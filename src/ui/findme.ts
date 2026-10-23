@@ -125,6 +125,10 @@ function autoRows(K: RowKit, body: HTMLElement) {
   num('Zoom', 'zoomAmt', 10, 100, none(pct), 'How much the camera zooms in and out by itself. At none, the zoom stays where you set it.');
   num('Zoom speed', 'zoomRate', 0.4, 1, of('zoomRate'), 'How fast the camera zooms.');
   num('Stay on the squad', 'beatSecs', 0.5, 1, secs, 'How long the view stays on a door your squad is working after you give the order.');
+  if (AUTOCAM.lock) {
+    num('Zoom in when you sneak up', 'lockIn', 10, 100, none(pct), 'How much closer the camera comes as you sneak up on someone who hasn\'t noticed you. At none, it doesn\'t come in.');
+    num('Start zooming in from', 'lockM', 1, 1, v => `${v.toFixed(0)} m`, 'How far away from an enemy the camera starts to come in.');
+  }
 }
 const TURNS: { v: 'as' | 'rev'; label: string }[] = [{ v: 'as', label: 'Normal' }, { v: 'rev', label: 'Reversed' }];
 const FADES: { v: 'pic' | 'meter'; label: string }[] = [{ v: 'pic', label: 'Picture' }, { v: 'meter', label: 'Light meter' }];

@@ -675,7 +675,7 @@ export function validateLevelData(d: LevelData): string[] {
             if (t.atMan !== undefined && !isStr(t.atMan)) err(`${tw}.atMan`, 'a patrol route\'s name');
             for (const k of ['menuLine', 'pageLine', 'planLine', 'noTap'] as const) if (t[k] !== undefined && !isStr(t[k])) err(`${tw}.${k}`, 'a non-empty string');
             if (t.eye !== undefined && !(isObj(t.eye) && isVec(t.eye.at) && isNum(t.eye.yaw) && (t.eye.fov === undefined || (isNum(t.eye.fov) && t.eye.fov > 0 && t.eye.fov <= 360)))) err(`${tw}.eye`, '{ at: Vec3, yaw: radians, fov?: degrees up to 360 }');
-            if (t.explain !== undefined && !(isObj(t.explain) && isStr(t.explain.text) && (t.explain.title === undefined || isStr(t.explain.title)))) err(`${tw}.explain`, '{ title?: a non-empty string, text: a non-empty string }');
+            if (t.explain !== undefined && !(isObj(t.explain) && isStr(t.explain.text) && (t.explain.title === undefined || isStr(t.explain.title)) && (t.explain.now === undefined || typeof t.explain.now === 'boolean') && (t.explain.quiet === undefined || typeof t.explain.quiet === 'boolean') && !(t.explain.quiet === true && t.explain.now === true))) err(`${tw}.explain`, '{ title?: a non-empty string, text: a non-empty string, quiet?: boolean, now?: boolean (one of the two at most) }');
             if (t.toward !== undefined && !isVec(t.toward)) err(`${tw}.toward`, 'Vec3'); else if (t.toward !== undefined && t.at === undefined) err(`${tw}.toward`, 'needs the step\'s `at`: where the arrow starts');
             if (t.onWay !== undefined && !(isObj(t.onWay) && (t.onWay.nv === undefined || typeof t.onWay.nv === 'boolean') && (t.onWay.run === undefined || typeof t.onWay.run === 'boolean'))) err(`${tw}.onWay`, '{ nv?: true or false, run?: true or false }'); else if (t.onWay !== undefined && t.at === undefined) err(`${tw}.onWay`, 'needs the step\'s `at`: the mark the order is to');
             if (t.after !== undefined && !(isObj(t.after) && (t.after.line !== undefined || t.after.word !== undefined) && ['line', 'word'].every(k => t.after[k] === undefined || (typeof t.after[k] === 'string' && t.after[k].length > 0)) && (t.after.on === undefined || (Array.isArray(t.after.on) && t.after.on.length > 0 && t.after.on.every((x: unknown) => typeof x === 'string'))))) err(`${tw}.after`, '{ line?: text, on?: order ids, word?: text } with a line or a word');
@@ -701,10 +701,15 @@ export function validateLevelData(d: LevelData): string[] {
             if (!/^[0-4]$/.test(k)) err(cw, "a place on the roster: '0' (you) to '4'");
             if (!isObj(c)) { err(cw, 'must be an object'); continue; }
             if (c.shield !== undefined) err(`${cw}.shield`, 'the ballistic shield is out of the game: take the key out (the rest of the card stands)');
-            known(cw, c, ['weapon', 'shield', ...BOOLS, ...NUMS, 'rings']);   // ('shield': said above, in words of its own)
+            known(cw, c, ['weapon', 'shield', ...BOOLS, ...NUMS, 'rings', 'loaded']);   // ('shield': said above, in words of its own)
             if (k !== '0' && c.shells !== undefined) err(`${cw}.shells`, 'yours alone: a teammate carries no 40 mm');   // (your own `charges` and `walls` are read where your own charges are switched on — game/owncharge.ts, kit.ts chargeRow / wallRow — and are nothing where they are off)
             if (c.weapon !== undefined && !['rifle', 'pistol', 'shotgun'].includes(c.weapon)) err(`${cw}.weapon`, "'rifle' | 'pistol' | 'shotgun'");
-            if (c.rings !== undefined) { if (k !== '0') err(`${cw}.rings`, 'yours alone: the launcher is on your rifle'); else if (c.weapon === 'pistol' || c.weapon === 'shotgun') err(`${cw}.rings`, 'the launcher is the rifle\'s: this card carries none'); else if (!(Number.isInteger(c.rings) && c.rings >= 0 && c.rings <= 5)) err(`${cw}.rings`, 'a whole number 0‥5'); }   // (the launcher's sponge rounds — game/kit.ts RINGS_MAX, held equal by tools/qa/issuewhole-check.ts; a mission's own card for you is handed none: ISSUE.whole)
+            // (your rifle's launcher: its sponge rounds — game/kit.ts RINGS_MAX, held equal by tools/qa/issuewhole-check.ts; a mission's own card for you is handed
+            //  none: ISSUE.whole — and the load it comes up on, game/kit.ts kitPlayer)
+            for (const key of ['rings', 'loaded'] as const) if (c[key] !== undefined) {
+              if (k !== '0') err(`${cw}.${key}`, 'yours alone: the launcher is on your rifle'); else if (c.weapon === 'pistol' || c.weapon === 'shotgun') err(`${cw}.${key}`, 'the launcher is the rifle\'s: this card carries none');
+              else if (key === 'rings' ? !(Number.isInteger(c.rings) && c.rings >= 0 && c.rings <= 5) : c.loaded !== 'ring' && c.loaded !== 'he40') err(`${cw}.${key}`, key === 'rings' ? 'a whole number 0‥5' : "'ring' | 'he40'"); }
+            if (c.loaded === 'he40' && c.shells === 0 || c.loaded === 'ring' && !(c.rings! > 0)) err(`${cw}.loaded`, 'this card carries none of that load: the launcher would come up on the other one');
             for (const b of BOOLS) if (c[b] !== undefined && typeof c[b] !== 'boolean') err(`${cw}.${b}`, 'true | false');
             for (const n of NUMS) if (c[n] !== undefined && !(Number.isInteger(c[n]) && c[n] >= 0 && c[n] <= 9)) err(`${cw}.${n}`, 'a whole number 0‥9'); }
         }

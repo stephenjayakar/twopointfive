@@ -102,7 +102,7 @@ import { say, resetGuards, tension, updateEscalation, escalationSummary, raiseEs
 import type { SearchPlan, Pieing, Standoff } from './guards';
 import type { Clearing } from './squad';
 import { updatePlayer, startTakedown, updateAim, launchCancel } from './player';
-import { closeSeatTick, closeReset, closeLethal, closeBare } from './close';
+import { CLOSE, closeAt, closeRmb, closeSeatTick, closeReset, closeLethal, closeBare } from './close';
 import { stalkHas, stalkGrab, stalkKeyCan, stalkKeyTook, stalkReset } from './stalk';
 import type { CloseKind } from './close';
 import { doorMoveBegin, doorMoveTick, haulSetDown, teamDoorHand } from './hands';
@@ -299,7 +299,7 @@ export class Player {
   haul: Haul | null = null; doorMove: DoorMove | null = null;   // hands.ts: the pick-up of the body in `dragging` (which end, which beat) · the door he is working by hand (HANDS, its switch; both null with it off)
   dragging: Guard | null = null; dragYaw = 0; dragNoiseT = 0; dragStuckT = 0;   // the body being dragged (F): crouched, facing it, its ankles in your hands (ragdoll pins), the rest trailing along the floor
   noise = 0;                                                    // HUD sound meter: the loudest thing you did lately (hearing-model level, decays)
-  takedown: { g: Guard; t: number; kind?: CloseKind; from?: number; alert?: boolean; yaw?: number; at?: Vec3; lethal?: boolean } | null = null;             // silent takedown in progress (a LEFT CLICK with the hands empty on the man in reach behind): locked behind the guard until the strike lands
+  takedown: { g: Guard; t: number; kind?: CloseKind; from?: number; alert?: boolean; yaw?: number; at?: Vec3; lethal?: boolean; /** CLOSE.rmbHold: the quick knockout — heard further */ loud?: boolean } | null = null;             // silent takedown in progress (a LEFT CLICK with the hands empty on the man in reach behind): locked behind the guard until the strike lands
   /** the man in his arm (player.ts startGrab / updateHold — the 'grab him' row on a living guard from behind): the pair moves as one at a slow walk, his rows put
    *  questions to him (Game.interrogate) and choke him out quiet (holstered: the arm variant) or pistol-whip him (pistol drawn: the gun variant, which also
    *  fires past him on a click) — there is no letting him go; null when his hands are his own. */
@@ -2011,11 +2011,19 @@ export class Game {
     // CLICK with the hands empty — holstered, E — on the man in reach behind, whatever the panel highlights; with the pistol drawn a click is a round (updatePlayer
     // fired it), so you holster first. One gate for both (buildInteractables' inReach).
     { const free = !pl.takedown && !pl.down && !pl.holding && !samStaggered(this) && !pl.breakerMove;   // (samstun.ts: folded by a blast, no takedown and no grab; handwork.ts: his hand is on the breaker's lever for its half second — committed, like a kick; never set with that switch off)
-      const bare = closeBare(this), two = closeLethal(this) && !bare, knife = !bare && input.lmbHit() && !stalkHas(this), blow = knife || ((two || bare) && input.rmbHit());   // (close.ts CLOSE.noKnife: no knife — the left click is no blow, the right click the knockout)   // (close.ts: with the two-button blow live the left click is the knife and the right click the knockout; else the left click is the knockout and the right nothing)
-      const clicked = pl.holstered && blow ? (this.nearby.find(it => it.kind === 'guard' && it.inReach && !(it.guard && (this.rescue?.isHostage(it.guard) || this.snatch?.out.owns(it.guard)))) ?? null) : null, viaClick = clicked?.guard ?? null;   // click, hands empty: the man in reach
+      const bare = closeBare(this), two = closeLethal(this) && !bare, knife = !bare && input.lmbHit() && !stalkHas(this);
+      // the man a click with empty hands is on (the one in reach), and whether the choke is his to be given (close.ts CLOSE.rmbHold: the right button let
+      // go inside a tap is the knockout, kept down it is the choke — off, or beside a man who can only be struck, the press itself is the knockout)
+      const inReach = pl.holstered ? (this.nearby.find(it => it.kind === 'guard' && it.inReach && !(it.guard && (this.rescue?.isHostage(it.guard) || this.snatch?.out.owns(it.guard)))) ?? null) : null;
+      const chokeOn = CLOSE.rmbHold && !!inReach?.guard && !inReach.guard.civ && this.rails.offers('grab') && closeAt(this, inReach.guard, pl.char.pos).grab;
+      const rb = closeRmb(this, CLOSE.on && CLOSE.rmbHold && (two || bare) && pl.holstered && free, input.rmb(), input.rmbHit(), dt, !!inReach, chokeOn, input.hit('Blur') || input.hit('Paused')), blow = knife || ((two || bare) && rb !== null);   // (close.ts CLOSE.noKnife: no knife — the left click is no blow, the right click the knockout; with the two-button blow live the left click is the knife and the right click the knockout)
+      const clicked = blow ? inReach : null, viaClick = clicked?.guard ?? null;   // click, hands empty: the man in reach
       const stalked = stalkGrab(this);   // (stalk.ts: the held click has walked him in to the man's back — the grab it ends in is the row's own)
       if (stalked && free) { startGrab(this, stalked); if (pl.holding?.g === stalked) pl.holding.from = [pl.char.pos[0], pl.char.pos[1], pl.char.pos[2]]; }   // (the way in is read where he stands: behind him, or behind his chair)
-      else if (viaClick && free) startTakedown(this, viaClick, clicked!.close, two && knife && !viaClick.civ);   // (close: the way in his row offered — close.ts, undefined with its switch off)
+      else if (viaClick && free && rb === 'hold') {   // (the choke: into the arm — the stalk's own grab where the key's would be — which closes as soon as it has him: player.ts updateHold, `rmbChoke`)
+        const keyed = stalkKeyCan(this, viaClick); startGrab(this, viaClick, clicked!.close);
+        if (pl.holding?.g === viaClick) { if (keyed) { stalkKeyTook(this); pl.holding.from = [pl.char.pos[0], pl.char.pos[1], pl.char.pos[2]]; } pl.holding.rmbChoke = 1; pl.holding.rmbT = CLOSE.rmbTapSecs; } }   // (a hold already: letting go eases it off)
+      else if (viaClick && free) startTakedown(this, viaClick, clicked!.close, two && knife && !viaClick.civ, !knife && rb === 'tap' && chokeOn);   // (close: the way in his row offered — close.ts, undefined with its switch off; the quick knockout is the loud one where the quiet choke was his to choose)
       else if (act?.kind === 'guard' && verb === 'grab' && act.guard && free) { const keyed = stalkKeyCan(this, act.guard); startGrab(this, act.guard, act.close); if (keyed && pl.holding?.g === act.guard) { stalkKeyTook(this); pl.holding.from = [pl.char.pos[0], pl.char.pos[1], pl.char.pos[2]]; } }   // (stalk.ts STALK.key: the row's key finishes a stalk — the grab is the stalk's own, the step in and all)
     }
     // A door in reach, one row per thing it can be made to do: shut → 'push it open' (Doors.use: away from you, its creak) / 'ease it open — silent' (started

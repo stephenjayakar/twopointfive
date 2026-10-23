@@ -600,7 +600,7 @@ fn refractedRead(pixf: vec2f, P0: vec3f, N0: vec3f, gp: GlassPath) -> GlassRead 
 // along than across, with the DOT where it lands (seg.b.w) and a glint at the device. Picture only: nothing the game reads. a = start + drawn half-width,
 // b = end + dot, e = the box's (dimmed) emissive + the air's share.
 struct BeamSeg { a: vec4f, b: vec4f, e: vec4f };
-struct Beams { n: u32, p0: u32, p1: u32, p2: u32, k: vec4f, seg: array<BeamSeg, 8>, fireN: vec4u, fire: array<FireRec, 4> };   // (… and, behind the segments, THE OPEN FIRES: passes.ts setFires — fire.wgsl FireRec, fireN.x of them; the reflection pass's own struct stops at the segments)
+struct Beams { n: u32, p0: u32, p1: u32, p2: u32, k: vec4f, seg: array<BeamSeg, 8>, fireN: vec4u, fire: array<FireRec, 4>, fireLook: FireLook };   // (… and, behind the segments, THE OPEN FIRES: passes.ts setFires — fire.wgsl FireRec, fireN.x of them, and the look's numbers they are all drawn with, FireLook; the reflection pass's own struct stops at the segments)
 @group(1) @binding(15) var<uniform> beams: Beams;
 const BEAM_R0 = 0.0022;                           // combat.ts beamBoxes: the beam's own half-width, m
 fn beamOutdoors(p: vec2f) -> bool {
@@ -662,7 +662,7 @@ fn fireOver(c: vec3f, pixf: vec2f, rd: vec3f, tMax: f32) -> vec3f {
   let n = min(beams.fireN.x, 4u);
   var at = array<f32, 4>(-1.0, -1.0, -1.0, -1.0); var any = false;
   for (var i = 0u; i < n; i++) {
-    let cb = fireBound(beams.fire[i], frame.camPos, rd);   // (nothing of this fire is on a ray that misses it)
+    let cb = fireBound(beams.fire[i], beams.fireLook, frame.camPos, rd);   // (nothing of this fire is on a ray that misses it)
     if (cb.x > cb.y || cb.y < 0.0 || cb.x > tMax) { continue; }
     at[i] = max(cb.x, 0.0); any = true;
   }
@@ -675,12 +675,36 @@ fn fireOver(c: vec3f, pixf: vec2f, rd: vec3f, tMax: f32) -> vec3f {
     at[pick] = -1.0;
     let F = beams.fire[pick];
     if (F.d.y > 0.5) { let seen = fogSeenAt(F.a.xyz, vec3f(0.0)) >= 0.5; if (seen != (F.d.y < 1.5)) { continue; } }
-    let fa = fireAir(F, frame.camPos, rd, tMax, beamPix(), jit);
+    let fa = fireAir(F, beams.fireLook, frame.camPos, rd, tMax, beamPix(), jit);
     col = col * fa.a + fa.rgb;
   }
   return col;
 }
-fn compositePixel(pixf: vec2f) -> vec3f {
+/** THE SHIMMER OF THE HOT AIR OVER A FIRE (fire.wgsl fireShimmer; game/fire.ts FIRE.look.shimmer, `?fireheat=0`): how far, in pixels, this pixel reads the
+ *  picture aside — the whole composite is a function of the pixel, so the picture behind a fire's column is that function a little off. Nothing nearer than
+ *  the column is moved, and nothing nearer is read in its place (the depth here and the depth where it would read both say), and a fire the fog of war
+ *  draws only here or only there has its shimmer by the flame's own rule (fireOver). 0 with no fire near the ray. */
+fn fireWarp(pixf: vec2f) -> vec2f {
+  let n = min(beams.fireN.x, 4u);
+  if (n == 0u || beams.fireLook.b.w <= 0.0) { return vec2f(0.0); }
+  let rd = normalize(worldFromDepth(pixf, 0.5) - frame.camPos);
+  var off = vec2f(0.0); var near = 1e30;
+  for (var i = 0u; i < n; i++) {
+    let F = beams.fire[i];
+    if (F.d.y > 0.5) { let seen = fogSeenAt(F.a.xyz, vec3f(0.0)) >= 0.5; if (seen != (F.d.y < 1.5)) { continue; } }
+    let s = fireShimmer(F, beams.fireLook, frame.camPos, rd);
+    if (s.z > 0.0) { off += vec2f(s.x, -s.y) / (beamPix() * s.z); near = min(near, s.z); }
+  }
+  if (near > 1e29) { return vec2f(0.0); }
+  let d = textureLoad(gDepth, vec2i(pixf), 0);
+  if (d < 1.0 && linearDepth(d, pixf) < near) { return vec2f(0.0); }   // (what this pixel shows stands in front of the fire's column)
+  let to = clamp(pixf + off, vec2f(0.5), vec2f(textureDimensions(gDepth)) - 0.5); let d2 = textureLoad(gDepth, vec2i(to), 0);
+  if (d2 < 1.0 && linearDepth(d2, to) < near) { return vec2f(0.0); }   // (… and so does what it would have read: a man in front of the fire is not smeared onto the ground beside him)
+  return off;
+}
+fn compositePixel(pix0: vec2f) -> vec3f {
+  var pixf = pix0;
+  if (frame.debugView == 0u && beams.fireN.x > 0u) { pixf = clamp(pix0 + fireWarp(pix0), vec2f(0.5), vec2f(textureDimensions(gDepth)) - 0.5); }
   let pix = vec2i(pixf);
   var pin = pixf; if (SHARP) { pin = pixf * inOverOut() + frame.sharpCfgC.xy; }   // this pixel on the INTERNAL raster (the stochastic terms' texel maps; + the decoupled jitter that raster carries, 0 without it)
   let depth = textureLoad(gDepth, pix, 0);

@@ -63,6 +63,9 @@ const BASE_REVS = ['636e5eaef', '3046a115e', 'c069ca16f', 'd13650f85', '0d3a1807
  *  still meet). A look twin (`<name>-gwot.json`) with no row of its own is held to the plain level's. A level with no row is held to BASE_REVS above, as it
  *  was; a level BASE_REVS does not carry must have one. */
 const LEVEL_BASE: Record<string, string> = {
+  // the ground melted round the brazier laid round: two ten-sided patches of five slabs each where two squares lay (eight boxes more, in the level's own part)
+  'pass.json': '5d2bfc3f0',
+
   // the lesson taken out of the yard (the seven Training lessons went 2026-10-23; the yard stays as a stage for checks)
   'train-move.json': 'd5893130e',
 
@@ -80,11 +83,13 @@ const LEVEL_BASE: Record<string, string> = {
   // door, light or prop moved
   'tut-plan.json': '1955e5c1e',
 
-  // the ledger's whistled man looks from the lane's gap and turns away to smoke by a chair (three volumes, a chair, a gas bottle, a tin)
-  'tut-quiet.json': '87c7cebef',
+  // the ledger's store teaches the rifle's launcher: the chest beam moved to the hall man's back, the hand-to-hand step gone and six in its place (the laser
+  // named inside the door, the rifle, the swap's card, a mark to shoot from, the shot, the hands' key), its own card for the player, a sixth checkpoint
+  'tut-quiet.json': 'f9a3f60e0',
 
-  // the tunnel station, played with no fog of war (its lesson's rails.fog); its last step tells the squad to run back to the trucks (onWay.run)
-  'tut-sky.json': '34c71d8c3',
+  // the tunnel station, played with no fog of war (its lesson's rails.fog); its last step tells the squad to run back to the trucks (onWay.run); the
+  // brazier's melt patch laid round (eight turned slabs where two square ones were)
+  'tut-sky.json': '26fa53ede',
 
   // the fuel stop, alone: the ground laid as the place is used and a gate for its trucks, the moon behind the shop; then the inner wall and its wooden
   // door, the lines re-cut round it (full auto, the door shot out, the reload), `settle` on the steps that end in a shot or a blast, and no sponge round

@@ -144,7 +144,7 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     teaches: ['Turn, zoom and move the view', 'Order the squad with one key', 'Stack the squad up on a door, then send them in', 'Put a charge on a wall', 'Cut the lights and fight in the dark'] },
   // plan mode (tools/levels/tut-plan.ts, levels/tut-plan.script.ts): nobody of his is on the floor and the mode is up from the first frame, and every stop is a thing one order to all
   // four cannot do and a plan can
-  { id: 'tut-plan', title: 'On the radio', kind: 'roomclear', squad: 4, level: 'tut-plan.json', seed: 1, group: 'tutorial', hour: 'midday', weather: 'clear',   // (a plan is laid by day: every yard and door in plain sight from above)
+  { id: 'tut-plan', title: 'On the radio', kind: 'roomclear', squad: 4, level: 'tut-plan.json', seed: 1, group: 'tutorial', hour: 'dusk', weather: 'clear',   // (a plan is laid in the last light: a low sun, long shadows across the yard and every door still plain from above. It was midday until 10-23, and at midday the pale walls and the ground were one flat wash)
     place: 'A walled relay post in the hills', lean: 'loud', defenders: 8, squads: true,
     blurb: "You'll lead your squad from above again, but this time you'll plan first. Hit two doors at once, beat a gunner, and cover two gates.",
     scene: "The enemies who hit the convoy use this relay post to talk to each other. You're not on the ground for this one either, so you'll lead your squad over the radio and plan each move before they make it.",
@@ -170,7 +170,7 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     place: 'A money changer\'s shop on a snowy night', lean: 'quiet', defenders: 3, hour: 'night',   // (its light IS the lesson: a midday left on the link put the lamps out and the lane in sun)
     blurb: 'You go in alone. Slip through the dark to the strongroom, then leave the way you came in.',
     scene: 'The post was paid through a money changer\'s shop in town, and his ledger shows who paid. The ledger is in the strongroom. Nobody can know you were there.',
-    teaches: ['Stay low and out of the light', 'Whistle to lure a guard', 'Grab a guard from behind', 'Locks, the breaker box and night vision', 'Leave the way you came in'] },
+    teaches: ['Stay low and out of the light', 'Whistle to lure a guard, then grab him', 'Knock a guard out with a sponge round', 'Locks, the breaker box and night vision', 'Leave the way you came in'] },
   // quiet, as two (tools/levels/tut-pair.ts): one partner under the pair rules, and each stretch of a truck park is one thing a second man makes possible
   { id: 'tut-pair', title: 'The truck park, as two', kind: 'quiet', squad: 1, level: 'tut-pair.json', group: 'tutorial',
     place: 'A walled truck park, at night', lean: 'quiet', defenders: 4,

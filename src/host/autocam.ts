@@ -38,19 +38,37 @@
 //   side); and the frame's lean and the zoom's travel each have a share of their own (`leanK`, `zoomAmt`). An eased turn is seconds long, so the
 //   loop treats it as it treats the sway and not as the quick turn: no aim carried, the mouse does not end it, `gap` from where it is seen to stop
 //   (host/loop.ts). Off = the numbers as they were, to the bit.
-// Off here (the frozen stand); the page raises `on`, `sway` and `tune` (host/profile.ts: `?autocam=0` off, `?autoturn=0`, `?autozoom=0`, `?autosway=0`
-// and `?autotune=0` for those alone).
+//   THE SOFT LOCK (`lock`, read() and frame()). The maintainer, of a review of Chaos Theory's "closer than ever": "there's definitely stuff for the auto
+//   camera mode to learn". What that review says of the camera on an approach (a machine's rough transcript of it): whenever an enemy is on screen the
+//   camera shifts its focus to him, and as the player moves closer its focus becomes stronger and stronger, almost as if he were soft locked on — so
+//   subtly that most players never notice. Here: the man he is stalking (game/stalk.ts), or else the nearest hostile man the picture shows in his
+//   line who is NOT onto him (the one it has stays until another is `lockStick` nearer, and through `lockLinger` behind a pillar), is the man of the
+//   lock from `lockM` in; its strength rises to full at `lockNearM`, eased (`lockEase`). Nobody is while it is a FIGHT (somebody the picture shows is
+//   onto him, or was within `lockCalm`), and but for a stalk nobody is while he is not sneaking (the rifle up, a sprint, a body in tow, a kick, a
+//   lock, the wand, a throw being aimed). The frame goes from the middle of the men he could shoot to the middle of the two of them, and the camera
+//   goes toward the lock's own distance — the place's zoom less `lockIn` of it, never so near that a man he could shoot leaves the picture (a door
+//   ahead and the squad's beat do not hold the lock out). A man held keeps it in close (the frame as it was). The zoom as it was is worked out
+//   untouched under it (`A.goal`: the place's own zoom, the band); `lockIn` goes by the hand's share of the zoom (`zoomAmt`), and at none of either
+//   the distance is as it was to the bit. One rule of the zoom gives way to it, by its strength: "it never comes in on a fight" holds the zoom out
+//   while any man is in his line, and the lock's man lets it back in as the lock takes hold. A held button stills it as it stills the frame — the
+//   strength and the share it takes, though never so that the men he could shoot leave the picture — but for the held click of a stalk or of the
+//   wait at a corner (it aims at nothing), a man in his arm, and letting go once a fight has begun. The view gone to somebody else (plan mode, a
+//   show): the lock lets go at once and the distance is the zoom's own. No turn is added: it moves and zooms the frame.
+// Off here (the frozen stand); the page raises `on`, `sway`, `tune` and `lock` (host/profile.ts: `?autocam=0` off, `?autoturn=0`, `?autozoom=0`,
+// `?autosway=0`, `?autotune=0` and `?autolock=0` for those alone).
 // tools/qa/autocam-check.ts holds it (AUTOCAM_BREAK=1 = the switch left off, AUTOSWAY_BREAK=1 = the sway left off, AUTOTUNE_BREAK=1 = the tuning left
-// off: their lines must fail).
-import type { Vec3 } from '../math/vec';
-import type { Game } from '../game/game';
+// off, AUTOLOCK_BREAK=1 = the soft lock left off: their lines must fail).
+import { smoothstep, type Vec3 } from '../math/vec';
+import type { Game, Guard } from '../game/game';
 import type { FollowCamera } from '../game/camera';
 import type { Input } from '../game/input';
 import type { Door } from '../game/doors';
 import type { DoorOp } from '../game/doortools';
 import { roomRead, type RoomRead } from '../game/roomread';
 import { isHostile } from '../game/teams';
-import { closeMode } from '../game/close';
+import { closeMode, closeSubject } from '../game/close';
+import { stalkOn, stalkWait } from '../game/stalk';
+import { samWork } from '../game/handwork';
 
 export const AUTOCAM = {
   /** the switch: the camera's key tapped twice puts the auto camera on. Off = the double tap is the Options row's, as it was */
@@ -98,6 +116,12 @@ export const AUTOCAM = {
   turnSeen: 0.0175,
   /** …a share of every lean of the frame (0 = it stays on him) · and of how far the zoom leaves the hand's own (0 = it stays there) */
   leanK: 1, zoomAmt: 1,
+  /** THE SOFT LOCK (off = the frame and the zoom as they were): a man who is not onto him begins to hold the frame this far off (m) and holds it in
+   *  full this near (m) · the frame's share of the way to him at full (the middle of the two) · the camera comes in by this share of where it
+   *  would be at full (0 = it does not come in) · how fast the strength goes to where it is wanted (1/s) · the man it has is kept until another
+   *  is this much nearer (m), and through this long out of his line (s: a pillar he passes) · after somebody in the picture was onto him it is
+   *  nobody's for this long (s: a fight does not end the moment the last man loses him) */
+  lock: false, lockM: 8, lockNearM: 2, lockK: 0.5, lockIn: 0.4, lockEase: 2, lockStick: 0.75, lockLinger: 1, lockCalm: 4,
   /** THE SWAY (off = the view turns by itself only at rest): the share of the angle to the middle of the men of the fight that the yaw leans, and the
    *  most of it (rad) · men gone further round than this to the OTHER side (rad) do not flip the side it took · that middle nearer him than `swayNearM`
    *  leans nothing, and counts in full `swayFadeM` further out (m) · a man of the fight is one the picture shows who was in his line within `swayLinger`
@@ -133,9 +157,14 @@ export interface AutoScene {
   shown: number; zoomFree: boolean;
   /** seconds since he fired */
   firedAgo: number;
+  /** THE SOFT LOCK's man (AUTOCAM.lock): where he stands, how strongly he holds the frame by how near he is (0..1), and whether the button that is
+   *  down is the stalk's own held click (the frame is not stilled by it). A man Sam holds: no place (the frame as it is), in full ·
+   *  somebody the picture shows is onto him (a fight: nobody is the lock's man, and the zoom does not come in) */
+  lock?: { at: Vec3 | null; s: number; stalk: boolean } | null; onto?: boolean;
 }
 
-/** the mode's own working state: one per seat, kept by the loop (host/loop.ts LoopCtx.auto). Nothing of the game's */
+/** the mode's own working state: one per seat, kept by the loop (host/loop.ts LoopCtx.auto). Nothing of the game's but the soft lock's man, who is
+ *  asked for again ten times a second and checked against the floor's men before he is used */
 export interface AutoCam {
   /** the look-at's shift from his feet (x, z), as eased */
   off: [number, number];
@@ -165,16 +194,23 @@ export interface AutoCam {
   swayCalm: number; swayK: number; swayKT: number;
   /** when each hostile man was last in his line, and the men of the fight as last asked */
   lineT: Map<object, number>; fight: Vec3[];
+  /** the soft lock: its man as last asked (null: nobody, or a fight), whether it is a fight (somebody the picture shows is onto him, or was within
+   *  `lockCalm`) and when somebody last was, its strength as eased, and the distance it last asked for (NaN: none of it) */
+  lockGd: Guard | null; lockFight: boolean; lockFightT: number; lockS: number; lockTo: number;
   /** the last scene read (the check's and the debugger's look) */
   scene: AutoScene | null;
 }
 export function autoCam(): AutoCam {
-  return { off: [0, 0], base: NaN, goal: NaN, stillT: 0, turnT: 1e9, turnV: 0, heldT: 0, handPx: 0, handT: 1e9, space: null, cell: -1, spaceT: -1e9, mid: null, shown: 0, ops: new Map(), way: null, seen: [], seenT: -1e9, sway: 0, swayV: 0, swayGoal: 0, swayT: 1e9, swayHome: 0, swayRaw: 0, swayFight: 0, swayMove: 0, swayCalm: 1e9, swayK: 1, swayKT: 0, lineT: new Map(), fight: [], scene: null };
+  return { off: [0, 0], base: NaN, goal: NaN, stillT: 0, turnT: 1e9, turnV: 0, heldT: 0, handPx: 0, handT: 1e9, space: null, cell: -1, spaceT: -1e9, mid: null, shown: 0, ops: new Map(), way: null, seen: [], seenT: -1e9, sway: 0, swayV: 0, swayGoal: 0, swayT: 1e9, swayHome: 0, swayRaw: 0, swayFight: 0, swayMove: 0, swayCalm: 1e9, swayK: 1, swayKT: 0, lineT: new Map(), fight: [], lockGd: null, lockFight: false, lockFightT: -1e9, lockS: 0, lockTo: NaN, scene: null };
 }
 /** the mode came on: the zoom as it stands is the hand's own, and nothing of an earlier run is kept */
-export function autoBegin(A: AutoCam, cam: FollowCamera): void { A.off[0] = A.off[1] = 0; A.base = cam.desiredDistance; A.goal = NaN; A.stillT = 0; A.turnT = 1e9; A.turnV = 0; A.heldT = 0; A.handPx = 0; A.way = null; A.ops.clear(); A.space = null; A.cell = -1; A.lineT.clear(); A.fight.length = 0; swayDrop(A); AUTOCAM_STATS.on++; }
+export function autoBegin(A: AutoCam, cam: FollowCamera): void { A.off[0] = A.off[1] = 0; A.base = cam.desiredDistance; A.goal = NaN; A.stillT = 0; A.turnT = 1e9; A.turnV = 0; A.heldT = 0; A.handPx = 0; A.way = null; A.ops.clear(); A.space = null; A.cell = -1; A.lineT.clear(); A.fight.length = 0; A.lockGd = null; A.lockFight = false; A.lockFightT = -1e9; A.lockS = 0; A.lockTo = NaN; swayDrop(A); AUTOCAM_STATS.on++; }
 /** the view is somebody else's for now (plan mode, a show, a pin): nothing is leaned, and it starts from his feet when it is his again */
-export function autoRest(A: AutoCam): void { A.off[0] = A.off[1] = 0; A.stillT = 0; A.way = null; }
+export function autoRest(A: AutoCam, cam?: FollowCamera): void {
+  A.off[0] = A.off[1] = 0; A.stillT = 0; A.way = null;
+  if (A.lockS > 0 && cam && A.goal > 0) cam.desiredDistance = A.goal;   // (the soft lock's share of the distance is not the other view's: back to where the zoom stood without it)
+  A.lockS = 0; A.lockTo = NaN; A.lockGd = null;
+}
 /** the yaw as it stands is the hand's own from here: the mode put off, or a come-round begun */
 export function swayDrop(A: AutoCam): void { A.sway = 0; A.swayV = 0; A.swayGoal = 0; A.swayT = 1e9; A.swayRaw = 0; A.swayFight = 0; A.swayMove = 0; A.swayK = 1; A.swayKT = 0; }
 /** the sway stopping where it is — a button down, or the view gone to somebody else for now: its speed dies away, with no step. The turn to give the camera */
@@ -210,20 +246,41 @@ function past(d: Door, from: Vec3, m: number): Vec3 {
   return [c[0] - s * nx * m, 0, c[2] - s * nz * m];
 }
 
+/** THE SOFT LOCK'S MAN, where he stands NOW (he walks between the askings of read()): the man being stalked (`st`), or else the one the last asking
+ *  chose — a man he could take (close.ts `closeSubject`) who is not onto him; with a man in Sam's arm, no place (the frame as it is) and the camera in
+ *  full. Nobody in a fight, and but for a stalk nobody while he is not sneaking (the close-in mode's list, close.ts `modeNow`, less the wall hold —
+ *  the wait at a corner is a sneak — and with a throw being aimed: kept by hand beside that list). `wait`: the held click is the corner wait's (it stills nothing, as a stalk's). */
+export function autoLock(A: AutoCam, g: Game, st: Guard | null, wait = false): AutoScene['lock'] {
+  const pl = g.player; if (A.lockFight || pl.down) return null;
+  if (pl.holding) return { at: null, s: 1, stalk: false };
+  const busy = g.touring || pl.rifleUp || pl.sprinting || !!pl.dragging || !!pl.kick || !!pl.picking || !!pl.wanding || !!pl.coding || !!samWork(g) || !!pl.throwPreview || !!pl.launchHeld;
+  const ok = (m: Guard | null) => !!m && g.guards.includes(m) && closeSubject(g, m) && m.state !== 'alert';   // (still a man of this floor: a load swaps them between askings)
+  const L = ok(st) ? st! : busy ? null : A.lockGd; if (!ok(L)) return null;
+  const p = pl.char.pos, q = L!.char.pos; return { at: [q[0], 0, q[2]], s: smoothstep(AUTOCAM.lockM, AUTOCAM.lockNearM, flat(p, q)), stalk: L === st || wait };
+}
+
 /** THE SCENE, read off the game as the tick left it. It asks and writes nothing (the space round him is kept on `A`, asked again when he changes cell). */
 export function autoRead(A: AutoCam, g: Game, input: Input, dt: number): AutoScene {
   const K = AUTOCAM, pl = g.player, c = pl.char, p = c.pos, now = g.time; AUTOCAM_STATS.reads++;
   // ---- the men he could shoot: hostile, on their feet, in the picture (the fog's word) and in his line — asked ten times a second
   if (now - A.seenT >= 0.1 || now < A.seenT) {
     A.seenT = now; A.seen.length = 0; A.fight.length = 0; A.shown = 0; if (A.lineT.size > g.guards.length) A.lineT.clear(); const eye: Vec3 = [p[0], 1.5, p[2]], fog = g.fogOfWar;
+    let lockD = K.lockM, onto = false; const had = A.lockGd; A.lockGd = null;
     for (const gd of g.guards) {
       if (gd.state === 'dead' || gd.held || !isHostile('player', gd.team)) continue;
+      if (gd.state === 'alert') onto = true;   // (the soft lock's fight: a man onto him anywhere, in the picture or not — the one shooting from the far end)
       const q = gd.char.pos; if (flat(p, q) > K.fightM || fog?.hidden(gd)) continue;
       const inLine = !g.col.segmentBlocked(eye, [q[0], 1.3, q[2]]); if (inLine) { A.seen.push([q[0], 0, q[2]]); A.lineT.set(gd, now); }
       const last = A.lineT.get(gd); if (last !== undefined && now >= last && now - last <= K.swayLinger) A.fight.push([q[0], 0, q[2]]);   // (a man of the fight: the sway's)
+      // the soft lock's man: the nearest in his line who is not onto him — the one it has until another is clearly nearer, and through a moment out of the line
+      if (K.lock && gd.state !== 'alert' && (inLine || gd === had && last !== undefined && now >= last && now - last <= K.lockLinger)) { const d = flat(p, q) - (gd === had ? K.lockStick : 0); if (d < lockD) { lockD = d; A.lockGd = gd; } }
       if (inLine || flat(p, q) <= K.nearM) A.shown++;   // (behind cover but this near: a step puts him in the line)
     }
+    // (somebody is onto him, or was a moment ago: that is a fight, and the fight's rules frame it)
+    if (!K.lock) A.lockFight = false;
+    else { if (onto || now < A.lockFightT) A.lockFightT = onto ? now : -1e9; A.lockFight = now >= A.lockFightT && now - A.lockFightT < (onto ? Infinity : K.lockCalm); if (A.lockFight) A.lockGd = null; }
   }
+  const lmb = input.lmb(), lock = K.lock ? autoLock(A, g, lmb ? stalkOn(g) : null, lmb && !!stalkWait(g)) : null;   // (a stalk, and the wait at a corner, live only under the held click)
   // ---- the squad: the newest beat — a door order's phase as it changes (the order given, its men set, the word, the entry), or men just sent somewhere
   let beat: AutoScene['beat'] = null;
   if (g.orders?.active) {
@@ -268,9 +325,9 @@ export function autoRead(A: AutoCam, g: Game, input: Input, dt: number): AutoSce
   }
   const room: AutoScene['room'] = A.mid ? { at: A.mid, w: 1 } : null, inRoom = !!A.mid;
   const sky = !g.weather?.underRoof(p[0], p[2]);
-  const zoomK = (closeMode(g) ? K.closeK : inRoom ? K.roomK : sky ? K.skyK : 1) * (pl.sup.v > K.fireAt ? K.fireK : 1);
+  const zoomK = (closeMode(g) || K.lock && K.lockIn > 0 && K.zoomAmt > 0 && !!pl.holding && !A.lockFight ? K.closeK : inRoom ? K.roomK : sky ? K.skyK : 1) * (pl.sup.v > K.fireAt ? K.fireK : 1);
   const free = !pl.holding && !pl.dragging && !pl.throwPreview && !pl.launchHeld && !pl.wall && !g.rails?.locks('camera') && g.lesson?.step?.done?.is !== 'view';
-  return A.scene = { sam: [p[0], p[1], p[2]], threats: A.seen, beat, door, room, zoomK, hold: input.buttons !== 0, still, free, vel: [c.vel[0], c.vel[2]], fight: A.fight, shown: A.shown, zoomFree: !g.rails?.locks('zoom'), firedAgo: now - pl.lastFireT };
+  return A.scene = { sam: [p[0], p[1], p[2]], threats: A.seen, beat, door, room, zoomK, hold: input.buttons !== 0, still, free, vel: [c.vel[0], c.vel[2]], fight: A.fight, shown: A.shown, zoomFree: !g.rails?.locks('zoom'), firedAgo: now - pl.lastFireT, lock, onto: A.lockFight };
 }
 
 /** how far the floor shows from the look-at at one metre of distance: to a side, up the screen and down it */
@@ -283,27 +340,45 @@ function reach(cam: FollowCamera): { side: number; up: number; down: number } {
  *  The loop hands that to FollowCamera.step in place of his feet, with no aim to lean on. */
 export function autoFrame(A: AutoCam, S: AutoScene, cam: FollowCamera, dt: number): Vec3 {
   const K = AUTOCAM, p = S.sam; let ox = 0, oz = 0;
+  // the soft lock: its strength eased to what the scene asks. A held button stills the frame, the zoom and the strength — but not the held click of a
+  // stalk, not a man in his arm, and not the letting go once a fight has begun (a stalk the man broke, the button still down: the fight is not left
+  // in close; a man shot under a held aim with nobody onto him is, until the button is up)
+  const L = K.lock && S.lock ? S.lock : null, stilled = S.hold && !L?.stalk, moves = !stilled || (L ? !L.at : !!S.onto);
+  if (!K.lock) A.lockS = 0; else if (moves) { A.lockS += ((L ? L.s : 0) - A.lockS) * Math.min(1, dt * K.lockEase); if (A.lockS < 1e-4 && !L) A.lockS = 0; }
+  const ls = A.lockS;
   const take = (at: Vec3, share: number, w: number) => { share *= K.leanK; ox += (share * (at[0] - p[0]) - ox) * w; oz += (share * (at[2] - p[2]) - oz) * w; };
   if (S.room) take(S.room.at, K.room, S.room.w);
   if (S.door) take(S.door.at, K.door, S.door.w);
   if (S.beat) take(S.beat.at, K.beat, S.beat.w);
-  if (S.threats.length) { let x = 0, z = 0; for (const t of S.threats) { x += t[0]; z += t[2]; } take([x / S.threats.length, 0, z / S.threats.length], K.fight, 1); }
+  if (S.threats.length) { let x = 0, z = 0; for (const t of S.threats) { x += t[0]; z += t[2]; } x /= S.threats.length; z /= S.threats.length;
+    if (L?.at && ls > 0) take([x + (L.at[0] - x) * ls, 0, z + (L.at[2] - z) * ls], K.fight + (K.lockK - K.fight) * ls, 1);   // (from the middle of the men he could shoot to the middle of the two of them)
+    else take([x, 0, z], K.fight, 1); }
+  else if (L?.at && ls > 0) take(L.at, K.fight + (K.lockK - K.fight) * ls, 1);   // (its man out of his line for a moment, or stalked from behind something: framed as he was in it)
   // …inside the box he stays in: the camera's own across and up, at the camera's own distance
   const B = cam.planarBasis(), k = cam.distance / 21, box = (x: number, z: number): [number, number] => {
     const r = x * B.right[0] + z * B.right[2], f = x * B.fwd[0] + z * B.fwd[2], r1 = Math.max(-K.sideM * k, Math.min(K.sideM * k, r)), f1 = Math.max(-K.backM * k, Math.min(K.awayM * k, f));
     return r1 === r && f1 === f ? [x, z] : [B.right[0] * r1 + B.fwd[0] * f1, B.right[2] * r1 + B.fwd[2] * f1]; };   // (inside it: as it is, to the bit)
   [ox, oz] = box(ox, oz);
-  if (!S.hold) { const e = Math.min(1, dt * K.lean); A.off[0] += (ox - A.off[0]) * e; A.off[1] += (oz - A.off[1]) * e; }
+  if (!stilled) { const e = Math.min(1, dt * K.lean); A.off[0] += (ox - A.off[0]) * e; A.off[1] += (oz - A.off[1]) * e; }
   [A.off[0], A.off[1]] = box(A.off[0], A.off[1]);
   // the zoom: the hand's own by where he stands, and out to hold what is framed from where the look-at is going
   if (K.zoom && S.zoomFree && A.base > 0) {
+    const lockIn = K.lockIn * Math.max(0, Math.min(1, K.zoomAmt));   // (the lock's zoom is a zoom of the mode's own: the hand's share of those is its share of this)
     const V = reach(cam), fit = (at: Vec3) => { const x = at[0] - p[0] - ox, z = at[2] - p[2] - oz, r = Math.abs(x * B.right[0] + z * B.right[2]), f = x * B.fwd[0] + z * B.fwd[2]; return Math.max(r / V.side, f > 0 ? f / V.up : -f / V.down) / K.fitIn; };
-    let need = fit(p); for (const t of S.threats) need = Math.max(need, fit(t)); if (S.beat && S.beat.w > 0.5) need = Math.max(need, fit(S.beat.at)); if (S.door && S.door.w > 0.5) need = Math.max(need, fit(S.door.at));
+    let need = fit(p); for (const t of S.threats) need = Math.max(need, fit(t)); const men = need; if (S.beat && S.beat.w > 0.5) need = Math.max(need, fit(S.beat.at)); if (S.door && S.door.w > 0.5) need = Math.max(need, fit(S.door.at));
     let want = Math.max(6, Math.min(40, Math.max(A.base * S.zoomK, Math.min(need, A.base * K.fitMost))));
     if (K.zoomAmt !== 1) want = Math.max(6, Math.min(40, A.base + (want - A.base) * K.zoomAmt));   // (the hand's own share of that travel: AUTOCAM.tune)
-    if (S.threats.length && A.goal > 0 && want < A.goal) want = A.goal;   // (it never comes in on a fight)
-    if (!S.hold && (!(A.goal > 0) || Math.abs(want / A.goal - 1) > K.band)) A.goal = want;
-    if (A.goal > 0) cam.desiredDistance += (A.goal - cam.desiredDistance) * Math.min(1, dt * K.zoomRate);
+    if (S.threats.length && A.goal > 0 && want < A.goal) want = A.goal + (want - A.goal) * (lockIn > 0 ? ls : 0);   // (it never comes in on a fight — but for the soft lock's man, by the lock's strength)
+    if (!stilled && (!(A.goal > 0) || Math.abs(want / A.goal - 1) > K.band)) A.goal = want;
+    // …and the soft lock goes from there toward its own distance by its strength: the place's zoom (by the hand's share, as the goal's is) less its
+    // share, never past what holds the MEN he could shoot in the picture (a door ahead or the squad's beat holds the zoom out under it, and not the
+    // lock in full). A held button stills where that goes, as it stills the goal under it — but the men stay in the picture.
+    let to = A.goal;
+    if (ls > 0 && A.goal > 0 && lockIn > 0) {
+      const floor = Math.min(men, A.base * K.fitMost);
+      if (moves || !(A.lockTo > 0)) { const place = Math.max(6, Math.min(40, A.base + (A.base * S.zoomK - A.base) * K.zoomAmt)); A.lockTo = A.goal + (Math.min(A.goal, Math.max(6, place * (1 - lockIn))) - A.goal) * ls; }
+      to = Math.min(A.goal, Math.max(A.lockTo, floor)); } else A.lockTo = NaN;
+    if (to > 0) cam.desiredDistance += (to - cam.desiredDistance) * Math.min(1, dt * K.zoomRate);
   }
   return [p[0] + A.off[0], p[1], p[2] + A.off[1]];
 }
@@ -412,7 +487,7 @@ export function turnCoast(A: AutoCam, dt: number): number {
 // loads; a harness has no store and gets the start. It writes this file's own table and nothing else: the view is the seat's input, so no recording
 // and no digest can tell one tuning from another, and with `tune` off every number is the module's (autoTuneApply).
 const DEG = Math.PI / 180;
-export const AUTO_KEYS = ['rest', 'restAhead', 'swing', 'turnCap', 'swingCap', 'still', 'gap', 'swayFightMax', 'swayMove', 'swayRate', 'leanK', 'lean', 'zoomAmt', 'zoomRate', 'beatSecs'] as const;
+export const AUTO_KEYS = ['rest', 'restAhead', 'swing', 'turnCap', 'swingCap', 'still', 'gap', 'swayFightMax', 'swayMove', 'swayRate', 'leanK', 'lean', 'zoomAmt', 'zoomRate', 'beatSecs', 'lockIn', 'lockM'] as const;
 export type AutoKey = typeof AUTO_KEYS[number];
 export type AutoTuned = Pick<typeof AUTOCAM, AutoKey>;
 export type AutoMode = 'never' | 'rest' | 'gentle' | 'free';
@@ -428,7 +503,7 @@ export const AUTO_MODES: Record<AutoMode, AutoTuned> = { never: { ...GENTLE, res
  *  built' and its least is the first real notch */
 export const AUTO_RANGE: { [K in AutoKey as AutoTuned[K] extends number ? K : never]: [min: number, max: number] } = {
   turnCap: [10 * DEG, 120 * DEG], swingCap: [30 * DEG, 210 * DEG], still: [0.5, 5], gap: [1, 15], swayFightMax: [0, AUTOCAM.swayMax], swayMove: [0, 30 * DEG], swayRate: [2 * DEG, 20 * DEG],
-  leanK: [0, 1.5], lean: [0.5, 5], zoomAmt: [0, 1.5], zoomRate: [0.4, 2.4], beatSecs: [0.5, 8] };
+  leanK: [0, 1.5], lean: [0.5, 5], zoomAmt: [0, 1.5], zoomRate: [0.4, 2.4], beatSecs: [0.5, 8], lockIn: [0, 0.6], lockM: [4, 12] };
 const held = (k: AutoKey, v: number): number => { const r = (AUTO_RANGE as Record<string, [number, number]>)[k]; return (k === 'turnCap' || k === 'swingCap') && v <= 0 ? 0 : Math.max(r[0], Math.min(r[1], v)); };
 export const AUTOTUNE_START: AutoMode = 'gentle';
 export const AUTOTUNE: { mode: AutoMode; over: Partial<AutoTuned> } = { mode: AUTOTUNE_START, over: {} };

@@ -467,7 +467,8 @@ fn applyImpulses(p: ptr<function, Particle>, kind: u32, slot: u32, sn: ptr<funct
   // flies takes its drag against the moving air below
   var vAir = vec3f(0.0); let wk = windKnobs();
   let windy = numWinds() > 0u && !isNew && dt > 0.0;
-  if (windy) { vAir = windAir(p.pos, kind, select(-1e9, p.pos.y - 0.012, asleep)) * windCoupling(kind, wk.debrisK); }
+  let ember = emberIs(kind, p.color);   // (an ember off a fire goes with the air as a puff of dust does — the wind's records name the kinds they move, and no record names a spark — where a spark does not: particles_common.wgsl EMBER)
+  if (windy) { vAir = windAir(p.pos, select(kind, P_DUST, ember), select(-1e9, p.pos.y - 0.012, asleep)) * select(windCoupling(kind, wk.debrisK), 1.0, ember); }
   if (windy && isSheet && asleep) {
     let spd = length(vAir);
     if (spd > 0.03) {
@@ -498,6 +499,7 @@ fn applyImpulses(p: ptr<function, Particle>, kind: u32, slot: u32, sn: ptr<funct
       shardAir(&p, &sn, &sw, k0, dt);
     } else {
       p.vel.y -= k0.x * dt;
+      if (emberIs(kind, p.color)) { let ph = f32(p.seed & 1023u) * 0.00614; p.vel += vec3f(EMBER_SWIRL * sin(p.age * 5.1 + ph), k0.x + EMBER_LIFT, EMBER_SWIRL * cos(p.age * 4.3 + ph * 1.7)) * dt; }   // EMBER (game/fire.ts): lighter than the hot air it left the fire in — it climbs, wandering, until it burns out
       if (kind == P_DUST && steamIs(p.color)) { p.vel.y += 2.0 * k0.x * dt; }   // STEAM (snowBreath.ts): warm breath is lighter than the air — the puff's own slow settling, the other way up
       p.vel = vAir + (p.vel - vAir) * exp(-k0.y * dt);   // drag against the MOVING air (vAir = 0: × e^−k·dt exactly as it was)
     }
@@ -582,7 +584,7 @@ fn applyImpulses(p: ptr<function, Particle>, kind: u32, slot: u32, sn: ptr<funct
   // ---- shade
   let u = p.age / p.life;
   if (kind == P_SPARK) {
-    p.shade = sparkRadiance(u, k1.y, k1.w);
+    if (emberIs(kind, p.color)) { p.shade = emberRadiance(u, p.color, k1.w, p.seed, p.age); } else { p.shade = sparkRadiance(u, k1.y, k1.w); }
   } else if (isSheet) {
     // the face the eye sees: light falling on it, TRANS of what falls on the other face (a leaf against a torch glows), the cache's ambient — facing up at rest,
     // the sphere's mean in the air (both faces)

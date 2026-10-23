@@ -1631,6 +1631,61 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   idea; a recording played back writes its own numbers into the table until the visit ends (the mode's line then says they are not the
   mode's). The modes' numbers are FIRST GUESSES for his hand to settle (a row he settles on becomes a mode's own). Never seen on a GPU.
   NOBODY HAS PLAYED IT: whether gentle is calm enough, and whether a slow turn that does not carry his aim reads right, are his to say.
+- **The auto camera comes in on a man he sneaks up on: the soft lock** (`AUTOCAM.lock`, `src/host/autocam.ts` read and frame, 10-23; the
+  maintainer, of a review of Chaos Theory's "closer than ever" chapter: "there's definitely stuff for the auto camera mode to learn"). WHAT THE
+  REVIEW SAYS OF THAT CAMERA (from a machine's rough transcript of its narration, so in our words): with an enemy on screen the camera shifts
+  its focus to him, more strongly the nearer the player gets, as if softly locked on, and most players never notice; in a narrow hall it shifts
+  to the side he is not on to show what is ahead; at a corner it moves out a little to see round it. WHAT WAS FOUND IN THE CODE: the mode leaned
+  the frame half way to the middle of the men he could shoot, never came in on a man in his line ("it never comes in on a fight"), and a held
+  button stilled the frame, so through the whole of a stalk (the held click) the camera did nothing.
+  THE RULE: the man he is stalking (`game/stalk.ts`, while its click is held), or else the nearest hostile man the picture shows in his line
+  who is not `alert` and whom he could take (`close.ts closeSubject`; one searching counts, as for a stalk), is the lock's man from `lockM`
+  (8 m) in. The man it has is kept until another is `lockStick` (0.75 m) nearer and through `lockLinger` (1 s) out of his line (a pillar he
+  passes). NOBODY is the lock's man in a FIGHT: while any hostile man is alert, in the picture or not, and for `lockCalm` (4 s) after; and but for a stalk
+  nobody is while he is not sneaking (the close-in mode's list less the wall hold: the rifle up, a sprint, a body in tow, a kick, a lock, the
+  wand, hands at work; and a throw being aimed. The list is kept by hand beside `close.ts modeNow`). Its strength goes from none at `lockM` to full
+  at `lockNearM` (2 m), eased (`lockEase`). By that strength the frame goes from the middle of the men he could shoot to the middle of the two
+  of them (`lockK`), and the camera goes from where it would be toward the lock's own distance: the place's zoom less `lockIn` (40%), never so
+  near that another man he could shoot leaves the picture's reach (`fitMost` stands; a door ahead and the squad's beat hold the zoom out under
+  it, not the lock in full). The zoom as it was is worked out untouched under it (`A.goal`: the place's own zoom, the band; the lock's is
+  `A.lockTo`), so it begins with no step under the sky and in a room alike. `lockIn` goes by the hand's share of the zoom (`zoomAmt`): with
+  either at none the distance is as it was to the bit. One rule of the zoom gives way to it: "it never comes in on a fight" holds the zoom
+  out while any man is in his line, and the lock's man lets it back in by the lock's strength (else a zoom gone out to fit men earlier would
+  starve it). A man out of his line for the linger, or stalked from behind something, is framed as he was in it. A man he holds keeps the
+  camera in close (the close-in mode's zoom under it) and leaves the frame as it is. A held button stills it as it stills the frame (the
+  strength, and the share it takes: the men he could shoot are still kept in the picture), but for the held click of a stalk or of the wait
+  at a corner (it aims at nothing; the wait is read off the stalk polish's own picture, `stalkWait`), a man in his arm, and letting go once a
+  fight has begun (a stalk the man broke, the button still down: the camera goes back out; a man shot under a held aim with nobody onto him:
+  it waits for the button). A fight stamped ahead of the clock (a checkpoint loaded) is none. The view gone to somebody else (plan mode, a
+  show): the lock lets go at once and the distance is the zoom's own (`autoRest`).
+  NO TURN is added: it moves and zooms the frame only.
+  SWITCH: on in the page (`?autolock=0` = the frame and the zoom as they were), OFF in the module and on the frozen stand
+  (`FROZEN_HOLDS['AUTOCAM.lock']`, `TPS_AUTOLOCK=1`; pinned in `host/standup.ts`). It rides `AUTOCAM`; a recording from before the key replays
+  with it off (`journal.ts applyKnobs`). The view is the seat's input: no digest can tell it on from off.
+  ROWS (under the tuning's, only with the lock on): "Zoom in when you sneak up" (`lockIn`, none to 60%) and "Start zooming in from" (`lockM`,
+  4 to 12 m). They are numbers of every mode, kept as the tuning's rows are.
+  CHECK: `autocam` lines 21 to 23, both stands, `AUTOLOCK_BREAK=1` red on 21 and 22 (`AUTOCAM_BREAK=1` on 22 too). 21, the frame function:
+  the frame and the zoom by the lock's strength from rest with no step; the place's zoom at 1.15 and at 0.92; a plain held button, a stalk's,
+  and the button still down with his man gone (kept in close with nobody onto him, let go in a fight); two men with the lock's share told
+  apart from the fight's; a man in his arm; a second man kept in reach and a door ahead that does not hold it out; `lockIn` at none and
+  `zoomAmt` at none and at a half; the zoom held out for a man in his line as it was (no lock's man, a fight, the lock's zoom at none, the
+  switch off: the last two to the bit) and let in by the lock's man; his man out of the line framed as in it; the view gone to somebody
+  else. 22, the
+  whole Game on the free and the fixed step: a man stood at the end of a clear line and closed on in stages, a button held as he is moved back
+  out, a second man 0.4 m and 1.5 m nearer, the stalked man over the nearest, a man in his arm, half a second and a second and a half out of
+  his line, the rifle up, a body in tow, the corner wait's click, the man onto him, the calm after, and a fight stamped ahead of the clock.
+  NOT in a line: a real stalk begun by the held click and a man really held (the lock is handed its man), and a walk up to him past a door
+  (he is put there in stages). `tools/qa/autocam-page.cjs` (`ONLY=tune`) does 9 m and 3 m on the real page.
+  MEASURED (one floor, one seed, headless, the frozen stand): the hand's distance 21 m; at 8 / 7 / 5.5 / 4 / 3 / 2 m from him the camera at
+  20.6 / 20.0 / 17.5 / 14.3 / 12.5 / 11.7 m (the page's stand ends at 10.2 m: the close-in mode's own zoom is under it there); a button held
+  and he 6 m off again: 15.8 m, 17.0 once it is up.
+  NOT DONE, from the same review: the corridor's side shift and the move out at a corner (the frame already leans to the room he is in and to
+  the door ahead; neither was built or measured against these); his head turning to the man is the sneak's, which may ask the camera for its
+  man (`autoLock`). KNOWN: the hand taking the view back in the middle of a sneak puts the distance back to the hand's own, as it always did,
+  and from full lock that is a long way out (eased by the camera's own damping); a stalk's click still held after its man is lost with
+  nobody onto him is a plain held button, and the camera stays in until it is up; with the stalk polish off the corner wait's click is a
+  plain button too. Nobody has played it, and it has never been seen on a GPU: whether 40% is too much, and whether coming back out when a man turns on him
+  reads as a lurch, are his to judge.
 - **A mission's page loads behind that mission's brief and waits for Start** (2026-10-19; the maintainer, after watching a first-time player: "having
   the loading screen make more sense (e.g. being a pre mission brief) that you then click through rather than flashing the controls"; that player's
   notes: "stay on loading screen longer, would like to read"). `src/ui/loadbrief.ts`. BEFORE: a page whose address names a mission booted behind the

@@ -134,14 +134,14 @@ const LESSON: LessonData = {
     { id: 'move', line: 'Press [B] on the yard to move them in', after: { line: 'They\'re using the smoke to get to the yard' }, allow: ['order'], cue: 'break', at: YARD_MARK, done: { is: 'squad', area: YARD_IN }, hold: 0.6 },
     { id: 'gate', line: 'They\'re holding the gate. The enemies from the roadblock are coming', at: [14.5, 0.02, 19.9], done: { is: 'cue', name: 'roadblock' } },   // (no hold: with the roadblock already down when the squad sets, the line never comes up)
     // ---- indoors ----
-    { id: 'stack', line: 'Press [B] on the door to stack up', after: { line: 'They\'re stacking up on the door' }, explain: { title: 'Doors', text: 'The way into a room is usually its door. Point at a door and press [B] to stack the squad up beside it.\nThey\'ll wait there until you say go.' }, cue: 'indoors', checkpoint: 'the yard', at: TEA_DOOR, done: { is: 'any', of: [{ is: 'stackOn', door: 'tea', set: true }, { is: 'taken', room: 'tea' }, { is: 'squad', area: R.tea.bounds, n: 3 }] } },
+    { id: 'stack', line: 'Press [B] on the door to stack up', after: { line: 'They\'re stacking up on the door' }, explain: { quiet: true, title: 'Doors', text: 'The way into a room is usually its door. Point at a door and press [B] to stack the squad up beside it.\nThey\'ll wait there until you say go.' }, cue: 'indoors', checkpoint: 'the yard', at: TEA_DOOR, done: { is: 'any', of: [{ is: 'stackOn', door: 'tea', set: true }, { is: 'taken', room: 'tea' }, { is: 'squad', area: R.tea.bounds, n: 3 }] } },
     { id: 'go', line: 'Press [F] to send them in', after: { word: 'They\'re going in' }, allow: ['word'], at: TEA_DOOR, done: { is: 'any', of: [{ is: 'taken', room: 'tea' }, { is: 'all', of: [{ is: 'word' }, { is: 'squad', area: R.tea.bounds, n: 3 }] }] }, hold: 1.5 },
     { id: 'kitchen', line: 'Press [B] on the kitchen door, then [F]', after: { line: 'Press [F] to send them in', word: 'They\'re taking the kitchen' }, checkpoint: 'the tea room', at: PASS_DOOR, done: { is: 'any', of: [{ is: 'taken', room: 'kitchen' }, { is: 'all', of: [{ is: 'word' }, { is: 'squad', area: R.kitchen.bounds, n: 3 }] }] }, hold: 1.5 },   // (a second tap of the command key sends a stack in with no word: the room taken is the step done, however they went)
     // ---- the wall ---- (a door is where a room expects them)
-    { id: 'charge', line: '[X] on the wall', after: { line: 'They\'re putting the charge on the wall', on: ['wallCharge'] }, explain: { title: 'Walls', text: 'The store is locked, and the enemies inside are watching the door anyway.\nA charge on the wall will get your squad in where nobody\'s waiting.' }, menuLine: 'Press [5], then [3] for a charge', pageLine: 'Press [3] for a charge', noTap: 'Keep [B] held down', eye: WALL_EYE, allow: ['menu', 'ring'], cue: 'wall', checkpoint: 'the kitchen', at: WALL_MARK, done: { is: 'any', of: [{ is: 'flag', flag: 'chargeClear' }, { is: 'taken', room: 'store' }, { is: 'squad', area: R.store.bounds, n: 3 }] }, hold: 0.4 },   // (the word's line waits for the squad to stand off: a charge blown with men beside it blinds them)
+    { id: 'charge', line: '[X] on the wall', after: { line: 'They\'re putting the charge on the wall', on: ['wallCharge'] }, explain: { quiet: true, title: 'Walls', text: 'The store is locked, and the enemies inside are watching the door anyway.\nA charge on the wall will get your squad in where nobody\'s waiting.' }, menuLine: 'Press [5], then [3] for a charge', pageLine: 'Press [3] for a charge', noTap: 'Keep [B] held down', eye: WALL_EYE, allow: ['menu', 'ring'], cue: 'wall', checkpoint: 'the kitchen', at: WALL_MARK, done: { is: 'any', of: [{ is: 'flag', flag: 'chargeClear' }, { is: 'taken', room: 'store' }, { is: 'squad', area: R.store.bounds, n: 3 }] }, hold: 0.4 },   // (the word's line waits for the squad to stand off: a charge blown with men beside it blinds them)
     { id: 'blow', line: 'Press [F] to blow it', after: { word: 'They\'re going through the wall' }, eye: WALL_EYE, at: WALL_MARK, done: { is: 'any', of: [{ is: 'taken', room: 'store' }, { is: 'squad', area: R.store.bounds, n: 3 }] }, hold: 1.5 },
     // ---- the dark ---- (the card says what light is to both sides before the lights go; what the bunkhouse then does is the showing of it)
-    { id: 'breaker', line: 'Press [B] on the breaker box to cut the lights', after: { line: 'A buddy team is going for the breaker box' }, explain: { title: 'Light', text: 'Enemies can only fight what they can see. In the dark they\'ll slow down and turn on flashlights.\nYour squad has night vision, so cut the lights and you\'ll own the dark.' }, cue: 'dark', checkpoint: 'the store', at: BREAKER, done: { is: 'flag', flag: 'dark' } },
+    { id: 'breaker', line: 'Press [B] on the breaker box to cut the lights', after: { line: 'A buddy team is going for the breaker box' }, explain: { quiet: true, title: 'Light', text: 'Enemies can only fight what they can see. In the dark they\'ll slow down and turn on flashlights.\nYour squad has night vision, so cut the lights and you\'ll own the dark.' }, cue: 'dark', checkpoint: 'the store', at: BREAKER, done: { is: 'flag', flag: 'dark' } },
     { id: 'nv', line: 'Press [N] to turn on night vision', allow: ['nvg'], cue: 'nv', done: { is: 'flag', flag: 'nv' } },
     { id: 'torches', line: 'They\'re using flashlights, so you can see where they are', cue: 'torches', at: [27.6, 0.02, 13.2], done: { is: 'cue', name: 'torches' } },
     { id: 'bunk', line: 'Press [B] on the last room\'s door, then [F]', after: { line: 'Press [F] to send them in', word: 'They\'re taking the last room' }, at: BUNK_DOOR, done: { is: 'any', of: [{ is: 'taken', room: 'bunk' }, { is: 'all', of: [{ is: 'word' }, { is: 'squad', area: R.bunk.bounds, n: 3 }] }] }, hold: 1.5 },
@@ -179,6 +179,14 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const cleared = (id: string, x0: number, z0: number, x1: number, z1: number, ring = 0.4) => {
     lay(x0 - ring, z0 - ring, x1 + ring, z1 + ring, S.snowOld, 0.004); lay(x0, z0, x1, z1, M.dust, 0.006);
     zones.push({ id, mat: 'asphalt', x0: x0 - ring, z0: z0 - ring, x1: x1 + ring, z1: z1 + ring });
+  };
+  /** GROUND MELTED ROUND A FIRE: the same two layers as `cleared`, each laid as four slabs through one centre 45 degrees apart (an octagon to the eye), the
+   *  slabs a little unequal and the whole turned off the walls' lines, so that a round drum stands in a rough round patch and not on a square tile (the
+   *  maintainer's close look at a burning drum: the patch read as a hard grey tile under the fire's light). `r` = the bare earth's reach from the centre */
+  const melted = (id: string, x: number, z: number, r: number, ring = 0.35) => {
+    const T = Math.tan(Math.PI / 8), oct = (R: number, m: Mat, y: number, turn: number, f: number[]) => { for (let k = 0; k < 4; k++) add({ c: [x, y / 2, z], h: [R * f[k], y / 2, R * T], yaw: turn + k * Math.PI / 4, ...m }); };
+    oct(r + ring, S.snowOld, 0.004, 0.2, [1, 0.92, 1.06, 0.9]); oct(r, M.dust, 0.006, 0.5, [0.94, 1.05, 0.9, 1]);
+    zones.push({ id, mat: 'asphalt', x0: x - r - ring * 0.6, z0: z - r - ring * 0.6, x1: x + r + ring * 0.6, z1: z + r + ring * 0.6 });
   };
   /** DECAL: a flat mark at the floor, w along local x, d along local z */
   const flat = (x: number, z: number, w: number, d: number, m: Mat, yaw = 0) => add({ c: [x, 0.012, z], h: [w / 2, 0.003, d / 2], yaw, ...m, flags: DECAL });
@@ -383,7 +391,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   cleared('tea_door', 8.15, 11.64, 10.35, 13.0, 0.4);
   cleared('kitchen_door', 16.5, 11.64, 19.9, 12.7, 0.35);                                     // (the kitchen's door and the mains box beside it)
   cleared('bunk_door', 27.6, 15.5, 28.86, 17.0, 0.35);
-  cleared('brazier', 11.0, 13.9, 12.0, 14.9, 0.35);
+  melted('brazier', 11.5, 14.4, 0.55, 0.35);                                                 // (round, as the drum is: it was a square of slush with a square of earth in it)
   cleared('generator', 30.2, 7.8, 33.6, 8.9, 0.3);
   // ---- trodden paths: from the gate to each door, between the doors, round to the court ----
   grp('snow.paths');
