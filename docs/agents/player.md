@@ -1264,6 +1264,16 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   foot is down under it), and the plant right after it, which the first key swallows, lays none either: a gap of one print at such a turn; never
   seen on a GPU. A FIRST CUT, thrown out in review: the count ran from the last footfall FILED and was kept through a stop. After one about-turn
   every later footfall of a steady walk was filed a fifth of a turn before the foot came down (the first key swallowed each plant and the count
-  never met the feet again), and a debt from before a stop was paid a few frames into the next nudge. Do not go back to it. NOT DONE: never heard in
-  a page; nobody has played it; what a shaking hand on a mouse does to the cycle was staged with the cursor put square ahead and square behind, not
-  recorded from a hand; the keypad plant and the kick are covered by the takedown's line by reading (the same early return), not staged.
+  never met the feet again), and a debt from before a stop was paid a few frames into the next nudge. Do not go back to it. A SAVE does not
+  carry the count or its stamp (`Player.stepOwed`, `stepAt`: `savestate.ts` sets them 0 and -1 on a load, and the card's stand line holds that a
+  checkpoint does not name them), so a load and the game continued are not the same in those two fields. It costs no footfall: a load is a standing
+  start whatever these fields are (staged once, not a card: both keys raised on the frozen stand, one seed, 80 saves made mid-walk, plain and with
+  the cursor across him every 10, 12 and 15 frames: 1.55 m/s at the save and 0 after the load, so the loaded game never filed the continued one's
+  footfalls with or without the debt), and with the debt put back by hand after the load the three seconds after it filed the same footfalls on
+  the same frames in 80 of 80, because he is under 0.4 m/s on the first frame, which clears the count. Should a save ever carry his speed, these
+  two fields go with it. The rollback snapshot walks every field of the player (`rollback.ts`), by reading. NOT DONE: never heard in a page;
+  nobody has played it; what a shaking hand on a mouse does to the cycle was staged with the cursor put square ahead and square behind, not
+  recorded from a hand; the keypad plant and the kick are covered by the takedown's line by reading (the same early return), not staged. IN A
+  PAGE (headless Chromium, the software adapter, the solo night): the key reads on, and off with `?footfallowed=0`; 31 frames of a shaken walk
+  drawn with no page or console error; stepped with no picture, three seconds from the same spot and foot filed 6 footfalls on a plain walk
+  with the key on or off (the same frames), and with the cursor across him every 10, 12 and 15 frames 6, 7 and 6 with it on against 3, 4 and 3.
