@@ -147,7 +147,7 @@ export async function snowBlastCheck(o: { verbose?: boolean } = {}): Promise<boo
       if (has) hush(() => B.g.destr.blast([Y[0], 0.2, Y[2]], { who: 0, radius: R0, power: 1 })); const S = snowBlastStats(B.g);
       verdict(has && S.blasts === 1 && S.marked === 1 && marks(B.g) - m0 > 800, 'feed — a blast through the destruction engine is heard, once', `g.destr.blast over the yard (destruction on: ${DESTRUCTION.on}): ${S.blasts} heard, ${S.marked} marked the snow, ${marks(B.g) - m0} texels`); DESTRUCTION.on = was.destr; }
     // ---- dig: the standing snow (the field's hills, baked once) is dug out by a blast in it
-    { const B = await rig('pass.json', true); B.step(3); const g = B.g, F = g.snowField, bx: any[] = g.level.boxes; const S = snowBlastStats(g);
+    { const B = await rig('pass.json', true); B.step(3); const g = B.g, F = g.snowField, bx: any[] = g.level.boxes; const S = { get last() { return snowBlastStats(g).last; }, get dug() { return snowBlastStats(g).dug; } };   // (read as it stands each time: the read-out is a copy)
       const inPlan = (b: any, x: number, z: number, pad = 0) => { const c = Math.cos(b.yaw ?? 0), sn = Math.sin(b.yaw ?? 0), px = x - b.c[0], pz = z - b.c[2]; return Math.abs(c * px - sn * pz) <= b.h[0] + pad && Math.abs(sn * px + c * pz) <= b.h[2] + pad; };
       const snowBox = (b: any, i: number) => i !== F?.slab && !(b.flags & 3) && snowPaintOf(b) === 'snow' && b.c[1] - b.h[1] <= 0.06 && b.c[1] + b.h[1] >= 0.03;
       // a bank: the crest tier of deep snow (its top over 0.3 m, the hill over it higher still), the biggest first
@@ -213,6 +213,29 @@ export async function snowBlastCheck(o: { verbose?: boolean } = {}): Promise<boo
         'puff — a ring of powder is filed at the blast as wisp records with no gust length; none before it, none with the wisps off', `${pn} wisps in ${puffs.length} record${puffs.length === 1 ? '' : 's'} (SNOWBLAST.puff ${K.puff})${p0 ? ` at (${p0.pos[0].toFixed(1)}, ${p0.pos[2].toFixed(1)}), disc ${p0.opts.radius.toFixed(2)} m, ${p0.opts.speed} m/s out, colour [${p0.opts.color}]` : ''} · before the blast ${pool.recs.slice(0, n0).filter(isPuff).length} · the wisps' switch down: ${poolN.recs.filter(isPuff).length}`);
       const up = r.src.filter(n => n > 0).length; const wantUp = Math.round(K.airS / DT);
       verdict(r.src[0] === 1 && up >= wantUp - 2 && up <= wantUp + 2 && r.src[r.src.length - 1] === 0, 'air — one short shove in the air\'s sources, gone when its time is up', `${r.src[0]} source on the blast's frame, live for ${up} frames (airS ${K.airS} s = ${wantUp}), ${r.src[r.src.length - 1]} at the end`); }
+    // ---- owed: what a blast owes the pool is the host's book (snowBlast.ts SnowBlastShown), not the game's
+    { const RB = await import(`${ROOT}/src/game/rollback.ts`); const { hostPutBack } = await import('./putback-host.ts'); const K = SNOWBLAST;
+      /** the recycler run with NO pool: the same frames as `fly`, on a host that draws no particles */
+      const bare = (R: any, frames: number, each?: (i: number) => void) => { const e = R.g.engine as any; const had = { p: e.particles, gp: e.settings.gpuParticles };
+        for (let i = 0; i < frames; i++) { R.set(); each?.(i); updateAirSim(R.g, DT); e.particles = null; e.settings.gpuParticles = false; updateSnowFx(R.g, DT, { distance: 21, target: Y } as any); e.particles = had.p; e.settings.gpuParticles = had.gp; } };
+      const book = (R: any) => (R.g.engine as any).hostBooks?.snowBlast; const puffN = (recs: any[]) => recs.filter(isPuff).reduce((n: number, p: any) => n + p.count, 0);
+      const A2 = await rig('pass.json', true); A2.step(3); const B2 = await rig('pass.json', true); B2.step(3); const pa = mk();
+      fly(A2, pa, 12, Y, (i) => { if (i === 0) snowBlastAt(A2.g, Y, R0); }); bare(B2, 12, (i) => { if (i === 0) snowBlastAt(B2.g, Y, R0); });
+      if (process.env.SNOWBLASTBOOK_BREAK === '1') (A2.g as any).snowBlastBook = book(A2);   // (the break: the book hung on the game itself, as its counts were)
+      const apart = (RB.stateAlike(A2.g, B2.g, 20000) as string[]).filter(l => /snowBlast/.test(l)); const SA = snowBlastStats(A2.g), SN = snowBlastStats(B2.g);
+      const tally = (S: any) => [S.blasts, S.marked, S.craters, S.dug, S.live].join(' ');
+      // a put-back while the blast is live: the ring was emptied with the book, so the blast is owed whole again; one that is over is owed nothing
+      const C = await rig('pass.json', true); C.step(3); const pc = mk(); (pc.P as any).clear = () => pc.P.clearRain(); const snap = RB.takeSnapshot(C.g);
+      fly(C, pc, 6, Y, (i) => { if (i === 0) snowBlastAt(C.g, Y, R0); }); const n1 = puffN(pc.recs), live1 = snowBlastStats(C.g).live;
+      { const e = C.g.engine as any, had = e.particles; e.particles = pc.P; await hostPutBack(C.g); e.particles = had; } const gone = book(C) === undefined;
+      fly(C, pc, 6, Y); const n2 = puffN(pc.recs) - n1, fresh = book(C)?.puffs;
+      fly(C, pc, 40, Y); const n3 = puffN(pc.recs) - n1 - n2, live3 = snowBlastStats(C.g).live, rows3 = book(C)?.owed.length;
+      // the game put back to before the blast with the host not told (a check's own restore): the blast made again is another one under the same serial, owed whole
+      RB.restoreSnapshot(snap); const m0 = puffN(pc.recs); fly(C, pc, 6, Y, (i) => { if (i === 0) snowBlastAt(C.g, Y, R0); }); const n4 = puffN(pc.recs) - m0;
+      verdict(apart.length === 0 && SA.puffs === K.puff && SN.puffs === 0 && SA.throwFrames > 0 && SN.throwFrames === 0 && tally(SA) === tally(SN) && SA.live === 1
+        && n1 === K.puff && live1 === 1 && gone && n2 === K.puff && fresh === K.puff && n3 === 0 && live3 === 0 && rows3 === 0 && n4 === K.puff,
+        'owed — what a blast owes the pool is the host\'s book: a pool and none leave the game one state, a put-back owes a live blast whole again',
+        `one blast, twelve frames, over a pool and over none: values of the blast's apart in the game's state ${apart.length}${apart.length ? ` (${apart.slice(0, 2).map(s => s.split(': ')[0]).join(', ')})` : ''} · the game's tallies (blasts, marked, craters, dug, live) ${tally(SA)} | ${tally(SN)} · the host's: ${SA.puffs} | ${SN.puffs} wisps filed, ${SA.throwFrames} | ${SN.throwFrames} throw frames · six frames in (${n1} filed, ${live1} live) the host's put-back: the book dropped ${gone}; six more: ${n2} filed by a fresh book (its count ${fresh}); forty more: ${n3} filed, ${live3} live, ${rows3} rows · the game put back to before the blast, the host not told, and the blast made again: ${n4} filed${process.env.SNOWBLASTBOOK_BREAK === '1' ? ' (SNOWBLASTBOOK_BREAK=1: the book hung on the game — this line must fail)' : ''}`); }
     // ---- off
     { const B = await rig('pass.json', false); B.g.tune.chaos = 0.5; B.step(3); const pool = mk(); const m0 = marks(B.g); let ret: boolean[] = [];
       DESTRUCTION.on = true; const r = fly(B, pool, 30, Y, (i) => { if (i === 3) { ret.push(snowBlastAt(B.g, Y, R0)); hush(() => B.g.destr?.blast?.([Y[0] + 2, 0.2, Y[2]], { who: 0, radius: R0, power: 1 })); } }); DESTRUCTION.on = was.destr;
