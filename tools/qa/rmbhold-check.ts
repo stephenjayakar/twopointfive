@@ -5,6 +5,7 @@
 //             a second, nobody was ever in the arm, and the room hears it `rmbLoud` further up the scale than the knockout was.
 //   hold      the button kept down: no blow; at `rmbTapSecs` he is in the arm, the arm closes the frame the hold has him (no key, no commit beat), and he
 //             goes down choked with the button never let go — and nothing the room hears of it is as loud as the tap's knockout.
+//   early     the button let go while the grab is still landing: he is held, the arm never closes, and nothing louder than the grab is heard.
 //   release   the button let go half a second into the choke: he breathes, he is held, and three seconds on he is still on his feet in the arm.
 //   stopped   the choke stopped by something else (a step, a tap of the key) with the button still down: it is a hold, and the button does not start it again.
 //   again     in the arm the button is the same: pressed again and kept down it chokes, let go he breathes; a one-frame click there is the whole choke.
@@ -17,7 +18,7 @@
 //   off       the key down: the press itself is the knockout (begun on the press's own frame, as loud as it was), and the button kept down takes nobody.
 //   harness   the key is a row of the two stands' list with its word, off on the frozen stand and on in the page (`?rmbhold=0` puts it off), rides a
 //             recording's tables, and a recording from before the key replays with it off.
-// RMBHOLD_BREAK=1 = the key left down where tap, hold, release, stopped, again, late, words and page ask for it up: each must FAIL.   exit 0 = all hold · 1 = one does not
+// RMBHOLD_BREAK=1 = the key left down where tap, hold, early, release, stopped, again, late, words and page ask for it up: each must FAIL.   exit 0 = all hold · 1 = one does not
 // THE HARNESS HAS NO GPU AND NO EARS: nothing here says how the choke out of a held button LOOKS, or how the louder blow SOUNDS.
 import { standUp, ROOT } from './headless.ts';
 
@@ -69,6 +70,11 @@ async function tapAndHold() {
     `a blow ${H.blowAt >= 0} · in the arm ${secs(H.armAt)} after the press (a tap is under ${f2(CLOSE.rmbTapSecs)} s) · the arm closing ${secs(H.chokeAt)} · down ${secs(H.downAt)} · filed ${HF.join(', ') || 'nothing'} · the loudest the room heard ${f2(H.loud)} (the tap: ${f2(T.loud)})`);
 }
 async function releaseAndStop() {
+  console.log('\n=== early: let go while the grab is landing, he is held and the arm never closes ===');
+  const E = await world(up()); E.press(); for (let i = 0; i < 120 && E.armAt < 0; i++) E.step(); E.step(4); const landing = E.g.player.holding?.phase; E.lift(); E.step(120);
+  verdict(E.armAt >= 0 && landing === 'grab' && E.g.player.holding?.g === E.A && E.g.player.holding.phase === 'held' && E.chokeAt < 0 && E.A.state !== 'dead' && E.g.player.holding.rmbChoke === undefined && E.loud < 0.14,
+    'the button kept down takes him into the arm and is let go four frames into the grab: two seconds on he is held, on his feet, the arm never closed on his throat, and nothing as loud as the choke was heard',
+    `in the arm ${secs(E.armAt)} after the press · let go in the ${landing ?? 'no'} phase · now ${E.g.player.holding?.phase ?? 'not held'} · the arm closed ${E.chokeAt >= 0} · the loudest the room heard ${f2(E.loud)} (the grab is 0.12, the arm closing 0.15)`);
   console.log('\n=== release: let go mid-choke, he breathes and is held ===');
   const R = await world(up()); R.press(); for (let i = 0; i < 300 && R.chokeAt < 0; i++) R.step(); R.step(30); const choking = R.g.player.holding?.phase === 'choke'; R.lift(); R.step(20); const ph = R.g.player.holding?.phase; R.step(180);
   verdict(choking && ph === 'held' && R.g.player.holding?.g === R.A && R.g.player.holding.phase === 'held' && R.A.state !== 'dead' && R.g.player.holding.rmbChoke === undefined,

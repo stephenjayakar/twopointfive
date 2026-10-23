@@ -2014,7 +2014,7 @@ export class Game {
       // the man a click with empty hands is on (the one in reach), and whether the choke is his to be given (close.ts CLOSE.rmbHold: the right button let
       // go inside a tap is the knockout, kept down it is the choke — off, or beside a man who can only be struck, the press itself is the knockout)
       const inReach = pl.holstered ? (this.nearby.find(it => it.kind === 'guard' && it.inReach && !(it.guard && (this.rescue?.isHostage(it.guard) || this.snatch?.out.owns(it.guard)))) ?? null) : null;
-      const chokeOn = !!inReach?.guard && !inReach.guard.civ && this.rails.offers('grab') && closeAt(this, inReach.guard, pl.char.pos).grab;
+      const chokeOn = CLOSE.rmbHold && !!inReach?.guard && !inReach.guard.civ && this.rails.offers('grab') && closeAt(this, inReach.guard, pl.char.pos).grab;
       const rb = closeRmb(this, CLOSE.on && CLOSE.rmbHold && (two || bare) && pl.holstered && free, input.rmb(), input.rmbHit(), dt, !!inReach, chokeOn, input.hit('Blur') || input.hit('Paused')), blow = knife || ((two || bare) && rb !== null);   // (close.ts CLOSE.noKnife: no knife — the left click is no blow, the right click the knockout; with the two-button blow live the left click is the knife and the right click the knockout)
       const clicked = blow ? inReach : null, viaClick = clicked?.guard ?? null;   // click, hands empty: the man in reach
       const stalked = stalkGrab(this);   // (stalk.ts: the held click has walked him in to the man's back — the grab it ends in is the row's own)

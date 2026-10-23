@@ -1254,9 +1254,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (1.2 s) for him to walk into it; a button the page takes away (a blur, the pause card) is no tap. The man's row says "RMB  knock
   him out  ·  RMB  hold to choke him" where the hold is the choke. The lab has the toggle and both numbers; the debugger has the
   toggle beside "no knife". Off = the press itself is the knockout everywhere. THE CHECK is `rmbhold-check.ts` (`probes.ts rmbhold`,
-  in the stealth and takedown families; `RMBHOLD_BREAK=1` reds eight of its eleven lines), both stands: a four-frame tap begins the
+  in the stealth and takedown families; `RMBHOLD_BREAK=1` reds nine of its twelve lines), both stands: a four-frame tap begins the
   blow 0.08 s after the press and he is down at 0.37 s, heard at 0.45; kept down he is in the arm at 0.22 s, the arm closing at
-  0.70 s, down choked at 3.32 s, the loudest of it 0.30; let go mid-choke he is held three seconds on; eased off with the button down
+  0.70 s, down choked at 3.32 s, the loudest of it 0.30; let go while the grab is still landing he is held and the arm never closes; let go mid-choke he is held three seconds on; eased off with the button down
   it does not start again; in the arm the button chokes while held and a one-frame click is the whole choke; a press from 1.7 m takes
   him once in reach, and not after the wait; a blur is no tap; from the front the press is the knockout on its frame at 0.50; the
   row's words; with the stalk as the page has it the held button's grab is the stalk's own, counted once; with the click the only way
