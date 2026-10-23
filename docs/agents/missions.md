@@ -617,8 +617,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     step `all` has a NEW card, "Pick everyone again" (the go sends only the teammates who are picked — the one thing here a player would carry wrong into a real mission).
     That card names no key: the word is locked until the next step, and a card that said "press [F]" on a step where [F] is dead was a review's find. KNOWN: `faceA` is 14
     words and `faceB` 14 (the guide: about twelve), each two deeds in one line (pick two, drag an order); cutting each into two steps wants a lesson test that does not
-    exist (two picked and neither on an order: `picked`'s `free` asks about stacks only), the frame's to add. A click is written "right click" as the other missions' lines
-    are; the guide's own pairs write "right-click": one or the other is the word sweep's.
+    exist (two picked and neither on an order: `picked`'s `free` asks about stacks only), the frame's to add. A click is written "right-click" and the squad's word is "say go", as the guide's owner has the rest of the game
+    (three wording notes of its read, taken the same night; `faceB` got its comma back from that read).
     THE LOOKOUT is back on `word2` (`HALL_EYE`, one const for the hall's five steps): a frame's eye is the picture's alone since `RAILS.eyeView`, so the squad picks its
     entry by what its own men saw. IT LEANS ON THAT RULE: with `?eyeview=0` the gunner is seen through the eye, the squad takes a can and the first men are in at 5.9 and
     6.1 s, not 1.2 (a review's run, two seeds); no check plays the mission with it off. With four men up the step's eye is the picture's fifth and last place.
