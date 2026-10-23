@@ -54,8 +54,8 @@ export const FIRE = {
   embers: 10,
   /** THE SMOKE (the solver's units: 6 /m of extinction a unit of density, +1.6 m/s² a unit of heat): how high over the coals the source's middle is as a share of the
    *  flame's height (its foot, a radius lower, stays over a standing man's head on a drum: tools/qa/fire-check.ts holds it), the source's radius (m) and its least width in cells, what it lets out a second, how hot, how fast it leaves, and how hard the air is dragged along;
-   *  filed afresh every `every` s for that long; only for a fire within `viewR` m of what the view looks at */
-  smoke: { up: 1.9, radius: 0.26, cells: 4, density: 2.2, temp: 30, speed: 1.5, push: 6, jitter: 0.5, every: 1, viewR: 18, lean: 0.12 },
+   *  filed afresh every `every` s for that long; only for a fire within `viewR` m of what the view looks at; `on` false = a fire with no smoke (`?firesmoke=0`) */
+  smoke: { on: true, up: 1.9, radius: 0.26, cells: 4, density: 2.2, temp: 30, speed: 1.5, push: 6, jitter: 0.5, every: 1, viewR: 18, lean: 0.12 },
   /** THE SOUND: the bed's level at the fire and each crack's (× how hard the crack is), and how long one bed voice is held before the next takes over (the
    *  mixer lets a followed voice go after its own time, and one it never took — the mixer off, a page in the background — is asked for again then) */
   bed: 0.5, crack: 0.55, bedSecs: 12,
@@ -164,7 +164,7 @@ export function updateFire(g: Game, dt: number) {
       if (slot !== Math.floor(was / K.bedSecs) || was <= 0 || !(S.lit & bit)) { T.beds++; const end = (slot + 1) * K.bedSecs + 0.35, me = t, at = M.pos;
         g.audio.play('fireBed', at, K.bed, { follow: () => FIRE.on && g.time < end && g.time >= end - K.bedSecs - 0.4 && me.factor > 0.001 ? { pos: at, k: BED_K * Math.min(1, me.factor), t: g.time } : null }); } }
     // the smoke: a short source on the solver, filed afresh every `every` s while the fire is near the view
-    if (dt > 0 && drawing && d < K.smoke.viewR) { const B = K.smoke, slot = Math.floor(time / B.every); smoked |= bit;
+    if (dt > 0 && drawing && K.smoke.on && d < K.smoke.viewR) { const B = K.smoke, slot = Math.floor(time / B.every); smoked |= bit;
       if (slot !== Math.floor(was / B.every) || !(S.smoked & bit)) { T.smokes++;
         const sk = wl > 8 ? 8 / wl : 1, dir: Vec3 = [wv[0] * sk * B.lean, 1, wv[2] * sk * B.lean];
         g.smoke.emit({ pos: [M.pos[0], M.pos[1] + K.height * B.up, M.pos[2]], dir, speed: B.speed, radius: B.radius, minVoxels: B.cells, density: B.density * heat, temperature: B.temp * heat, ttl: B.every, age: 0, kind: 'cloud',

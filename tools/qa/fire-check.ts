@@ -17,7 +17,7 @@
 //   sound     one bed voice held at a time (handed on every FIRE.bedSecs), and a crack for each pop of the wood, about as often as the table says
 //   smoke     with a solver drawing: a source a second, as wide as the drum, its foot over the flames and over a standing man's head, every one LOOK ONLY, on the
 //             coarse lattice, none thicker than the table says; with
-//             none drawing: no source at all
+//             none drawing, or with the smoke alone put off (?firesmoke=0): no source at all
 //   out       the lamp put out (as a round or the jammer would): the frame after, no fire is handed to the renderer, no source, no crack, and the lamp is
 //             back where the level hung it; lit again, it burns again
 //   load      a checkpoint put back: the lamp, its place and the coals are that moment's on the frame it loads
@@ -115,6 +115,10 @@ export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean>
         `${S.length} sources in twelve seconds (${A.sources.length} filed in all by the game) · coarse lattice: ${S.every((e: any) => e.lattice === 'coarse')} · thickest ${Math.max(0, ...S.map((e: any) => e.density))} against the table's ${K.smoke.density}${S[0] && F ? ` · ${(S[0].pos[1] - F.pos[1]).toFixed(2)} m over the coals, its foot ${(S[0].pos[1] - S[0].radius).toFixed(2)} m over the floor, ${S[0].radius} m in radius` : ''}`);
       const B = await rig(true, false); B.step(6 * 60);
       verdict(B.sw && mine(B).length === 0, 'smoke — … and with no solver drawing, no source at all', `${mine(B).length} sources`);
+      K.smoke.on = false;
+      try { const C = await rig(true, true); C.step(4 * 60); const drawn = (C.g.engine.fires ?? []).length;
+        verdict(C.sw && mine(C).length === 0 && drawn === 1, 'smoke — … and with the smoke alone put off (the page\'s ?firesmoke=0), the fire burns and files no source', `${mine(C).length} sources · ${drawn} fire handed to the renderer`); }
+      finally { K.smoke.on = true; }
     }
     // ---- meter
     {
