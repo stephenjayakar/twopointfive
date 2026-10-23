@@ -152,6 +152,10 @@ fn cubeNormal(vi: u32) -> vec3f {
     let dt = detailSurface(v.wp, n, bi, albedo, rough, metal, frame.matCfg.w);
     albedo = dt.albedo; rough = dt.rough; metal = dt.metal;
   }
+  if (SURF_TRY && !cap) {                                                // SURFACES, A TRY (surface.wgsl; ?surf at boot — dead code on every other page): a paint drawn as the stuff it stands for, after the wear, before the markings
+    let sf = surfaceTry(v.wp, n, bi, v.lc, v.hf, v.albedo, albedo, rough, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y);
+    albedo = sf.albedo; n = sf.n; rough = sf.rough;
+  }
   let wetK = floor(frame.rtCfg.z * 0.5) * 0.1;                           // WET GROUND (detail.wgsl wetGround; settings.wetBreakup rides rtCfg.z as 2 × tenths — 0 = nothing here runs)
   if (wetK > 0.0 && wetG && n.y > 0.9) { rough = wetGround(v.wp, rough, wetK); }
   if (v.mark != 0u && !cap) {                                             // MARKINGS (markings.wgsl): the pixel-art signifiers on this box's faces — albedo + roughness only, after the wear, before the encounter's marks
