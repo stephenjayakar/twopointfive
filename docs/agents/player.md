@@ -1360,6 +1360,43 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   MEASURED: the check's own lines on both stands (die 1, the office; the pill's shape for 40 pills). NOT MEASURED: no fight or stealth tally was
   run with these on. NOT DRIVEN headless in a mission: the squad ring with one row (its pointing is the same function, asked directly). Never
   seen on a GPU; the before and after pictures of the wedges were drawn by the page's own drawing code and stylesheet over a flat backdrop.
+- **The corner panel is three things: the objective, his key's line, the squad key's line** (2026-10-23; `HANDRING.corner`, `?corner=0`, off under
+  `?handring=0` too; off in the module and on the frozen stand, raised there by `TPS_HANDRING=1`, a `FROZEN_HOLDS` row, off for a recording from
+  before its key; the maintainer's five lines are in handring.ts). The panel at the top left was a heading and a row for his key ('DOOR · OPEN' over
+  'E push it shut') and under it the squad's block: a title ('SQUAD · LOUD · ORDERS TO GOLD'), a line a man, what the squad carries, and the quick
+  key's line. Now (`ui/corner.ts cornerRows`, fed by `ui/overlay.ts deriveInteractions`, drawn by `setInteractions`' `.it.one` / `.it.sec`,
+  `index.html #interact.corner`, 230 px wide where it was 290): the OBJECTIVE as a section at its head (`objectiveParts`: the line's own word
+  as the label, whatever it is ('objective', 'training 2/7'), a par or a clock in front of it at the right, a run's end line as words under no
+  label, red when failed as the top line was; its words and clock are set in place, the panel is not rebuilt on a tick; the line at the top
+  middle of the screen says nothing while the section has it, and says it again while the squad's menu is the panel; the diamond on the objective
+  stays), then BLOCKS UNDER NO HEADING: of his own rows every line a key gives, each by itself (the highlighted row's, its key lit; on a man in
+  reach both clicks), a row no key gives whole (a running verb's own words, how to stop it and its bar; a committed move's line; for a moment the
+  word an empty tap left, with how far), then every line of the squad's that a key gives (the keyed lines of `orders.hud().status`: the quick
+  key's, a plan's go, a wall charge to blow; and `doortools.ts cornerNotes`, what the block and a door's heading said that the corner would
+  lose: a set door charge as the squad's key's line while that key by itself blows it, with who it would catch; a set charge that key does not
+  blow so (his own, or one that goes with the word) only while it would catch somebody, as a warning under no key, shown whatever a lesson's frame
+  keeps back; the small squad held at a threshold, only once the men have called it), then A MAN LOST, struck as he was
+  (deathrecap.ts: the line and its arrow are the same; kept because nothing else on the screen says who is gone; it is the one line a man has).
+  Each is there only while it has something to say; with none the panel is not drawn. GONE FROM THE SCREEN with it, and said nowhere else yet:
+  what each living man of the squad is doing, loud or quiet, who the orders go to, the squad's charges, bangs and frags, the plain notes of the
+  block ('ready on your word', 'word given · waiting for'), a row's alternative ('or sprint into it'), a thing's name and state over its row
+  (a set charge's warning on the door's own heading is in `cornerNotes`). With a card up over the game the top line says the objective
+  again; under a ring whose words cross the panel the objective fades with the rest of it. The maintainer's idea for those is a
+  card on Tab (objectives in full and the squad's kit), not built. The picture only: the rows, the squad's block and the objective's words are
+  made as they were, so a lesson's frame that keeps a row back still keeps it back, and a key's line of `cornerNotes` is kept back where the frame
+  keeps the squad's notes back. CHECK: `handring`, its 'corner panel' line, both stands; `HANDRING_BREAK=1` red, and `HANDRING_BREAK=corner` (this rule
+  off, the rest on; likewise `lone`, `bare`, `onThing`, `turn`) red on that line alone. The line asks the reduction with rows shaped as the page
+  makes them (parseOpts on player.ts's second lines) and asks the page's own feed (`Overlay.deriveInteractions`, called with no page) at a door:
+  the three things with the rule on, the list as it was with it off; and a charge set on that door by hand, him at it and away: what the
+  block's line says of a key or of who it would catch is in `cornerNotes` and in the panel. The panel AS DRAWN is the page's: driven on the real page on the software
+  adapter with the rule on and under `?corner=0` (the classes, the rows' text, the size, the top line, no console error). Two page checks read
+  what it changes and were changed with it: `lesson-page.cjs` reads the section where the top line says nothing, `deathrecap-page.cjs`'s
+  'liveoff' case accepts no line for a lost man under the corner. MEASURED: nothing. It moves no tally (no rule of the game reads it; a run's
+  digest is the same with it on or off by construction, never run to show it). RUN ON THE PAGE after the change: `deathrecap-page` ONLY=live (three cases pass). NOT RUN: `lesson-page`
+  after its change, a set door charge or a threshold hold on the page or in a check with the squad of four armed on it, a running verb on the
+  page. DECLINED from review, with why: `hudNotes` returning keyed notes under the rule (it would change what the block holds on the shipped
+  stand, which that stand's checks read as strings); `objectiveText` returning its parts (every mission module words that line). Never seen on a GPU. NOBODY HAS PLAYED IT.
+
 - **The gun is put away for a charge, and brought back after** (`src/game/workstow.ts WORKSTOW.on`, 10-23; the maintainer: "characters should fully
   unequip their weapon when planting door charges, etc. -- they can reequip after they're done"). A charge went on with the gun still in the man's
   hands: the player set one with his left while the pistol stayed in his right, and a teammate pressed his on one-handed with the carbine in the

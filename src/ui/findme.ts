@@ -14,7 +14,8 @@ import type { FollowCamera } from '../game/camera';
 import type { Vec3 } from '../math/vec';
 import { PLAN } from '../game/floorplan';
 import { camCap } from '../host/keymap';
-import { FINDME, FINDME_WIDTH, FINDME_MATES, setFindMe, resetFindMe, outlineWant, outlineInk, OUTLINE_LOOK } from '../host/findme';
+import { FINDME, FINDME_WIDTH, FINDME_MATES, AUTOVIEW, setAutoView, setFindMe, resetFindMe, outlineWant, outlineInk, OUTLINE_LOOK } from '../host/findme';
+import { AUTOCAM } from '../host/autocam';
 import { makeOutlineMan, type OutlineFrame, type OutlineMan } from '../render/outline';
 
 /** where the ring would be drawn for the seat's own man (its centre on the floor), null = none: the row off, or he is down */
@@ -107,6 +108,7 @@ export function findMeRows(K: RowKit, body: HTMLElement): () => void {
   K.sec(body, 'Camera · trying out');
   pct('Aim pan', 'pan', 100, 10, true, 'How far the view leans toward where you aim. At none you stay in the middle of the screen.');
   K.seg(body, 'Turn direction', TURNS, () => FINDME.turn < 0 ? 'rev' : 'as', v => setFindMe('turn', v === 'rev' ? -1 : 1), () => `Which way the view turns when you hold ${camCap()} and move the mouse.`);
-  K.flip(body, `Double tap ${camCap()}`, () => FINDME.behind, v => setFindMe('behind', v), `Tap ${camCap()} twice and the view turns to put what you are facing ahead of you.`, ['On', 'Off']);   // (the camera's key as the board has it: host/keymap.ts camCap)
-  return resetFindMe;
+  if (AUTOCAM.on) K.flip(body, 'Auto camera', () => AUTOVIEW.on, v => setAutoView(v), `Tap ${camCap()} twice and the camera frames things for you. Hold ${camCap()} and move the mouse to take it back.`, ['On', 'Off']);   // (host/autocam.ts: the double tap is the mode's, and it turns the view as the row below did)
+  else K.flip(body, `Double tap ${camCap()}`, () => FINDME.behind, v => setFindMe('behind', v), `Tap ${camCap()} twice and the view turns to put what you are facing ahead of you.`, ['On', 'Off']);   // (the camera's key as the board has it: host/keymap.ts camCap)
+  return () => { resetFindMe(); if (AUTOCAM.on) setAutoView(false); };   // (the row above is not one of FINDME's: its start is Off)
 }

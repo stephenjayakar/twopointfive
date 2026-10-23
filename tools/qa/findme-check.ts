@@ -50,16 +50,17 @@ export async function findmeCheck(): Promise<boolean> {
   const { outlineWant } = F;
   const { findMeRing, findMeOutline } = await import(`${ROOT}/src/ui/findme.ts`) as typeof import('../../src/ui/findme.ts');
   const { FINDME, FINDME_START, findMeRead, TapTwice, TAPTWICE, behindYaw } = F;
+  const { AUTOCAM } = await import(`${ROOT}/src/host/autocam.ts`) as typeof import('../../src/host/autocam.ts');
   const BREAK = process.env.FINDME_BREAK === '1';
   const set: typeof F.setFindMe = BREAK ? () => {} : F.setFindMe;
   let all = true;
   const line = (ok: boolean, s: string, detail = '') => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${s}${detail ? `\n    ${detail}` : ''}`); };
   console.log('\n=== findme: twelve rows to find your own man and turn the view; at their starts the game as it was ===');
   const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
-  const fixedWas = FIXEDSTEP.on, startWas = { ...FINDME };
+  const fixedWas = FIXEDSTEP.on, startWas = { ...FINDME }, autoWas = AUTOCAM.on;
   const ctxOf = (W: any, extra: Record<string, unknown> = {}): any => ({ game: W.game, input: W.input, cam: W.cam, view: W.canvas, host: W.engine, render: () => { W.engine.world.upload(); }, betweenTicks: () => { W.engine.world.upload(true); },
     smoke: null, audio: null, demo: null, attract: null, hud: null, bubbles: null, time: 0, updateMs: 0, frozen: () => false, present: () => false, fixedStep: () => true, ...extra });
-  const stand = async (seed: number) => { Math.random = seeded(1); return await standUp({ seed }) as any; };
+  const stand = async (seed: number) => { Math.random = seeded(1); const W = await standUp({ seed }) as any; AUTOCAM.on = false; F.setAutoView(false); return W; };   // (the camera that runs itself, host/autocam.ts, takes the double tap where it is on — the page's stand: these lines are the row's own, with it off; autocam-check.ts holds the tap with it on)
   const DT = 1 / 60, f4 = (v: number) => v.toFixed(4);
   try {
     // (1) the table
@@ -338,7 +339,7 @@ export async function findmeCheck(): Promise<boolean> {
         'the outline: off with its row off, the man down or his marks hidden; on, his owner, a small box he stands in, strong in the dark only; the pass asks nothing while off, draws once its one program is there, never after a failed one; its width, its strength and the light it fades by are the rows\'; by the picture the meter is not asked',
         `row off: ${offRow ? 'frame off' : 'frame ON ✗'} · on: owner ${Fm.owner}, box ${(share * 100).toFixed(1)} % of the picture${inBox ? '' : ' (he is OUTSIDE it ✗)'}, strength ${s1.toFixed(2)} after a frame, ${dark.toFixed(2)} in the dark, ${lit.toFixed(2)} in the light, ${nv.toFixed(2)} under the goggles${frameOk ? '' : ' ✗'} · down: ${offDown ? 'off' : 'ON ✗'} · marks hidden: ${offHidden ? 'off' : 'ON ✗'} · under a card (no time): ${held ? 'the meter\'s word at once' : 'NOT at once ✗'} · behind the lens: ${behindLens ? 'an empty box' : `a box ${back.rect.map(v => v.toFixed(2)).join(' ')} ✗`} · the rule's ends ${edges ? 'hold' : '✗'}`
         + `\n    the pass: frame off ${quiet ? 'no call to the device' : `${A.st.calls.join(' ')} ✗`} · first frames on ${built ? 'one module, one pipeline, no draw' : '✗'} · program in: ${n(A.st, 'pass')} passes over 2 + 3 frames (2 wanted), scissor ${sc ? sc.join(' ') : 'none'} of ${CW} × ${CH}${inside ? '' : ' ✗'}, draw(${A.st.drawn}), blended ${tgt?.blend ? 'yes' : 'NO ✗'}, radius ${u ? u.f[5].toFixed(2) : '?'} px${drew ? '' : ' ✗'} · no strength / off the picture / behind the lens / off: ${skipped ? 'no pass' : 'a pass ✗'} · a program that fails: ${failed ? 'said once, never drawn, never asked again' : '✗'} · width row at 100 % / 50 % (2160 high) / most (2160 high) / 100 % on 300 high: radius ${[rw.one, rw.half, rw.most, rw.low].map(v => v.toFixed(2)).join(' / ')} px · every step of the row a different rim on 300, 720 and 2160 rows: ${noDead ? 'yes' : 'NO ✗'}, none under 100 % wider than the old rule's: ${notWider ? 'yes' : 'NO ✗'} · at none: ${noneOk ? 'the frame off, no pass' : '✗'}${widths ? '' : ' ✗'} · strength row at 100 % / 25 %: opacity ${inks.map(v => v.toFixed(2)).join(' / ')}, at none ${inkOff ? 'the frame off' : 'ON ✗'}${strong ? '' : ' ✗'} · light rows at 80 / 40: ${cal.map(v => v.toFixed(2)).join(' ')} at light 0.9 0.8 0.6 0.4 0.1; full dragged over shows stops at it (${stopD}), shows dragged under full stops at it (${stopL}): ${crossed.join(' ')} at 0.6 0.5 0.49 0${lights ? '' : ' ✗'} · by the picture: lit by the meter and ${pOn.drew ? 'drawn' : 'NOT drawn ✗'}, ends ${pOn.u ? `${pOn.u[8].toFixed(2)} / ${pOn.u[9].toFixed(2)}, exposure ${pOn.u[10]}` : '?'}, the copy ${pOn.bound === picV ? 'bound' : 'NOT bound ✗'}; no copy: the meter's word (lit ${pNone.drew ? 'DRAWN ✗' : 'no pass'}, dark ${pDark.drew ? 'a pass' : 'NO pass ✗'}); goggles ${pNv.drew ? 'DRAWN ✗' : 'no pass'}; the row on the meter: ${pMeter.u && pMeter.u[11] === 0 ? 'its word' : '✗'}${byPicture ? '' : ' ✗'} · passes.ts makes it in one place, under the frame\'s on: ${site ? 'yes' : 'NO ✗'}`); }
-  } finally { Object.assign(FINDME, startWas); FIXEDSTEP.on = fixedWas; }
+  } finally { Object.assign(FINDME, startWas); FIXEDSTEP.on = fixedWas; AUTOCAM.on = autoWas; }
   console.log(all ? '\nfindme: ALL PASS' : '\nfindme: FAIL');
   return all;
 }
