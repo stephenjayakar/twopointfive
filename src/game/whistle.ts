@@ -22,7 +22,7 @@ import type { UpperMode } from './character';
 import { PLAYER_ID } from './consts';
 import { isHostile } from './teams';
 import { hearPath } from './weather';
-import { w } from './words';   // (a leaf: the dialogue pass's one switch)
+import { w, wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 
 /** Every number of it (panel-tunable; the QA probes read them rather than copy them). */
@@ -66,7 +66,7 @@ const TWICE_NOW = ['all right — who\'s messing around?', 'that\'s twice now. c
 const LOOK_FOE = ['…quiet. listen.', 'you hear that?', "something's there."];
 const TWICE_FOE = ["that's no bird. going to look.", "someone's close. eyes up."];
 /** the whistle's lines, for the QA soak (its own smell, and only ever from a man who has just answered one) */
-export function whistleLines(kind: 'look' | 'twice' | 'all' = 'all'): string[] { return kind === 'look' ? [...LOOK_LINES, ...LOOK_FOE] : kind === 'twice' ? [...TWICE_LINES, TWICE_NOW[0], ...TWICE_FOE] : [...LOOK_LINES, ...LOOK_FOE, ...TWICE_LINES, TWICE_NOW[0], ...TWICE_FOE]; }
+export function whistleLines(kind: 'look' | 'twice' | 'all' = 'all'): string[] { return kind === 'look' ? [...LOOK_LINES, ...LOOK_FOE] : kind === 'twice' ? [...TWICE_LINES, ...wg([TWICE_NOW[0]], []), ...TWICE_FOE] : [...LOOK_LINES, ...LOOK_FOE, ...TWICE_LINES, ...wg([TWICE_NOW[0]], []), ...TWICE_FOE]; }
 
 // ---------------------------------------------------------------- per-man memory (dies with the Guard object: resetGuards makes fresh men)
 /** 'never' for respondedAt: far enough back that no twiceWindow the panel allows reaches it, still finite for the logs */
@@ -189,7 +189,7 @@ export function hearWhistle(g: Game, gd: Guard, e: GameEvent, keen: number, smal
   if (twice) {   // the second inside the window: a proper search of the place, gun out, no more 'hello?'
     gd.state = 'search'; gd.searchPlan = null; gd.pieing = null; gd.bodyDuty = null; gd.reactT = 0;
     M.searches++; M.soft = false; WHISTLE_STATS.searched++; if (log && log.t === R.t) log.search = true;
-    g.say(gd, pick(w(gd.team === 'guard' ? TWICE_NOW : TWICE_FOE, TWICE_LINES), M, 'lastTwice'));
+    g.say(gd, pick(w(gd.team === 'guard' ? wg(TWICE_NOW, TWICE_LINES) : TWICE_FOE, TWICE_LINES), M, 'lastTwice'));
   } else {       // the first: over to it for a look, torch in hand
     if (gd.state === 'patrol') gd.state = 'suspicious';
     gd.reactT = WHISTLE.reactT; M.soft = true; M.softAt = now;

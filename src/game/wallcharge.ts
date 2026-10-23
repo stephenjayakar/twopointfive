@@ -66,7 +66,7 @@ import { COVER } from './cover';
 import { isHostile } from './teams';
 import { PLAYER_ID } from './consts';
 import { PACE } from './guards';
-import { WORDS, w } from './words';   // (a leaf: the dialogue pass's one switch)
+import { WORDS, wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { SAMSTUN, dazzlePlayer } from './samstun';
 import { chargeHands } from './handwork';
 import { moraleBlast } from './morale';
@@ -359,7 +359,7 @@ export function wallAt(g: Game, at: Vec3, from: Vec3 = g.player.char.pos): WallS
     }
     const d = Math.hypot(dx, dz) - (B ? 1e-3 : 0); if (d >= bd) continue;
     const outer = !part && (B ? K.outer : outerWall(g, i));   // (an outer wall takes a charge: WALLCHARGE.outer — one already holed is the engine's by now, and still it)
-    if (K.outer && !part && !outer && !/^steel/.test(why) && thin <= K.outerThick) why = long < K.outerMinLen ? w("that wall's too short for a charge.", 'too short a stretch of wall for a charge.') : /^outer/.test(why) ? "a charge won't cut that one." : why;   // (with outer walls taking a charge, 'outer wall' is no reason)
+    if (K.outer && !part && !outer && !/^steel/.test(why) && thin <= K.outerThick) why = long < K.outerMinLen ? wg("that wall's too short for a charge.", 'too short a stretch of wall for a charge.') : /^outer/.test(why) ? "a charge won't cut that one." : why;   // (with outer walls taking a charge, 'outer wall' is no reason)
     const alongX = sx >= sz, c = alongX ? b.c[0] : b.c[2], L = long / 2, m = Math.min(K.endM, L);
     const perp = alongX ? from[2] - b.c[2] : from[0] - b.c[0];
     bd = d; best = { index: i, box: b, alongX, u: clamp(alongX ? at[0] : at[2], c - L + m, c + L - m), side: perp >= 0 ? 1 : -1, ok: part || outer, why: part || outer ? '' : why, ...(outer ? { outer } : null) };
@@ -453,7 +453,7 @@ export class WallCharge {
   /** the row's words (the squad's menu and Sam's own) · the refusal's, with none to set */
   private rowWords(): string { const n = this.g.doorTools.charges, p = this.price;
     return this.carried !== null ? `breach with a wall charge · ${this.carried} left` : p <= 1 ? `breach with a charge · ${n} left` : p === 2 && n === 2 ? 'breach the wall · uses both charges' : `breach the wall · uses ${p} of ${n} charges`; }
-  private noneWords(): string { return this.carried !== null ? (this.brought === 0 ? w('nobody brought a wall charge.', 'no wall charge carried.') : 'no wall charge left.') : this.price > 1 && this.g.doorTools.charges > 0 ? 'not enough charge for a wall.' : 'no charges left.'; }
+  private noneWords(): string { return this.carried !== null ? (this.brought === 0 ? wg('nobody brought a wall charge.', 'no wall charge carried.') : 'no wall charge left.') : this.price > 1 && this.g.doorTools.charges > 0 ? 'not enough charge for a wall.' : 'no charges left.'; }
   /** one set on a wall: paid out of the carried ones, else out of the bag (all `cost` of it or none). The price paid, or −1 = there was none to set */
   private take(): number { const g = this.g; this.freeSet = false;
     // UNLIMITED AMMO (the sandbox row; the maintainer, 10-14: "unlimited ammo doesn't apply to wall charges"): with one to set, it is set and none is spent

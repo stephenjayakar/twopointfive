@@ -56,7 +56,7 @@ import { bang } from './effects';
 import { DOORTOOLS } from './doortools';
 import { giveStuns, stunsOf, markDanger, dangerAt, dangerDoors } from './tactics';
 import { hearPath } from './weather';
-import { WORDS, w } from './words';
+import { WORDS, wg } from './words';
 import { laneExposed, laneHolds, laneWarns } from './lanes';
 import { teamTread } from './teampace';
 import { loadGait, loadHeard } from './kitload';   // (a teammate's card in the defenders' ears: his footfall as the mixer has it)
@@ -633,7 +633,7 @@ function consider(g: Game, F: RoomFight, st: State, D: Def) {
       st.told.set(D, { T: tg.T, at: v3.copy(tg.at), t: g.time });   // (and he does not lose the place himself when the next shot comes to him by another doorway)
       let n = 0;
       for (const X of F.defs) if (X !== D && alive(X) && X.room === D.room && X.mode === 'hold' && !st.of.has(X) && !st.think.has(X) && toldOf(g, st, X)?.T !== tg.T && !PICKETS.has(X.gd) && X.noiseOut && g.time - X.noiseT < 1.5) { st.told.set(X, { T: tg.T, at: v3.copy(tg.at), t: g.time }); n++; }
-      if (n) { st.stats.pairsTold++; g.say(gd, w('they\'ve hit the others — get ready, we go together!', 'that\'s the others they\'ve hit — get ready, we go together!'), false); note(g, F, gd, `by way: tells ${n} of his room where the fight is`); }
+      if (n) { st.stats.pairsTold++; g.say(gd, wg('they\'ve hit the others — get ready, we go together!', 'that\'s the others they\'ve hit — get ready, we go together!'), false); note(g, F, gd, `by way: tells ${n} of his room where the fight is`); }
     }
     return;
   }
@@ -693,7 +693,7 @@ function consider(g: Game, F: RoomFight, st: State, D: Def) {
     P.n0++; m.freeAt = g.time;
     if (role === 'press') { m.moving = false; m.set = true; m.charged = charge(g, D, m.door, P.room); loose(g, D, P.at); } else run(g, D, m.spot, m.door);
   } else run(g, D, m.spot, m.door);
-  if (role === 'flank') { st.stats.flankSent++; g.say(gd, w('going around — keep them there!', 'going round — keep them there!'), true); }
+  if (role === 'flank') { st.stats.flankSent++; g.say(gd, wg('going around — keep them there!', 'going round — keep them there!'), true); }
   else { st.stats.pressMen++; g.say(gd, forms(g) ? (up.length ? 'with you — on the door!' : 'they\'ve hit the others — on that door!') : (up.length ? 'with you — moving!' : 'they\'ve hit the others — get in there!'), true); }
   note(g, F, gd, `press ${P.id} on room ${tg.T.id}: ${role} to ${m.door.def.name} (${way.w.L.toFixed(1)} m)`);
 }
@@ -800,7 +800,7 @@ function tickPress(g: Game, F: RoomFight, st: State, P: Press): boolean {
         const go = up.filter(m => m.set && g.time - m.D.gd.lastSeenT > 3 && g.time >= m.D.gd.dazzledUntil && !!m.D.noiseAt && g.time - m.D.noiseT < 2 && m.D.noiseT > m.D.movedAt + 0.5);
         if (go.length) {
           P.phase = 'go'; P.goAt = g.time; P.n0 = up.length; st.stats.pressConverge++;
-          g.say(go[0].D.gd, w('they\'re coming out — get around them, go!', 'they\'re coming out — get round them, go!'), true); note(g, F, go[0].D.gd, `press ${P.id}: the trap is sprung, ${go.length} go round`);
+          g.say(go[0].D.gd, wg('they\'re coming out — get around them, go!', 'they\'re coming out — get round them, go!'), true); note(g, F, go[0].D.gd, `press ${P.id}: the trap is sprung, ${go.length} go round`);
           for (const m of up) { m.freeAt = g.time; if (go.includes(m)) { m.moving = false; loose(g, m.D, m.D.noiseAt!); } }
           return false;
         }
@@ -984,7 +984,7 @@ function standTo(g: Game, F: RoomFight, st: State) {
   if (g.time - w.t0 < PRESSURE.reportSecs) return;
   w.phase = 'called'; w.callT = w.lastT = g.time;
   const gd = (holds(w.by) ? w.by : F.defs.find(holds) ?? w.by).gd;
-  st.stats.warnCalls++; g.say(gd, WORDS.on ? 'that was outside — they\'re coming. get ready!' : 'shots outside — they\'re coming. stand to!', true);   // (the report may have been a boot or a charge: he names no shots)
+  st.stats.warnCalls++; g.say(gd, WORDS.on ? wg('that was outside — they\'re coming. get ready!', 'that was outside — they\'re coming. stand to!') : 'shots outside — they\'re coming. stand to!', true);   // (the report may have been a boot or a charge: he names no shots)
   note(g, F, gd, `stand to: calls the report, room ${w.room!.id} is the nearest of theirs to it`);
 }
 
@@ -1046,7 +1046,7 @@ function goLook(g: Game, F: RoomFight, st: State) {
     const mates = C.filter(D => D !== lead && flat(D.station, lead.station) <= PRESSURE.sweepPairM).sort((a, b) => flat(a.station, lead.station) - flat(b.station, lead.station)).slice(0, n - 1);
     if (mates.length < n - 1) continue;
     st.swept = w.t; st.lookT = g.time; st.look = { at: v3.copy(w.p), goT: g.time + PRESSURE.sweepBeat, w: w.t, men: [lead, ...mates] };
-    st.stats.lookCalled++; g.say(lead.gd, WORDS.on ? 'it\'s gone quiet. with me — let\'s go look.' : 'gone quiet. with me — we go and look.', true);
+    st.stats.lookCalled++; g.say(lead.gd, WORDS.on && WORDS.guide ? 'it\'s gone quiet. with me — let\'s go look.' : 'gone quiet. with me — we go and look.', true);
     note(g, F, lead.gd, `go and look: nothing of the team for ${(g.time - w.t).toFixed(0)} s, calls ${n} to where they were last put`);
     return;
   }

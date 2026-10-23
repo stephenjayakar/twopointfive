@@ -32,7 +32,7 @@ import type { DialoguePick } from './dialogue';
 import { responseWords } from './qrf';
 import { CIV_LINES, CIV_COUNT, HOSTAGE_LINES, SNATCH_LINES, hashStr, roomName, isOffice } from './dialogue';
 import type { HostageMoment } from './dialogue';
-import { WORDS, w } from './words';   // (a leaf: the dialogue pass's one switch)
+import { WORDS, w, wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { goTo, followPath, notGettingAnywhere, eyeContact, sightGain, sightGainOn, escalationOf, raiseEscalation, say, pointInView, bodyPos, meterOf, glassHeard } from './guards';
 import { torchLightDef } from './rigProps';
 import { isDaylight } from './lighting';
@@ -442,7 +442,7 @@ function later(g: Game, secs: number, P: Omit<Pending, 'at'>) { floorOf(g).pendi
 function runPending(g: Game, P: Pending) {
   const cv = P.cv, o = P.o, C = cv.civ!;
   switch (P.kind) {
-    case 'greetReply': if (o && (chattyEnough(g, o) || (o.state === 'patrol' && o.awareness < 0.15 && !o.held && g.guards.includes(o)))) say(g, o, fill(g, cv, pick(cv, w(CIV_LINES.now.greetGuard.filter(t => !(/stairs|elevator/.test(t) && away(g)) && !(/trash/.test(t) && !C.def.tasks?.includes('bin'))), CIV_LINES.greet.guard)), o)); break;   // (words.ts: the stairs and the lift are the office's, the bins are hers only if she does them)
+    case 'greetReply': if (o && (chattyEnough(g, o) || (o.state === 'patrol' && o.awareness < 0.15 && !o.held && g.guards.includes(o)))) say(g, o, fill(g, cv, pick(cv, w(wg(CIV_LINES.guide.greetGuard.filter(t => !(/stairs|elevator/.test(t) && away(g)) && !(/trash/.test(t) && !C.def.tasks?.includes('bin'))), CIV_LINES.greet.guard.filter(t => !(/stairs|lift/.test(t) && away(g)) && !(/bins/.test(t) && !C.def.tasks?.includes('bin')))), CIV_LINES.greet.guard)), o)); break;   // (words.ts: the stairs and the lift are the office's, the bins are hers only if she does them)
     case 'reportRadio': {   // his report over the net in his own voice a beat after her telling — and for an armed man / a body the floor a step up on it (deliverReport)
       if (!o || o.state === 'dead' || o.held) break;
       say(g, o, fill(g, cv, CIV_LINES.guardRadio[P.key ?? 'someone'] ?? CIV_LINES.guardRadio.someone, o), true); g.audio.play('radio', o.char.bones.head ?? o.char.pos, 0.7);
@@ -451,7 +451,7 @@ function runPending(g: Game, P: Pending) {
     case 'escalate': raiseEscalation(g, 1, o && g.guards.includes(o) ? o : null, 'civilian'); break;   // (o = the man excepted from wording the order: the one who told it / was sent)
     case 'outsideCall': {   // control rings the floor with what she said at the door (toGone)
       if (!g.civilians.includes(cv)) break;
-      const pos = C.causePos ?? cv.char.pos; control(g, cv, away(g) ? CIV_LINES.own.control.outside : w(CIV_LINES.now.control.outside, CIV_LINES.control.outside)); const sent = sendToLook(g, pos, 'civilian'); if (C.armed) later(g, 1.4, { kind: 'escalate', cv, o: sent });
+      const pos = C.causePos ?? cv.char.pos; control(g, cv, away(g) ? wg(CIV_LINES.guide.own.control.outside, CIV_LINES.own.control.outside) : wg(CIV_LINES.guide.control.outside, CIV_LINES.control.outside)); const sent = sendToLook(g, pos, 'civilian'); if (C.armed) later(g, 1.4, { kind: 'escalate', cv, o: sent });
       const data = { who: C.name, to: 'control', cause: C.cause ?? 'sam', armed: C.armed, how: 'outside', sent: sent?.callsign ?? '' };
       if (firstHand(C.cause)) chronicleN(g, 'civilianReported', 'civReported', data, pos); else chronicle(g, 'civilianReported', data, pos);
       break; }
@@ -481,8 +481,8 @@ function pick(gd: Guard, pool: string[]): string { const C = gd.civ!; return poo
 /** words.ts: this is not the office's floor — the lines that name its fourth floor, its building security, its stairs and lift give way to CIV_LINES.own (false with the
  *  switch off: every line as it was). A pool is swapped or thinned BEFORE the one roll `pick` makes, so her dice run the same either way. */
 const away = (g: Game) => WORDS.on && !isOffice(g.level);
-/** what she tells the man she reaches, by cause: the pool as it is said now (words.ts), place for place with the old one */
-const reportPool = (cause: string | null | undefined): string[] => { const k = cause && CIV_LINES.report[cause] ? cause : 'sam', was = CIV_LINES.report[k]; return w(CIV_LINES.now.report[k] ?? was, was); };
+/** what she tells the man she reaches, by cause: the pool as the writing guide has it (words.ts `guide`), place for place with the old one */
+const reportPool = (cause: string | null | undefined): string[] => { const k = cause && CIV_LINES.report[cause] ? cause : 'sam', was = CIV_LINES.report[k]; return wg(CIV_LINES.guide.report[k] ?? was, was); };
 /** a pool without its shouts for 'security' where there is no such desk to shout for */
 const noSecurity = (g: Game, pool: string[]) => away(g) ? pool.filter(t => !/security/i.test(t)) : pool;
 /** {room} {name} {label} {she} {her} {cs} filled off her record (cs = the man in `reportTo` / `foundBy`) */
@@ -920,7 +920,7 @@ function phoneCall(g: Game, gd: Guard) {
   const C = gd.civ!; if (C.phoned) return;
   C.phoned = true; C.reported = true; CIV_STATS.phoned++;
   const pos = C.causePos ?? gd.char.pos; const armed = C.armed || C.cause === 'body';
-  { const k = C.cause === 'body' ? 'body' : armed ? 'armed' : 'someone'; control(g, gd, (away(g) ? CIV_LINES.own.control[k] : undefined) ?? w(CIV_LINES.now.control[k] ?? CIV_LINES.control[k], CIV_LINES.control[k])); }
+  { const k = C.cause === 'body' ? 'body' : armed ? 'armed' : 'someone'; control(g, gd, (away(g) ? wg(CIV_LINES.guide.own.control[k], undefined) ?? CIV_LINES.own.control[k] : undefined) ?? wg(CIV_LINES.guide.control[k] ?? CIV_LINES.control[k], CIV_LINES.control[k])); }
   const sent = g.quietUtility ? null : sendToLook(g, pos, 'civilian');
   if (armed && !g.quietUtility) { g.alarm.pos[0] = pos[0]; g.alarm.pos[1] = 0; g.alarm.pos[2] = pos[2]; g.alarm.placed = true; later(g, 1.4, { kind: 'escalate', cv: gd, o: sent }); }
   const data = { who: C.name, to: 'control', cause: C.cause ?? 'sam', armed, how: 'phone', sent: sent?.callsign ?? '' };
@@ -1041,7 +1041,7 @@ export function civilianAnswer(g: Game, gd: Guard, rnd: () => number = simRandom
   if (g.snatch?.isMan(gd)) return T.stage <= 1 ? { ...base, text: pick(gd, SNATCH_LINES.held), id: 'civ:fear', stage: 1, stageN: T.stage } : { ...base, text: pick(gd, SNATCH_LINES.dry), id: 'civ:dry', stage: 'x', stageN: T.stage };   // (a snatch's man: his own two lines, and he has nothing to tell)
   if (T.stage <= 1) return { ...base, text: pick(gd, worker ? CIV_LINES.heldFearWorker : away(g) ? CIV_LINES.heldFear.map(t => /CLEAN here/.test(t) ? CIV_LINES.own.heldFear : t) : CIV_LINES.heldFear), id: 'civ:fear', stage: 1, stageN: T.stage };
   const own = away(g), men = own ? g.guards.filter(x => !x.unit && x.team === 'guard').length : 0;   // (words.ts: off the office what she knows is the keypad's digits, where there is one, and how many walk the place — the roster as she saw it come on, whoever is down since; nobody on it: not that)
-  const pool = own ? [...(g.devices?.padNear(gd.char.pos) ? [CIV_LINES.own.intelPad] : []), ...(men ? CIV_LINES.own.intel : [])] : CIV_LINES.intel[C.def.kind] ?? [];
+  const pool = own ? [...(g.devices?.padNear(gd.char.pos) ? [CIV_LINES.own.intelPad] : []), ...(men ? wg(CIV_LINES.guide.own.intel, CIV_LINES.own.intel) : [])] : CIV_LINES.intel[C.def.kind] ?? [];
   if (C.intelN < pool.length) {
     let text = pool[C.intelN]; C.intelN++;
     if (own) { text = text.replace('{n}', CIV_COUNT[Math.min(men, CIV_COUNT.length - 1)]); if (C.intelN >= pool.length) C.intelN = Math.max(C.intelN, CIV_LINES.intel[C.def.kind]?.length ?? 0); }   // (told out: the count as player.ts's row reads 'told you everything' off the office's table)
@@ -1178,7 +1178,7 @@ function foundDown(g: Game, cv: Guard, o: Guard) {
     o.awareness = Math.max(o.awareness, 0.7); o.lastKnown = v3.copy(body); o.reactT = 1.2; o.bodyDuty = null; o.task = null; o.path = []; o.pathGoal = null;
     if (o.state === 'patrol' || o.state === 'search') { o.state = 'suspicious'; o.searchT = 0; o.searchPlan = null; o.pieing = null; }   // (a searcher's plan and his doorway go with the search: this runs after his own update, which would only drop them a frame late)
   }
-  say(g, o, fill(g, cv, dead ? CIV_LINES.foundDown.dead : away(g) ? CIV_LINES.own.foundCold : CIV_LINES.foundDown.cold, o), true); g.audio.play('radio', o.char.bones.head ?? o.char.pos, 0.9);
+  say(g, o, fill(g, cv, dead ? CIV_LINES.foundDown.dead : away(g) ? wg(CIV_LINES.guide.own.foundCold, CIV_LINES.own.foundCold) : CIV_LINES.foundDown.cold, o), true); g.audio.play('radio', o.char.bones.head ?? o.char.pos, 0.9);
   for (const other of g.guards) if (other !== o && other.state !== 'dead' && other.team === 'guard' && !other.held) { other.witness.calledToBody = { victim: C.name, t: g.time, breathing: !dead }; if (other.script) continue; other.awareness = Math.max(other.awareness, 0.45); if (!other.task && other.state !== 'alert') other.lastKnown = v3.copy(body); }
   if (!g.quietUtility) {
     g.alarm.pos[0] = body[0]; g.alarm.pos[1] = 0; g.alarm.pos[2] = body[2]; g.alarm.placed = true;
@@ -1210,7 +1210,7 @@ function greetings(g: Game) {
       if (!chattyEnough(g, o) || v3.distXZ(o.char.pos, cv.char.pos) > CIV.greetM) continue;
       if (g.col.solidBlocked(v3.add(o.char.pos, [0, 1.4, 0]), v3.add(cv.char.pos, [0, 1.4, 0]))) continue;
       C.greetAt = g.time; F.greetAt = g.time; CIV_STATS.greetings++;
-      civSay(g, cv, pick(cv, w(CIV_LINES.now.greetCiv.filter(t => !(/wet floor/.test(t) && !C.def.tasks?.includes('wipe'))), CIV_LINES.greet.civ)));   // (words.ts: the wet floor is hers to warn of only if she wipes one)
+      civSay(g, cv, pick(cv, w(wg(CIV_LINES.guide.greetCiv, CIV_LINES.greet.civ).filter(t => !(/wet floor/.test(t) && !C.def.tasks?.includes('wipe'))), CIV_LINES.greet.civ)));   // (words.ts: the wet floor is hers to warn of only if she wipes one)
       later(g, 1.3, { kind: 'greetReply', cv, o });
       log(g, cv, `greets ${o.callsign}`);
       return;
@@ -1223,7 +1223,7 @@ function evacuationCheck(g: Game) {
   if (!CIV.evacuateOnQrf || !g.qrf || g.qrf.state === 'idle') return;
   const F = floorOf(g);
   const movable = g.civilians.filter(cv => cv.state !== 'dead' && !cv.held && cv.civ!.state !== 'gone' && cv.civ!.state !== 'evacuate' && !g.snatch?.isMan(cv));   // (a snatch's man is nobody control clears off the floor: he is who they are coming for — snatch.ts)
-  if (!F.evacTold) { F.evacTold = true; if (movable.length) { const RW = away(g) ? responseWords(g) : null; control(g, movable[0], RW ? `anybody who isn't ours, clear out of ${RW.site} — ${RW.team} is coming in` : w(CIV_LINES.now.qrf, CIV_LINES.qrf)); log(g, movable[0], 'control clears the floor (QRF inbound)'); } }
+  if (!F.evacTold) { F.evacTold = true; if (movable.length) { const RW = away(g) ? responseWords(g) : null; control(g, movable[0], RW ? `anybody who ${wg("isn't", 'is not')} ours, clear out of ${RW.site} — ${RW.team} is coming in` : w(CIV_LINES.now.qrf, CIV_LINES.qrf)); log(g, movable[0], 'control clears the floor (QRF inbound)'); } }
   for (const cv of movable) {
     const C = cv.civ!; if (C.state === 'phone' && C.talkT < CIV.phoneSecs) continue;   // she finishes the call
     endTask(cv); C.riseT = 0; cv.char.anim.act = null;

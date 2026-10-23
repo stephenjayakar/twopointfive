@@ -46,7 +46,7 @@ import { fightLive } from './roomfight';
 import { bubbleSecs } from './guards';
 import { pressOwns } from './pressure';
 import { squadOwns, squadMen } from './enemysquads';
-import { w } from './words';
+import { w, wg } from './words';
 import { isHostile } from './teams';
 import { hearPath } from './weather';
 import { DIGIN } from './digin';   // (call-time only: how far a shout carries)
@@ -98,7 +98,7 @@ export type CueKind = 'help' | 'stay' | 'stayOurs' | 'huntOver' | 'calm' | 'cove
  *  on their net (the strip) — 0 = spoken only, not a net line; every one is also a bubble over a man the team can see. `now` = the same lines, place for place, as
  *  the dialogue pass has them (words.ts; read through `said()`): what he heard may have been a boot or a charge, so he does not call it 'shots', and a man told to stay
  *  is on his POST — he may have no door and no room of his own. */
-const LINES: Record<CueKind, { cls: number; say: string[]; now?: string[] }> = {
+const LINES: Record<CueKind, { cls: number; say: string[]; now?: string[]; /** (WORDS.guide) the same lines as the writing guide has them, place for place */ guide?: string[] }> = {
   help: { cls: 1, say: ['moving to the fight — {the}', "they're hit {at} — moving to them"] },
   huntOver: { cls: 2, say: ['lost them — holding {the}', 'lost them — staying {at}'] },
   calm: { cls: 2, say: ['quiet now — staying put', 'standing down — holding here'] },
@@ -109,8 +109,8 @@ const LINES: Record<CueKind, { cls: number; say: string[]; now?: string[] }> = {
   squadStays: { cls: 3, say: ['{sq}: still on the doors — nobody goes'] },
   squadHears: { cls: 4, say: ['{sq}: heard that — stand by'] },
   squadCopies: { cls: 4, say: ['{sq}: copy, {ally} — stand by'] },
-  squadWaits: { cls: 3, say: ['{sq}: hold — let them come in. Wait for my word!'], now: ['{sq}: hold — let them come in. wait for my call!'] },   // (enemysquads.ts drillNet: a drilled garrison's squad that could go, holding on purpose — its word comes later than a 'stand by' squad's, and may be a pair going round)
-  squadCopiesWaits: { cls: 3, say: ['{sq}: copy, {ally} — hold, let them come in. Wait for my word!'], now: ['{sq}: copy, {ally} — hold, let them come in. wait for my call!'] },
+  squadWaits: { cls: 3, say: ['{sq}: hold — let them come in. Wait for my word!'], now: ['{sq}: hold — let them come in. wait for my word!'], guide: ['{sq}: hold — let them come in. wait for my call!'] },   // (enemysquads.ts drillNet: a drilled garrison's squad that could go, holding on purpose — its word comes later than a 'stand by' squad's, and may be a pair going round)
+  squadCopiesWaits: { cls: 3, say: ['{sq}: copy, {ally} — hold, let them come in. Wait for my word!'], now: ['{sq}: copy, {ally} — hold, let them come in. wait for my word!'], guide: ['{sq}: copy, {ally} — hold, let them come in. wait for my call!'] },
   fellBack: { cls: 5, say: ['{the} is lost — falling back', 'falling back — {the} is lost'] },
   planted: { cls: 5, say: ['fell back — set {at}'] },
   pinnedIn: { cls: 5, say: ["can't get out — fell back to cover {at}"] },
@@ -119,7 +119,7 @@ const LINES: Record<CueKind, { cls: number; say: string[]; now?: string[] }> = {
   flinch: { cls: 0, say: ['the door—!'] },
 };
 /** a kind's lines as they are said now: the pass's where it has any — as many as before, so the pick falls on the same place in the list either way */
-const said = (k: CueKind): string[] => w(LINES[k].now ?? LINES[k].say, LINES[k].say);
+const said = (k: CueKind): string[] => w(wg(LINES[k].guide, undefined) ?? LINES[k].now ?? LINES[k].say, LINES[k].say);
 /** s before the same KIND of cue is said again by anybody on the floor (three men over one body say it once; absent = no wait) */
 const KIND_GAP: Partial<Record<CueKind, number>> = { cover: 15, huntOver: 4, calm: 4, still: 6, stay: 3, stayOurs: 3 };
 /** every new line's words (the QA probe: each falls in a row of CLASSES, none is said twice by the table) */

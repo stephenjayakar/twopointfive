@@ -48,7 +48,7 @@ import { isHostile, teamOfId, foeDown, spokenName, defenderWords } from './teams
 import { sideShotEnergy } from './glasspen';
 import { detonateStun } from './combat';
 import { placeName, isOffice, ownPlace } from './dialogue';
-import { WORDS, w } from './words';
+import { WORDS, wg } from './words';
 import { doorSaidName, doorWrittenName, shorthandId } from './doornames';
 import { doorWords } from './orders';
 import { SUPPRESSION } from './suppression';
@@ -383,9 +383,9 @@ function flankCall(g: Game, plan: Plan, m: Guard, place: string): string {
   const who = defenderWords(m) ? 'them' : 'him';
   if (!WORDS.on) return `moving round — coming at ${who} from ${place}`;
   let since = Infinity;
-  for (const o of plan.members) { const t = lookSince(g, o) ?? squadLookSince(g, o); if (t === null) return `moving around — coming at ${who} from ${place}`; since = Math.min(since, t); }
+  for (const o of plan.members) { const t = lookSince(g, o) ?? squadLookSince(g, o); if (t === null) return `moving ${wg('around', 'round')} — coming at ${who} from ${place}`; since = Math.min(since, t); }
   const seen = g.guards.some(o => o.team === plan.team && o.lastSeenT > since);
-  return seen ? `moving around — coming at ${who} from ${place}` : `moving around — coming in from ${place}`;
+  return seen ? `moving ${wg('around', 'round')} — coming at ${who} from ${place}` : `moving ${wg('around', 'round')} — coming in from ${place}`;
 }
 export function planApproach(g: Game, men: Guard[], target: Vec3, why = 'formed', prefer: Guard | null = null): Plan | null {
   const st = S(g); const nav = g.col.nav; const team = men[0].team;
@@ -571,7 +571,7 @@ function moveRole(g: Game, gd: Guard, role: Role, dt: number): TacMove {
       if (!role.holding) {
         role.ground = (role.ground ?? 0) * Math.exp(-dt / 1.5) + flat(c.pos, role.lastPos ?? c.pos); role.lastPos = v3.copy(c.pos);   // (metres covered lately, ~1.5 s window: the presser's clock reads it)
         if (advance(g, gd, dt, setAt, run, out) || flat(c.pos, setAt) < 0.5) { role.holding = true; role.set = true; gd.path = []; gd.pathGoal = null; TACTICS_DEBUG.log?.(`${g.time.toFixed(2)}s ${gd.callsign} (flanker) set at (${c.pos[0].toFixed(1)}, ${c.pos[2].toFixed(1)})`); }
-        else if (notGettingAnywhere(gd, dt, ROLE_STALL_SECS)) { role.holding = true; role.set = true; role.holdAt = v3.copy(c.pos); gd.path = []; gd.pathGoal = null; if (!role.saidSet) { role.saidSet = true; g.say(gd, w('set — this is as far around as I can get', 'set — as far round as I get'), true); } }
+        else if (notGettingAnywhere(gd, dt, ROLE_STALL_SECS)) { role.holding = true; role.set = true; role.holdAt = v3.copy(c.pos); gd.path = []; gd.pathGoal = null; if (!role.saidSet) { role.saidSet = true; g.say(gd, wg('set — this is as far around as I can get', 'set — as far round as I get'), true); } }
         if (!out.aim) out.aim = [fix[0], 1.1, fix[2]];
       } else { kneelToward(g, gd, dt, fix, out); role.holdT += dt; }
       return out;
@@ -963,7 +963,7 @@ function runGate(g: Game, gd: Guard, G: Gate, dt: number): boolean {
       if (G.sliceI >= G.slicePts.length) {
         TACTICS_DEBUG.log?.(`${now.toFixed(2)}s GATE ${d.def.name}: ${gd.callsign} has sliced it (${G.t.toFixed(1)} s)`);
         if (G.goalNear) { releaseGate(g, gd, G, 'sliced — his mark is this side of it'); return true; }
-        g.say(gd, gateMate(g, G, 'second', gd) ? w('clear as far as I can see — crossing, on me', 'clear as far as I see — crossing, on me') : 'crossing');
+        g.say(gd, gateMate(g, G, 'second', gd) ? wg('clear as far as I can see — crossing, on me', 'clear as far as I see — crossing, on me') : 'crossing');
         beginCross(g, gd, G);
       }
       return true;

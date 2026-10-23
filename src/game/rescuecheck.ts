@@ -48,7 +48,7 @@ import { tally } from './mission';
 import { isBreathing } from './game';
 import { runnerFled } from './runner';
 import { RESCUE } from './rescue';
-import { w } from './words';   // (a leaf: the dialogue pass's one switch)
+import { wg } from './words';   // (a leaf: the dialogue pass's one switch)
 
 /** the switch and its numbers: off in the module, raised by the page (host/profile.ts pageSwitches; ?norescuecheck = a rescue's men never miss each other,
  *  as it was) and by the shipped stand; the harness's frozen stand leaves it off (TPS_RESCUECHECK=1 turns it on). UNTUNED by play. */
@@ -177,7 +177,7 @@ export function rescueCheckTick(g: Game, _dt: number) {
   const go = goer(g, cast, about, post);
   if (!go) { net(g, by, `nothing from ${place} — nobody to spare. Stay on your doors!`, 3); event(g, st, 'nobody', by, `nobody outside the hostage room is free to walk to ${about.callsign}'s post`); return; }
   st.out = { gd: go.gd, about, goal: v3.copy(post), from: v3.copy(go.D.station), phase: 'out', thereT: -1, tries: 0, stepT: -100, heard0: loudHeard(go.gd), calm: calmOf(go.D) };
-  net(g, go.gd, w(`nothing from ${place} — I'm heading over!`, `nothing from ${place} — one moving there!`), 1); walk(g, go.D, post);
+  net(g, go.gd, wg(`nothing from ${place} — I'm heading over!`, `nothing from ${place} — one moving there!`), 1); walk(g, go.D, post);
   event(g, st, 'goes', go.gd, `walks to where ${about.callsign} was posted (${place}), ${flat(go.gd.char.pos, post).toFixed(0)} m off`);
 }
 
