@@ -957,7 +957,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the lead's wrist from 0.20 m under his head joint to 0.13 m over it; the front man waves twice in 7 s and alone, his wrist 0.56 m out from his spine,
   the line said once and gone 0.72 s after the player steps out, 18 rounds from the team in the next four seconds with nothing shown; "I'm hit." once
   and "I can't keep up." once in a 7 s run. The poses on the mesh with no GPU: `tools/qa/pose-mesh.ts operator_1 signal-aside | signal-aside-in |
-  signal-aside-right` (gun low; the arm out wide to his side in the overhead view; the push to his right is the smaller one). NOT SEEN: never on a GPU
+  signal-aside-right` (gun low; the arm out wide to his side in the overhead view; the push to his right is the smaller one). THE PAGE, headless
+  Chromium on the software adapter, the warehouse with four, 'bang and clear' on the word: the table boots on, the lead's wrist is over his head joint
+  0.78 s after the stack is made, the word sends them in, no page error; with `?showwhy=0` the table boots off and no hand signals through the same
+  wait. In that still (very low quality, the whole stack in view) the raised fist cannot be told from the helmet: the fist's read at game size is the
+  open question. NOT SEEN: never on a GPU
   and never played; the wave's read at game size, the `'go'` hand for "after you.", and the timing of every line are first pass. NOT RE-ASKED: the
   fire holds' finer points (a man half-noticed under the unseen hold, the pair's watch, the spotted hold): there he shows nothing or, under those two
   sandbox switches, may wave at a round the order was holding anyway. The lines open on no capital, as the squad's other bubbles do.
