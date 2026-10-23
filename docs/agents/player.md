@@ -1208,3 +1208,27 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   IS STILL THE FIRST TOUCH: the ring now sits metres past it, and aiming the throw so the can RESTS under the cursor would be a rule of the game
   (every throw, the scripted ones too) — asked of the maintainer, not built. `tools/qa/hudmarks-page.cjs` reads the ring, the tick and the roll on
   the real page (software adapter). NEVER SEEN ON A GPU: the tick, the dots, the ring's place on the screen.
+- **One footfall a step** (`FOOTFALL.once`, src/game/player.ts; 2026-10-22, from the quiet lesson's scripted run). THE FLAW: a footfall is filed when the
+  walk cycle's phase crosses a half or wraps. Backpedal runs the cycle backwards, so when backpedal flips frame by frame the phase rocks over ONE edge
+  and every frame files a footfall: 20 in 20 frames staged, and a calm man 0.76 m in front goes alert on eight of them. What flips it: forwards and
+  backwards keys by turns (a scripted player hunting its mark), and the walk with a man in the arm, whose facing rule has no slack. A cursor parked at
+  his own feet does NOT (the plain walk's backpedal has slack: 0 to 6 flips in ten seconds). THE RULE: a crossing files a footfall only when the cycle
+  has come `FOOTFALL.travel` (a quarter of a turn, either way added up, `Player.stepTravel`) since the last footfall FILED; the travel starts at 1 and
+  is capped there, so the first step of a mission and any jump of the phase the walk did not make are never swallowed. A plain walk has half a turn
+  between edges, so it files what it always did. Rocking kept up files at most twice a plain walk's footfalls (the legs are moving), never two nearer
+  than a quarter of the cycle. A FIRST CUT ("the same edge crossed twice files nothing") was thrown out in review: it swallowed real steps without bound
+  (a pacing man walked silent) and the first footfall of a start past the half. Do not go back to it; a longer travel (0.45) halves a pacing man's
+  footfalls too. Both places a footfall is filed go through `stepTravelled` / `sameFootfall` / `footfallFiled`. Switch: ON in the page
+  (`?footfallonce=0` off; Tab ▸ Closer than ever ▸ 'one footfall a step'), OFF in the module and on the frozen stand (`FROZEN_HOLDS` 'FOOTFALL.once':
+  `TPS_FOOTFALL=1`; `TPS_FOOTFALL=0` holds it off on the shipped stand), registered in knobs.ts and `JOURNAL_KNOBS`, a recording from before it replays
+  with it off, and a checkpoint names `stepTravel` only when it is not 1. Key off writes nothing (the travel stays 1). CHECK:
+  `bun run tools/qa/footfall-check.ts` (probe `footfall`, family player), both stands; `FOOTFALL_BREAK=1` must fail rock, held and ears. Lines: rock
+  (three seeds: 20 footfalls in 20 frames key down, 1 key up), slow (ten seconds of it, legs of 2 / 4 / 10 frames: 300 / 150 / 60 key down, 33 / 30 / 30
+  key up, 18 for a plain walk), walk (crouched, standing, sprinting, backwards on three seeds: the same frames and levels, digests equal), turns (pacing
+  30 / 50 / 40 frames a leg: 20 / 18 / 15 against 20 / 24 / 15; the cursor across him every 15 / 25 / 35 frames: 7 / 6 / 14 against 11 / 9 / 18, frames
+  running counted once), held, ears, harness. WHAT IT COSTS: an about-turn within an eighth of a cycle of an edge loses that footfall; a review's
+  random keys and cursor (8 seeds of a minute a pattern) lost 7 to 18 % of the key-off footfalls with frames running counted once. The quiet lesson's
+  scripted run passes with the key on and off (different digests). NOT THIS RULE'S: a walk with the cursor shaken across him about three times a
+  second files NO footfall with either key (the phase never reaches an edge); the key makes the milder shakes cheaper too (8 to 21 footfalls in ten
+  seconds down to 3 to 9). A footfall owed to travel alone would mend both and is not built. NOT DONE: no tour, no soak; never heard in a page; the
+  lesson's "seven frames running" was not met on that lesson's pushed head (two frames running on the build before it), only staged.

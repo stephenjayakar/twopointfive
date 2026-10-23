@@ -425,6 +425,9 @@ export class Player {
   /** the last spot the collision sweep settled him at (player.ts collidePlayer walks him from here to wherever he has been put since, in short strides; null until the first settle, reset by a teleport) */
   safe: Vec3 | null = null;
   stepPhase = 0;
+  /** how far the walk cycle has come since the last footfall filed, in turns, either way added up, 1 at the most (player.ts FOOTFALL.once; 1 = far enough,
+   *  which is where it starts, and where it stays while the key has never been on) */
+  stepTravel = 1;
   constructor(ch: GltfCharacter, pos: Vec3, hasRifle = true) {
     this.char = new Character(ch, { id: PLAYER_ID, tint: [0.05, 0.06, 0.07], tint2: [0.1, 0.32, 0.18], pos, yaw: Math.PI });
     this.char.muzzleAhead = this.pistol.def.muzzleAhead;   // (the row's: where the round, the flash and the rail light's beam start along the gun)
