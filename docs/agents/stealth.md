@@ -152,6 +152,43 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   AFTER THE STEP: a squad mix kept on the machine (the three levers) no longer says its line ("Your own mix, kept on this machine: …") under the lever
   rows of the solo night's or a quiet mission's Team & kit screen: none of it acts there and its fog word read against the quiet fog's row
   (`ui/loadout.ts paintLevers`, the kit card's file; words on a screen only, no switch). `levers-screens` holds it on both stands; red on the tree before.
+- **How much you're told is a fourth difficulty lever, and a squad mission's fog can be put off** (`src/game/told.ts` TOLD; 10-23, from the maintainer's
+  "how do we communicate friendly and enemy AI state to the player (especially on easier difficulties)"). What was there: every setting only took signs
+  away (the fog's cones, own eyes), and the last-seen mark (`fogofwar.ts lastSeen()`, the fading '(?)' `ui/overlay.ts` draws) was built and at 0 s
+  (`FOG.lastSeen`). THE LEVER: `You're told`, three rungs from the easiest, GUIDED · STANDARD · BARE, a fourth row under Enemy kit on the mission sheet,
+  the Setup rail and the loadout screen (`difficulty.ts leversNow()` = LEVERS plus this one; `ui/levers.ts` draws whatever that list holds). The level
+  standard puts it on Standard and hard on Bare; Guided is no level's, it is reached by moving the lever (a mix of your own, kept on the machine with the
+  others, `?told=guided|standard|bare` for a visit). Left alone it follows the level the other three stand on (`difficulty.ts levelOfThree`): fog cones +
+  AI hard set by hand over standard is still Hard, with this row on Bare, so a machine that kept that mix reads as it did. The row moved by hand off
+  its level's rung is a mix (`custom`: records and pars are filed there, `main.ts`). WHAT A RUNG DOES TODAY, one thing: an enemy who goes out of the team's sight keeps his mark for `TOLD.standard` 4 s on Standard, `TOLD.guided`
+  10 s on Guided, none on Bare (the debugger's `FOG.lastSeen` row is 0 as shipped; turned up it is the seconds on every rung). The mark is drawn
+  only under a fog; the row stays live with the fog's own, its off rung included, because the lever is for more signs than this one. The mark is the HUD's alone: no game code reads it, so a run
+  digests the same on every rung and with the lever off. A LATER SIGN ASKS THE LEVER, never the difficulty: `toldAtLeast('standard')` (shown on Standard
+  and Guided) or `toldAtLeast('guided')` (Guided alone); with the switch off both answer as Bare. A sign that would show a defender COUNT stays off
+  Guided without the maintainer's word (menus.md, the mystery rule). THE FOG OFF (`TOLD.fogOff`): a squad mission's fog lever has the quiet missions'
+  bottom rung, off (`difficulty.ts FOG_OFF_RUNG`, `SET.fog 'off'`, `?fog=off` for a visit): `scenarioRun.ts fogOfQuery` then raises no fog on a room
+  clear's or a rescue's link (one that asks for the fog by name, `fow`, still gets it). NO FOG IS NO FOG FOR THE SQUAD'S CODE TOO: `fogOfWar.sighting()`
+  and `hidden()` answer for every enemy, so `wallcharge.knownFoes`, a pair's foe list and the 40 mm count men nobody saw, and the wand and the sticky
+  cameras are not offered. The rung's words say the team knows too; a fight under it is NOT the fogged fight with more drawn, and nothing has measured
+  it. It is the cheap test, the floor under Guided, not Guided. `fogOfLink` is the old
+  answer ('does this mission have a fog at all'), which is what keeps the lever's row live on the screens while the rung is off. A quiet mission's and
+  the solo night's fog is still their own pick (`quietfog.ts`), a Training lesson reads no lever. SWITCHES: both ON in the page (`?told=0`,
+  `?fogoff=0`), OFF in the module and on the frozen stand (`TPS_TOLD=1`, `TPS_FOGOFF=1`; FROZEN_HOLDS rows `TOLD.on`, `TOLD.fogOff`); the TOLD table
+  rides a recording, and one from before the keys replays with both off (`journal.ts`). Off = three levers, three rungs of fog, `FOG.lastSeen` alone
+  deciding the mark. No debugger row yet. CHECKS: `bun run tools/qa/probes.ts told` (`tools/qa/told-check.ts`, 23 verdicts, `TOLD_BREAK=1` exits 1 on
+  both stands): the rules with the switches down and up, the URL and the store, a squad link with the fog off hiding nobody, a sighting and a loss on each
+  rung (mark at 0.75 s, at 5 s, at 11 s) with the four runs' digests equal, the real sheet and the loadout screen on a fake DOM, the words (no digit above 5, no compass word),
+  the two stands and the journal. The real page: `PORT=<port> node tools/qa/told-page.cjs <dir>` (the start page's rail at 1440x900 and 1000x673, then
+  a room clear in play on the software adapter under Guided, Bare and `fog=off`; `GAME=0` skips the second half, `TOLD_BREAK=1` must fail). Older checks
+  that count three levers hold both switches down for their run (`levers-probes`, `quietfog-check`, `sticky-check` stickyWays, `calls-probes` calls-lastseen: `told-check.ts threeLevers`).
+  NEIGHBOURS' FILES, a few lines each: `difficulty.ts`, `fogofwar.ts` (one line in lastSeen), `scenarioRun.ts`, `ui/levers.ts`, `ui/missions.ts`,
+  `ui/loadout.ts`, `host/profile.ts`, `standup.ts`, `standEnv.ts`, `knobs.ts`, `journal.ts`. WHAT MOVES IN THE PAGE WITH NO FLAG: a mission on Standard
+  shows last-seen marks for 4 s where it showed none (Hard is as it was), and a Training lesson under a fog does too (lessons stand on standard).
+  A visit with a switch off keeps the kept rungs it hides (`keptHidden`). KNOWN, LEFT: (1) the fog put off on the sheet in mid-mission acts at the
+  next deploy, where the fog's other rungs act at once; (2) the wand's and a camera's own marks (`markSecs`) are untouched; (3) `write()` sets
+  `TOLD.rung` with the switch off too (nothing reads it then), and over a harness `--set TOLD.rung`. Measured on one level (the pair's room
+  clear), one seed, both stands. Never seen on a GPU and never played: whether 4 s and 10 s read right, and whether the '(?)' is enough of a sign, is
+  the maintainer's to say.
 - **Your own stuck cameras show in the fog of war** (`STICKY.mark`, `stickycam.ts stickyBoxes / stickyMarks`, drawn by `ui/overlay.ts` as `.cammark`;
   2026-10-17; the maintainer, from play on the vault, quiet, hard, the fog's cones: "nit, you should be able to see your sticky cameras in fog of war").
   WHAT WAS THERE: a camera's two boxes were unkeyed, so the fog's rule for loose things (fogofwar.ts rule 4d) handed them to the picture only on floor an

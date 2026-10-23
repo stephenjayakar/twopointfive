@@ -1557,7 +1557,7 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
     ]);
     tf = fw;
     feelRows('FOG', [
-      { k: 'lastSeen', label: 'fog ▸ last seen s', title: 'an enemy who goes out of the team\'s sight keeps a fading ? where he was last seen for this long (s). 0 = no mark (as shipped): a ready answer if the game is too hard to read without enemy lasers' },
+      { k: 'lastSeen', label: 'fog ▸ last seen s', title: 'an enemy who goes out of the team\'s sight keeps a fading ? where he was last seen for this long (s). 0 (as shipped) = the You\'re told lever on the mission sheet decides: a few seconds on Standard, longer on Guided, no mark on Bare. Turned up, this row is the seconds on every setting' },
     ]);
     tf = TF.door;
     feelRows('ENTRY', [

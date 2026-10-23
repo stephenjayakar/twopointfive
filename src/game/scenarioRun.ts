@@ -4,7 +4,7 @@
 // Type-only game imports but difficulty.ts's one function: nothing here is built from another game module's exports at load (src/game is one import cycle).
 import type { Game } from './game';
 import { hourFromQuery } from './hours';   // (called inside startFromQuery only)
-import { difficultyHere } from './difficulty';   // (called inside startScenario only)
+import { difficultyHere, fogOffNow } from './difficulty';   // (called inside startScenario only)
 import { rowSettings } from './rowset';   // (used inside calls only)
 import { weatherOfSearch } from './weatherKinds';   // (tables and pure functions: no game import)
 import { kitSoloStand } from './kit';   // (called inside startFromQuery only)
@@ -36,6 +36,11 @@ export function sameFog(a: string | URLSearchParams, b: string | URLSearchParams
   return sig(a) === sig(b);
 }
 export function fogOfQuery(q: URLSearchParams): boolean {
+  if (fogOffNow() && !quietLike(q) && !lessonLevel(q) && !plainFog(q)) return false;   // (the squad fog lever on its bottom rung — told.ts TOLD.fogOff, difficulty.ts: every enemy drawn. A quiet mission has its own pick, a lesson is taught on the level as it is, and a link that asks for the fog by name — `fow`, the plain page's own word — gets it, so a refused start and a quit put back what the page booted with)
+  return fogOfLink(q);
+}
+/** …as the LINK alone asks, whatever the squad's fog lever says: 'this mission has a fog of war' (the screens: the lever is live there, its bottom rung too) */
+export function fogOfLink(q: URLSearchParams): boolean {
   if (q.has('nofow') || q.has('nofogofwar')) return false;
   const four = q.has('squad4') && !q.has('nightbreach') && !q.has('rescue') && !q.has('quiet');
   return q.has('fow') || q.has('fogofwar') || q.has('roomclear') || q.has('rescue') || four || quietRungOfQuery(q) !== 'off';
