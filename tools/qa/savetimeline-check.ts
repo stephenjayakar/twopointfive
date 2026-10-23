@@ -1,7 +1,7 @@
 // THE SAVE TIMELINE (src/game/savestate.ts SAVETIMELINE): the saves roll in two rings, each keeps a picture, a team on the floor is saved in memory, and every
 // entry of the strip loads and plays on as the run it was taken from.
 //   bun run tools/qa/savetimeline-check.ts          (probes.ts savetimeline; SAVETIMELINE_BREAK=1 leaves the switch off and must FAIL)
-// What it holds, on the plain night alone and in a Training lesson with a pair on the floor (train-orders):
+// What it holds, on the plain night alone and on a yard with a pair on the floor (train-orders, once Training 5):
 //   (1) the set ROLLS at its cap: seven autosaves and seven saves by hand leave the newest five of each — neither kind pushes out the other — and the strip
 //       (`timeline`) lists the ten in the mission clock's order;
 //   (2) every entry LOADS, and the ten seconds after the load digest as the ten seconds after the save did (checkpoint-identity's terms: one seed, sampled once a second);
@@ -15,10 +15,10 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
+import { yardRow } from './yards.ts';
 import { digestRun } from './checkpoint-probes.ts';
 const SS = await import(`${ROOT}/src/game/savestate.ts`);
 const { SAVETIMELINE, CKPT, canSave } = SS;
-const { ALL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
@@ -56,9 +56,9 @@ async function night(seed: number, on: boolean): Promise<any> {
   g.player.visibility = 0.02; g.godMode = true; g.playerInvisible = true; g.saves.enabled = false; for (const gd of g.guards) gd.heardUpTo = 1e12; rollcallState(g).nextAt = 1e9;
   steps(W, 0.5); return W;
 }
-/** a Training lesson as its row starts it */
+/** a stage yard as a row would start it (the yards were Training 5 and 1: no row and no lesson of their own since 2026-10-23; their rows are tools/qa/yards.ts) */
 async function lesson(id: string, seed: number, on: boolean): Promise<any> {
-  const E = (ALL_MISSIONS as any[]).find(e => e.id === id); if (!E) throw new Error(`no scenario '${id}'`);
+  const E = yardRow(id); if (!E) throw new Error(`no yard '${id}'`);
   Math.random = seeded(seed);
   const W: any = await hushed(() => standUp({ level: levelOfFile(E.level) })); const g = W.game;
   SAVETIMELINE.on = on;
@@ -159,7 +159,7 @@ export async function savetimelineCheck(): Promise<boolean> {
           `${pics0} pictures before the full store's save, ${pics1} after${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
       } else line(false, '(4) pictures', `the two saves: ${a.why ?? 'ok'} / ${b.why ?? 'ok'}`);
     }
-    // ---- (5) a Training lesson with a pair on the floor
+    // ---- (5) a room clear with a pair on the floor (the yard that was Training 5)
     {
       const W = await lesson('train-orders', 11, ON), g = W.game, S = g.saves; const fails: string[] = [], notes: string[] = [];
       const units = g.guards.filter((x: any) => x.unit).length; if (!units) fails.push('no unit on the floor: the lesson did not stand its pair');

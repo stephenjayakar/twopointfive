@@ -48,7 +48,7 @@ export async function mysteryCheck(): Promise<boolean> {
     MYSTERY.on = !BREAK;
     // ---- total
     const rows: { id: string; text: string; total: number; lesson: boolean }[] = (ALL_MISSIONS as { id: string; title: string; place?: string; blurb?: string; scene?: string; defenders?: number; group?: string }[]).map(e => (
-      { id: e.id, text: [e.place, e.blurb, e.scene].filter(Boolean).join(' '), total: e.defenders ?? -1, lesson: e.group === 'training' || e.group === 'tutorial' }));
+      { id: e.id, text: [e.place, e.blurb, e.scene].filter(Boolean).join(' '), total: e.defenders ?? -1, lesson: e.group === 'tutorial' }));
     rows.push({ id: SOLO_NIGHT.id, text: `${SOLO_NIGHT.place} ${SOLO_NIGHT.blurb}`, total: 3, lesson: false });
     for (const p of PICKS as { id: string; line: string }[]) rows.push({ id: `pick ${p.id}`, text: p.line, total: (pickEntry(p) as { defenders?: number } | null)?.defenders ?? 3, lesson: false });
     if (BREAK) for (const [text, total] of OLD) rows.push({ id: 'an old row', text, total, lesson: false });

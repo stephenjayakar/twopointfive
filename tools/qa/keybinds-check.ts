@@ -167,16 +167,15 @@ export async function keybindsCheck(): Promise<boolean> {
         return { f1, w1, w2, f3, w3 }; });
       verdict(g3.f1 === '' && !g3.w1 && g3.w2 && g3.f3 === 'KeyQ' && g3.w3, `no wall key, the game (${process.env.TPS_PROFILE === 'shipped' ? 'the page\'s stand' : 'the frozen stand'}): Q through the keyboard beside a wall files nothing and takes nothing; the code written straight in (a recording, a probe) takes the wall as it did; the key the row was put on takes it through the keyboard`,
         `Q on the board: filed '${g3.f1}', on a wall ${g3.w1} · 'KeyQ' written in: on a wall ${g3.w2} · the row on K, K on the board: filed '${g3.f3}', on a wall ${g3.w3}`);
-      // the two lessons whose lines named Q: the step is done by a held move key, the walk-in on as the page has it (on this stand too: the line is the page's)
+      // the wall the first Training lesson taught it on (its yard is kept as a stage; the lesson and its line went 2026-10-23): taken by a held move key, the walk-in on as the page has it (on this stand too: the line is the page's)
       { const { readFileSync } = await import('node:fs'); const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`), { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { WALLSNAP } = await import(`${ROOT}/src/game/wallsnap.ts`);
-        const LES: [string, string, number[], string, (p: number[]) => boolean][] = [['train-move.json', 'Walk into the container and keep walking to put your back to it', [18.3, 0, 20.75], 'KeyW', p => p[0] >= 13.2 && p[0] <= 19.7 && p[2] >= 20.2 && p[2] <= 21],
-          ['train-hands.json', 'The last guard is watching the gap. Put your back to the wall in the dark corner beside it', [23.45, 0, 19.4], 'KeyS', p => Math.hypot(p[0] - 23.45, p[2] - 19.4) <= 1]];
+        const LES: [string, number[], string, (p: number[]) => boolean][] = [['train-move.json', [18.3, 0, 20.75], 'KeyW', p => p[0] >= 13.2 && p[0] <= 19.7 && p[2] >= 20.2 && p[2] <= 21]];
         const rows: string[] = []; let ok = true;
-        for (const [file, line, at, key, inside] of LES) { const text = readFileSync(`${ROOT}/levels/${file}`, 'utf8'), has = text.includes(`"line": "${line}"`) && !/"line": "[^"]*\bQ\b/.test(text);
+        for (const [file, at, key, inside] of LES) { const text = readFileSync(`${ROOT}/levels/${file}`, 'utf8');
           const r = await quiet(async () => { const W: any = await standUp({ level: loadLevel(parseLevelData(text)), seed: 1 }), g = W.game, pl = g.player; const was = { on: WALLSNAP.on, press: WALLSNAP.press }; WALLSNAP.on = true; WALLSNAP.press = !FB;
             try { g.godMode = true; g.teleportPlayer([...at]); for (let i = 0; i < 20; i++) W.step(DT); W.input.keys.add(key); let took = -1; for (let i = 0; i < 120 && took < 0; i++) { W.step(DT); if (pl.wall) took = i; } W.input.keys.delete(key); return { took, in: inside(pl.char.pos as number[]) }; } finally { WALLSNAP.on = was.on; WALLSNAP.press = was.press; } });
-          ok &&= has && r.took >= 0 && r.in; rows.push(`${file}: the line ${has ? 'names no key' : 'IS NOT AS WRITTEN HERE'}, ${key} held ${r.took < 0 ? 'took no wall' : `had the wall in ${r.took + 1} frames`}${r.in ? ', where the step asks' : ', NOT where the step asks'}`); }
-        verdict(ok, 'no wall key, the lessons: the two Training lines that named Q name no key, and each step is done as its line says, by a move key held into the wall where the step asks', rows.join(' · ')); }
+          ok &&= r.took >= 0 && r.in; rows.push(`${file}: ${key} held ${r.took < 0 ? 'took no wall' : `had the wall in ${r.took + 1} frames`}${r.in ? ', at the container' : ', NOT at the container'}`); }
+        verdict(ok, 'no wall key, on a floor: the wall is taken by a move key held into it, at the container the old first lesson taught it on', rows.join(' · ')); }
       K.KEYMAP.freeWhen = null; K.KEYMAP.qFree = false; K.KEYMAP.qCmd = false; K.KEYMAP.setFree = false; K.KEYMAP.qOnly = false; K.KEYMAP.on = true; K.setKeys({}); }
 
     // ---- the game, on this stand: one script of hands, three ways in

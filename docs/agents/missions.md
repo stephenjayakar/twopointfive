@@ -33,7 +33,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   every way in. The second starts: compound = the back gate (the list's word since 10-19, as the level names it: `gate_n` 'back gate'; the first is `gate_w` 'side yard gate') · barracks = the galley's back door · warehouse = the dark off the south-east corner, up the lit
   loading apron at both dock doors · depot = outside the east gate (the list's back gate), an arm's length from the store's hatch · the block (both files) = the loading hall's south end, on the tool crib's
   door · records = the dark west side, on the records room's own outside door.
-- **Training lessons** (`src/game/lesson.ts`, `Game.lesson`, `__lesson`; rows in `scenarioList.ts TRAINING_MISSIONS` — a third table beside `SCENARIOS` / `QUIET_MISSIONS`, `group: 'training'`; block
+- **Training lessons — TAKEN OUT 2026-10-23** (the bullet 'The seven Training lessons are out' at the end of this file says what went and what stayed;
+  what follows is the group as it was, kept for the lesson engine it describes, which the tutorial's missions run on)
+  (`src/game/lesson.ts`, `Game.lesson`, `__lesson`; rows in `scenarioList.ts TRAINING_MISSIONS` — a third table beside `SCENARIOS` / `QUIET_MISSIONS`, `group: 'training'`; block
   `scenarios.lesson`, docs/level-format.md *Scenarios*): a level file's STEPS — a line for the objective row naming the key, a DONE-TEST record read off the game (`LESSON_TESTS`: in / near / flag / slot /
   pace / meter / stage / door / target / men / all / any, deeds counted since the step came up: `did act:|event:|chron:|order:` (+ `on: '<door>'` for an order), and rows by family — hands `downed` `body`,
   kit `reload` `launcher` `burst` `threw`, squad `orderTo` `stackOn` `pairsOn` `word` `taken` `following`, the quiet partner `mate` `pair`) — run over a REAL mission of the level's kind (quiet alone, quiet as two, a
@@ -1752,3 +1754,42 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   is' and 'the job done, the squad runs back' (27 lines green on both stands, `RAILS_BREAK=1` fails 19 on both), `lesson-run tut-sky` (the two asserts
   above). NOT DONE: no fight or stealth tally was run for the new reason (it is reached only from a tutorial step). The picture was looked at on the
   software adapter only (the first step: frame, word and four rings, the word clear of the big line): never seen on a GPU, never played by a person.
+- **The seven Training lessons are out (2026-10-23, the maintainer: "let's also remove the old tutorials").** The tutorial's six missions (`tut-sky`, `tut-plan`,
+  `tut-solo`, `tut-squad`, `tut-quiet`, `tut-pair`) are the only lessons. No switch: a row that is not on the list cannot be switched back, and no rule of
+  play changed. GONE: the mission list's Training group (`MissionGroup 'training'`, its heading) and its seven rows (`TRAINING_MISSIONS`;
+  `LESSON_MISSIONS` is the tutorial's table now, `lessonGroup` is `'tutorial'` alone); every `scenarios.lesson` block of a `train-*` level (all seven); the levels and
+  generators of `train-hands`, `train-lights`, `train-kit`, `train-pairs`; the seven scripted players (`tools/qa/lessons/train-*.ts`); `lesson-page.cjs`;
+  their music rows, menu pictures, menu-art pins and menu-shot recipes; the eight recorded sound replays that were a lesson played (the seven, and `whip`,
+  which was recorded on the hands lesson's yard), with `tools/qa/tapes/whip.ts`. `lesson-check` and `lesson-gate` with no name now walk the six tutorial
+  missions; `verdict-lessons` too, on the page's stand only (a tutorial mission's scripted player is not run frozen; it exits 2 without the word). KEPT, AS
+  STAGES FOR CHECKS: `levels/train-move.json`, `train-orders.json`, `train-silent.json` and their generators,
+  with no lesson, no row and nothing on a menu that loads them, because checks owned elsewhere are staged on their floors (the hands probes,
+  `thrpie-check`, `wordcuts-check`, `teamtally-check`, `takecheck-check`, `savetimeline-check`, `carlamps-check`, `keybinds-check`'s wall line, four page
+  looks). A check that started one by its list row finds the row in `tools/qa/yards.ts`. They are bare yards:
+  `?levelFile=train-move.json&quiet` still starts a quiet mission on one, AS ANY QUIET MISSION NOW (the fog lever at its default, cameras lent, the kept
+  kit card, the levers live): `torch-leak-stills.cjs` and `hands-look.cjs` ask for `quietfog=off` in their links to keep the picture they were written for;
+  `shaderwait-page.cjs` and `savetimeline-page.cjs` load the yards as they now open, and none of the four was run on a page since. `tools/levels/train-ground.ts` and `lived-train.ts` stay for them and for
+  `lights-out` and `vault`. A YARD WITHOUT ITS LESSON IS READ DIFFERENTLY BY FIVE RULES that ask `level.scenarios.lesson`: the squads' stay-and-ask roll call
+  (`stayask.ts`), dozing guards (`doze.ts`), the squad deal (`roomclear.ts` → `squadDeal`), door names (`doornames.ts`) and the solo stand's kit
+  (`kit.ts kitSoloStand`); and by the three that ask `LESSON_MISSIONS` for the level (the kit as issued and the levers held off on the page, no fog lever).
+  THE SOUND PAGE LOST EIGHT OF ITS THIRTEEN REPLAYS: the thirteen played 66 different sounds between them, the five left play 56, so ten have no
+  "in play" replay now (lightOff, grabScuffle, murmur, chokeStrain, chokeLimp, ocp, padBeep, padOpen, launcher, whipThud; `sounds-page.cjs` asks for five); recording the tutorial's missions would bring most back and needs the page bot taught their scripts.
+  TAUGHT ONLY BY TRAINING, so taught nowhere now: the squad's 'clear from outside' and the word at a held door; the hold order; bang and clear and frag and
+  clear as orders the player gives; go silent / go loud; the empty-hands wall hold and its lean; the sound meter by name; the pace wheel; the launcher's ring
+  airfoil; the weapon light; the light jammer (OCP) on a camera and a beam; cameras; dragging and hiding a body; a key taken from a man; parking a partner
+  and 'watch him'. CHECKS MOVED TO A TUTORIAL LEVEL OR ROW: `stayask` (d) → `tut-plan`; `solo-fog`'s lesson line, `quietfog`'s lesson cases, `verdict`'s
+  row and `pouch-wall`'s lesson level → `tut-quiet`; `sticky-ways`' lesson line → the first quiet tutorial row played alone (`tut-solo`); `lesson-check`'s
+  kit lines → `tut-quiet` and `tut-plan` (two that issue no kit of their own and are played as issued); `quickthrow` (5) reads the steps of every tutorial row's level; `levers` and
+  `loadbrief` count tutorial rows. DROPPED WITH THEIR SUBJECT: `fresh-start`'s "every Training room clear names its seed", `writing-check`'s held count
+  for the Training lines, `keybinds-check`'s two lesson lines (the wall line is kept on the yard), `aimcost`'s `train-lights` leg, `carlamps`'
+  `train-hands` row, and the Training rows of `second-way`, `wallfurn` and `kitview-plan`. MEASURED on the build of 2026-10-23 with the corner panel in it, FROZEN and SHIPPED alike unless said (one seed, each check's own): both
+  typechecks; `lesson-check` ALL PASS (62); `lived-check` ALL PASS (393); `rails-check`, `writing-check`, `knobs-check`, `dice-check`, `rollback-check
+  --static`; `lesson-gate` for the six missions ALL PASS (36: each scripted run, and four dice as the page ships); `verdict-lessons` all six (shipped);
+  the 26 probe families the change touched, green but for three lines that were red before it on the build it started from: `missions-list` "every
+  mission has a place…" (three blurbs over their cap, both stands), `pouch-wall` "staged: the wall charge…" and `takecheck` "with the rule off…" (shipped).
+  `sounds-page.cjs` ALL PASS in a headless browser (one build earlier). NOT DONE:
+  nothing here was seen on a GPU or played; of the other page looks only `loadbrief-page.cjs`'s tutorial job was tried (it drew the brief the mended line
+  reads, then did not finish in nine minutes on a loaded machine) (`verdict-look.cjs lesson` now puts the mission's frame off, `rails=0`, because the frame
+  holds a tutorial mission's end while a step is up; `loadbrief-page.cjs`'s tutorial job reads the scene and what it teaches, which a tutorial row draws in
+  place of the job's line and the three cells); the comments across `src/` that say "a Training lesson" for what is now any lesson level were left (about
+  thirty).

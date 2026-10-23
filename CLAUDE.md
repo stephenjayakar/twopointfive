@@ -97,7 +97,7 @@ happened when; the live queue is outside the repo.
   architecture map (files, frame flags, box flags, the Frame layout), the removed Mac app, the import cycle.
 - `qa.md` — run / build / check in full, the two stands, the knob registry, the gates, driving the page headlessly (hooks, URL flags,
   `__stage`, `__ready`), checkpoints + autosave.
-- `missions.md` — scenario kinds, fresh deals and ways in, Training lessons, the par clock, the snatch, timed charges, Mousehole, the
+- `missions.md` — scenario kinds, fresh deals and ways in, the lesson engine (the old Training lessons are out), the par clock, the snatch, timed charges, Mousehole, the
   long hall, the vault, quiet missions, lights-out, the glasshouse, the solo night's opening.
 - `menus.md` — title, start page, Team & kit, the kit figure, key art, the debrief, the sandbox row, the debugger panel (backtick).
 - `squad.md` — the orders menu and its keys, every squad order, move-there, four in two pairs and the word, fall in, rear men, throws

@@ -907,10 +907,10 @@ function verdict(P: KitViewPlanned | null, how: string): string {
 }
 async function dryRun(only: string[]) {
   say('\n=== E. the dry run — every squad mission\'s every way in, with NO block (proposals; never a failure)');
-  const { SCENARIOS, TRAINING_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
+  const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
   const head = ['mission', 'level', 'way', 'block', 'anchor (proposed)', 'nearest door', 'kind', 'side', 'hand', 'fit', 'in front', 'behind', 'wall face / top', 'pane', 'occl', 'indoors', 'lane', 'problems', 'own way in or a set'];
   const lines: string[][] = []; let clean = 0, blocky = 0, total = 0;
-  for (const e of [...SCENARIOS, ...TRAINING_MISSIONS] as Data[]) { if (e.kind === 'quiet') continue;
+  for (const e of [...SCENARIOS] as Data[]) { if (e.kind === 'quiet') continue;
     const name = (e.level ?? 'office.json').replace(/\.json$/, ''); if (only.length && !only.includes(name)) continue;
     const L = await levelOf(name), S = L.data.scenarios, sts = starts(S, e.kind);
     sts.forEach((st, k) => { total++;

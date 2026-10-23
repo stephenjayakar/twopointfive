@@ -34,9 +34,9 @@ export async function wallfurnCheck(o: { levels?: string[]; cap?: number; baseli
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
   const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
-  const { SCENARIOS, TRAINING_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
+  const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
   const BREAK = process.env.WALLFURN_BREAK === '1', RULE = !BREAK, CAP = o.cap ?? Infinity;
-  const all: string[] = [...new Set<string>([...[...SCENARIOS, ...TRAINING_MISSIONS].filter((e: any) => e.kind !== 'quiet').map((e: any) => e.level).filter((l: any) => typeof l === 'string'), 'office.json'])].sort();
+  const all: string[] = [...new Set<string>([...[...SCENARIOS].filter((e: any) => e.kind !== 'quiet').map((e: any) => e.level).filter((l: any) => typeof l === 'string'), 'office.json'])].sort();
   const LEVELS = [...(o.levels ?? all)]; if (BREAK) for (const f of ['mousehole.json', 'barracks.json']) if (!LEVELS.includes(f)) LEVELS.unshift(f);
   const quiet = async <T>(fn: () => T | Promise<T>): Promise<T> => { if (o.verbose) return await fn(); const l = console.log, e = console.error, w = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = l; console.error = e; console.warn = w; } };
   let fails = 0, checks = 0;
