@@ -10,6 +10,7 @@ export type SfxName =
   | 'padBeep' | 'padOpen' | 'alarmChirp'   // devices (game/devices.ts): a keypad key, the pad accepting the code, a tripwire's emitter chirping as it reports
   | 'wallCrack' | 'wallThump' | 'wallDebris'   // a wall charge going off (game/blastFeel.ts)
   | 'wallOn' | 'wallOff'   // the player's back landing on a wall and his stepping off it (game/wallsnap.ts `voice`)
+  | 'grabCatch' | 'gunStrip' | 'gunDown'   // the grab as three beats: the catch, the gun twisted out of his hand, the gun let down onto the floor
   | 'mk12Suppressed' | 'mp7Suppressed' | 'mk46Report' | 'm1014Report' | 'm870Report' | 'hk45Suppressed' | 'g18Report'   // the guns a card's two slots offer, each its own report (game/gunlook.ts), and the pump gun's
   | 'beltCoverUp' | 'beltBoxOff' | 'beltBoxOn' | 'beltLay' | 'beltCoverDown' | 'chargeLmg' | 'shellIn' | 'boltDrop'   // how they are fed: a belt under a feed cover, shells one at a time (game/gunreload.ts)
   | 'chairRoll';   // a chair coasting on its castors (game/props.ts CASTOR): looped between ROLL_LOOP's two marks for as long as it rolls
@@ -66,6 +67,9 @@ export const HEARD: Partial<Record<SfxName, number>> = {
   //  the two shotguns a little over the bare pistol, the belt gun and the Glock 18 a little under it (their rounds stack), the MP7 and the HK45 under every other gun)
   mk12Suppressed: 0.118, mp7Suppressed: 0.086, mk46Report: 0.268, m1014Report: 0.31, m870Report: 0.3, hk45Suppressed: 0.08, g18Report: 0.268,
   beltCoverUp: 0.09, beltBoxOff: 0.075, beltBoxOn: 0.11, beltLay: 0.09, beltCoverDown: 0.15, chargeLmg: 0.17, shellIn: 0.105, boltDrop: 0.18,
+  // (the grab's three beats: no table before them either — set by hand against the hold's voices at the gains they are played at (0.5, 0.45, 0.4): the catch over the
+  //  scuffle it stands in for and under the whip, the strip and the knock each under the catch)
+  grabCatch: 0.125, gunStrip: 0.1, gunDown: 0.095,
 };
 /** one voice: run, levelled to its HEARD number, and CUT WHERE IT ENDS (`dur` is room to work in — the mixer holds a voice's slot for its buffer's whole length, so a
  *  buffer does not carry silence behind the sound) */
@@ -124,12 +128,12 @@ function rollLoop(ctx: SfxContext, raw: SfxBuffer): SfxBuffer {
   return out;
 }
 /** something heavy and soft-edged landing on something big (a body on a floor, a leaf on its stop): a low push of air and the two or three modes of what took it */
-const thud = (v: Voice, at: number, f: number, t60: number, g: number, hi = 260, dst?: Float32Array): void => {
+export const thud = (v: Voice, at: number, f: number, t60: number, g: number, hi = 260, dst?: Float32Array): void => {
   v.hiss(at, f * 0.45, hi, 0.002, t60 * 0.5, g * 1.5, dst);
   v.ring(at, [[f, t60, 0.6], [f * 1.64, t60 * 0.75, 0.42], [f * 2.63, t60 * 0.5, 0.22]], 0.006, g * 0.7, 0, dst);
 };
 /** a part's modes drawn again: each a few dB up or down (and, with pct, a little off its pitch) — what makes the second bounce of a thing differ from the first */
-const vary = (v: Voice, m: readonly Mode[], db = 4, pct = 0): Mode[] => m.map(([f, t, g]): Mode => [f * (1 + pct * v.rnd()), t, g * Math.pow(10, db * v.rnd() / 20)]);
+export const vary = (v: Voice, m: readonly Mode[], db = 4, pct = 0): Mode[] => m.map(([f, t, g]): Mode => [f * (1 + pct * v.rnd()), t, g * Math.pow(10, db * v.rnd() / 20)]);
 /** a contact with no note in it: a band of noise up in a third of a millisecond and gone in a few */
 export const knock = (v: Voice, at: number, lo: number, hi: number, d: number, g: number, dst?: Float32Array): void => v.hiss(at, lo, hi, 0.0003, d, g, dst);
 /** a body that is not a bell: n modes spread between lo and hi, none where a neighbour is, the high ones dying first */
@@ -144,7 +148,7 @@ export const clack = (v: Voice, at: number, lo: number, hi: number, t60: number,
 };
 // the parts that are in more than one voice, each its own few modes [Hz, T60 s, weight]: a pistol's slide on its stop · a rifle's bolt home · a magazine catch · a
 // door's latch bolt · a hollow-core door leaf · a solenoid's armature (a contactor, an electric strike) · a furnished room's lowest modes
-const SLIDE: Mode[] = [[1150, 0.025, 1], [2700, 0.018, 0.8], [4300, 0.012, 0.6], [6900, 0.008, 0.35]];
+export const SLIDE: Mode[] = [[1150, 0.025, 1], [2700, 0.018, 0.8], [4300, 0.012, 0.6], [6900, 0.008, 0.35]];
 const BOLT: Mode[] = [[760, 0.035, 1], [1900, 0.025, 0.8], [3300, 0.015, 0.6], [5200, 0.009, 0.4]];
 const LATCH: Mode[] = [[1250, 0.022, 1], [2150, 0.016, 0.8], [3400, 0.01, 0.6], [5100, 0.006, 0.4]];
 const LEAF: Mode[] = [[78, 0.16, 0.6], [124, 0.13, 1], [187, 0.1, 0.9], [265, 0.07, 0.7], [390, 0.05, 0.5], [560, 0.035, 0.3]];
@@ -797,6 +801,39 @@ export function buildSfx(ctx: SfxContext): Record<SfxName, SfxBuffer> {
       const sole = ts > 0 ? (lp(m, st, 2, 0.05) * 1.3 + (lp(m, st, 3, 0.3) - lp(m, st, 4, 0.08)) * 0.3) * env(ts, 0.005, 0.045) : 0;
       return peel + sole;
     }, 227),
+    // ---- THE GRAB AS THREE BEATS (played by name in place of grabScuffle and the knocked-out gun's borrowed magDrop: the catch as the arm lands, the strip 0.18 s
+    //      after it at his gun hand, the gun let down about 0.6 s after it at the floor — low thump, bright snap, dull knock). FIRST TAKES, written blind: nobody has
+    //      heard one. Other takes of each: audio/sfxAlt.ts.
+    // the catch: Sam's sleeve whipping round the man's neck (cloth swelling for a fortieth of a second and STOPPED by what it lands on), then one firm thump of a chest
+    // into a back 28 ms in — its weight between 100 and 500 Hz so a laptop's speakers carry it, the slap of a rig on a jacket over it, one buckle — and the breath
+    // the man snatches, shut off by the forearm seventy milliseconds after it starts. Nothing after that but his collar settling: a catch, not a struggle
+    grabCatch: make(ctx, 'grabCatch', 0.31, 4201, v => {
+      v.hiss(0, 1400, 6500, 0.026, 0.004, 0.42); v.hiss(0, 450, 1600, 0.026, 0.005, 0.25);                // the sleeve, and the heavier cloth of the arm under it
+      thud(v, 0.028, 150, 0.1, 1.0, 520); v.hiss(0.028, 220, 900, 0.001, 0.011, 0.9);                   // chest into back
+      knock(v, 0.03, 1300, 3800, 0.003, 0.2);                                                             // a buckle between them
+      const b = v.layer();
+      v.throat(0.058, 0.085, t => 190 - 500 * t, t => Math.min(1, t / 0.035) * (t < 0.07 ? 1 : Math.exp(-(t - 0.07) / 0.004)),
+        () => [[650, 180, 1], [1500, 250, 0.6], [2700, 300, 0.3]], { open: 0.7, breath: 0.9, voice: 0.35, jitter: 0.05, shimmer: 0.2 }, b);
+      v.add(peakTo(b), 0.4);                                                                              // his breath in, cut off
+      v.hiss(0.15, 700, 3000, 0.02, 0.014, 0.045);                                                       // his collar settling under the arm
+    }),
+    // the strip: the pistol twisted out of his grip — a dry snap as the grip leaves his palm (skin and polymer, no note in it), the slide rattling in its rails as the
+    // gun turns (four ticks, each the slide's own few modes drawn again, dying), Sam's glove round it, and one small hard click as it turns over in his hand. Bright
+    // and dry against the catch's thump; nothing in it rings longer than a fortieth of a second, so slowed to 0.8 it is a carbine's sling swivel and not a slowed pistol
+    gunStrip: make(ctx, 'gunStrip', 0.27, 4211, v => {
+      knock(v, 0, 1600, 7500, 0.003, 1.0); v.hiss(0, 450, 1800, 0.0004, 0.005, 0.8); v.ring(0, cluster(v, 1300, 4800, 6, 0.007), 0.0004, 0.3);   // the snap
+      for (let k = 0; k < 4; k++) { const at = 0.036 + 0.022 * k + 0.006 * v.u(), a = 0.3 * (1 - 0.17 * k); knock(v, at, 2200, 7000, 0.0012, a); v.ring(at, vary(v, SLIDE, 4, 0.05), 0.0004, a * 0.35); }
+      v.hiss(0.03, 900, 3200, 0.03, 0.012, 0.1);                                                          // the glove
+      clack(v, 0.17, 1400, 6500, 0.009, 0.34); v.ring(0.17, [[2900, 0.006, 1], [4700, 0.004, 0.6]], 0.0003, 0.14);   // over in his hand
+    }),
+    // the gun let down: from a low hand onto the floor, flat — ONE dull knock (its weight under 500 Hz, the frame and the magazine dead inside two hundredths of a
+    // second, a little steel in the contact), then it rocks flat: three small ticks, each half the last, and the hand leaving it. No bounce and no ring
+    gunDown: make(ctx, 'gunDown', 0.34, 4219, v => {
+      v.hiss(0, 100, 480, 0.001, 0.018, 1.0); knock(v, 0, 380, 1700, 0.006, 0.6); v.ring(0, cluster(v, 240, 1000, 6, 0.022), 0.0015, 0.3);
+      knock(v, 0.003, 1700, 4200, 0.0015, 0.1);
+      for (let k = 0; k < 3; k++) knock(v, 0.07 + 0.045 * k + 0.012 * v.u(), 800, 2800, 0.0025, 0.13 / (k + 1));
+      v.hiss(0.06, 250, 1100, 0.02, 0.026, 0.07);
+    }),
     // Sam's low whistle (V, game/whistle.ts): two short lip-whistled notes, the second a shade over a minor third down (1.1 kHz for 140 ms, a 40 ms breath, 0.9 kHz
     // for 170 ms), each scooped into from a touch flat the way a mouth finds a pitch and rounded off rather than cut, a whisper of second harmonic, and the breath
     // that makes it round the note (band noise about the pitch, loudest on the attacks) — phase-accumulated so the glide is exact at any rate. Quiet by design
