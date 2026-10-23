@@ -50,6 +50,7 @@ import { w, wg } from './words';
 import { isHostile } from './teams';
 import { hearPath } from './weather';
 import { DIGIN } from './digin';   // (call-time only: how far a shout carries)
+import { runnerMute } from './runner';   // (asked inside a tick only: false with its switch off)
 
 export const CUES = {
   /** the switch: off = none of this file runs, the strip and every line as they were */
@@ -261,7 +262,7 @@ export class Cues {
   /** one cue from this man, if he can speak and has not just spoken: a bubble, and (a net line) a row for the strip */
   private cue(gd: Guard, kind: CueKind, vars: Record<string, string> = {}): boolean {
     const g = this.g, t = g.time, M = this.man(gd);
-    if (gd.state === 'dead' || gd.held || t < gd.dazzledUntil || t - M.saidT < CUES.manSecs) return false;
+    if (gd.state === 'dead' || gd.held || t < gd.dazzledUntil || t - M.saidT < CUES.manSecs || runnerMute(gd)) return false;   // (runner.ts nobody: a man who has given up is nobody's voice)
     const b = gd.bubble, own = !!b && t >= b.t && t - b.t < 1.5;   // he has just said something of his own: that was his word on it —
     if (own && !(kind === 'help' || kind === 'fellBack' || kind === 'squadWaits' || kind === 'squadCopiesWaits')) return false;   // — but a shout to the men beside him ('fall back!', 'move!') is not the net: these two still go out on it (and a squad's 'hold — wait for my word' is the squad's word on its net, whatever he has just barked at the noise)
     if (this.kindBusy(kind)) return false;   // (the floor has just heard this from somebody)
@@ -275,7 +276,7 @@ export class Cues {
     return true;
   }
   private kindBusy(kind: CueKind): boolean { const t = this.g.time, kt = this.kindT[kind]; return kt !== undefined && t >= kt && t - kt < (KIND_GAP[kind] ?? 0); }
-  private fit(gd: Guard): boolean { const t = this.g.time; return gd.state !== 'dead' && !gd.held && t >= gd.dazzledUntil && t >= gd.staggerUntil; }
+  private fit(gd: Guard): boolean { const t = this.g.time; return gd.state !== 'dead' && !gd.held && t >= gd.dazzledUntil && t >= gd.staggerUntil && !runnerMute(gd); }
   private squadVoice(name: string, by: string): Guard | null {
     const g = this.g, men = squadMen(g, name).filter(m => this.fit(m)); if (!men.length) return null;
     return men.find(m => m.callsign === by) ?? men.find(m => g.fight.defs.some(D => D.gd === m && D.mode === 'hold')) ?? men[0];

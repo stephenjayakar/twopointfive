@@ -129,6 +129,7 @@ import { mateWandEye, mateWandEyes } from './wandorder';
 import { peekEye } from './peeksight';
 import { STICKY_STATS, stickyEyes } from './stickycam';
 import { toldLastSeen } from './told';   // (called inside lastSeen() only)
+import { runnerNobody } from './runner';   // (asked inside a tick only: false with its switch off)
 
 /** The knobs (Tab ▸ Sandbox ▸ Fog of war, __fow.knobs; read every frame). */
 export const FOG = {
@@ -542,7 +543,7 @@ export class FogOfWar {
     const g = this.g; const now = this.callClock += dt;
     if (!FOG.calls || !(FOG.cone || FOG.own) || !this.eyes.length || g.player.down || this.frameNo % CALL_EVERY) return;   // (looked over ten times a second: the lines asked here are the calls' own)
     const me = this.eyes[0];
-    const foes: Guard[] = []; for (const h of g.guards) if (h.state !== 'dead' && h.char.alive && isHostile(h.team, 'player') && h !== (g.player.holding?.g ?? null)) foes.push(h);
+    const foes: Guard[] = []; for (const h of g.guards) if (h.state !== 'dead' && h.char.alive && isHostile(h.team, 'player') && h !== (g.player.holding?.g ?? null) && !runnerNobody(h)) foes.push(h);   // (runner.ts nobody: a man who has dropped his gun and run is nobody's contact)
     const chestOf = (h: Guard) => h.char.bones.chest ?? v3.add(h.char.pos, [0, 1.1, 0]);
     for (const h of foes) if (this.recs.get(h)?.seen && this.lineToMan(me, h, chestOf(h))) this.knownT.set(h, now);   // (whom the player's own eye has, in the picture — not lost in a plume: nobody need tell him)
     if (now - this.lastCall < FOG.callGap) return;
@@ -559,7 +560,7 @@ export class FogOfWar {
     // heard: a step in a teammate's ears (roomfight.ts: the man he turns his head to) from somebody no eye of the fog's has
     for (const O of g.fight.ops) { const sb = O.stepBy; if (!sb || O.gd.state === 'dead' || this.toldStep.get(O.gd) === sb.t) continue;
       this.toldStep.set(O.gd, sb.t);
-      if (sb.by.state === 'dead' || !fresh(sb.by) || this.recs.get(sb.by)?.seen) continue;
+      if (sb.by.state === 'dead' || !fresh(sb.by) || this.recs.get(sb.by)?.seen || runnerNobody(sb.by)) continue;
       say(O.gd, sb.by, 'heard', sb.at); return; }
   }
 
