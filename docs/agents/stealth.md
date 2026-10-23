@@ -1097,6 +1097,63 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   solve is on or off, never eased, so where it starts or stops (the gun swapped in with a man in the arm, the hold ending, the haul's
   end) a knee still moves about 2 cm in one frame, once. sneaklab-check now raises the polish with the stalk, as the rule above asks.
   Nobody has seen or played anything of this pass; nothing of the stalk has been seen on a GPU.
+- **The stalk's eighth pass: the catch has a shape (10-23; `STALK.yankWith`, `HOLD.catchShape` and its numbers `HOLD.catch`;
+  `player.ts`, `character.ts` `holdLayer` / `heldLayer` / `catchFix`).** Measured first, frame by frame (`tools/qa/stalk-pose.ts`): the
+  man was hauled 11 cm INTO Sam (the haul moved him alone), Sam's root jumped 7 cm on the hold's first frame, his legs went from idle
+  to a walk mid-stride as the haul began and back as it ended, and his lead hand swung past the man's face at brow height, 21 cm
+  ahead of him. With the two keys up: (1) Sam goes back WITH the man (the gap is `HOLD.dist` from the landing on), his own stride
+  stops once he has landed and his feet STEP the haul, the rear one first (`catch.samFeet`, `HoldPose.pull`; slid with his root they
+  skated 28 cm at one height); the pair's turn to the cursor eases in over 0.45 s from a quarter second after the landing, whatever
+  the hold's phase by then. (2) The lead hand starts from where it
+  was DRAWN the frame before (the reach's hand, kept by `catchFix`, which also solves that arm last, after the crouch and reach
+  layers have moved the shoulder), goes over the man's left shoulder and round his throat with the elbow tucked (`catch.via`, `.over`,
+  both carried with the man by `HoldPose.man`, across and ahead, while Sam is still coming in). (3) The man is seen to be hit: both hands fly out, one
+  higher than the other, hang a tenth of a second and come onto the arm one after the other (`catch.fling`; a gun hand is the
+  disarm's as before), a short jolt of chest and head (`catch.jolt`), and his feet lag the haul and step back one after the other
+  (`catch.feet`, `HeldPose.pull`). (4) THE HOLD: he sits back onto Sam, hips down and forward, knees bent, heels out in front
+  (`catch.sink`, `.hips`, `.heels`), Sam's rear foot stepped back and out, his hips back and to the side, his head above and beside
+  the man's (`catch.brace`, `.seat`). The seat gives way to the lowering, the haul on the head and a gun's share, which have their own
+  fitted places: to the gun by `gv`, its eased share (keyed off the variant it dropped whole on the frame of a swap: Sam's hips 10 cm,
+  the man's 18). The FEET do not give way: where the seat set Sam's rear foot and the man's heels they stay through the lowering, the
+  haul and his going limp (`seatF`, `sitF`; given up with the rest they slid 19 and 12 cm as he was let down, which takedown-lower
+  caught). A hold dropped mid-reach lets the arm go with the layer's weight (held whole on its frozen key the hand hung, then
+  jumped 70 cm). `catchFix` lets go of the hand over the first 0.4 s of the held that follows the catch (`catch.settle`). The leg
+  solve's knee swivel eases in and out under the key. SWITCH: both keys are of the polish: up by
+  `stalkPolish(true)` at the page's boot, `?stalkpolish=0` puts them down with the other twelve; `HOLD.catchShape` acts only in a
+  bare-handed hold (not with Sam's pistol drawn, not with the knife back by `?noknife=0`), `STALK.yankWith` in any stalk's grab.
+  `HOLD.catch`'s numbers are the same on both stands and do nothing with the key down. FROZEN: down, two more `FROZEN_HOLDS` rows with
+  `TPS_STALKPOLISH=1` (fourteen now). SHIPPED: up. A recording from before this pass (no `yankWith` in its stalk table) replays with
+  both down (`journal.ts`). No new module state (`hdFrom`, `rdHandL`, `hdFix` are the animator's, drawn only). CHECK: stalk-check
+  `catch`, four lines, each against the same grab with the two keys down: the gap 0.27 to 0.27 m for 40 frames from the landing (0.16
+  with them down), Sam 0.28 m back, a foot 10.6 cm up at its highest and no foot on the floor moving more than 1.8 cm in a frame; the
+  lead hand at most 2.6 cm over the man's head bone and 11.5 cm ahead of him (4.6 and 25.0), and with the man taken out of the arm 14
+  frames into the reach the hand moves no further in a frame than with the keys down (22.0 cm both, Sam's own step in it); the man's
+  hands 78 cm apart for 9 frames on end (0); in the settled hold, the sway up, his feet 15.0 cm ahead of where he stands and his hips
+  15.9 cm ahead of his head (-7.0, 1.0), Sam's shins at most 0.7 mm a frame, the same again after a second's walk, and the gun
+  swapped in from there moves no hip, head or foot of either man more than 2.3 cm in a frame (0.8 with the keys down). `harness`: the fourteen rows, and a
+  seventh-pass recording replays with these two down and the rest up. Both stands, `STALK_BREAK=1` fails all five on both, one seed.
+  takedown-lower's '30 cm below standing' now adds the seat's 12 cm to the choke that does not lower him (he no longer ends it
+  standing): 40.0 cm by that, both stands green. `legs`' knee-twitch line now runs with `HOLD.catchShape` down (the seat asks for the leg solve too and hid its break). DOWN IS AS
+  IT WAS: stalk-pose `--down` in this tree against the build before it, bare hands and with the knife: THE SAME, 411 frames, 44 bones,
+  none 0.1 mm apart (by hand, shipped stand, one scene). With the polish up and the KNIFE back, Sam goes back with the man too, his
+  feet step it and the turn eases in: `STALK.yankWith`'s share, the changes outside bare hands. `catchFix` mends the LEFT hand only:
+  the right hand and every hand after the settle are still solved before the layers that move the trunk. LOOKED AT: close-stills sheets (`stalk`, `stalk-rifle`, `hold`, `choke`) on the shipped stand, three
+  passes with a visual reviewer between them; close-stills' `stalk` scene now keeps the cursor at Sam's feet after the grab so the
+  pair does not turn under the camera. STILL WRONG, known: the man's long shirt tents into a wedge beside his legs in the hold; the
+  rifle hangs for a tenth of a second while the support hand is out, then swings through both bodies on its way to Sam's hand (the
+  disarm's own timing, not touched); nothing moves in the settled hold but the sway; the chest-and-head jolt is too small to see from
+  the game's camera. Nobody has seen or played this pass; nothing of the stalk has been seen on a GPU.
+- **A lesson line names the move, not its key (`lesson.ts` `TOKENS`, `LESSON_TOKENS`, `lessonToken`; 10-23).** `{grab him}`,
+  `{grab him from behind}`, `{knock him out}`, `{take him out}` in a lesson's text are written out by `lessonLine` in the build's own
+  words: the held click with the stalk up (`STALK.on` and `.only`), the grab's key without, the knockout with bare hands, the knife
+  with `?noknife=0`. Any words may stand for `him`; a capital first letter begins a sentence; a name in braces that is none of the
+  four is left as written. No switch: a line with no token reads as before, and the old exact-sentence patterns still turn the old
+  lines. `checkLesson` refuses, in a step's `line`, `setupLine`, `blowLine` and `ringLine`: a name in braces that is no token (a
+  digit, a doubled or trailing space, a `from` left in the man's words), a brace left open, and a line that fits the row's 96
+  characters as written and not once written out the longest of the four ways (`lessonTokenFaults`). NOT checked: a token in a card's
+  text, a `noTap`, a plan or menu line, which `lessonLine` writes out all the same. No level uses a token yet (the tutorial's lines
+  are its owner's to move). CHECK: noknife-check, one line, the four ways the two keys stand and seven bad and three good lines, both
+  stands, its break by `NOKNIFE_BREAK=1`. Nobody has read a token's line on the page.
 - **The wait at a corner (`STALK.corner`, `stalk.ts cornerMan`).** The maintainer, 10-23: "curious if we can make this language work for working corners.
   like when you're at a corner you can either grab or CQC with the right timing". With his back on a wall (the wall hold, not the stack), hands empty, the
   left button HELD lies in wait: the moment a man who is not onto him is inside `cornerM` (1.35 m) with Sam at least `cornerDeg` (110) degrees round from
