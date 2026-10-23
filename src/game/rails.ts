@@ -259,11 +259,11 @@ export class Rails {
    *  Shift, his walk keys): set by `gate`, read and dropped by `afterOrders` in the same tick, so no snapshot between ticks ever holds one */
   private planTick: { buttons: number; shift: boolean; walk: boolean } | null = null;
   /** RIGHT AFTER THE ORDERS HAVE READ THE TICK (Game.step; RAILS.planDown): the mode was up when the gate ran and is down now — the pair, the back key,
-   *  the squad gone, a chain's own end: whichever road — so what was the mode's goes out of the tick before his feet, his sprint or his trigger read it */
+   *  the squad no longer his to order, nobody left to order, a save loaded: whichever road — so what was the mode's goes out of the tick before his feet, his sprint or his trigger read it */
   afterOrders(input: Input) {
     const T = this.planTick; this.planTick = null; if (!T || this.g.orders?.plan.up) return;
     input.buttons &= T.buttons; input.clicked &= T.buttons;
-    if (!T.shift) for (const k of ['ShiftLeft', 'ShiftRight']) { input.keys.delete(k); input.pressed.delete(k); }
+    if (!T.shift) for (const k of ACTS.sprint.keys!) { input.keys.delete(k); input.pressed.delete(k); }
     if (!T.walk) for (const k of ACTS.move.keys!) { input.keys.delete(k); input.pressed.delete(k); }
   }
   /** THE GATE (Game.step, right after the tick's record is loaded into the seat's input): whatever the step has not unlocked is taken out of the tick */

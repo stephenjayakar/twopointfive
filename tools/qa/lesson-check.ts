@@ -32,19 +32,20 @@ async function quiet<T>(f: () => Promise<T> | T): Promise<T> { console.log = con
  *  after it, whatever lies between. A wrong catch costs a look and a row in HONEST; a miss is a dead key on the player's screen. (Three cuts tried to tell
  *  'grab him with [Space]' from 'grab him, then press [E] to swap' by the words between: each one let a reworded old line through.) The line below holds it
  *  to the cases it was taught on, and a new miss goes there first */
-const KNIFE = /\b(kni(fe|fes|ves|fed|fing)|blades?|stab(s|bed|bing)?)\b/i, GRAB_KEY = /\[(?:Space|E)\]|\bSpace\b/;
-const GRAB = /\b(?:grab\w*|(?:tak(?:e|es|ing)|took|gets?|got|getting) hold|chok(?!e points?\b)\w*|seiz(?:e|es|ed|ing))\b/i;
+const KNIFE = /\b(kni(fe|fes|ves|fed|fing)|blades?|stab(s|bed|bing)?)\b/i, GRAB_KEY = /\[(?:space|e)\]|\bspace(?:bar)?\b/i, GRAB_E = /\bE\b/;   // (a key in brackets or bare, in any case; the letter alone only as a capital)
+const GRAB = /\b(?:grab\w*|(?:tak(?:e|es|ing)|took|gets?|got|getting) hold|chok(?!e[- ]?points?\b)\w*|seiz(?:e|es|ed|ing))\b/i;
 /** HONEST LINES THE NET CATCHES, word for word as the page says them (after lessonLine): a line here names a key beside a grab and the key is another act's.
- *  None today. Add one only after reading it on the page with both rules on */
+ *  None today. Add one only after reading it on the page with both rules on; a line lessonLine words differently on the two stands (a key the hand ring
+ *  moved) wants a row for each wording */
 const HONEST: ReadonlySet<string> = new Set<string>([]);
 const namesOld = (w: string, honest: ReadonlySet<string> = HONEST): boolean => { if (honest.has(w)) return false; if (KNIFE.test(w)) return true;
-  const q = w.split(/[.!?\n]+/); return q.some((x, i) => GRAB.test(x) && (GRAB_KEY.test(x) || GRAB_KEY.test(q[i - 1] ?? '') || GRAB_KEY.test(q[i + 1] ?? ''))); };
+  const q = w.split(/[.!?\n]+/).filter(x => x.trim()), key = (x = '') => GRAB_KEY.test(x) || GRAB_E.test(x); return q.some((x, i) => GRAB.test(x) && (key(x) || key(q[i - 1]) || key(q[i + 1]))); };
 if (!names.length) { console.log('\n=== lesson-check: the words the rules took away ===');
   const old = ['Sneak up behind him and press [Space] to grab him', 'Press [Space] behind him to grab him, and your partner will take his', 'Press [Space] behind the far guard to grab him', 'Press [Space] when you are close enough to him to grab him',
     'Grab him with [Space]', 'To grab him, press [Space]', 'When he stops, grab him: press [Space]', 'Grab him by pressing and holding [Space]', '[E] takes hold of him', 'Press [Space]! Grab him.', '[Space], and you\'ve got hold of him',
-    'Press [Space] to put him in a chokehold', 'Left click to use your blade', 'Stay low, then left click to knife him', 'Knives are quiet', 'Left click stabs him'].filter(w => !namesOld(w));
+    'Press [Space] to put him in a chokehold', 'Press [Space]. \nGrab him.', 'Press space to grab him', 'Press the Spacebar to grab him', 'Press [SPACE] to grab him', 'Press E to grab him', 'Grab him\nSneak up behind him and press [Space].', 'Left click to use your blade', 'Stay low, then left click to knife him', 'Knives are quiet', 'Left click stabs him'].filter(w => !namesOld(w));
   const fine = ['Hold left click on him from behind to grab him', 'Press [B] on the breaker box to cut the lights', 'When you grab yours, he\'ll take his. Wait for the light to pass. Press [Space] to open the door.', 'Right click to knock him out',
-    'Keep the stable door shut', 'Press [E] at the choke point'].filter(w => namesOld(w));
+    'Keep the stable door shut', 'Press [E] at the choke point', 'Press [E] at the chokepoint', 'Press [E] at the choke-point'].filter(w => namesOld(w));
   // (a key that is another act's, beside a grab: caught, by design, until its line is in the list — word for word, so a reworded one is caught again)
   const other = 'Hold left click to grab him, then press [E] to swap to your gun', listed = namesOld(other) && !namesOld(other, new Set([other])) && namesOld(other + '.', new Set([other]));
   verdict(!old.length && !fine.length && listed, 'the net knows a key to grab by, before the word or after it and across a stop, and the knife by any of its names; it leaves alone a held click, a cut light, a stable door and a choke point; and a key that is another act\'s beside a grab is caught until that line, word for word, is listed as honest',
@@ -67,7 +68,7 @@ for (const name of list) {
   // naming one and nothing else would say so: every line and card is read through it here. LESSON_BREAK=words leaves the two rules off: it must fail
   // on a level that teaches the grab.
   { const was = [STALK.on, STALK.only, CLOSE.on, CLOSE.noKnife], up = process.env.LESSON_BREAK !== 'words'; STALK.on = STALK.only = CLOSE.on = CLOSE.noKnife = up;
-    const said: [string, string][] = (L.steps as any[]).flatMap(T => [...Object.keys(T).filter(k => /[lL]ine$|^noTap$/.test(k)).map(k => T[k]), T.explain?.title, T.explain?.text, T.after?.line, T.after?.word]
+    const said: [string, string][] = (L.steps as any[]).flatMap(T => [...Object.keys(T).filter(k => /[lL]ine$|^noTap$/.test(k)).map(k => T[k]), T.explain?.title, T.explain?.text, T.explain?.title && T.explain?.text ? `${T.explain.title}\n${T.explain.text}` : null /* (a card is one screen: its title and words read together too) */, T.after?.line, T.after?.word]
       .filter((w: unknown) => typeof w === 'string').map((w: string) => [T.id, lessonLine(w)] as [string, string]));
     [STALK.on, STALK.only, CLOSE.on, CLOSE.noKnife] = was;
     const bad = said.filter(([, w]) => namesOld(w));
