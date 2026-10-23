@@ -935,8 +935,8 @@ export function kitName(i: number): { title: string; sub: string } {
 }
 /** a card in a line: 'AKS-74U · no light · goggles · 2 stun, 1 charge, 1 frag · olive drab'. Under the pouches rule the line names what fills a pouch — frags too, and your 40 mm
  *  rounds (none without the rifle: homeShells) — so its counts add up to the pouches shown beside it; with the rule off it is the line the build before had (no frags, no 40 mm: the rows fixture holds it) */
-export function kitWords(i: number): string {
-  const m = kitShown(i), look = [m.suit !== 'issued' ? SUITS[m.suit].label : '', m.trim !== 'issued' ? `${TRIMS[m.trim].label} trim` : ''].filter(Boolean).join(', ');
+export function kitWords(i: number, m: MemberKit = kitShown(i)): string {   // (`m`: another card in member i's place — the one a man was staged with, kitOf: ui/tabcard.ts)
+  const look = [m.suit !== 'issued' ? SUITS[m.suit].label : '', m.trim !== 'issued' ? `${TRIMS[m.trim].label} trim` : ''].filter(Boolean).join(', ');
   const frags = SLOTS.on && m.frags ? `, ${m.frags} frag${m.frags === 1 ? '' : 's'}` : '';
   // (KITTREE: a gun by its pick's name, as its tile reads — 'bare' after one whose suppressor the card has taken off)
   const gun = (slot: GunSlot) => `${gearText(pickWord(m[slot]))}${canChoice(m[slot]) && !kitSlotCan(m, slot) ? ' bare' : ''}`, guns = () => (m.weapon === 'pistol' ? `${gun('secondary')} only` : `${gun('primary')} + ${gun('secondary')}`);

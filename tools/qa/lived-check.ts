@@ -90,8 +90,9 @@ const LEVEL_BASE: Record<string, string> = {
   // behind the shop
   'tut-solo.json': 'bd7b25a26',
 
-  // the squad mission after a first play: the hall's street window glazed, a step given a cue
-  'tut-squad.json': 'be980f1e1',
+  // the squad mission: the hall's street window moved to the corner men's line and narrowed, the bags behind the gun over a man's head and longer, the can
+  // and its oil inside the nest (so only the strip in front of the glass has a line to the hall's two)
+  'tut-squad.json': '988465e1c',
 };
 /** WHAT OF A LESSON ITS OWNER MAY CHANGE WITH NO NEW BASE (scenarios.lesson; scene/scenarios.ts LessonData, LessonStep, RailsData): its WORDS, read from
  *  today's file and never held to the base — the lesson's `title`; a step's `line` and the lines that stand in for it (`setupLine`, `ringLine`, `blowLine`,

@@ -108,11 +108,13 @@ import { attachFlashlight, rollcallState, escalationOf, forgetGuardClocks } from
 import { forgetSuppressionClocks } from './suppression';
 import { glassState } from './glass';
 import { isDaylight, setDaylight, updateTargets } from './lighting';
+import { updateFire } from './fire';
 import { lampGlass } from './carlamps';
 import { needsSnapshot, needsRestore } from './needs';
 import { gunWallSnapshot, gunWallRestore } from './gunwall';
 import { wallHoldSnapshot, wallHoldRestore, type WallSnap } from './player';
 import { CLOSE, closeModeSnapshot, closeModeRestore } from './close';
+import { stalkReset } from './stalk';
 import { calmTorchSnapshot, calmTorchRestore, calmTorchPosed, type CalmTorchSnap } from './calmtorch';
 import { dozeSnapshot, dozeRestore, type DozeSnap } from './doze';
 import { moraleSnapshot, moraleRestore, type MoraleSnap } from './morale';
@@ -778,6 +780,7 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
   g.messages.length = 0; for (const m of (s.messages ?? []).slice(-5)) g.messages.push({ text: String(m.text), t: fin(m.t) }); g.cues.adopt(g.messages);
   gunWallRestore(g, s.gunWall);
   if (SAVETIMELINE.holds) { wallHoldRestore(g, s.wallHold); if (CLOSE.on) closeModeRestore(g, s.player.closeOn); }
+  stalkReset(g);   // (stalk.ts: nothing is stalked after a load — the button is pressed afresh)
   needsRestore(g, s.needs); whistleRestore(g, s.whistle); tacticsRestore(g, s.tactics); lanesRestore(g, s.lanes); dialogueRestore(g, s.dialogue);   // (whistle: the blower is keyed by the fresh Player, the men's halves by roster index — both exist by now)
   civiliansRestore(g, s.civilians);   // (after the men — she runs to / tells / was found by one of them by callsign — and after eventSeq: the fresh civilians' ears were stamped off the abandoned future's count; a file without the slice keeps them fresh on their marks, ears set right)
   if (s.weather && g.weather) g.weather.restore(s.weather);
@@ -797,6 +800,7 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
   const A = g.saves; if (A) A.adopt(s.autosave, g);
   g.hover = null; g.interactables = []; g.nearby = []; g.act = null; g.useDoor = null; g.aimGuard = null; g.aimTarget = null; g.aimSnap = null;
   updateTargets(g, 0);   // (every target's factor / light / emissive off the restored switches and blackout NOW: a checkpoint written in the dark loads dark on its first frame, not its second)
+  updateFire(g, 0);      // (… and an open fire's lamp, its place and its coals as this clock has them: fire.ts)
   if (s.dice && g.dice) { g.dice.s = s.dice.s | 0; g.dice.n = fin(s.dice.n); g.dice.seed = fin(s.dice.seed) >>> 0; }   // the game's own die back where the file left it — LAST, after every construction draw the clean slate above made
   if (s.kind !== 'harness') { chronCheckpoint(g, 'load', opts.label ?? s.label); g.messages.push({ text: `checkpoint loaded${s.label ? ` — ${s.label}` : ''}`, t: g.time }); if (g.messages.length > 5) g.messages.shift(); }   // (a harness restore is staging, not a checkpoint the player loaded: no row, no line, no load on the card)
 }

@@ -56,7 +56,7 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
   const fight = async (want, secs) => { if (!drew) return until(want, secs);
     for (let k = 0; k < secs; k++) { const s = await read(); if (want(s)) return s; await run(60); await page.evaluate(async () => { window.__runFrames(1, 1 / 60, [], false); await window.__engine.device.queue.onSubmittedWorkDone(); await new Promise(r => setTimeout(r, 50)); }); }
     return read(); };
-  const url = `http://localhost:${PORT}/?roomclear&squad4&levelFile=${NAME}.json&paused&quality=${QUALITY}&mute&nocutboxes`;
+  const url = `http://localhost:${PORT}/?roomclear&squad4&levelFile=${NAME}.json&paused&quality=${QUALITY}&mute&nocutboxes${process.env.URL_ADD || ''}`;   // (URL_ADD='&tab=brief' = Tab's objectives card as a played page has it: a driven page has none)
   log(url);
   // (a browser kept up from a run before this one: a page that is not this mission at its first tick — left in the middle, FINISHED, or on another mission, the
   //  end card's own key goes on to the next row — is loaded again, however long the software adapter takes: the game's own restart puts back a checkpoint, not
@@ -121,6 +121,10 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
   const walkTo = async (s, what) => {
     let r = await read(); const was = r.plan; if (r.plan) { await tap('Tab'); await run(80); r = await read(); }
     if (was) check(!r.plan && !r.crouch, `step '${s.id}': Tab on the real keyboard puts plan mode away and he stands`, `mode ${r.plan} · on a knee ${r.crouch}`);
+    // (…and that press was the back key's alone: the page's objectives card, which Tab opens when there is nothing to back out of, did not come up on it;
+    //  with the mode down the line stops naming the key, so nobody is sent to press it a second time)
+    if (was) { const tc = await page.evaluate(() => { const e = document.getElementById('tabcard'); return !!e && e.classList.contains('on'); });
+      check(!tc && !r.keys.includes('Tab') && !/plan mode/.test(r.line) && /walk/i.test(r.line), `step '${s.id}': the press that closed plan mode did not open the objectives card, and the line now only says where to walk`, `objectives card ${tc ? 'UP' : 'not up'} · the line "${r.line}" · keys ${r.keys.join(' ') || 'none'}`); }
     // (the view has come back to him: the ring he is to walk to is on the picture, or the page has pinned the step's mark to the picture's edge on that side
     //  with the metres to it — ui/overlay.ts, the objective's mark — so the line never points at nothing)
     { const q = await at(s.at), m = await page.evaluate(() => { const e = document.querySelector('.objmark'); return e ? { on: getComputedStyle(e).display !== 'none' && +getComputedStyle(e).opacity > 0.2, edge: e.classList.contains('edge'), x: Math.round(parseFloat(e.style.left)), y: Math.round(parseFloat(e.style.top)), text: e.textContent } : null; });

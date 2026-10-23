@@ -52,6 +52,7 @@ export async function runnerCheck(): Promise<boolean> {
   const { DARKDOOR } = await import(`${ROOT}/src/game/darkdoor.ts`); const wasDoor = DARKDOOR.on;
   const { RUNNER, RUNNER_STATS, runnerOf, runnerFled, runnerOwns, runnerLines, runnerSummary, runnerBreak } = await import(`${ROOT}/src/game/runner.ts`);
   const { DOORBLAST } = await import(`${ROOT}/src/game/doorblast.ts`);
+  const { GUNROLES } = await import(`${ROOT}/src/game/gunroles.ts`);
   const { pictureTell } = await import(`${ROOT}/src/game/picture.ts`);
   const { FRAG, blast } = await import(`${ROOT}/src/game/frag.ts`);
   const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`);
@@ -86,11 +87,13 @@ export async function runnerCheck(): Promise<boolean> {
   /** the hut's man broken and holding (morale-check's stage and its lone run), then baited dry: `on` = this file's switch; `mates` = where the rest of the
    *  garrison is — parked across the yard in the shed · the two nearest left on their own posts, the rest parked · every one of them down; `squad` = the
    *  player's team staged with him (blind until the case wants one of them); `shoulder` = a mate put two metres from him as his change begins */
+  let gunWas: boolean | null = null; const gunDeal = (hold = false) => { if (gunWas === null) gunWas = GUNROLES.on; GUNROLES.on = hold ? false : gunWas; };   // (the gun deal as the stand has it, held off for one staging and put back for the next: a stand-up on the page's stand does not write it again)
   const stage = async (seed: number, on: boolean, mates: 'parked' | 'posts' | 'none' = 'parked', squad = false, shoulder = false, bait = true, squads = false) => {
     draws = 0; { const die = seeded(seed); Math.random = () => { draws++; return die(); }; }
     MORALE.on = false; RUNNER.on = false; Object.assign(RUNNER, was.runner, { on: false }); SQUADS.on = squads;
     const W: any = await quiet(() => standUp({ level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', 'compound.json'), 'utf8'))) }));
     const g = W.game; DOORBLAST.on = true; DESTRUCTION.on = true; FRAG.doorStun = true; g.tune.chaos = 0.5; MORALE.on = true; RUNNER.on = on; RUNNER.anyway = false; first();   // (anyway: the later rule — both guns down, the run past a known enemy — has its own check, runanyway-check; these lines are the rule under it)
+    gunDeal(mates === 'posts');   // (case (2) was staged with every defender on the short carbine: under the gun deal (gunroles.ts) the two mates left on their posts are on the move by the time he runs, and he is still 14 m short of them when `mateSecs` is up — the rule as written, but not the case these lines stage. The page's stand held this red from the day the deal came in)
     startFromQuery(g, `levelFile=compound.json&roomclear${squad ? '&squad4' : ''}`); g.godMode = true;
     const gone: any[] = [];
     let vis = 0.05; const step = (n = 1) => { for (let i = 0; i < n; i++) { g.player.visibility = vis; wipe(g, gone); W.step(DT); } };
@@ -297,7 +300,7 @@ export async function runnerCheck(): Promise<boolean> {
 
     // (10) a man of the night staff, and the game's own checkpoint · (11) a bare night breach
     { MORALE.on = false; RUNNER.on = false; Object.assign(RUNNER, was.runner, { on: false }); SQUADS.on = was.squads; Math.random = seeded(41);
-      const W: any = await quiet(() => standUp({})); const g = W.game; MORALE.on = true; RUNNER.on = true; RUNNER.anyway = false; first(); g.godMode = true;
+      const W: any = await quiet(() => standUp({})); const g = W.game; MORALE.on = true; RUNNER.on = true; RUNNER.anyway = false; gunDeal(); first(); g.godMode = true;
       const step = (n = 1) => { for (let i = 0; i < n; i++) { g.player.visibility = 0.05; wipe(g); W.step(DT); } };
       step(30);
       const staff = g.guards.filter((x: any) => x.team === 'guard' && x.state !== 'dead'), T = staff[0], idx = g.guards.indexOf(T), n0 = g.guards.length, units = g.guards.filter((x: any) => x.unit).length;
@@ -316,7 +319,7 @@ export async function runnerCheck(): Promise<boolean> {
       } catch (e) { snapWhat = `the checkpoint threw: ${e instanceof Error ? e.message : String(e)}`; }
       line(snapOk, '(10) the game\'s own checkpoint (savestate.ts): his run comes back fled, the same phase, the same place to tell, still held, still empty-handed', snapWhat); }
     { MORALE.on = false; RUNNER.on = false; Object.assign(RUNNER, was.runner, { on: false }); Math.random = seeded(42);
-      const W: any = await quiet(() => standUp({})); const g = W.game; MORALE.on = true; RUNNER.on = true; RUNNER.anyway = false; first(); g.godMode = true;
+      const W: any = await quiet(() => standUp({})); const g = W.game; MORALE.on = true; RUNNER.on = true; RUNNER.anyway = false; gunDeal(); first(); g.godMode = true;
       const gone: any[] = [], step = (n = 1) => { for (let i = 0; i < n; i++) { g.player.visibility = 0.05; wipe(g, gone); W.step(DT); } };
       const why = (await startFromQuery(g, 'nightbreach'))?.why ?? null; step(20);
       const nb = g.nightBreach, H = nb.hostiles.find((h: any) => h.state !== 'dead'); if (H) gone.push(H);
@@ -343,7 +346,7 @@ export async function runnerCheck(): Promise<boolean> {
     { const lostRun = async (seed: number, fall: boolean) => {
         MORALE.on = false; RUNNER.on = false; Object.assign(RUNNER, was.runner, { on: false }); SQUADS.on = false; Math.random = seeded(seed);
         const W: any = await quiet(() => standUp({ level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', 'compound.json'), 'utf8'))) }));
-        const g = W.game; DOORBLAST.on = true; DESTRUCTION.on = true; FRAG.doorStun = true; g.tune.chaos = 0.5; MORALE.on = true; RUNNER.on = true; RUNNER.anyway = false; first(); MORALE.training = 'mixed';
+        const g = W.game; DOORBLAST.on = true; DESTRUCTION.on = true; FRAG.doorStun = true; g.tune.chaos = 0.5; MORALE.on = true; RUNNER.on = true; RUNNER.anyway = false; gunDeal(); first(); MORALE.training = 'mixed';
         startFromQuery(g, 'levelFile=compound.json&roomclear'); g.godMode = true;
         let vis = 0.05; const step = (n = 1) => { for (let i = 0; i < n; i++) { g.player.visibility = vis; wipe(g); W.step(DT); } };
         step(10);
@@ -392,7 +395,7 @@ export async function runnerCheck(): Promise<boolean> {
         '(8) the switch off: nobody taken, nothing on the floor, nothing filed, the summary empty — and the run draws and digests as a stand that never had the rule on',
         `dry ${off.dry} · frames taken ${off.taken} · weapon items of his ${off.guns} · filed ${off.filed} · summary '${off.sum}' · die draws ${off.draws} (base ${base.draws}) · fifteen digests equal ${off.s === base.s}`); }
   } catch (e) { all = false; console.log(`- FAIL — the check threw\n    ${e instanceof Error ? e.stack : String(e)}`); }
-  finally { DARKDOOR.on = wasDoor; NQ_.on = nq0_; Object.assign(RUNNER, was.runner); Object.assign(MORALE, was.morale); Object.assign(FRAG, was.frag); DOORBLAST.on = was.door; DESTRUCTION.on = was.sw; SQUADS.on = was.squads; Math.random = was.rnd; }
+  finally { DARKDOOR.on = wasDoor; NQ_.on = nq0_; Object.assign(RUNNER, was.runner); Object.assign(MORALE, was.morale); Object.assign(FRAG, was.frag); DOORBLAST.on = was.door; DESTRUCTION.on = was.sw; SQUADS.on = was.squads; if (gunWas !== null) GUNROLES.on = gunWas; Math.random = was.rnd; }
   console.log(`=== runner: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
 }

@@ -1026,3 +1026,62 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   floor's rows; that memo is a module `SideMap` marked `asMemo()` now (the charges' own mend), and the check's read asks `hud(kept)` every
   frame after the pick, so `ask` and `state` stand for the whole HUD read. The store is outside the rollback snapshot (scratch and a list a
   second old). Never seen in a page.
+- **The squad reaches you, and the quick key says why** (`src/game/squadnet.ts`, table `SQUADNET`, one `SquadNet` on the Game as `game.squadNet`;
+  drawn by `src/ui/bubbles.ts`; Tab ▸ 'Squad net'). The maintainer picked it from the AI legibility doc: "The squad reaches you, and Q says why.
+  Off-screen teammate lines arrive near you with a radio click, a man down has its own sound, the Q row says 'Bang and clear. Nobody's been in
+  there.', and 'clear' means clear." Three rules from that pick and a fourth found while building it, a switch each, all ON in the page and OFF in the
+  module and on the frozen stand.
+  FAR LINES (`SQUADNET.on`, `?squadnet=0`, `TPS_SQUADNET=1`): a bubble was drawn only over a head on the screen, so a teammate's line said two
+  rooms off was said to nobody. With the rule his bubble is drawn NEAR YOU (`SQUADNET.near` × the view's shorter side from you, toward where he
+  is on the screen; about the middle of the view while you are off it yourself: the plan's camera, a man watched) as `↙ Red One: stacked up.`,
+  class `bubble net` + his tone, one row, each further line a row higher, never under a HUD card. `say()` asks `squadNet.line()` for a click
+  when his head (`guards.ts headOf`, the point and the `onScreen` test the HUD draws by) is off the screen: `'radio'` at `SQUADNET.click`, rate
+  `clickRate` 1.3 so that it is not the defenders' net's squelch (cues.ts, rate 1), once a frame. A teammate whose state turns `dead` is a row of
+  its own on `squadNet.rows` (`Red Two is down.`, 5 s, drawn over where he fell while that is on the screen and near you otherwise) with the
+  same voice louder and at rate 0.55: there is no voice of its own for it in `audio/sfx.ts` yet, that is the sound work's to make. Nothing
+  writes a `Guard.bubble`: the run with it on is the run with it off by digest (the check holds it). A man already down when a run starts or a
+  checkpoint loads is not called; a roster stood up again under the same names is. NOT DONE: a line said on the screen whose man the camera
+  then leaves moves to the near place with no click; a cue's own bubble (`cues.aside`) on a far teammate is drawn near and does not click.
+  WHY (`SQUADNET.why`, `?qwhy=0`, `TPS_QWHY=1`): `squadnet.ts whyWords(pick)` gives the reason when the autopilot's pick on a door the men wait
+  on is not a plain open: at the end of the quick key's row (`orders.ts hud()`, one `autoPick` a frame for the words and the reason) and in the
+  answer of the man who takes the order (`GiveOpts.ack`, in place of the row's own; `autoQuick` and a plan's `quickFor` both pass it):
+  `nobody's been in there` / `banging it. nobody's been in there.` · `they see one inside` / `banging it. i see one in there.` · `they're saving
+  the last bang` / `going in. i'm saving the last bang.` (`AutoPick.kept`: an unknown room opened plain because `AUTOPILOT.keepBangs` holds
+  the last stun) · `they can't open it` / `we can't open it. setting a charge.` (the press only: the HUD's line asks no lock). A plain open, a
+  silent squad and a stack say nothing more; no press waits. The answer changes a bubble's length, so a run with it on is not the run with it
+  off by digest once such a line is said.
+  CLEAR (`SQUADNET.clear`, `?honestclear=0`, `TPS_HONESTCLEAR=1`): the lead's call at an entry's end (`doortools.ts`, a room of the room clear's
+  own) goes through `roomCall()`: `<room> clear.` only with nobody standing in it AND a search that was not cut short (`RoomSearch.left` under
+  `DOORTOOLS.deadCells`, the search's own bar for floor no man could see); `<room>'s quiet. we didn't see all of it.` (`bunks are quiet. …` for
+  a name in the plural) with a search cut short and no enemy of the room in the team's sight; nothing with one in sight, or one standing on
+  floor they saw (as before: nothing was said there). An entry with no search of its own (open floor) is called as it was. The floor counted is
+  the room fight's flood, the name and who stands inside are the room clear's own rectangle: two models of a room, not reconciled here.
+  EVERY ENTRY ENDS WITH A CALL (`SQUADNET.endCall`, `?endcall=0`, `TPS_ENDCALL=1`): the lead called only a room of the room clear's own list,
+  so an entry into any other room (the office's conference room, a hall, every room of a mission with no list) ended with nothing said. With
+  the rule, at the same place in `doortools.ts`: a lead who stands in no room of the list calls the listed room the entry's own points are in;
+  with none there either he calls the room fight's flood with no name through `squadnet.ts plainCall()`: `room clear.` / `room's quiet. we
+  didn't see all of it.` by `roomCall`'s own rule (who stands inside is `inFlood()`: the flood's cells and the room's own doorways, a man who
+  has dropped his gun left out as in the named call), and of open floor (`openFloor`, which nobody searches) `clear so far.` unless an enemy
+  on it is in the team's sight. Sam's own squad only (`g.orders.sams`): the response team runs the same door orders as a cast of its own and
+  says none of it. The same test now guards the far lines' click in `guards.ts say()`: before it, the response team's lines clicked the
+  squad's net (7 clicks over two of its entries with no squad on the floor). It adds a line where there was none, so a run with it on is not
+  the run with it off by digest once one is said; off is the build as it was (seeds 1–4, two entries each, both stands, against the build
+  head it was merged on). The pre-existing named call has no such guard: a response team that ends an entry in a listed room of a room clear
+  would call it by name, as it did before any of this (not seen, not changed here).
+  CHECK `bun run tools/qa/squadnet-check.ts` (also `probes.ts squadnet`: why · clear · end · net · off; `end` runs under `doortools` too;
+  `SQUADNET_BREAK=1` fails all five), both stands, the room clear on the office with four, seeds 5, 7 and 11, and the response team on seed
+  41. It reads what a man SAID off his bubble, a frame at a time. MEASURED on the office (the squad of four, the quick key's own pick, the
+  defenders of the room beyond left as dealt, every switch on): entries into the room clear's four listed rooms, seeds 1–4 on the shipped
+  stand, 16 of 16 called by name (all `clear`; floor unseen 0 or 1 cell, under the bar); entries into the conference room, which is on no
+  list, seeds 1–8: 8 of 8 silent before the rule (shipped stand) and 8 of 8 `room clear.` with it (each stand). So on the office the honest call changes
+  nothing a player would hear, and the fourth rule is what he hears. A COUNT THIS FILE CARRIED WAS WRONG: an earlier pass read 24 of 60
+  entries into listed rooms as ending with no call. It counted rows of the message log, and `say()` files a row only for a man off the
+  screen or in the fog, so every call made in view was missed. NOT MEASURED: any level but the office; a live entry onto open floor (`clear
+  so far.` is held as words only); a mission with no room list (rescue, the quiet missions as two), where every entry now takes the
+  no-name call. ON THE PAGE (`PORT=<port> node
+  tools/qa/squadnet-look.cjs <dir>`, software adapter): the far lines and the down row are read off the HUD's own elements with where they lie
+  against you and against the man; `ENTRY=1` in front of it drives an entry into the conference room and read `↑ Red Two: room clear.` as a
+  far line near you (the lead off the screen), counted once, no page or console errors. Never seen on a GPU, never played, never heard: the click's level and pitch and the pitched-down click for a
+  man down are guesses. The words are lower case like the rows and answers beside them. OPEN: where the reason sits on the quick key's row is
+  the commanding work's to settle (its flat wheel and the corner panel draw that row); the reason for a charge is not on the HUD's line (the
+  hint does not ask the lock, so it shows the open it will not do).

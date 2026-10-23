@@ -1,6 +1,7 @@
 // The other takes of the fourteen voices the maintainer called toys (src/audio/sfxAlt.ts): each one renders, is neither silent nor clipped, is a different sound from the
 // voice in the game and from its sibling, sits at that voice's level, and rendering them leaves the game's own table sample for sample what it was. It prints each take's
 // length, level and where its energy lies BESIDE the old voice ('before') and the one in the game's redone table ('after') — numbers, since nobody here can listen.
+// The same holds of the two other takes of each of the grab's three beats (grabCatch, gunStrip, gunDown), which have no 'before'.
 // THE TUNER'S HOOK (the sound lanes' card, src/replay/soundtune.ts): a voice built ALONE under a tune that changes nothing is the table's voice sample for sample, for
 // every voice and every other take; a number laid over a layer, another seed, a muted layer each make another buffer; a layer heard alone and the voice without it add
 // up to the voice (the level scale is the whole voice's) wherever the recipe only adds; a kept tune of garbage reads as no tune.
@@ -35,9 +36,11 @@ const TOYS = ['rifleSuppressed', 'magOut', 'magIn', 'rack', 'footHard', 'doorBan
 const FLAGGED = ['propScrape', 'propThud', 'lockBreak', 'magDrop'];
 /** his picks of 10-13, as [name, place in its list]: moved into the game's table, their places kept so 'new 2' stays 'new 2' */
 const PICKS: [string, number][] = [['footHard', 0], ['magIn', 1], ['rack', 1]];
-const WITH = [...TOYS, ...FLAGGED];
+/** the grab's three beats (new voices, nobody has heard one): two other ideas of each to choose from */
+const GRAB = ['grabCatch', 'gunStrip', 'gunDown'];
+const WITH = [...TOYS, ...FLAGGED, ...GRAB];
 const asked = process.argv.slice(2), names = asked.length ? asked : WITH;
-line(WITH.every(n => altTakes(n) >= 1) && altNames().every(n => WITH.includes(n)) && altTakes('pistolLoud') === 0, `his fourteen toys and the four he flagged have another take, and no other voice has (${altNames().length} voices)`);
+line(WITH.every(n => altTakes(n) >= 1) && GRAB.every(n => altTakes(n) === 2) && altNames().every(n => WITH.includes(n)) && altTakes('pistolLoud') === 0, `his fourteen toys and the four he flagged have another take, the grab's three beats have two each, and no other voice has (${altNames().length} voices)`);
 { const got: string[] = []; for (const n of WITH) for (let k = 0; k < altTakes(n); k++) if (altPicked(n, k)) got.push(`${n} new ${k + 1}`);
   const want = PICKS.map(([n, k]) => `${n} new ${k + 1}`);
   line(got.slice().sort().join() === want.sort().join() && PICKS.every(([n, k]) => altTake(ctx, n, k) === null), `his three picks keep their places and are offered no more: ${got.join(', ') || 'none'}`); }

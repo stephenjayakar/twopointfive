@@ -152,6 +152,43 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   AFTER THE STEP: a squad mix kept on the machine (the three levers) no longer says its line ("Your own mix, kept on this machine: …") under the lever
   rows of the solo night's or a quiet mission's Team & kit screen: none of it acts there and its fog word read against the quiet fog's row
   (`ui/loadout.ts paintLevers`, the kit card's file; words on a screen only, no switch). `levers-screens` holds it on both stands; red on the tree before.
+- **How much you're told is a fourth difficulty lever, and a squad mission's fog can be put off** (`src/game/told.ts` TOLD; 10-23, from the maintainer's
+  "how do we communicate friendly and enemy AI state to the player (especially on easier difficulties)"). What was there: every setting only took signs
+  away (the fog's cones, own eyes), and the last-seen mark (`fogofwar.ts lastSeen()`, the fading '(?)' `ui/overlay.ts` draws) was built and at 0 s
+  (`FOG.lastSeen`). THE LEVER: `You're told`, three rungs from the easiest, GUIDED · STANDARD · BARE, a fourth row under Enemy kit on the mission sheet,
+  the Setup rail and the loadout screen (`difficulty.ts leversNow()` = LEVERS plus this one; `ui/levers.ts` draws whatever that list holds). The level
+  standard puts it on Standard and hard on Bare; Guided is no level's, it is reached by moving the lever (a mix of your own, kept on the machine with the
+  others, `?told=guided|standard|bare` for a visit). Left alone it follows the level the other three stand on (`difficulty.ts levelOfThree`): fog cones +
+  AI hard set by hand over standard is still Hard, with this row on Bare, so a machine that kept that mix reads as it did. The row moved by hand off
+  its level's rung is a mix (`custom`: records and pars are filed there, `main.ts`). WHAT A RUNG DOES TODAY, one thing: an enemy who goes out of the team's sight keeps his mark for `TOLD.standard` 4 s on Standard, `TOLD.guided`
+  10 s on Guided, none on Bare (the debugger's `FOG.lastSeen` row is 0 as shipped; turned up it is the seconds on every rung). The mark is drawn
+  only under a fog; the row stays live with the fog's own, its off rung included, because the lever is for more signs than this one. The mark is the HUD's alone: no game code reads it, so a run
+  digests the same on every rung and with the lever off. A LATER SIGN ASKS THE LEVER, never the difficulty: `toldAtLeast('standard')` (shown on Standard
+  and Guided) or `toldAtLeast('guided')` (Guided alone); with the switch off both answer as Bare. A sign that would show a defender COUNT stays off
+  Guided without the maintainer's word (menus.md, the mystery rule). THE FOG OFF (`TOLD.fogOff`): a squad mission's fog lever has the quiet missions'
+  bottom rung, off (`difficulty.ts FOG_OFF_RUNG`, `SET.fog 'off'`, `?fog=off` for a visit): `scenarioRun.ts fogOfQuery` then raises no fog on a room
+  clear's or a rescue's link (one that asks for the fog by name, `fow`, still gets it). NO FOG IS NO FOG FOR THE SQUAD'S CODE TOO: `fogOfWar.sighting()`
+  and `hidden()` answer for every enemy, so `wallcharge.knownFoes`, a pair's foe list and the 40 mm count men nobody saw, and the wand and the sticky
+  cameras are not offered. The rung's words say the team knows too; a fight under it is NOT the fogged fight with more drawn, and nothing has measured
+  it. It is the cheap test, the floor under Guided, not Guided. `fogOfLink` is the old
+  answer ('does this mission have a fog at all'), which is what keeps the lever's row live on the screens while the rung is off. A quiet mission's and
+  the solo night's fog is still their own pick (`quietfog.ts`), a Training lesson reads no lever. SWITCHES: both ON in the page (`?told=0`,
+  `?fogoff=0`), OFF in the module and on the frozen stand (`TPS_TOLD=1`, `TPS_FOGOFF=1`; FROZEN_HOLDS rows `TOLD.on`, `TOLD.fogOff`); the TOLD table
+  rides a recording, and one from before the keys replays with both off (`journal.ts`). Off = three levers, three rungs of fog, `FOG.lastSeen` alone
+  deciding the mark. No debugger row yet. CHECKS: `bun run tools/qa/probes.ts told` (`tools/qa/told-check.ts`, 23 verdicts, `TOLD_BREAK=1` exits 1 on
+  both stands): the rules with the switches down and up, the URL and the store, a squad link with the fog off hiding nobody, a sighting and a loss on each
+  rung (mark at 0.75 s, at 5 s, at 11 s) with the four runs' digests equal, the real sheet and the loadout screen on a fake DOM, the words (no digit above 5, no compass word),
+  the two stands and the journal. The real page: `PORT=<port> node tools/qa/told-page.cjs <dir>` (the start page's rail at 1440x900 and 1000x673, then
+  a room clear in play on the software adapter under Guided, Bare and `fog=off`; `GAME=0` skips the second half, `TOLD_BREAK=1` must fail). Older checks
+  that count three levers hold both switches down for their run (`levers-probes`, `quietfog-check`, `sticky-check` stickyWays, `calls-probes` calls-lastseen: `told-check.ts threeLevers`).
+  NEIGHBOURS' FILES, a few lines each: `difficulty.ts`, `fogofwar.ts` (one line in lastSeen), `scenarioRun.ts`, `ui/levers.ts`, `ui/missions.ts`,
+  `ui/loadout.ts`, `host/profile.ts`, `standup.ts`, `standEnv.ts`, `knobs.ts`, `journal.ts`. WHAT MOVES IN THE PAGE WITH NO FLAG: a mission on Standard
+  shows last-seen marks for 4 s where it showed none (Hard is as it was), and a Training lesson under a fog does too (lessons stand on standard).
+  A visit with a switch off keeps the kept rungs it hides (`keptHidden`). KNOWN, LEFT: (1) the fog put off on the sheet in mid-mission acts at the
+  next deploy, where the fog's other rungs act at once; (2) the wand's and a camera's own marks (`markSecs`) are untouched; (3) `write()` sets
+  `TOLD.rung` with the switch off too (nothing reads it then), and over a harness `--set TOLD.rung`. Measured on one level (the pair's room
+  clear), one seed, both stands. Never seen on a GPU and never played: whether 4 s and 10 s read right, and whether the '(?)' is enough of a sign, is
+  the maintainer's to say.
 - **Your own stuck cameras show in the fog of war** (`STICKY.mark`, `stickycam.ts stickyBoxes / stickyMarks`, drawn by `ui/overlay.ts` as `.cammark`;
   2026-10-17; the maintainer, from play on the vault, quiet, hard, the fog's cones: "nit, you should be able to see your sticky cameras in fog of war").
   WHAT WAS THERE: a camera's two boxes were unkeyed, so the fog's rule for loose things (fogofwar.ts rule 4d) handed them to the picture only on floor an
@@ -877,8 +914,117 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   harness. One staging, no seeds, and no line stages a low man (the neck bar is read from the code alone). Pictures: `close-stills.ts --scene stops-crouch` with and without `--set '{"CLOSE":{"handsLow":false}}'`. WHAT IT COSTS:
   crouched, nothing on Sam's body now says "the grab is on" before he presses; the row says it. NOT MENDED: the grab still takes him from the crouch to
   upright against the man's back in about 0.12 s. Seen only as CPU mesh stills; never in the page, never on a GPU.
+- **The stalk: the last three metres to a man's back are one held click (`STALK`, `src/game/stalk.ts`).** The maintainer's design, 10-23: "when you're close
+  enough to an enemy (like entering the closer than ever state) you can click and hold on an enemy and sam will creep toward him · click, let go to stop, and
+  click again to continue · the game also controls the trajectory and speed and makes things smooth. it ends with you grabbing him · you get kicked out of the
+  mode if he gets too far away, turns around, goes through a door in a way that doesn't make sense", and then "we should get rid of E to grab then. lmb is the
+  only way". Hands empty, a living man who is not onto him, inside `CLOSE.modeM` (3.0 m) with nothing solid between, Sam at least 104.5° round from the
+  man's nose (`beginCos`): the LEFT button pressed on him (the reticle's man, or the cursor within `cursorM` 1.1 m of his feet) takes him. While it stays down
+  `updatePlayer` walks Sam: crouched, toward the point `stationM` (0.55 m) behind the man's back, at the man's own speed plus a closing speed
+  (`closeMin` 0.3 m/s at the grab, `closeK` 0.6 more a metre out, never over `pace` 1.6), his speed eased in at `easeUp` 4 /s and out at `easeDown` 9 /s,
+  facing the man. Inside `grabM` (0.95 m) with the grab on offer (`closeAt`), `game.ts` calls `startGrab` on that frame. It ENDS, with nothing stalked until
+  a fresh press: the button up · past `CLOSE.modeOutM` (3.6 m) · a wall or a leaf between them · he has turned until Sam is less than 93° round (`outCos`)
+  · he is dead, held, out of the picture or onto Sam · Sam's hands are busy or no longer empty · a move key of the player's own. The click that begins or
+  carries a stalk is no blow (`stalkHas`). `STALK.only` (on with the stalk; `?stalkonly=0` puts the row back): a staff man has NO 'grab him' row in
+  `closeRows` — his line says `LMB  hold to grab him`, or `E  holster, then hold LMB to grab him` with a gun out, so the pistol's hold is reached from the arm
+  hold's own draw row. A civilian keeps her row, and so does everybody under a show (`closeLive` is false there) and with `CLOSE.on` off. THE RAILS: where a
+  mission's rows offer 'grab' and his hands are empty the left button is let through (`rails.ts gate`), and `lesson.ts lessonLine` turns 'press [Space] …
+  to grab him' into 'hold left click on him … to grab him' (the level files are untouched). `tools/qa/lesson-run.ts`'s `verb('guard', 'grab')` holds the
+  left button on the nearest man when there is no such row. Switch: ON in the page (`?stalk=0` off; Tab ▸ Closer than ever ▸ 'the stalk ▸ …'), OFF in
+  the module and on the frozen stand (`FROZEN_HOLDS` 'STALK.on': `TPS_STALK=1`; `TPS_STALK=0` holds it off on the shipped stand), in the journal's tables
+  (`JOURNAL_KNOBS`), and a recording from before the table replays with it off. Its state is a `SideMap` per game, reset with the guards and on a load;
+  `STALK_STATS` is a tally (rollback-exempt). CHECK: `bun run tools/qa/stalk-check.ts` (probe `stalk`, family stealth), both stands; `STALK_BREAK=1` must
+  fail grab, still, steer and let. Measured there, three seeds: 2.6 m behind a man walking away at 1.15 m/s he is in the arm in 4.22 s, top speed 1.60 m/s,
+  the largest change of speed in a frame 0.15 m/s; behind a man who stands, 2.48 s; begun 60° off dead astern it ends 42.6° off. Older probes that read the
+  grab's row or its key run with the stalk held off (`probes.ts` `GRAB_ROW_AS_IT_WAS`). WHAT IT COSTS: no grab with a gun out in one press; an alert man
+  cannot be stalked (nor grabbed before it); the creep makes the crouch's own footfalls and moves under their eyes as any crouched Sam does. NOT DONE: the
+  pose does not yet change over the creep (the arm comes up at the grab, as before); nothing at a corner. Driven in the real page on the software adapter
+  (`tools/qa/stalk-page.cjs`); never played by a person, never seen on a GPU.
+- **No knife (`CLOSE.noKnife`, `src/game/close.ts`).** The maintainer, 10-23: "remove the knife, only rmb for non lethal CQC when nothing equipped … then we
+  also remove the knife from interrogation. you can still select nothing equipped or the pistol, but there's only rmb to choke out". With the key up and the
+  close-in mode on (never under a show: `closeBare`): empty hands, the LEFT click is no blow (behind a man it is the stalk's) and the RIGHT click is the
+  knockout from any side, whatever `CLOSE.lethal` says; with a man in the arm (`CLOSE.heldClicks`) the left click does nothing and the right click chokes;
+  nothing draws or names a blade — no sheath on his chest (`combat.ts handProps`), no knife in the fist of an arm hold, the animator's `noKnife` (no hand to
+  a hilt in the tell or the close-in carriage, the reaching arm waits on nothing, the hold's right hand clamped on the man's shoulder from the first: the
+  choke's own station), no row or status line with the word, none of Sam's 'knife' lines (`dialogue.ts`), and the three lesson lines that teach it say the
+  knockout (`lesson.ts lessonLine`; the level files are untouched). Switch: ON in the page (`?noknife=0` off; Tab ▸ Closer than ever ▸ 'no knife ▸ …'), OFF
+  in the module and on the frozen stand (`FROZEN_HOLDS` 'CLOSE.noKnife': `TPS_NOKNIFE=1`), in the journal's `CLOSE` table, and a recording from before the
+  key replays with it off. CHECK: `bun run tools/qa/noknife-check.ts` (probe `noknife`, families stealth / takedown), both stands; `NOKNIFE_BREAK=1` must
+  fail blow, hold, draw and words. One staging each, no seeds. Older probes that read the knife run with the key held off (`probes.ts`
+  `KNIFE_AS_IT_WAS`). WHAT IT COSTS: no silent kill with empty hands at all (a body always wakes or is found breathing); `lesson.ts`'s `downed: knife`
+  test can no longer come true (no shipped step asks it). NOT MENDED, other owners': a grabbed civilian's 'he had a KNIFE at me' line (`dialogue.ts`), the
+  knife as an item of kit (`character.ts KitItem`, `kitanim.ts`: never asked for with the key up), the debrief's 'the knife' wording for old runs. The
+  bare-handed tell and hold are seen only as CPU mesh stills; never in the page by a person, never on a GPU.
+- **The sneak lab (`/sneaklab` on the dev server = `?levelFile=sneak-lab.json&solo&sneaklab`; `src/host/sneaklab.ts`, `tools/levels/sneak-lab.ts`).** The
+  maintainer, 10-23: "can you make a debug level / workbench where we can play with this and tweak it? … make it workbench like where we can tweak things
+  live". The level is the kit yard's floor, lit, with six men each walking one case (a man who stands · a long straight beat · a loop round a block · through
+  the bunkhouse's two doors · down an alley and round a corner · inside the store). The word `sneaklab` gives the panel its own system, open from the first
+  frame: every number of `STALK` and the few of `CLOSE` / `TWOGEARS` it leans on as live sliders (the two arcs in degrees), the build's numbers back by the
+  section's reset, 'copy them' (one line of JSON on the clipboard and in the panel), 'put everyone back' (`game.restart()`), 'sit one down', 'they can't
+  notice you' (`playerInvisible`) and 'nothing hurts you' (god mode), both on to begin with and written every page step, a line that says what the stalk is
+  doing and why the last one ended (`STALK_STATS.last`), and the stalk's geometry on the floor (`src/ui/stalkviz.ts`, `STALKVIZ.on`: the two range rings, the
+  arc's edges, the station point, the grab's ring, Sam's line). Not a row of the start card, no mission of its own (the plain night on that floor). CHECK:
+  `bun run tools/qa/sneaklab-check.ts` (probe `sneaklab`; the file is its generator's, six men of whom five walk and all stay calm over 40 s, the held click
+  takes the man who stands in 2.52 s with the real guards running, every number of `STALK` has its row); `SNEAKLAB_BREAK=1` must fail men and creep. The
+  page: `tools/qa/stalk-page.cjs`. The panel covered the middle of the page, where Sam stands, so a press on the man landed on a slider: with 'keep Sam
+  clear of this panel' (`SNEAKLAB.clear`, on) the view's follow point is shifted (`camera.ts hostShift`, host only, null in a game) so he stands in the
+  middle of what the panel leaves. The corner list's lone hint row ('LMB  hold to grab him') was never drawn when it was also the hovered row
+  (`ui/overlay.ts deriveInteractions`): a hovered row with no verb is now a hint, not the lead. `map-check.ts sneak-lab` says FAIL for the missing room clear, as it does of `quiet-yard`. Never played by a person; its
+  two floods are bare lights and its light has never been seen on a GPU.
+- **The way in shows on his body, and ends in one step (`STALK.tell`, `STALK.catchSecs`; `stalk.ts stalkTell`, `close.ts closeTick`, `character.ts
+  READY_BARE`).** The maintainer, 10-23: "we want very very smooth transitions from regular crouching to the closer than ever state. then, once you click and
+  hold its very smooth to gradually shift the animation until you end on a grab, and you can be interrupted any time". With the stalk on, Sam's pose behind a
+  man he could stalk is the DISTANCE's: from `reachFrom` (2.9 m) the reach comes in straight by distance to whole at `grabM`, and from `riseFrom` (2.3 m) he
+  comes up out of the crouch, `rise` (0.7) of the way by `riseBy` (1.05 m). Pose only: `anim.readyAmt` and `anim.rise`; the crouch the men see and hear is
+  untouched, though his head bone is higher (their sight lines read bones). Let go, the pose stands where it is. With no knife (`noKnife`) the reach is two
+  hands for one target (`READY_BARE`: left out ahead of its shoulder at neck height, never more than 0.3 m over it and never nearer than 0.32 m to the neck, right level
+  with it, both elbows down), and it is not dropped when the grab begins: it is let go over 0.25 to 0.8 of the grab's reach (`READY_BARE.out`), the right hand's share by 0.3
+  when there is a gun to take (the disarm needs that hand at 0.2 s). The grab a stalk ends in closes the last of the gap in one lunge over `catchSecs`
+  (0.3 s, `Hold.from`, `player.ts`, `stalk.ts stepEase`: off the mark over three frames, three fifths of the way in a third of the time), his legs given
+  the step at up to `catchStride`; 0 = the grab's own snap (a fifth of the gap in the first frame). THE YANK (`STALK.yank` 0.28 m): once the step has
+  landed the man is hauled that far straight back, Sam going back with him, over the rest of the grab (less where a ray finds something solid within
+  `yankRoom` behind the pair; not a civilian): real positions, so it is the stalk's alone and off wherever the stalk is; the pose's share is
+  `HOLD.yank` (the man's chest back 11 degrees more and Sam sat 9 cm into it for a quarter second) and, with no knife, `HOLD.bareArch` (he is hauled
+  back onto the arm 11 degrees, elbows down, where upright Sam hid him from the game's camera). `STALK.tell` off = the pose
+  in reach alone. CHECK: `stalk-check.ts` lines `tell` and `stepin` (the first frame under 4 cm, never over 7 m/s, the man hauled back; BREAK fails both), both stands. Judged on CPU stills only (`close-stills.ts --scene stalk
+  | stalk-rifle | stalk-pause`) and by a reviewer reading them; never seen on a GPU, never played.
+- **The stalk after its review (10-23; `stalk.ts`, `player.ts`, `close.ts`, `rails.ts`).** What a reviewer found in the first three passes and what stands
+  now. (1) A press made with a move key still down used to be lost: the press ARMS the stalk (`St.armed`) and it begins on the frame his own keys come
+  up, the button still down; a button merely still down after a stalk ended takes no man (the `out` line holds that). (2) The step in moves him by the
+  step's own delta from where his collision last left him, and eases onto the hold's point once the lunge is over: it used to write the straight line's
+  point and could come out the far side of a thin wall behind the man. (3) Inside `grabM` on the man's flank (he turned a little, the grab's rear arc
+  not on offer) Sam walks on round to the point behind his back: he used to stand still with the button down. (4) Shift does not sprint him under a
+  stalk. (5) The wait at a corner asks what `startGrab` asks before it hands a man over (not folded by a blast, no hand on a breaker, room to stand): it
+  used to tally a grab every frame the game refused. (6) In reach of ANOTHER man the tell is that man's, not the stalked man's by distance. (7) With no
+  knife the choke's brace follows the choke again (`knE`), the held clicks and the held man's bare pose ask `closeBare` (never under a show), and `haul`
+  and `takedown-kill` join `KNIFE_AS_IT_WAS`: both were measured on a man held with the knife, and the bare hold's arch puts the two heads 19 cm apart at
+  the height of the lifted choke where `haul` asks 22 (fading the arch under the lift was tried: his neck slid 5 cm along the forearm).
+  (8) A tutorial step's CARD runs through `lessonLine` as its line does, and the left button reaches the game on a tutorial only on a step that allows
+  `use`. (9) THE STEALTH TUTORIAL'S SMOKE SPOT moved 0.3 m (`TQ.smoke` 30.3 to 30.6, and `SMOKE` in `levels/tut-quiet.script.ts`): the haul back puts
+  the man a step nearer the back door, and a body within 1.3 m of a hand at the lock takes the tap from the door's row (the level's own note on that
+  spot). `stealthpose-creep` joins `GRAB_ROW_AS_IT_WAS`: the stretch it reads (behind a man, out of reach, the free hand low) is the way in's now.
+  Measured: `stalk-check`, `noknife-check`, `sneaklab-check`, `disarm-check` and the lessons on both stands, headless. Never played, never seen on a GPU.
+- **The wait at a corner (`STALK.corner`, `stalk.ts cornerMan`).** The maintainer, 10-23: "curious if we can make this language work for working corners.
+  like when you're at a corner you can either grab or CQC with the right timing". With his back on a wall (the wall hold, not the stack), hands empty, the
+  left button HELD lies in wait: the moment a man who is not onto him is inside `cornerM` (1.35 m) with Sam at least `cornerDeg` (110) degrees round from
+  his nose (he is most of a pace past; at 75 it fired level with him and Sam swung round him), with nothing solid between, the grab fires (`startGrab` takes him off the wall; the same eased step in). Pressed early it waits; a man who
+  comes round facing him is not taken; the right click's knockout in reach is the player's own timing, as off a wall. Before this the button did nothing on a
+  wall with empty hands, and with `STALK.only` no row grabbed from a wall at all. Rides `STALK.on` (so off on the frozen stand and in a recording from before
+  the stalk); the page: `?stalkcorner=0`; the lab has its toggle and both numbers. CHECK: `stalk-check.ts` line `corner` (a man walking past is taken once
+  past, not before; no press or the switch off and he walks by; a man facing him is not taken; `STALK_BREAK=1` fails it), both stands. LIMITS: no pose of
+  its own while he waits (the wall stance), no hint on screen until the man is in the grab's own reach, and whether a guard notices him first is the guard's
+  sight as ever. One scene, one seed, the AI off; stills `--scene stalk-corner`; never seen on a GPU, never played.
+- **The grab's disarm, second pass (`HOLD.strip`, `HOLD.bareGrip`; `disarm.ts`, `character.ts`).** The move itself is `HOLD.disarm` (`?disarm=0`,
+  `TPS_DISARM=1` with `TPS_HOLDDROP=1`): Sam's right hand takes the gun out of the man's hand 0.2 s into the grab and lets it go at 0.5 s; its voices are
+  `docs/agents/sounds.md`'s. Judged on stills, the first pass set the gun down at his thigh (it slid down his leg and lay under his foot) and the held man's
+  open right hand waved over the pair. Now the gun is torn out to a straight arm at Sam's right (`strip.low`), his chest going with it (`strip.yaw` -16),
+  and thrown from there (`strip.push` 1.3 m/s out, `strip.spin`). Third pass: let go earlier (`strip.drop` 0.42 s, was 0.5) from a LEVEL arm with the gun
+  level, the arm held out `strip.follow` 0.1 s after it; it lands a metre clear on the same beat as before (0.83 s; `grabvoice` green), and the knock is
+  the floor's alone (`disarm.ts GUN_FLOOR`: a thrown gun may touch a wall on its way, which moved the beat). With no knife in the hold the man's right hand is on the arm across his throat from the start (`HeldPose.bare`, `HOLD.bareGrip`
+  0.9) instead of half up and open beside his head. CHECK: `tools/qa/disarm-check.ts` (probe `disarm`; beats, pose, ends, off, harness; `DISARM_BREAK=1`
+  fails), both stands. Where the gun lands is the item's own physics and was read off stills in one open room; never seen on a GPU.
 - **The close-in poses as pictures with no Blender: `tools/qa/close-stills.ts` + `tools/qa/pose-mesh-raster.py`.** `close-stills.ts [--scene approach-crouch |
-  approach-stand | stops-crouch | stops-stand | hold] [--out dir] [--set '{"CLOSE":{"reachUp":false}}']` stages the real game headless (the page's stand unless
+  approach-stand | stops-crouch | stops-stand | hold | stalk | stalk-rifle | stalk-pause | stalk-corner | disarm…] [--out dir] [--set '{"CLOSE":{"reachUp":false}}']` stages the real game headless (the page's stand unless
   `TPS_PROFILE` says otherwise), runs the game's own entry points, and at each moment skins BOTH men's worn meshes on the CPU into one PLY in the taken man's
   first frame, with a line of numbers a moment (gap, hands, knees, feet). `python3 -I tools/qa/pose-mesh-raster.py dir/<scene>.json [--tile 300]` draws the
   scene as a contact sheet with numpy and Pillow alone (a small z-buffer rasteriser: from the side, the game camera's pitch from behind and from in front,

@@ -480,7 +480,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     ends, whoever ended it, and when the program stops), and the fog empties its set with its own reset. `c.stimulus.cease(unit)`: rounds of his a burst has not put yet are not
     put. `q.inside(volume, 'team')` = the player or any living teammate. NO SWITCH AND NO BREAK WORD: the row is new this week and its level, script and scripted player change
     together; the verbs do nothing until a script calls them (no other script does). The level file's fingerprint moved (a door, a table, three volumes): checkpoints and recordings
-    of the row from before are refused. THE HALL'S TWO MEN are the script's from the first tick (beat `hall`: KNEELING on their marks, rifles on their doorway; standing, the one by the street window was shot through it from the alley, twelve metres off, in both of two slow
+    of the row from before are refused. THE HALL'S TWO MEN are the script's from the first tick (beat `hall`: KNEELING on their marks until 10-23, when both stand: 'The hall's window is seen from one strip of ground' below, rifles on their doorway; standing, the one by the street window was shot through it from the alley, twelve metres off, in both of two slow
     readers' runs, before the player had come near) until their door gives or
     the player is in the room; one of them hit, the other turns his rifle to the window and stays on his mark, still the script's (let go, he went to the far corner out of the
     window's sight and the window's line had nobody to shoot: a slow reader's run, twice, the first man shot through the glass from far off): they were the game's own from the first shot of the first room, one stands a step from the
@@ -557,6 +557,32 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
       `BASE_REVS`). Not run: `map-check`'s 48 runs, `missions-gate`, the tour and the soak.
     - NOT DONE / NOBODY HAS SEEN: none of it on a GPU (the pane's fracture, the decals, the gun staying down, the two held in the store); notes 2, 5 and 6 were never reproduced headless,
       so whether his page now plays as written is his next play to say; the page run reaches the workshop only.
+  - **The hall's window is seen from one strip of ground** (2026-10-23; level data, its script and its scripted player: no switch, no rule of the game's. The level file's
+    fingerprint moved: a window, a wall of bags, a can: checkpoints and recordings of the row from before are refused). WHY: `showwhy.ts` (in the build that week) has a teammate
+    whose round the fire gate holds for the player wave him aside and say "you're in my line.". Read off `showWhyLog` at the end of 16 unprotected runs on the page's stand
+    (`lesson-run --plain`: dice 1 to 6, dice 3 to 5 reading each line for 6 s, hard 1 to 3, hard 1 to 3 with 30 s at the blocks, hard 1 at 6 s), it showed on 9: on 8 as the step
+    'window' came up, from a teammate up the street with his rifle on the hall's corner man THROUGH the window, the player on his way to the glass as the line asks; on 1 on 'nest'
+    (hard, the frag's survivor on his feet and the player walking in on him). The frame's owner would not hush a true line on a taught spot: the staging is mended. The same log
+    said what the lesson had been: the squad shot both men through that window from the street before the player had fired (his magazine was full at their deaths). WHAT CHANGED:
+    (1) the WINDOW (`WIN` in the generator: the hole and the step's ring read it) is 0.75 m wide at x 31.4, on the line both corner men stand on, a metre nearer the door end's
+    corner; (2) the nest's BACK WALL of bags, between the gun and the hall, is nine courses (over a man's head) and 3.05 m long, where it was six and 1.8: by `game.col`, the ground
+    from which a standing eye has a line to either man is 2.2 m2, all of it the strip between those bags and the hall's wall in front of the glass; it was 54 m2 (the street from
+    the blocks to the bags, the whole nest, the alley by the back gate). Eight courses were looked through: a wall of bags longer than 1.6 m has a seam in its top course. The can
+    and its oil moved inside the nest; (3) BOTH HALL MEN STAND (the one by the window knelt against the shot from the alley, which no longer exists; on a knee under a sill a
+    metre high he showed the glass a head and no more, and the scripted player at the old mark, his gun held low by the wall, never fired at him); (4) the scripted player stands
+    0.8 m off the glass (nearer, `gunwall` holds his rifle down), puts the cursor on a man's chest BONE (a man the frag has left hurt and on a knee has his head under a standing
+    man's chest), takes the nest from a list of spots that ends in its open side, says whose rounds took the hall's two, and FAILS when a teammate took one from north of the back
+    wall (`TUT_SQUAD_HALL=any` lifts it). MEASURED, the same 16 runs on this tree: all finish; nothing shown at the window or on 'nest' on any; both hall men are the player's on
+    14; on die 2 (plain and hard: the frag leaves the gunner hurt and on a knee, the player walks the strip to the nest's open side) the teammate behind him stops in front of
+    the glass and takes them, and on the plain one the last man gives up and opens his own locked door, so 'window', 'door' and 'lock' go by with the fight. STILL SHOWN, AND NOT
+    MENDED: on 3 of the 4 slow readers' runs "you're in my line." comes once on 'gun', as the player steps out past the wall's end to shoot back with a teammate on the corner
+    behind him (it was on none of the 4 before: the runs part company long before the nest, so this is the dice, not the window). It is true there too; tucking the mark at the
+    wall's end farther behind the wall would take the corner man's eyes off the gun, and nobody has asked. FOUND ON THE WAY: the frag's survivor, hurt, stays on a knee under the
+    bags and no rifle outside them finds him (71 s on one die before the scripted player learnt the open side); the level's script still holds him 40 s as a man on his feet.
+    ON THE JOIN with the build of that morning the same 16 finish and read the same. ONE STILL of the real page each way (software adapter, the lowest preset, the player
+    stood at the scripted spot with the step up): the window is drawn, the man by it stands with the cursor on him, the far man shows; and in BOTH the player himself cannot be
+    made out, in the black between the bags and the hall's wall (his light meter reads 0 there): the taller bags did not make that, and nobody has said whether it is wanted.
+    NOT RUN: map-check's 48 runs, tour, soak. NOBODY HAS SEEN the line or the wave on a page, the shot through the glass from 0.8 m, or any of it moving. Never on a GPU.
   - **The harsh places, re-staged** (2026-10-22: the script, one Director verb, two Director reads, and one line in the defenders' squads; no hit point, no number of the fight's, one hit
     still downs the player). A player who does what a line says is not put down for it; a wrong move still costs the checkpoint. THE DEVICE, three times: a man the script holds does
     not fight, so he is kept in its hand until the player has done what the line asks, and brought where the squad's rifles or the player's have him first.
@@ -773,6 +799,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     changes to `rails.ts` and `planmode.ts`): seeds 1 to 4, hard and the wrong plan on seed 1, `tutplan-check` on both stands and both breaks, `lesson-gate`,
     `level-needs --run` and `rails-check` on both stands, `lived-check`, `writing-check`, `picker-list`, `rowset-check`, `lesson-check`, both typechecks, and the real
     page again (51 lines): the same numbers. Nobody has played it, and nothing of it has been seen on a GPU.
+  - **A walk line stops naming Tab once the mode is down** (2026-10-23, after Tab's objectives card came in, `ui/tabkey.ts`): with nothing to back out
+    of, Tab on a played page holds the game on that card, and the three walk lines said "Press [Tab] to close plan mode, then walk…" for as long as
+    the step lasted. Each walk step now carries a `planLine` (the frame shows it while the mode is down): "Use [W] [A] [S] [D] to walk to the marked
+    spot by your squad", "Walk to the marked spot beside the hall", "Walk into the hall to the marked spot". Lesson prose only: no switch, no list
+    and no box changed, the level's lived row stands. `tutplan-check`'s walk-step test no longer reads `planLine`. The real page
+    (`tools/qa/tut-plan-page.cjs`, 54 lines now; `URL_ADD='&tab=brief'` in front gives the page Tab's card as a played page has it, a driven page has
+    none) asks at each walk that the press which closed the mode did not open the card and that the line then names neither Tab nor plan mode:
+    green both ways on the software adapter. Not shown: the card opening on a second press there. Never seen on a GPU, nobody has played it.
   - **NOT taught, on purpose** (a first prototype): waits on the word added to and taken off a stop (no place where they earn their keep was found), Shift + right click to chain stops,
     the ring by the right button kept down. **Nobody has played it and nothing of it has been seen on a GPU**: the software adapter draws the level and the mode's marks; how the night
     reads, how the plan's lines look over it, and whether nineteen lines feel like a mission or a list are a person's to say.
@@ -1478,7 +1512,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   calm man who hears it goes suspicious); 0.9 s later the script takes him. He comes round the long wall's far end as before, stops in the back strip a
   stride short of the gap in the cross wall (26.4, 17.75), puts his torch through the gap and over where the whistle was (5.2 m off in the scripted run,
   his beam within 6 degrees of the mark) for 3.6 s, says "nothing. wind", walks back up the strip past the back door to his chair at its far end
-  (30.3, 17.7), brings the torch down to his side (the smoke order is `upper: 'none'`: a whistled man keeps his torch in the hand, `guards.ts handCarry`, and with no upper layer it hangs as a calm man carries it), and smokes there for 50 s with his back to the gap; then the script lets him go and he walks back to his fire, the game's own man. The
+  (30.6, 17.7; it was 30.3 until the grab hauled a man a step back, `docs/agents/stealth.md` the stalk after its review), brings the torch down to his side (the smoke order is `upper: 'none'`: a whistled man keeps his torch in the hand, `guards.ts handCarry`, and with no upper layer it hangs as a calm man carries it), and smokes there for 50 s with his back to the gap; then the script lets him go and he walks back to his fire, the game's own man. The
   player comes round the long wall's near end, up the walk, through the gap and along the strip to his back: seven metres with the man's back to him.
   A MAN A SCRIPT WALKS IS BLIND AND DEAF (`squad.ts runGuardScript`), so the script is his eyes and ears while it has him, and each of these hands him
   back to the game `alert`: the player on the walk or in the strip while he comes down it; the player there or in the lane (`tq_beam`: all of it but the
@@ -1655,7 +1689,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `STEPS`, `SETTLE`): it boots the row, checks the frame is up and the untaught keys do nothing, then does every step with real keys and the mouse, a
   picture where asked. Two things it had to learn: a hand walks by the game's own path finder, not in straight lines (a real-size door leaves a hand's
   width either side of a man); and stepped frames are never drawn there, so THE PAGE'S LIGHT METER DOES NOT MOVE unless a frame is drawn: it draws a few
-  before each order (`settle`), or the partner reads the light of wherever the last picture was taken. CHECKS: `lesson-gate tut-pair` (the file is its
+  before each order (`settle`), or the partner reads the light of wherever the last picture was taken. THE GRAB there is whatever the line asks for: the key on
+  its cap, or, where the line names no key (the held click is the only way to a man, `stalk.ts`), the left button pressed on him and kept down. CHECKS: `lesson-gate tut-pair` (the file is its
   generator's, `level-lint`, `lesson-check`, the scripted player on the frozen stand with the frame raised, and on the shipped stand on four dice, two of
   them reading every line for 6 s), `quiet-check`, `carlamps-check` (its row), `level-needs tut-pair --run`, `rails-check` (the frame's own), both
   typechecks, the page play. MEASURED, headless: the scripted player finishes all 18 steps on the shipped stand on seeds 1 to 4; "set" comes 5 to 12 s

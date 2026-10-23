@@ -17,7 +17,7 @@ import type { LevelScriptFn, BeatCtx, UnitRef, Query } from '../src/game/directo
 import type { Vec3 } from '../src/math/vec';
 
 /** where he looks from, where he smokes, and the lane's side of the level: a whistle blown east of the cross wall is the game's own business */
-const LOOK: Vec3 = [26.4, 0, 17.75], SMOKE: Vec3 = [30.3, 0, 17.7], CROSS_WALL_X = 25.5;
+const LOOK: Vec3 = [26.4, 0, 17.75], SMOKE: Vec3 = [30.6, 0, 17.7], CROSS_WALL_X = 25.5;
 /** how long he looks, how long the smoke lasts, and how far off boots are heard by a man with his back turned: a run, and a walk upright (a crouched
  *  step is under both lines: `level` is the gait's times the floor's, player.ts) */
 const LOOK_SECS = 3.6, SMOKE_SECS = 50, RUN = { level: 0.34, within: 6 }, WALK = { level: 0.14, within: 2.4 };

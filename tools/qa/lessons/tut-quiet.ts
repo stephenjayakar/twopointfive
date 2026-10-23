@@ -152,8 +152,8 @@ export const steps: Record<string, (B: Bot) => void> = {
     if (!closeIn(B, H, [26.3, 0, 12.9])) B.fail(`could not get behind the hall's man (${flat(B.pos(), H.char.pos).toFixed(2)} m off, he stands at ${at(H.char.pos)}, ${H.state})`);
     B.say(`  at his back: lit ${lit(B)}; he ${H.state}, aware ${H.awareness.toFixed(2)}`);
     unseen(B, n0, H, 'coming up behind him in the light');
-    B.click(1);
-    if (!B.until(() => H.state === 'dead', 4)) B.fail(`the left button did not put the hall's man down (${flat(B.pos(), H.char.pos).toFixed(2)} m off, ${H.state})`);
+    B.click(CLOSE.on && CLOSE.noKnife ? 2 : 1);   // (close.ts CLOSE.noKnife: no knife — the line says the right click's knockout, and that is the blow)
+    if (!B.until(() => H.state === 'dead', 4)) B.fail(`the click did not put the hall's man down (${flat(B.pos(), H.char.pos).toFixed(2)} m off, ${H.state})`);
     B.wait(1);
     const up = B.g.guards.filter((x: any) => x.state !== 'dead' && x.state !== 'patrol');
     if (up.length) B.fail(`${up.map((x: any) => `${x.callsign} ${x.state}`).join(', ')} after the hall's man went down`);

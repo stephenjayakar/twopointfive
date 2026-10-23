@@ -10,7 +10,7 @@
 //   z 11 │      └──door─┘   └───────────┘ ▌     ▐                  │
 //  track        the street ────────────── ▌wall         ▐nest (2)   road
 //  gate   SAM →                           ▌      ▪blocks▐           gate
-//   z 16.5      ┌──door─┐    the motor    way ┌──win──win────────┐ │
+//   z 16.5      ┌──door─┐    the motor    way ┌──────────────win─┐ │
 //        │      │store  │    yard      round  │  the hall (2)   door│
 //        │      │  (2)  │                     │                  │ │
 //   z 23 └──────┴───────┴─────────────────────┴──────────────────┴─┘
@@ -130,8 +130,13 @@ export function build() {
   G.drums(22.8, 15.2, 2);
   G.hesco(27.6, 15.9, 2, HALF);                                     // the blocks: the next cover, under four metres short of the bags
   grp('nest');
-  G.sandbags(31.0, 13.8, 2.8, HALF, 6); G.sandbags(31.9, 12.4, 1.8, 0, 6); G.sandbags(31.9, 15.2, 1.8, 0, 6);   // chest high on three sides: a head over the top is all the street sees
-  G.crates(33.4, 12.2, 0.3, 1, 'olive'); G.jerryCan(33.2, 15.4);
+  G.sandbags(31.0, 13.8, 2.8, HALF, 6); G.sandbags(31.9, 12.4, 1.8, 0, 6);   // chest high to the street and the mast: a head over the top is all the street sees
+  // … and its BACK WALL, between the gun and the hall, is over a man's head and a metre longer than the other arm: what stands in the hall's window is
+  // seen from the strip between these bags and the hall's wall and from nowhere north of them (six courses high and as long as the other arm it was
+  // looked over from the whole nest and past both its ends; nine courses and not eight, because the top course of a wall this long has a seam a line
+  // of sight goes through)
+  G.sandbags(31.825, 15.2, 3.05, 0, 9);
+  G.crates(33.4, 12.2, 0.3, 1, 'olive'); G.jerryCan(33.2, 14.55);
 
   // ---- outside the road gate: a blast wall across the road, as a checkpoint has one. Nothing inside the yard sees past it, the picket's camp least of all ----
   grp('road');
@@ -148,9 +153,16 @@ export function build() {
   { const b = G.piece(33.6, 6.2, 0); b(0, 0, 0, 2.95, 0.05, 0.05, G.M.galv); b(0, 0, 2.2, 2.24, 0.5, 0.02, G.M.galv); b(0, 0, 2.6, 2.64, 0.34, 0.02, G.M.galv); }
   G.wire(29.0, 8.8, 33.6, 6.2, 2.5);
 
+  /** the hall's one window, in its street wall (x, the low end and the width) */
+  const WIN = { at: 31.4, w: 0.75 }, WIN_X = WIN.at + WIN.w / 2;
   // ---- the hall: a locked door on its far face, in the passage past the nest; a street window that looks at both its men ----
   const HALL = hut({ x0: 25.5, z0: 17, x1: 32.4, z1: 22.2, kind: 'render', floor: 'slab', doors: [{ name: 'hall', side: 'e', at: 18.9, extra: { locked: true, keySide: -1 } }],   // (the lock is on the passage's face)
-    windows: [{ side: 'n', at: 30.6, w: 1.0, glass: true }] });   // (one window, at the door end: it looks at both corners, and from inside it shows only the nest's own ground)
+    // (ONE WINDOW, hard by the door end's corner, on the line both corner men stand on, and BEHIND THE NEST'S BACK WALL of bags, which is built over a
+    //  man's head (below). It looks at both men from the strip between those bags and this wall, and from nowhere else: not from the street, not from
+    //  inside the nest. A metre farther west, with chest-high bags, it was looked through from the whole street: the squad that follows the player had
+    //  its rifles on the corner man through it, shot both before the player the line asks had fired, and told him he stood in their line when he walked
+    //  to the glass. From inside it shows the back of those bags)
+    windows: [{ side: 'n', at: WIN.at, w: WIN.w, glass: true }] });
   grp('hall.room');
   G.rug(29.6, 19.6, 3.0, 2.2, 'afghan'); G.table(28.6, 21.4, 2.0, 0.8, 0, 'ply'); G.plasticChair(28.1, 20.7, 0); G.plasticChair(29.1, 20.7, 0);
   G.toshak(27.0, 19.4, 1.9, HALF, 'rugGreen'); G.trunk(26.2, 17.5, 0, 'paintBlue'); G.tube(29.5, 19.6, true, 'hall');
@@ -190,7 +202,7 @@ export function build() {
       { id: 'nest', name: 'the nest', bounds: { x0: 30.2, x1: 34.6, z0: 11.4, z1: 16.2 }, garrison: 2, doors: [{ id: 'gate_e', from: 'road' }],
         marks: [{ pos: [32.0, 0, 13.3], watch: 'gate_e', aimAt: STREET }, { pos: [32.0, 0, 14.4], watch: 'gate_e', aimAt: STREET }] },
       // two men in the corners of the door's own wall: nobody at the doorway can see them, and whoever walks through it is between them. The street
-      // windows look straight at both
+      // window is on their line (WIN) and looks straight at both
       { id: 'hall', name: 'the hall', bounds: { ...HALL }, garrison: 2, doors: [{ id: 'hall', from: 'road' }],
         marks: [{ pos: [31.75, 0, 17.9], watch: 'hall', aimAt: IN_HALL }, { pos: [31.75, 0, 21.4], watch: 'hall', aimAt: IN_HALL }] },
       // the picket, up the road: the level's script keeps it there until the hall has fallen (levels/tut-squad.script.ts)
@@ -262,7 +274,7 @@ export function build() {
       { id: 'nest', line: 'Take the gun nest', done: taken('nest'), at: [32.0, 1, 13.8], cue: 'fragged' },
       // 4 · A ROOM CAN BE CLEARED FROM OUTSIDE, AND A LOCK IS NOT A WALL: the men who wait inside the door are shot through a window; then the locked
       //     leaf is kicked in, and it is the way in
-      { id: 'window', line: 'Two enemies are waiting inside. Shoot them through the window', explain: CARDS.window, done: taken('hall'), at: [31.1, 1.4, 16.9], checkpoint: 'the hall' },
+      { id: 'window', line: 'Two enemies are waiting inside. Shoot them through the window', explain: CARDS.window, done: taken('hall'), at: [WIN_X, 1.4, 16.9], checkpoint: 'the hall' },
       //     (the walk to the door is a step of its own: from the window the leaf is edge on, and a player told to open it tried from there. And the first
       //      way through a lock anybody is shown is the boot: rounds through a door are for a door nobody can walk up to)
       { id: 'door', line: 'The door is locked. Go around to it', done: or(near(HALL_FRONT, 1.7), HALL_OPEN), at: [HALL_FRONT[0], 1, HALL_FRONT[2]] },
@@ -342,7 +354,7 @@ export function build() {
     // out of the bags along their foot, oil under the can, the wet where the pot is emptied, the gravel that gathers under a wall's drip line, a drift in
     // the corner by the gate wall, the trodden way round the bags' end, a few field stones behind the crates. All decals but the stones, which are
     // stepped over: this is the ground the nest is taken across and the hall's window is shot through
-    G.patch(31.3, 14.6, 2.6, 0.9, 'dust', 0.1); G.patch(32.6, 12.9, 1.6, 0.7, 'dust', -0.2); G.patch(33.3, 15.5, 1.0, 0.8, 'oil', 0.3); G.patch(33.0, 13.9, 1.8, 1.3, 'damp', 0.5);
+    G.patch(31.3, 14.6, 2.6, 0.9, 'dust', 0.1); G.patch(32.6, 12.9, 1.6, 0.7, 'dust', -0.2); G.patch(33.3, 14.6, 1.0, 0.8, 'oil', 0.3); G.patch(33.0, 13.9, 1.8, 1.3, 'damp', 0.5);
     G.patch(31.6, 16.55, 4.6, 0.7, 'gravel', 0); G.patch(34.2, 16.0, 0.9, 2.0, 'dust', 0.1); G.patch(29.4, 15.6, 1.6, 1.1, 'dirt', -0.4); G.rubble(34.3, 12.0, 0.5, 5);
     room('road');
     G.crates(39.4, 8.9, 0.3, 1, 'olive'); G.jerryCan(39.5, 11.9, 0.3); G.lantern(39.3, 10.9, 'lived.road.lantern', 'exterior');   // the picket's camp: a box, its water, its lantern (on the photocell's group with the lamps: nobody burns one at midday)

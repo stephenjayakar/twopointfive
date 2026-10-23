@@ -37,7 +37,7 @@ import type { RenderSettings } from '../settings';
 import type { HudLike, BubblesLike, View, Chapters } from './hud';
 import { TWEEN, type Tween } from './tween';
 import { FINDME, AUTOVIEW, setAutoView, ctrlTurn, behindYaw, behindStep, aimCarry, carryStep, CARRY_KEYS, type AimCarry } from './findme';
-import { AUTOCAM, AUTOCAM_STATS, autoCam, autoBegin, autoRest, autoZoom, autoHand, autoFree, autoRead, autoFrame, turnGoal, walkKey, type AutoCam } from './autocam';
+import { AUTOCAM, AUTOCAM_STATS, autoCam, autoBegin, autoRest, autoSway, swayDrop, swayCoast, autoZoom, autoHand, autoFree, autoRead, autoFrame, turnGoal, walkKey, type AutoCam } from './autocam';
 import { camKey } from './keymap';
 import { slotSetupTakes } from '../game/slotsetup';
 
@@ -166,7 +166,7 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
   // THE AUTO CAMERA'S MODE (host/autocam.ts; AUTOCAM.on): that double tap puts it ON — and brings the view round as the Options row's does, whatever the row says, so
   // the hand sees it took (in the mode, a double tap is that turn again) — and the hand on the camera puts it OFF: the key held with the mouse moved past a tremor, or
   // held longer than a tap with a walk key down. A turn of the mode's own ends where it is under a walk key or a button (the keys are read through the view)
-  if (auto && !AUTOVIEW.on) { if (auto.base > 0 && !game.rails.locks('zoom')) cam.desiredDistance = auto.base; auto.base = NaN; }   // (off, by the hand or by the Options row: the zoom goes back to the hand's own, and that is what it comes on with next)
+  if (auto && !AUTOVIEW.on) { if (auto.base > 0 && !game.rails.locks('zoom')) cam.desiredDistance = auto.base; auto.base = NaN; if (auto.sway || auto.swayV) swayDrop(auto); }   // (off, by the hand or by the Options row: the zoom goes back to the hand's own, and that is what it comes on with next)
   const autoTap = !!auto && !game.rails.locks('camera') && autoFree(game);   // (where the mode would frame nothing — the sky seat, plan mode, a puppet, him down — the tap is not its)
   const carryOn = () => { const c = game.player.char, was = ctx.carry; ctx.carry = aimCarry(c.aimYaw, c.pos, game.aimPoint, was ? was.realX : input.mouseX, was ? was.realY : input.mouseY); if (was) { ctx.carry.putX = was.putX; ctx.carry.putY = was.putY; } };   // (a carry begun under a carry: the mouse is where the first one knows it to be, not where the game's cursor was put)
   if (auto && !frozen) {
@@ -211,17 +211,22 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
       const aim = shot || game.spectate >= 0 || (game.orders.plan.up && game.orders.plan.look) ? null : game.aimPoint;   // (plan mode, planmode.ts: the view is the hand's — it leans toward nothing)
       // THE CAMERA RUNNING ITSELF (host/autocam.ts): with the mode on and the view Sam's own — no show, no pin, no spectated man, not plan mode's point or the sky
       // seat's — the look-at is the frame's (his feet, shifted toward what the game knows he is about), nothing leans on the cursor, and a turn of its own may begin
+      const hs = cam.hostShift;   // (a page with a panel over one side of the view — host/sneaklab.ts: the look-at moves over, whoever chose it)
       const mine = !!auto && AUTOVIEW.on && !frozen && !shot && viewFree() && follow === game.player.char.pos && autoFree(game);
       if (mine) {
         if (!(auto!.base > 0)) autoBegin(auto!, cam);   // (kept on from an earlier visit: the zoom as the page opened is the hand's own)
         const S = autoRead(auto!, game, input, cdt), look = autoFrame(auto!, S, cam, cdt), yaw = turnGoal(auto!, S, cam, cdt, (a, b) => game.col.segmentBlocked(a, b));
         if (ctx.behindAuto && ctx.behind != null && (S.shown || S.hold || !S.free)) ctx.behind = null;   // (a turn of its own under way ends where it is the moment it could not have begun)
-        if (yaw != null && ctx.behind == null) { ctx.behind = yaw; ctx.behindAuto = true; auto!.turnT = 0; AUTOCAM_STATS.turns++; carryOn(); }   // (his aim goes round with the view, as the double tap's does)
-        if (tick) cam.step(cdt, look, null); else cam.update(cdt, look, null);
+        if (yaw != null && ctx.behind == null && !auto!.sway && !auto!.swayV) { ctx.behind = yaw; ctx.behindAuto = true; auto!.turnT = 0; AUTOCAM_STATS.turns++; carryOn(); }   // (his aim goes round with the view, as the double tap's does; never begun across a lean of the sway's: that comes home first)
+        // …and the sway (AUTOCAM.sway): a slow lean of the yaw round the hand's own, toward the fight and the way he moves — not while a turn of another kind is under way
+        if (ctx.behind != null) swayDrop(auto!); else { const t = autoSway(auto!, S, cam, cdt, (a, b) => game.col.segmentBlocked(a, b)); if (t) { cam.rotate(t); AUTOCAM_STATS.swayed += Math.abs(t); } }
+        const at: Vec3 = hs ? [look[0] + hs[0], look[1], look[2] + hs[2]] : look;
+        if (tick) cam.step(cdt, at, null); else cam.update(cdt, at, null);
         return shot;
       }
-      if (auto && !frozen) autoRest(auto);   // (a card up is not somebody else's view: the frame is where it was when the card lifts)
-      if (tick) cam.step(cdt, shot ?? follow, aim); else cam.update(cdt, shot ?? follow, aim);
+      if (auto && !frozen) { autoRest(auto); if (auto.swayV) { const t = AUTOVIEW.on ? swayCoast(auto, cdt) : 0; if (t) cam.rotate(t); } }   // (a card up is not somebody else's view: the frame is where it was when the card lifts; a lean under way as the view goes to somebody else dies away, and is where it was when the view is his again)
+      const at: Vec3 = shot ?? (hs ? [follow[0] + hs[0], follow[1], follow[2] + hs[2]] : follow);
+      if (tick) cam.step(cdt, at, aim); else cam.update(cdt, at, aim);
       return shot;
     };
     if (!fixed) {

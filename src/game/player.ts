@@ -15,6 +15,7 @@ import { gunLookOf } from './gunlook';   // (called inside armRifle only)
 import { PLAYER_ID, DRIVE_REACH, DRIVE_SECS } from './consts';
 import { handworkOn, samWork, samWorkHand, samWorkLetGo, workStand, WORK_TURN } from './handwork';
 import { WORKSTOW, samStowTick, samStowing } from './workstow';
+import { disarmBegin, disarmCatch, disarmPose, type Strip } from './disarm';
 import type { SamWork } from './handwork';
 import { tread } from './floor';
 import { samLoadPace, loadGait, loadHeard } from './kitload';   // what his card weighs: his legs' pace and his footfall (as asked with its switch off)
@@ -65,7 +66,8 @@ import { wallChargeRows } from './wallcharge';
 import { defuseRows } from './defuse';
 import { rescueEndRows } from './rescueend';
 import { snatchOutRows } from './snatchout';
-import { closeLive, CLOSE, closeRows, closeCivGate, closeCivOffer, closeTick, closeBlow, closeAt, closeKindOf, closeStation, closeNoise, closeTook, closeSeated, closeUnseat } from './close';
+import { STALK, stalkStep, stepEase } from './stalk';
+import { closeLive, CLOSE, closeRows, closeCivGate, closeCivOffer, closeTick, closeBlow, closeAt, closeKindOf, closeStation, closeNoise, closeTook, closeSeated, closeUnseat, closeBare } from './close';
 import { feedDeal, feedPlan, feedPlay, shellPlan } from './gunreload';
 import { KITANIM, kitTick, kitClick, kitReload, kitReloadNote, kitGunUp, kitNv, kitNvEye } from './kitanim';
 import type { CloseKind } from './close';
@@ -126,6 +128,12 @@ export const HOLD_FIRE_CD = 0.7, HOLD_SPREAD = 0.09;
  *  man to finish — his word on the key he has just pocketed (takeKey) — put up the first frame the answer is down and no question is going up, dropped by
  *  whatever kills a pending question (cancelAsk) or by the next question beating it to the air (askHeld); null when none waits. */
 export interface Hold { g: Guard; variant: HoldVariant; phase: HoldPhase; t: number; since: number; windT: number; swapT: number; remarked: boolean; gunOut: number; fireQueued: boolean; shotT: number; ask: { t: number; dur: number } | null; after: { text: string; id: string } | null;
+  /** the grab's disarm while it runs (disarm.ts: begun by startGrab, moved on once a frame by disarmTick, gone when the hand is back on him) */
+  strip?: Strip;
+  /** the stalk's grab (stalk.ts, game.ts): where Sam stood as it fired. The way in is then ONE step from there over STALK.catchSecs, where the grab's own
+   *  is a snap (a fifth of the gap in its first frame). Unset = the grab as it was. `hitAt` = the game's time as that step landed (the yank's clock, for
+   *  both poses); `yankM` / `yanked` = how far the man is hauled back after it (STALK.yank, less where there is no room) and how much of that is done */
+  from?: Vec3; hitAt?: number; yankM?: number; yanked?: number; stepE?: number;
 }
 
 /** IN A DOOR FRAME HE IS AS WIDE AS HIS SHOULDERS. BODY_R is a margin for his arms and his gun, 0.84 m across; a real door (scene/doorSize.ts) leaves 0.83 m
@@ -464,6 +472,10 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
     if (input.down('KeyD')) { mx += right[0]; mz += right[2]; }
     if (input.down('KeyA')) { mx -= right[0]; mz -= right[2]; }
   }
+  // the stalk (stalk.ts): the left button held on a man he is close behind walks him in to the grab — the direction, the pace and the facing are the game's; a
+  // move key of his own ends it
+  const stalk = STALK.on ? stalkStep(g, input.lmb(), input.lmbHit(), mx !== 0 || mz !== 0) : null;
+  if (stalk) { mx = stalk.mx; mz = stalk.mz; pl.crouch = true; }
   if (g.puppet) {   // scripted movement: straight at the goal (the tour picks goals with a clear line), stop within 10 cm
     mx = 0; mz = 0; const gl = g.puppet.goal;
     if (gl) { const dx = gl[0] - c.pos[0], dz = gl[2] - c.pos[2]; const dl = Math.hypot(dx, dz); if (dl > 0.1) { mx = dx / dl; mz = dz / dl; } }
@@ -476,12 +488,12 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   if (rooted) { mx = 0; mz = 0; }
   const ml = Math.hypot(mx, mz); if (ml > 0) { mx /= ml; mz /= ml; }
   if (input.hit('KeyC') && !pl.dragging) { if (!pl.crouch) pl.crouch = true; else if (canStand(g)) pl.crouch = false; else g.msg('no room to stand'); }   // crouch is C, only (Ctrl is the camera-orbit modifier now); standing needs the headroom
-  const wantSprint = !isHurt(g, pl) && (input.down('ShiftLeft') || input.down('ShiftRight')) && (HANDS.on && (pl.haul || pl.doorMove) ? ownMove : ml > 0);   // (a step the hands' moves take for him is never a sprint; his own keys with Shift are one in any beat of a pick-up, planted or not: it lets go — hands.ts)
+  const wantSprint = !isHurt(g, pl) && (input.down('ShiftLeft') || input.down('ShiftRight')) && (HANDS.on && (pl.haul || pl.doorMove) ? ownMove : ml > 0 && !stalk);   // (a step the hands' moves take for him is never a sprint; his own keys with Shift are one in any beat of a pick-up, planted or not: it lets go — hands.ts)
   // back to the wall (Q): press against the face behind / beside you and sidle along it; Q again, breaking into a run or walking off it steps away (moveOnWall)
   if (rooted) { /* folded: no reaching for a wall, no pushing off one */ }
   else if (input.hit('KeyQ')) { if (pl.wall) wallStepOff(g, mx, mz, ml, 'q'); else if (!wantSprint) { const why = { blocked: false }; if (!wallSnap(g, cam, why) && !wallSnapLater(g, ml, why)) g.msg(pl.dragging ? 'hands full' : why.blocked ? "can't get to the wall here" : 'nothing to put your back to here'); } }   // (at a run there is no taking hold: Shift is one of the ways off it; blocked: a face in reach but furniture standing against it where he would go)
   else if (WALLSNAP.on) wallSnapPending(g, dt, cam, wantSprint);   // (Q a moment before the face came into reach: taken as it does)
-  if (WALLSNAP.on && WALLSNAP.press && !rooted && !g.rails?.locksWall()) wallPress(g, dt, input, cam, mx, mz, ml, wantSprint);   // (…and with no Q at all: a move key held into the wall he is up against)
+  if (WALLSNAP.on && WALLSNAP.press && !rooted && !stalk && !g.rails?.locksWall()) wallPress(g, dt, input, cam, mx, mz, ml, wantSprint);   // (…and with no Q at all: a move key held into the wall he is up against)
   if (pl.wall && wantSprint) wallStepOff(g, mx, mz, ml, 'run');
   const onWall = !!pl.wall && moveOnWall(g, dt, cam, mx, mz, ml);   // false: free (or let go this very frame — then he walks on from where he stands, below)
   if (!onWall) {
@@ -494,8 +506,9 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
     let maxSpeed = ml === 0 ? 0 : pl.sprinting ? T.playerSprint : pl.dragging ? (pl.haul ? haulSpeed(g) : T.playerCrouch * 0.6) : (pl.crouch ? crouchPace(g) : T.playerWalk) * pl.pace;   // hauling 80 kg along the floor is slow; the wheel-set pace scales the walk and the crouch-walk alike (the rifle in the shoulder costs no pace: the aim model's moving / settle terms are what the move costs him)
     if (g.puppet?.walk !== undefined && ml > 0) maxSpeed *= g.puppet.walk;
     maxSpeed = samLoadPace(g, maxSpeed, pl.sprinting);   // (kitload.ts: what his card weighs — a light one's legs are quicker, a heavy one's slower, a sprint by part of it; as asked with its switch off or no card on him)
+    if (stalk) maxSpeed = ml === 0 ? 0 : stalk.pace;   // (stalk.ts: the man's own speed and a closing speed that eases off as he nears — the game's, whatever his card weighs)
     if (pl.sprinting) maxSpeed *= sprintDoorPace(g, pl);   // (sprintdoor.ts: his hand is ripping a door round toward him — the run waits for it; 1 otherwise)
-    pl.speedSm = damp(pl.speedSm, maxSpeed, maxSpeed > pl.speedSm ? 6 : 12, dt);
+    pl.speedSm = damp(pl.speedSm, maxSpeed, stalk ? (maxSpeed > pl.speedSm ? STALK.easeUp : STALK.easeDown) : maxSpeed > pl.speedSm ? 6 : 12, dt);   // (stalk.ts: the creep takes up its speed more gently than a walk)
     if (ml > 0) { c.vel = [mx * pl.speedSm, 0, mz * pl.speedSm]; } else { c.vel = v3.scale(c.vel, Math.exp(-14 * dt)); }
     c.pos = v3.mad(c.pos, c.vel, dt);
     const headroom = pl.crouch ? 1.0 : 1.7;
@@ -504,7 +517,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   }
   const speed = Math.hypot(c.vel[0], c.vel[2]);
   // aim
-  const ap = g.aimPoint; const toAim: Vec3 = [ap[0] - c.pos[0], 0, ap[2] - c.pos[2]];
+  const ap = stalk ? stalk.at : g.aimPoint; const toAim: Vec3 = [ap[0] - c.pos[0], 0, ap[2] - c.pos[2]];   // (stalking, he faces the man: the cursor is free once the button is down)
   const aimDist = Math.hypot(toAim[0], toAim[2]);
   pl.aimHeld = false;   // (RMB is the OCP now; the gun comes up on firing, with the rail light, or from the ready carry — see `aiming`)
   const recentlyFired = g.time - pl.lastFireT < 1.6;
@@ -1476,15 +1489,16 @@ export function startGrab(g: Game, gd: Guard, way?: CloseKind) {
   gd.char.anim.lookYawExtra = 0; gd.sweep = 0;
   gd.lightLitAtLoss = gd.flashlight.enabled;   // (the grab: was the torch burning as it left his hand — attachFlashlight's floor sputter shows only what was lit)
   if (inHand(gd) === 'torch') { gd.dropped = dropFromHand(g, gd.char, 'torch', gd.beamDir, [0, 0, 0], false, true); gd.torchLostAt = g.time; }   // the torch is knocked out of his hand as the arm goes round: it clatters down quietly and dies on the floor like a dropped torch does (guards.ts) — his hands come up empty
-  else if (HOLD.dropGun && inHand(gd) === 'weapon') { gd.dropped = dropFromHand(g, gd.char, gd.weapon.def.drop, gd.char.gunDir, [0, 0, 0], gd.weapon.def.suppressed, true); gd.gunLostAt = g.time; }   // (HOLD.dropGun) …and so is the gun, if that is what the hand had: it lies where it fell like any dropped gun, and he is held with empty hands
+  else if (HOLD.dropGun && !HOLD.disarm && inHand(gd) === 'weapon') { gd.dropped = dropFromHand(g, gd.char, gd.weapon.def.drop, gd.char.gunDir, [0, 0, 0], gd.weapon.def.suppressed, true); gd.gunLostAt = g.time; }   // (HOLD.dropGun) …and so is the gun, if that is what the hand had: it lies where it fell like any dropped gun, and he is held with empty hands
   if (kind && !gd.civ && closeSeated(g, gd)) closeUnseat(g, gd);   // (hauled out of the chair: the sitting clip comes off as the arm goes round)
   gd.held = { by: 'player', since: g.time, variant, phase: 'grab', reverse: false };
   if (gd.civ) civilianGrabbed(g, gd);   // (a civilian: whatever she was doing stops, and she cannot scream with a forearm across her throat — civilians.ts)
   if (g.aiEnabled) gd.witness.wasHeld++; gd.talk.heldSince = g.time;   // his own record of it (the dialogue reads both: how long he has been held, whether this is the second time) — nothing is remembered with the AI off, like every other witness write
   pl.holding = { g: gd, variant, phase: 'grab', t: 0, since: g.time, windT: -1, swapT: Infinity, remarked: false, gunOut: 0, fireQueued: false, shotT: -1, ask: null, after: null };
+  disarmBegin(g);   // (disarm.ts, HOLD.disarm: the gun he still has in his hand is Sam's right hand's to take, a beat from now — nothing with the switch off)
   if (kind) closeTook(g, gd, 'grab', kind, b0, r0);
   pl.fireCd = Math.max(pl.fireCd, HOLD.secs.grab);   // (no round leaves the gun on its way round him)
-  g.audio.play('grabScuffle', v3.add(gd.char.pos, [0, 1.4, 0]), 0.4);   // the arm going round him: sleeve over his shoulder, chest into his back, the breath he snatches choked off
+  disarmCatch(g, v3.add(gd.char.pos, [0, 1.4, 0]));   // the arm going round him: sleeve over his shoulder, chest into his back, the breath he snatches choked off
   g.events.push({ kind: 'prop', pos: v3.copy(gd.char.pos), time: g.time, loud: false, level: GRAB_NOISE, who: PLAYER_ID }); pl.noise = Math.max(pl.noise, GRAB_NOISE); chronGrab(g, gd);   // a scuffle the room hears inside a few metres, not the floor
 }
 
@@ -1519,12 +1533,24 @@ export function updateHold(g: Game, dt: number, input: Input, cam: FollowCamera)
   if (!g.onFloor(gd) || gd.state === 'dead' || gd.held?.by !== 'player') { dropHold(g); c.update(dt); return; }   // reset from under the arm (P, the panel), or put down in it by somebody's round: nothing left to hold
   H.t += dt; H.swapT += dt; pl.fireCd -= dt;
   const K = HOLD.secs;
-  let speed = 0;
+  let speed = 0, own = -1;   // (own: Sam's legs alone, where they differ from the pair's — the stalk's step in)
   if (H.phase === 'grab') {
     // easing in to HOLD.dist behind him on HIS facing (he has not been turned yet), squaring up to his back — through Sam's own collision: squeezed behind a man by a
     // wall, the arm goes round him from as close as the wall allows and the hold proper settles the rest
     const yaw = hc.bodyYaw; const want: Vec3 = [hc.pos[0] - Math.sin(yaw) * HOLD.dist, 0, hc.pos[2] - Math.cos(yaw) * HOLD.dist];
-    c.vel = [0, 0, 0]; c.pos = v3.lerp(c.pos, want, 1 - Math.exp(-14 * dt)); collidePlayer(g, 1.7);
+    if (H.from && STALK.catchSecs > 0) {   // (stalk.ts: the step in — his legs take it, at no more than a walk's stride — and then the yank)
+      const T = Math.min(STALK.catchSecs, K.grab), u = clamp(H.t / T, 0, 1), was = c.pos; let to = want;
+      if (u >= 1 && STALK.yank > 0 && !gd.civ) {   // landed: the man comes back with him, as far as there is room behind the pair
+        if (H.hitAt === undefined) { H.hitAt = g.time; const hit = g.col.raycast([want[0], 1.0, want[2]], [-Math.sin(yaw), 0, -Math.cos(yaw)], STALK.yank + STALK.yankRoom); H.yankM = hit ? Math.max(0, hit.t - STALK.yankRoom) : STALK.yank; H.yanked = 0; }
+        const v = clamp((H.t - T) / Math.max(0.05, K.grab - T), 0, 1), y = H.yankM! * (1 - (1 - v) * (1 - v)), d = y - H.yanked!;
+        if (d > 0) { hc.pos = [hc.pos[0] - Math.sin(yaw) * d, hc.pos[1], hc.pos[2] - Math.cos(yaw) * d]; H.yanked = y; to = [want[0] - Math.sin(yaw) * d, 0, want[2] - Math.cos(yaw) * d]; }
+      } else if (u >= 1 && H.hitAt === undefined) H.hitAt = g.time;
+      // (by the step's own delta from where the collision last left him, never the straight line's point: behind a man with his back near a wall that
+      //  point is in the wall, and a push-out from past its middle comes out the far side)
+      const e = stepEase(u), e0 = H.stepE ?? 0, d0 = v3.sub(v3.lerp(H.from, to, e), v3.lerp(H.from, to, e0)); H.stepE = e;
+      c.pos = u >= 1 ? v3.lerp(c.pos, to, 1 - Math.exp(-14 * dt)) : [c.pos[0] + d0[0], c.pos[1], c.pos[2] + d0[2]];
+      own = Math.min(STALK.catchStride, Math.hypot(c.pos[0] - was[0], c.pos[2] - was[2]) / Math.max(dt, 1e-4)); c.vel = [0, 0, 0]; collidePlayer(g, 1.7); }
+    else { c.vel = [0, 0, 0]; c.pos = v3.lerp(c.pos, want, 1 - Math.exp(-14 * dt)); collidePlayer(g, 1.7); }
     c.bodyYaw = approachAngle(c.bodyYaw, yaw, 14 * dt); c.aimYaw = approachAngle(c.aimYaw, c.bodyYaw, 12 * dt); c.aimPitch = damp(c.aimPitch, 0, 8, dt);   // (the chest untwists over the reach, not in a frame)
     gd.speed = 0; hc.vel = [0, 0, 0];
     if (H.t >= K.grab) {
@@ -1543,7 +1569,7 @@ export function updateHold(g: Game, dt: number, input: Input, cam: FollowCamera)
     // ---- the two buttons with him in the arm (close.ts CLOSE.heldClicks; the knife's hold only, never a civilian, never under a show, not while the hand is between
     //      tools or a choke is already chosen): the LEFT click is the knife — committed from this frame — the RIGHT click the choke, chosen as its row chooses it
     //      (a click an order menu was up for is gone from the frame before this: Game.step runs orders.input first, and it takes the right click's bit out always and the left click's with a man in the arm — the click that shuts the menu is never the knife)
-    const clk = CLOSE.heldClicks && H.phase === 'held' && !gun && !swapping && H.windT < 0 && !gd.civ && !g.touring ? (input.lmbHit() ? (input.rmbHit() ? null : 'kill') : input.rmbHit() ? 'choke' : null) : null;   // (both buttons in one frame choose nothing: the knife cannot be taken back)
+    const clk = CLOSE.heldClicks && H.phase === 'held' && !gun && !swapping && H.windT < 0 && !gd.civ && !g.touring ? (input.lmbHit() && !closeBare(g) ? (input.rmbHit() ? null : 'kill') : input.rmbHit() ? 'choke' : null) : null;   // (both buttons in one frame choose nothing: the knife cannot be taken back)
     if (clk === 'kill') startKill(g);
     if (H.phase === 'held') {
       if (act === 'comply' && gd.civ && !swapping) { if (civilianComply(g)) { holdTail(g, dt, 0); return; } }   // 'stay down, stay quiet': a civilian let go into a crouch where she stands, told (civilians.ts) — the one way out of the arm on your feet by his choice, and hers alone
@@ -1610,21 +1636,23 @@ export function updateHold(g: Game, dt: number, input: Input, cam: FollowCamera)
     if (gd.held) gd.held.reverse = pl.backpedal;
   }
   pl.sprinting = false; pl.crouch = false;
-  holdTail(g, dt, speed);
+  holdTail(g, dt, speed, own);
 }
 /** the end of a hold frame, Sam's side, shared with the frames that end the hold: both animators told the beat (the man's is baked later, in updateGuard's held
  *  branch; Sam's here), the rail light (arm variant: off — the pistol rides the thigh while both hands are on him, hideHeldItem; gun variant: lit if L has it on,
  *  posed off the gun hand up beside his head like any carry), Sam's step events at the pair's pace (his tread is what the room hears of the pair) */
-function holdTail(g: Game, dt: number, speed: number) {
+function holdTail(g: Game, dt: number, speed: number, own = -1) {
   const pl = g.player, c = pl.char, H = pl.holding;
-  c.anim.speed = speed; c.anim.crouchTarget = 0; c.anim.upper = 'none'; c.anim.stance = 'none'; c.anim.lookYawExtra = 0;
+  c.anim.speed = own >= 0 ? own : speed; c.anim.crouchTarget = 0; c.anim.upper = 'none'; c.anim.stance = 'none'; c.anim.lookYawExtra = 0;
   const low = H ? takeLower(g) : 0;   // (the choke's lowering: both poses or neither)
   const kill = H ? takeKill(g) : false, beats = H ? takeBeats(g) : false, haul = H ? takeHaul(g) : false;   // (takedown.ts TAKEDOWN.kill / chokeBeats, fed with the pose as `low` is: the animator reads this frame's, not its module's one-frame-late fallback)
-  c.anim.holdPose = H ? { phase: H.phase, t: H.t, variant: H.variant, gunOut: H.gunOut, gunPitch: c.aimPitch, low, kill, beats, haul } : null;
+  const strip = H?.strip ? disarmPose(H.strip) : undefined;   // (disarm.ts: both poses or neither)
+  const yank = H && H.hitAt !== undefined && g.time - H.hitAt < 1 ? g.time - H.hitAt : undefined;   // (character.ts HOLD.yank: both poses or neither)
+  c.anim.holdPose = H ? { yank, phase: H.phase, t: H.t, variant: H.variant, gunOut: H.gunOut, gunPitch: c.aimPitch, low, kill, beats, haul, strip } : null;
   if (H) {
     const gd = H.g, hc = gd.char, an = hc.anim;
     an.speed = speed; an.reverse = pl.backpedal; an.crouchTarget = 0; an.upper = 'none'; an.stance = 'none'; an.lookYawExtra = 0; an.deliberate = 0;
-    an.heldPose = { phase: H.phase, t: H.t, agitation: agitationOf(g, gd), variant: H.variant, shot: H.shotT >= 0 ? g.time - H.shotT : -1, armed: inHand(gd) === 'weapon', low, kill, beats, haul };   // (armed: the pistol is in his hand — combat.ts handProps draws it for anyone not carrying the torch on a calm patrol — so the raised hand stays a fist round it)
+    an.heldPose = { yank, phase: H.phase, t: H.t, agitation: agitationOf(g, gd), variant: H.variant, bare: closeBare(g) || undefined, shot: H.shotT >= 0 ? g.time - H.shotT : -1, armed: inHand(gd) === 'weapon', low, kill, beats, haul, strip: strip ? { t: strip.t } : undefined };   // (armed: the pistol is in his hand — combat.ts handProps draws it for anyone not carrying the torch on a calm patrol — so the raised hand stays a fist round it)
     if (gd.held) gd.held.phase = H.phase;
     // where his torch points: nowhere useful — up over Sam's arm at the ceiling, wandering with the struggle (torchCarryDir reads his aim yaw / pitch; the pistol, if
     // that is what he has out, just rides the raised hand). The yaw share stays small and eased — it is also his chest's twist, and his neck must stay on the arm.
@@ -1694,7 +1722,7 @@ function swapHold(g: Game) {
     g.msg(`the pistol is at ${gd.callsign}'s head. click to fire past him, press Space to pistol-whip him, or E to holster it and question him`);
   } else {
     setHolstered(g, true, true);
-    g.msg(`holstered, with the knife back at ${gd.callsign}'s throat. press Space to question him, or hold Space for the choke`);
+    g.msg(closeBare(g) ? `holstered, with both hands on ${gd.callsign} again. press Space to question him, or hold Space for the choke` : `holstered, with the knife back at ${gd.callsign}'s throat. press Space to question him, or hold Space for the choke`);
   }
   g.audio.play('equip', null, 0.45);
 }
@@ -2183,7 +2211,7 @@ export function buildInteractables(g: Game, cam: FollowCamera, mx: number, my: n
     const cv = gd.civ;   // a CIVILIAN in the arm (civilians.ts): her rows — what she knows / 'stay down, stay quiet' (lets her go) / the choke; the whip with the pistol out; every civilian on the floor by his hand costs him
     const base: Interactable = { kind: 'held', pos: [head[0], head[1] + 0.3, head[2]], line1: cv ? `${gd.callsign} · the ${cv.label} · ${gun ? `your pistol at ${WORDS.on && cv.she === 'he' ? 'his' : cv.her} head` : 'in your arm'}` : `${gd.callsign} · ${gun ? 'your pistol at his head' : 'in your arm'}`, line2: '', inReach: true, off: false, guard: gd };
     if (H.phase === 'grab') rows.push(status(base, cv ? `getting hold of ${cv.her}…` : 'getting hold of him…'));
-    else if (H.phase === 'held' && H.swapT < K.swap) rows.push(status(base, gun ? 'the pistol coming up to his head…' : 'holstering it — the knife back at his throat…'));   // E's hand-over: nothing starts while the hand is between tools
+    else if (H.phase === 'held' && H.swapT < K.swap) rows.push(status(base, gun ? 'the pistol coming up to his head…' : CLOSE.noKnife ? 'holstering it to get both hands on him again…' : 'holstering it — the knife back at his throat…'));   // E's hand-over: nothing starts while the hand is between tools
     else if (H.phase === 'choke' || (H.windT >= 0 && !gun)) rows.push(running(base, 'choke', 'choking him out… — Space or a step and he breathes again', H.phase === 'choke' ? H.t / K.choke : 0));
     else if (holdKilling(H)) rows.push(status(base, 'the knife…'));   // (close.ts CLOSE.heldClicks, the left click: committed — a status line, nothing stops it)
     else if (H.phase === 'whip' || (H.windT >= 0 && gun)) rows.push(running(base, 'whip', 'pistol-whip… — Space or a step checks it', H.phase === 'whip' ? H.t / K.whip : 0));
@@ -2200,7 +2228,7 @@ export function buildInteractables(g: Game, cam: FollowCamera, mx: number, my: n
       const q = promptFor(g, gd), tk = heldTalk(g, H); const verb = q.spent ? "he's said his piece — ask anyway" : `“${q.text}”`;
       const ask = tk.asking ? "you're asking — he answers in a beat" : tk.samUp ? `${verb} — once you're done talking` : !tk.ready ? "he's answering — tap to cut it short" : `${verb}${tk.settled ? '' : ' — cuts in'}`;   // (samUp without asking: a remark of Sam's is in the air — his word on the key he has just pocketed — and he is never cut)
       rows.push(row(base, 'question', ask));
-      rows.push(row(base, 'choke', 'choke him out — quiet', `${CLOSE.heldClicks && !g.touring ? 'LMB  knife — lethal  ·  RMB  choke him out  ·  ' : ''}${HANDSLOT.on ? '1' : 'E'}  draw — gun to his head`));   // (the two buttons in the arm, close.ts CLOSE.heldClicks: the marks worded as the standing blow's are)
+      rows.push(row(base, 'choke', 'choke him out — quiet', `${CLOSE.heldClicks && !g.touring ? `${CLOSE.noKnife ? '' : 'LMB  knife — lethal  ·  '}RMB  choke him out  ·  ` : ''}${HANDSLOT.on ? '1' : 'E'}  draw — gun to his head`));   // (the two buttons in the arm, close.ts CLOSE.heldClicks: the marks worded as the standing blow's are)
     }
     list.push({ ...base, line2: rows.map(r => r.line2).join('  ·  '), progress: rows[0]?.progress });   // the marker (the ring sits on it; its text = the rows')
     for (const d of g.doors.list) {

@@ -18,6 +18,9 @@ export interface RtLight {
   flicker: number;            // 0 = steady; >0 = flicker amount (runtime modulation)
   /** transient lights (muzzle flashes) expire when ttl hits 0 */
   ttl: number; age: number; peakIntensity: number;
+  /** set by whoever FLICKERS a fixture's `intensity` frame by frame (game/fire.ts): the strength a reader of the place's steady light takes it for (guards.ts
+   *  lightEstimateAt, `steadyOnly`) and where it hangs when its `pos` is made to wander. Absent = `intensity` and `pos` are that. Nothing in the renderer reads it. */
+  steady?: { intensity: number; pos: Vec3 };
   /** a light its owner drives frame by frame (the weather's lightning stroke: game/weather.ts) that must still be treated as TRANSIENT by the renderer — the
    *  kind word's 256 bit: kept out of every accumulated signal (cascades, gather history), lit through the history-free direct pass only — without the ttl
    *  envelope above touching its intensity or retiring it. Counts toward numTransient like a ttl light. */
