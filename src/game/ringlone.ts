@@ -35,8 +35,8 @@ type Wedge = { key: number; text: string; opens?: boolean };
 export const wedgeMid = (key: number, n: number): number => (-90 + (key - 1) * 360 / n) * Math.PI / 180;
 /** the one row of a ring that has one (null: the wheel) — the page's, for what it draws */
 export function loneWedge(V: RingView | null): RingView['wedges'][number] | null { return HANDRING.lone && V?.wedges.length === 1 ? V.wedges[0] : null; }
-/** …and the game's: its digit, from the digits that have a wedge (a bit each, bit 1 the first); 0 = the wheel, or no ring */
-export const loneKey = (keys: number): number => HANDRING.lone && keys > 0 && !(keys & (keys - 1)) ? 31 - Math.clz32(keys) : 0;
+/** …and the game's: its digit, from the digits that have a wedge (a bit each, bit 1 the first; asked only while the rule is on); 0 = the wheel, or no ring */
+export function loneKey(keys: () => number): number { if (!HANDRING.lone) return 0; const k = keys(); return k > 0 && !(k & (k - 1)) ? 31 - Math.clz32(k) : 0; }
 /** a wedge's words as drawn */
 export const wedgeWords = (w: Wedge): string => w.opens ? `${w.text} ▸` : w.text;
 /** where a wedge's outline, digit and words go: on the wheel, or as a pill */

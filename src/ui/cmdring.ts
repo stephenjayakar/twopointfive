@@ -179,7 +179,7 @@ export class CmdRingViz {
    *  and the tutorial's big line steps out from under either ring (it lies over the ring's layer: with the cursor low in the middle, a ring's lower wedge
    *  and its caption were under the line's plate) — down if the view has the room, else up over the ring (index.html `--railshift`) */
   private clear(V: RingView | null, H: RingView | null, tz: number) {
-    const rail = V || H ? document.getElementById('railprompt') : null, k = (R: RingView | null) => R ? `${R.x.toFixed(0)},${R.y.toFixed(0)},${R.zoom.toFixed(2)}` : '';
+    const rail = V || H ? document.getElementById('railprompt') : null, k = (R: RingView | null) => R ? `${(R.x / 4).toFixed(0)},${(R.y / 4).toFixed(0)},${R.zoom.toFixed(2)}` : '';   // (to 4 px: a ring that stays on its point moves a little every frame the view does, and what it stands over is asked of the layout)
     const key = V || H ? `${k(V)}|${k(H)}|${rail?.classList.contains('on') ? rail.textContent?.length : ''}|${innerHeight}` : ''; if (key === this.overKey) return; this.overKey = key;
     const s = key ? this.svg.getBoundingClientRect() : null;
     /** a ring's words as a box of the window: wider than tall, and down to under its caption when `cap` */

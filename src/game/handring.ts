@@ -57,7 +57,7 @@ export const HANDRING = {
   onThing: false,
   /** …and no line of words under it (the maintainer, 10-23, of 'RACK 6 · THE DRIVE · PULL THE DRIVE — STAY ON IT' under the ring: "this is too
    *  busy, should just be the radial menu"): the wedges' own words are the ring's words. What the line said of the lit row is the corner's line
-   *  still (ui/overlay.ts: the thing's name and the row's long words, 'stay on it' with them); the whistle's 'one man comes to look' is said
+   *  still (ui/overlay.ts: the thing's name and the row's long words, 'stay on it' with them); the whistle's 'one guard will come to look' is said
    *  nowhere now. The picture only. On and off as `onThing` is; `?ringbare=0` puts the line back */
   bare: false,
   /** A ROW GIVEN AT A WALL SWITCH TURNS HIM TO IT (the maintainer, 10-23: "if you do the radial menu, turn around, and then hit the lights, player

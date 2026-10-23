@@ -29,7 +29,7 @@ import { Box, BoxFlag, makeBox } from '../scene/boxes';
 import { cancelDrive } from './mission';
 import { quietOf } from './quiet';
 import { breakerResetNear } from './lighting';
-import { switchHand } from './lightswitch';
+import { switchHand, switchLetGo } from './lightswitch';
 import { samStaggered } from './samstun';
 import { INHAND, BELT_TORCH } from './inhand';
 
@@ -170,7 +170,7 @@ export function breakerTick(g: Game, dt: number) {
 }
 /** player.ts: a click while a plant runs lets go of it (the click is then his to shoot with) — the drive and a wall charge; the breaker's half second is
  *  COMMITTED like a kick (its row's deed was filed on the tap — the lessons, the chronicle — so the mains must follow it): false = not let go of */
-export function samWorkLetGo(g: Game, W: SamWork): boolean { if (W.kind === 'breaker' || W.kind === 'switch') return false; if (W.kind === 'drive') cancelDrive(g); else if (W.kind === 'defuse') g.defuse?.cancel(); else if (W.kind === 'door') g.doorTools?.cancelSam(); else g.wallCharge?.cancel(); return true; }
+export function samWorkLetGo(g: Game, W: SamWork): boolean { if (W.kind === 'breaker') return false; if (W.kind === 'switch') switchLetGo(g); else if (W.kind === 'drive') cancelDrive(g); else if (W.kind === 'defuse') g.defuse?.cancel(); else if (W.kind === 'door') g.doorTools?.cancelSam(); else g.wallCharge?.cancel(); return true; }
 /** lighting.ts: a guard at the thrown breaker, re-arming it — his hand on the lever for the `dur` he fumbles, the throw at the end */
 export function leverHands(g: Game, c: Character, t: number, dur: number) { if (!live('work')) return; const F = breakerFace(g, c.pos); workAt(c, 'lever', F.p, F.n, t, dur, { dir: -1 }); }
 

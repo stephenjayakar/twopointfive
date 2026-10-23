@@ -1233,7 +1233,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   seconds down to 3 to 9). A footfall owed to travel alone would mend both and is not built. NOT DONE: no tour, no soak; never heard in a page; the
   lesson's "seven frames running" was not met on that lesson's pushed head (two frames running on the build before it), only staged.
 - **Four ring notes: one row is a pill, no line under his ring, his ring stands on its thing, a switch's row turns him** (2026-10-23; four fields of
-  `HANDRING`, handring.ts, each with its own page word; all four off in the module and on the frozen stand and raised there by the hands ring's own
+  `HANDRING`, handring.ts, each with its own page word and all four off under `?handring=0` too; all four off in the module and on the frozen stand and raised there by the hands ring's own
   word, `TPS_HANDRING=1` (no new stand word), each a `FROZEN_HOLDS` row, each off for a recording from before its key). CHECK: `handring`, both
   stands, a line for each of rules 1, 3 + 2 and 4; `HANDRING_BREAK=1` fails all three. The maintainer's words are in handring.ts.
   1. `lone`, `?lonepill=0` (`game/ringlone.ts` the shape, `ui/cmdring.ts RingDraw` draws it, `index.html .cmdring .lone / .ch`): a ring with ONE row
@@ -1251,18 +1251,22 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
      order shows it twice (tut-pair '1 fall in · 3 fall in'; a man's ring '1 fall in · 3 fall in · …'), two slices for one choice.
   2. `bare`, `?ringbare=0`: no line of words under HIS ring (`interact.ts handRingView`'s caption is empty; 'RACK 6 · THE DRIVE · PULL THE DRIVE —
      STAY ON IT' under the wedges was "too busy"). The lit row's long words, 'stay on it' with them, are the corner's line still; the whistle's
-     'one man comes to look' is said nowhere now. With it, a wall switch's and the mains' wedge is no longer drawn faint because the lights are
+     'one guard will come to look' is said nowhere now. With it, a wall switch's and the mains' wedge is no longer drawn faint because the lights are
      off (those things' `off` says how they stand, not that the row cannot be given: `STATE_OFF`). The squad ring's line (who the order goes to,
      what it was opened on) is not touched: it says which pair, and the wedges do not.
-  3. `onThing`, `?ringonthing=0`: HIS ring comes up with its middle on the thing its first row is about (`ringSpot`: the lit row's marker), on his
-     own body a metre up where no row is about a thing (the whistle alone), whole inside the view's edge (`ringPin`, `CMDRING.edgeX / edgeY`), and
-     stays on that point as the view moves (the page draws it from the picture's own camera: `ui/cmdring.ts pinned`). On his body it GOES WITH
-     HIM as he walks under it (a frame behind his feet), and when its rows change under it (he walked up to a thing, or off it) it stands on
-     what the rows are now about. The cursor may be anywhere when it comes up, so (`ringWant`'s `shapes`, `RingState.clear`) the cursor ON a
-     drawn wedge, its slice from the hole to the rim or the pill's place, lights it with no visit to the middle, but only once it has been off
-     every drawn wedge since the ring last changed under it (a place of the wheel with no wedge is not one), and never while the hand is still:
-     a cursor resting where a slice came up lights nothing and the key let go there leaves the ring standing. Out past the rim a direction
-     counts only from the middle, as before. Digits, a click, the key again: as they were. THE SQUAD'S RING IS NOT MOVED: it is opened on the place
+  3. `onThing`, `?ringonthing=0`: HIS ring comes up with its middle on the thing its TOP row is about (`ringSpot`: the first row with a wedge, the
+     tap's own; not the lit one, or it would hop between two things as the highlight moved), on his own body a metre up where no row is about a
+     thing (the whistle alone) or the thing is more than 3.5 m off (his own set charge's row is given from anywhere), whole inside the view's
+     edge (`ringPin`, `CMDRING.edgeX / edgeY`), and stays on it as the view moves (the page draws it from the picture's own camera:
+     `ui/cmdring.ts pinned`). On his body it GOES WITH HIM as he walks under it (a frame behind his feet); a thing that moves (a man in his arm,
+     a body he drags) takes it along; and when its rows change under it (he walked up to a thing, or off it) it stands on what the top row is
+     now about. The cursor may be anywhere when it comes up, so (`ringWant`'s `shapes`, `RingState.clear`) the cursor ON a drawn wedge, its
+     fifth of the wheel from the hole out over its words to the ring's own box (`RING_BOX`: pointing at a row's words is pointing at the row)
+     or the pill's place, lights it with no visit to the middle, but only once it has been off every drawn wedge since the ring last changed
+     under it (a place of the wheel with no wedge is not one), and never while the hand is still: a cursor resting where a slice came up
+     lights nothing and the key let go there leaves the ring standing, and only a wedge the HAND put the cursor on is pointed at
+     (`RingState.pt`: the lit wedge sliding under a resting cursor is not). Outside the box a direction counts only from the middle, as
+     before. The far-charge and moving-thing cases are by reading the code, no run. Digits, a click, the key again: as they were. THE SQUAD'S RING IS NOT MOVED: it is opened on the place
      the order goes to, which is where the cursor is, and stays on it already (`CMDRING.pin`).
   4. `turn`, `?ringturn=0` (`lightswitch.ts plants / turnSecs / switchHand`, `handwork.ts samWork` kind `switch`): a row given at a WALL SWITCH with his back
      to it (the ring up, he had turned with the cursor) flipped the lights and left him as he was: the hand's 0.3 s pose had nothing to reach
@@ -1270,9 +1274,10 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
      to arm's length, the trigger does not let go of it), and the hand's move is given the turn's time on top of its own (at most `turnMax`,
      0.45 s; the plant's own turn rate, `handwork.ts WORK_TURN`). The hand that goes to the plate is the free one (his left with the pistol or
      the rifle up: `samHand`, as at the mains). COST: his feet are not his for 0.3 s facing it, up to 0.75 s from a half turn away (0.60 s
-     measured from 180° off, W held throughout). It is a FOLLOW-THROUGH, NOT A VERB: nothing waits on it, the row is on offer again under it (a
-     second tap flips the room back and plants him again, as a second tap always flipped it), a save inside it does not keep it, and it breaks
-     off as the mains lever's does (down, a man or a body in hand, folded by a blast, moved off the plate). NOT FROM A WALL HOLD: pressed to
+     measured from 180° off, W held throughout). It is a FOLLOW-THROUGH, NOT A VERB: nothing waits on it, A CLICK LETS GO OF IT (the lights are
+     out and the trigger is his: `switchLetGo`), no fresh row is on offer under it (`buildInteractables`' `busy`, so the room cannot be
+     flipped back for that 0.3 to 0.75 s, where a second tap used to flip it at once), a save inside it does not keep it, and it breaks off
+     as the mains lever's does (down, a man or a body in hand, folded by a blast, moved off the plate). NOT FROM A WALL HOLD: pressed to
      the wall beside the plate he reaches it from where he is, as he did (a plant would take him off the wall). Nothing without hands at work
      (`HANDWORK.on`). A tap's row and a ring's row alike. THE OTHER ROWS already turned him, by
      reading the code, not by a run: a door's leaf (hands.ts: he faces the spot his hand goes to), a lock, a pad, a kick, the wand (planted and

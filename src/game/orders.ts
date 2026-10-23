@@ -1072,7 +1072,7 @@ export class SquadOrders {
     } else if (wheel) { this.stepWho(wheel as 1 | -1, null); CMDRING_STATS.who++; if (!this.menu) { this.cmdRing = null; return true; } }
     // a digit, or the cursor gone out of the ring's middle one way: that wedge is lit — a wedge that opens a page turns the ring to it and lights nothing.
     // The cursor counts from the ring's own middle, and only once it has been back there since the ring last changed under it (a page, a digit, a man)
-    const want0 = ringWant(R, input, digit, g.time, loneKey(this.ringKeys())), want = still && !digit && want0 !== R.lit ? 0 : want0; let turned = false;
+    const want0 = ringWant(R, input, digit, g.time, loneKey(() => this.ringKeys())), want = still && !digit && want0 !== R.lit ? 0 : want0; let turned = false;
     if (want && want !== R.lit) {
       const rows = this.menu!.rows, seat = this.seats(this.menu!, R), i = seat.row[want] ?? -1, first = this.menu!.page === null && !R.more;
       if (first && want === 1) R.lit = 1;

@@ -20,6 +20,7 @@ import { CMDRING, ringOpen, ringPin, ringWant, type RingState, type RingView } f
 import type { FollowCamera } from './camera';
 import { loneKey } from './ringlone';
 import { HANDRING, EMPTY_WORD, EMPTY_AGAIN_SECS, EMPTY_NEAR_M, EMPTY_SHY_M, EMPTY_WHY } from './handring';
+import { v3 } from '../math/vec';
 import type { Vec3 } from '../math/vec';
 import { tryWhistle, whistleReadyIn } from './whistle';
 import { CLOSE } from './close';
@@ -109,8 +110,9 @@ const wedged = (r: Interactable) => !!r.verb && !r.running && r.kind !== 'cancel
 const rowWords = (r: Interactable) => r.line2.replace(/^Space\s+/, '').split(/\s+·\s+/)[0].trim();
 /** … and up to that dash: what its wedge says */
 const wedgeWords = (r: Interactable) => rowWords(r).split(/\s+[—–-]\s+/)[0];
-/** (HANDRING.onThing) how far up his body his ring stands where no row is about a thing (m) */
-const RING_BODY_M = 1.0;
+/** (HANDRING.onThing) how far up his body his ring stands where no row is about a thing (m) · how far from him a thing may be and still have his ring
+ *  on it (m: a row can be about a thing rooms away — his own set charge's is given from anywhere — and the ring is his, near him) */
+const RING_BODY_M = 1.0, RING_THING_M = 3.5;
 /** (HANDRING.bare) a row's `off` is the THING's (game.ts Interactable: its marker and its panel line are drawn dim by it), and it says two things: on most
  *  rows that the row cannot be given (no code for the keypad, a charge that would kill him), on these kinds how the thing STANDS (the lights are off, the
  *  mains are thrown) — and there the row is the very one that can be given. Their wedge is not drawn faint for it. */
@@ -143,7 +145,7 @@ export function handRingView(g: Game): RingView | null {
 }
 /** the digits his ring has a wedge on, a bit each (bit 1 the first): what handRingView draws, less every word of it — all the game reads of the ring's
  *  picture (cmdring.ts ringWant `lone` and `shapes`) */
-function ringKeys(g: Game): number {
+export function handRingKeys(g: Game): number {
   let keys = 0; const n = Math.min(g.nearby.length, CMDRING.wedges);
   for (let i = 0; i < n; i++) if (wedged(g.nearby[i])) keys |= 1 << (i + 1);
   return whistleWedge(g) ? keys | 1 << CMDRING.wedges : keys;
@@ -180,18 +182,18 @@ function closeSelector(g: Game, spent: boolean) {
   shutList(g); S.downT = -1; S.moved = false; if (spent) pl.fHeld = true;
 }
 
-/** (HANDRING.onThing) is his ring about no thing — no row of it has one — so that it stands on his own body */
-const ringOnBody = (g: Game) => !g.nearby.some(wedged);
-/** …the point it stands on: the thing its lit row is about, else his own body */
-function ringSpot(g: Game): Vec3 { const h = g.hover && wedged(g.hover) ? g.hover : g.nearby.find(wedged), p = g.player.char.pos; return h ? [h.pos[0], h.pos[1], h.pos[2]] : [p[0], p[1] + RING_BODY_M, p[2]]; }
-/** …put there (`at` given: as it opens, and again when its rows change under it — another thing's rows are on another thing), and kept there as the view
- *  moves, whole inside the view's edge; on his body it goes with him. True: the hand has not moved the cursor since the last look */
-function ringOnThing(g: Game, R: RingState, input: Input, cam: FollowCamera, view: View, at?: Vec3): boolean {
-  if (at) { R.at = at; R.ox = 0; R.oy = 0; R.mx = input.mouseX; R.my = input.mouseY; R.clear = false; }
-  if (!R.at) return false;
-  if (!at && ringOnBody(g)) { const p = g.player.char.pos; R.at[0] = p[0]; R.at[1] = p[1] + RING_BODY_M; R.at[2] = p[2]; }
+/** (HANDRING.onThing) the point his ring stands on: the thing its FIRST row is about (the top row — the tap's own; not the lit one, or the ring would hop
+ *  between two things as the highlight moved), where that thing is near him; else his own body */
+function ringSpot(g: Game): Vec3 { const h = g.nearby.find(wedged), p = g.player.char.pos; return h && v3.distXZ(h.pos, p) <= RING_THING_M ? [h.pos[0], h.pos[1], h.pos[2]] : [p[0], p[1] + RING_BODY_M, p[2]]; }
+/** …put there (`open`: as it comes up, and again when its rows change under it — the cursor then starts over), and kept there: as the view moves, as he
+ *  walks (on his body it goes with him) and as the thing does (a man in his arm, a body he drags), whole inside the view's edge. True: the hand has
+ *  not moved the cursor since the last look */
+function ringOnThing(g: Game, R: RingState, input: Input, cam: FollowCamera, view: View, open = false): boolean {
+  if (open) { R.ox = 0; R.oy = 0; R.mx = input.mouseX; R.my = input.mouseY; R.clear = false; R.pt = 0; }
+  else if (!R.at) return false;
+  R.at = ringSpot(g);
   const [sx, sy, front] = cam.project(R.at, view.clientWidth, view.clientHeight); if (front) ringPin(R, sx, sy, view.clientWidth, view.clientHeight);
-  if (at) R.armed = Math.hypot(input.mouseX - R.ax, input.mouseY - R.ay) < CMDRING.flickPx * R.z;   // (the cursor counts by direction only from the ring's middle: ringOpen's own rule, asked of where it now stands)
+  if (open) R.armed = Math.hypot(input.mouseX - R.ax, input.mouseY - R.ay) < CMDRING.flickPx * R.z;   // (the cursor counts by direction only from the ring's middle: ringOpen's own rule, asked of where it now stands)
   const still = R.mx === input.mouseX && R.my === input.mouseY; R.mx = input.mouseX; R.my = input.mouseY; return still;
 }
 /** Once a frame, straight after the rows are built (game.ts update → updateAim → buildInteractables, then this): the wheel (the highlight while Space is down,
@@ -235,7 +237,7 @@ export function updateInteract(g: Game, dt: number, input: Input, view?: View, c
     if (S.open && S.ring && (g.orders.menu || g.orders.cmdRing)) { closeSelector(g, down); return; }   // (one list at a time: the squad's is up)
     const early = stays && HANDRING.early && down && armed && !S.open && wedgeDigit(input);   // (handring.ts `early`: a digit inside the hold is the ring's, at once)
     if (armed && live && !S.open && !g.orders.cmdRing && (!stays || (down && (early || S.downT >= HANDRING.holdSecs - 1e-6)))) { S.open = true; S.ring = { ...ringOpen(input, view?.clientWidth ?? 0, view?.clientHeight ?? 0, stays ? g.time - CMDRING.tapSecs : g.time, pl.nearSel + 1), key: pl.nearKey }; pickHover(g);
-      if (stays && HANDRING.onThing && cam && view) ringOnThing(g, S.ring, input, cam, view, ringSpot(g)); }   // (the ring that stays came up after a hold: the cursor counts at once, as under the squad's — orders.ts ringUp)
+      if (stays && HANDRING.onThing && cam && view) ringOnThing(g, S.ring, input, cam, view, true); }   // (the ring that stays came up after a hold: the cursor counts at once, as under the squad's — orders.ts ringUp)
     const R = S.ring;
     if (R && S.open) {
       if (input.hit('Blur')) { closeSelector(g, true); return; }   // (the window lost the keys: nothing is done, as under the squad's ring)
@@ -244,10 +246,11 @@ export function updateInteract(g: Game, dt: number, input: Input, view?: View, c
       if (lmb && !stays) { if (CLOSE.heldClicks && pl.holding?.variant === 'arm') input.clicked &= ~1; closeSelector(g, true); return; }   // (close.ts: with a man in the arm the click is the knife — the click that puts the ring away is not that click as well)
       let digit = 0; for (let d = 1; d <= 9; d++) if (input.pressed.delete(`Digit${d}`) && !digit) digit = d;   // (not his weapon slots while it is up)
       if (R.key !== pl.nearKey) { R.key = pl.nearKey; R.armed = false; R.clear = false; R.whistle = false;   // (the rows changed under it: the cursor lights nothing until it has been back to the middle — and the top row, not the whistle, is lit over rows that have just come)
-        if (R.at && cam && view) ringOnThing(g, R, input, cam, view, ringSpot(g)); }   // (HANDRING.onThing: …and it stands on what the rows are now about)
+        if (R.at && cam && view) ringOnThing(g, R, input, cam, view, true); }   // (HANDRING.onThing: …and it stands on what the rows are now about)
       if (!stays && (input.hit('ArrowDown') || input.hit('ArrowUp') || input.wheel)) R.armed = false;   // (… nor after the highlight was stepped by hand)
       const still = !!R.at && !!cam && !!view && ringOnThing(g, R, input, cam, view);   // (HANDRING.onThing: it stays on its point, and a cursor the hand has not moved lights no other wedge)
-      const keys = ringKeys(g), want0 = ringWant(R, input, digit, g.time, loneKey(keys), R.at ? keys : 0), want = still && !digit && want0 !== R.lit ? 0 : want0, wh = stays && whistleWedge(g), toWh = wh && want === CMDRING.wedges, row = want && !toWh ? g.nearby[want - 1] : null, at = row && wedged(row) ? want - 1 : -1;
+      const keys = handRingKeys(g), want0 = ringWant(R, input, digit, g.time, loneKey(() => keys), R.at ? keys : 0), want = still && !digit && want0 !== (R.pt ?? 0) ? 0 : want0, wh = stays && whistleWedge(g), toWh = wh && want === CMDRING.wedges, row = want && !toWh ? g.nearby[want - 1] : null, at = row && wedged(row) ? want - 1 : -1;
+      if (R.at && (digit || !still)) R.pt = digit ? 0 : want0;   // (what the HAND put the cursor on: only that is pointed at while the hand rests — the lit wedge sliding under a resting cursor is not)
       if (at >= 0) { R.whistle = false; if (at !== pl.nearSel) { pl.nearSel = at; pickHover(g); } }
       if (stays) {
         if (toWh || (wh && !choosable(g.nearby))) R.whistle = true; else if (!wh) R.whistle = false;   // (the whistle's wedge lit: asked for, or the only one there is)
