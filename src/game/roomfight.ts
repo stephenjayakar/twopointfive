@@ -81,6 +81,8 @@ import { friendInCone, ffHeld } from './friendlyfire';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 
 /** The module's switches and the few numbers that are not a side's. */
+/** the check's own break word (tools/qa coverkeep-probes.ts): the cover rule's switch reads on and the rule does nothing */
+const COVER_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.COVERKEEP_BREAK === '1';
 export const ROOMFIGHT = {
   /** off = nothing here runs and the night breach is its branch's (staged exchange, plan-forced aims) */
   on: true,
@@ -143,6 +145,14 @@ export const ROOMFIGHT = {
   /** a man HOLDING an arc he was given (orders.ts holdArcs: a watch point, on his mark) answers a mate's call or a footfall only inside this many degrees of it
    *  — the other half is the other man's; 180 = as it was (he turned to any call he had a line to, and the two of them ended facing one way) */
   arcHalfDeg: 100,
+  /** A MAN TOLD TO COVER KEEPS HIS ANGLE (the maintainer, of a man covering a lane who swung a quarter turn to a man two mates were already shooting, the
+   *  lane's own men still coming: "doesn't watch his angle even though red team has it covered"). With `coverKeep` a man stood at the post of a cover order
+   *  passes over an enemy who is more than `coverHalfDeg` off the way he was told to watch WHILE a mate's gun is on that man with a round at him: the man is
+   *  seen (his meter runs) and is not his — not to his eyes, and no call, shot or footfall of that man's turns his look. The man is his again the moment no
+   *  mate has him (the mate is behind a jamb, reloading, has a friend in his line or his muzzle down), his muzzle comes onto this man, or he is inside
+   *  `coverNearM`; a man he is already on he hands over only when the mate is past his own beat to fire. A look he had begun at such a man is dropped.
+   *  Not covered: coverfire.ts's rounds into cover at a man a mate knows of. Off = as it was: his eyes took any man they saw. */
+  coverKeep: false, coverHalfDeg: 45, coverNearM: 6,
   /** s a teammate stays ROUSED after a shot, a charge or a boot last reached his ears: a sighting alone is a man to him (no making the shape out first) and he
    *  reads at the roused rate. 10 = as it was — a quarter of a minute after a room was taken the team looked as calm men look, and a defender walking in through
    *  a connecting door two metres off had three tenths of a second on the man watching it */
@@ -940,6 +950,20 @@ export class RoomFight {
     gd.muzzleDown = true; gd.muzzleClearT = 0; return true;
   }
   private speak(O: Op, text: string, gap = 1.2) { if (this.g.time - O.saidT < gap) return; O.saidT = this.g.time; this.g.say(O.gd, text); }
+  /** ROOMFIGHT.coverKeep: true of an enemy who is NOT this covering man's — off his ordered way, and a mate has him (see the table). */
+  private coverPasses(g: Game, O: Op, h: Guard): boolean {
+    const R = ROOMFIGHT; if (!R.coverKeep || COVER_BREAK) return false;
+    const A = g.orders.of(O.gd); if (!A || A.order !== 'cover' || !A.watch || !A.post) return false;
+    const c = O.gd.char, hc = h.char;
+    if (flat(c.pos, A.post) > 0.8 || flat(c.pos, hc.pos) < R.coverNearM) return false;   // not on his post yet · a man this close is anybody's
+    if (Math.abs(wrapAngle(v3.yawTo(c.pos, hc.pos) - v3.yawTo(c.pos, A.watch))) <= R.coverHalfDeg * DEG) return false;   // in the angle he was given
+    if (Math.abs(wrapAngle(v3.yawTo(hc.pos, c.pos) - hc.aimYaw)) < 0.35) return false;   // a muzzle on him is his own business
+    // a mate HAS the man: his gun on him and a round to send — not behind a jamb (blockT), not reloading, no friend in his line, his muzzle not down.
+    // And a man this one is already ON is handed over only to a mate past his own beat to fire (readyAt): no gap with nobody's rounds going at him
+    const g0 = g.time, mine = O.tgt === h;
+    for (const X of this.ops) if (X !== O && X.tgt === h && X.gd.state !== 'dead' && X.blockT < R.noShot && X.lineT === 0 && g0 >= X.reloadUntil && !X.gd.muzzleDown && (!mine || g0 >= X.readyAt)) return true;
+    return false;
+  }
   private tickOp(O: Op, dt: number) {
     const g = this.g, gd = O.gd, c = gd.char, S = FIGHT_SKILL.operative;
     gd.skill = S;
@@ -970,7 +994,7 @@ export class RoomFight {
       const vis = blind ? null : canSeeChar(g, gd, h.char, false); const rate = vis?.visible ? this.rateOn(gd, h, vis.dist, M.m >= S.notice) : 0;
       if (rate > 0.05) { M.m = Math.min(1, M.m + rate * dt); if (rate > 0.25) M.seenT = g.time; } else M.m = Math.max(0, M.m - 0.5 * dt);
       if (noShot) { if (vis?.visible && (clearShot(g, c, chestOf(h.char)) || clearShot(g, c, h.char.bones.head ?? v3.add(h.char.pos, [0, 1.6, 0])))) O.pass = null; else continue; }   // (walked on from for want of a shot — walkOn: seen all the while, and his again the moment there is one)
-      if (g.time - M.seenT < 0.25 && (M.m >= S.notice || hot) && !pairPasses(g, gd, h) && !workPasses(g, gd, h)) {   // a real sighting now (the alert AI's own licence: rate > 0.25) — and either he has made the shape out over time (a calm floor) or the floor is hot, when the sighting is enough, as it is for any roused man
+      if (g.time - M.seenT < 0.25 && (M.m >= S.notice || hot) && !pairPasses(g, gd, h) && !workPasses(g, gd, h) && !this.coverPasses(g, O, h)) {   // a real sighting now (the alert AI's own licence: rate > 0.25) — and either he has made the shape out over time (a calm floor) or the floor is hot, when the sighting is enough, as it is for any roused man
         const hc = h.char; const onUs = Math.abs(wrapAngle(v3.yawTo(hc.pos, c.pos) - hc.aimYaw)) < 0.35 ? 2 : 0;   // a muzzle on him outranks one that is not
         const R = ROOMFIGHT, d = vis?.dist ?? 9;
         const alarm = h.state === 'alert' || h.state === 'search', passed = M.glassT !== undefined;   // (passed: he has held a round at this man for a pane in the way — silent.ts; never true of a loud squad)
@@ -1070,7 +1094,7 @@ export class RoomFight {
    *  mate's muzzle is on if he has a line to him — after his reaction beat, for a couple of seconds */
   private cue(O: Op) {
     const g = this.g, c = O.gd.char, S = FIGHT_SKILL.operative;
-    if (O.turn && (g.time > O.turn.until || O.turn.to.state === 'dead' || (!O.turn.door && workPasses(g, O.gd, O.turn.to)))) { O.turn = null; O.lostAt = g.time; }   // (… or workthings.ts: he is stood at the thing he was sent to work, and the look is for a man no round of his may go at — a door come open is still looked at)
+    if (O.turn && (g.time > O.turn.until || O.turn.to.state === 'dead' || (!O.turn.door && (workPasses(g, O.gd, O.turn.to) || this.coverPasses(g, O, O.turn.to))))) { O.turn = null; O.lostAt = g.time; }   // (… or workthings.ts: he is stood at the thing he was sent to work, and the look is for a man no round of his may go at — a door come open is still looked at)
     const look = O.turn && O.turn.pt ? O.turn : null;   // (a look at where steps come from — it follows them and lasts while they keep coming, `stepLookSecs` at most, and gives way to a shot or a mate's call)
     if (look && !look.door && O.stepBy && O.stepBy.by === look.to && g.time - O.stepBy.t < 0.6) { look.pt = O.stepBy.at; look.until = Math.min(Math.max(look.until, O.stepBy.t + 2.5), (look.t0 ?? g.time) + ROOMFIGHT.stepLookSecs); }
     if (O.turn && !look) return;
@@ -1078,9 +1102,9 @@ export class RoomFight {
     const gone = O.pass && O.pass.noShot && g.time < O.pass.until ? O.pass.h : null;   // (the man he has just walked on from for want of a shot: no mate's call, no burst into the pane and no footfall of his turns him back — the eye loop does, when there is a round at him)
     const A = g.orders.of(O.gd), arc = A && A.order === 'hold' && A.watch && A.arrived ? v3.yawTo(c.pos, A.watch) : null;
     const mine = (h: Guard) => arc === null || Math.abs(wrapAngle(v3.yawTo(c.pos, h.char.pos) - arc)) < ROOMFIGHT.arcHalfDeg * DEG;
-    for (const r of this.reports) { if (g.time - r.t > 0.6 || r.by.state === 'dead' || r.by === gone) continue; const d = flat(c.pos, r.by.char.pos); if (d < bd && !g.col.segmentBlocked(eye, chestOf(r.by.char))) { bd = d; who = r.by; } }
-    if (!who) for (const X of this.ops) if (X !== O && X.tgt && X.tgt !== gone && X.tgt.state !== 'dead' && X.gd.state !== 'dead' && flat(c.pos, X.tgt.char.pos) < 16 && mine(X.tgt) && !g.col.segmentBlocked(eye, chestOf(X.tgt.char)) && !workPasses(g, O.gd, X.tgt)) { who = X.tgt; call = true; }   // (workthings.ts: not a man stood at the thing he was sent to work, for a man no round of his may go at)
-    if (!who && O.stepBy && g.time - O.stepBy.t < 0.6 && O.stepBy.by.state !== 'dead' && O.stepBy.by !== gone && mine(O.stepBy.by) && !workPasses(g, O.gd, O.stepBy.by)) {   // footsteps coming, and his the nearest ears: he looks
+    for (const r of this.reports) { if (g.time - r.t > 0.6 || r.by.state === 'dead' || r.by === gone || this.coverPasses(g, O, r.by)) continue; const d = flat(c.pos, r.by.char.pos); if (d < bd && !g.col.segmentBlocked(eye, chestOf(r.by.char))) { bd = d; who = r.by; } }
+    if (!who) for (const X of this.ops) if (X !== O && X.tgt && X.tgt !== gone && X.tgt.state !== 'dead' && X.gd.state !== 'dead' && flat(c.pos, X.tgt.char.pos) < 16 && mine(X.tgt) && !g.col.segmentBlocked(eye, chestOf(X.tgt.char)) && !workPasses(g, O.gd, X.tgt) && !this.coverPasses(g, O, X.tgt)) { who = X.tgt; call = true; }   // (workthings.ts: not a man stood at the thing he was sent to work, for a man no round of his may go at)
+    if (!who && O.stepBy && g.time - O.stepBy.t < 0.6 && O.stepBy.by.state !== 'dead' && O.stepBy.by !== gone && mine(O.stepBy.by) && !workPasses(g, O.gd, O.stepBy.by) && !this.coverPasses(g, O, O.stepBy.by)) {   // footsteps coming, and his the nearest ears: he looks
       if (!g.col.segmentBlocked(eye, chestOf(O.stepBy.by.char))) { who = O.stepBy.by; call = true; }
       else if (ROOMFIGHT.stepLook && !look && !(A && A.door && !A.arrived)) { who = O.stepBy.by; call = true; pt = O.stepBy.at; }   // … at where they come from, with no line to the man himself (never on his way to a door's mark or through it: his corner is his)
     }
