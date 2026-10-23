@@ -14,6 +14,8 @@
 //            double tap's swing comes round eased, frame by frame; Options >
 //            Game has the auto camera's own section, Gentle lit with nothing kept and the table on gentle's numbers; Free clicked is the numbers as built
 //            and is kept; a row slid is the player's own over the mode (it stays lit and its line says so) and is kept; both hold over a reload; Reset puts Gentle back and keeps nothing.
+//            Then the soft lock (AUTOCAM.lock; the lines above run under `?autolock=0` too): with the mode on, a man who is not onto him is stood at the end
+//            of a clear line and he is put 9 m and then 3 m from him: the camera is metres nearer at 3 m and never moves by a step.
 //            ONLY=tune runs this part alone.
 //   THE CAMERA'S KEY is read from the page (`__keys.camCap()`), as findme-page.cjs reads it. exit 0 = all of it with no page error · 1 = otherwise.
 //   The verdict is the page's DOM, its store and the camera's numbers: nothing here judges a picture, and none of it has been seen on a GPU.
@@ -33,8 +35,19 @@ const RESET = () => { const b = document.querySelector('#options [data-act="rese
 const SHUT = () => { document.querySelector('#options [data-act="back"]')?.click(); window.__menu.close(); if (window.__smoke) window.__smoke.params.enabled = false; window.__game.godMode = true; window.__game.aiEnabled = false; const K = window.__knobs.registry().AUTOCAM; window.__swayWas = K.sway; K.sway = false; };
 // in the page: n frames one at a time with these keys held, and how the yaw went
 const SWAY = ([keys, n]) => { const c = window.__cam, y0 = c.yaw; let most = 0, far = 0, prev = y0, first = 0; for (let i = 0; i < n; i++) { window.__runFrames(1, 1 / 60, keys, i % 60 === 59 ? false : 'none'); const s = Math.abs(c.yaw - prev); if (!first && s > 0) first = s; most = Math.max(most, s); far = Math.max(far, Math.abs(c.yaw - y0)); prev = c.yaw; } return { yaw: c.yaw, most, far, first }; };
+// in the page: a man who is not onto him at the end of a clear line (found once), every other guard out of the picture, he `m` metres from him, `n` frames one
+// at a time with the man put back before each (a man on a round walks it with the AI off): where the camera is, and the most it moved in a frame
+const LOCK = ([m, n]) => { const g = window.__game, c = window.__cam; g.fogOfWar.hidden = () => false; let L = window.__lockT;
+  if (!L) { for (const gd of g.guards) { if (gd.state === 'dead' || gd.civ || gd.held || gd.team === 'operative') continue; const q = gd.char.pos;
+      for (let i = 0; i < 16 && !L; i++) { const a = i * Math.PI / 8, dx = Math.sin(a), dz = Math.cos(a); let clear = true; for (let s = 0.5; s <= 9.5 && clear; s += 0.5) { if (s >= 2 && g.col.nav.isBlocked(q[0] + dx * s, q[2] + dz * s)) clear = false; for (const h of [1.3, 0.4]) if (g.col.segmentBlocked([q[0], h, q[2]], [q[0] + dx * s, h, q[2] + dz * s])) clear = false; } if (clear) L = { gd, at: [q[0], q[2]], dir: [dx, dz] }; }
+      if (L) break; }
+    if (!L) return null; window.__lockT = L; }
+  const pin = () => { for (const o of g.guards) { if (o === L.gd) { o.char.pos[0] = L.at[0]; o.char.pos[2] = L.at[1]; o.state = 'patrol'; } else if (o.team !== 'operative') { o.char.pos[0] = L.at[0] - L.dir[0] * 60; o.char.pos[2] = L.at[1] - L.dir[1] * 60; } } };
+  pin(); g.teleportPlayer([L.at[0] + L.dir[0] * m, 0, L.at[1] + L.dir[1] * m]); let most = 0, prev = NaN;
+  for (let i = 0; i < n; i++) { pin(); window.__runFrames(1, 1 / 60, [], i % 60 === 59 ? false : 'none'); if (i > 1) most = Math.max(most, Math.abs(c.desiredDistance - prev)); prev = c.desiredDistance; }
+  const P = g.player.char.pos; return { d: c.desiredDistance, most, dist: Math.hypot(P[0] - L.at[0], P[2] - L.at[1]), on: window.__knobs.registry().AUTOCAM.lock }; };
 // the auto camera's own section as Options shows it, and the table and the store under it
-const TUNE = () => { const K = window.__knobs.registry().AUTOCAM, rows = [...document.querySelectorAll('#options .op-row')], by = l => rows.find(x => x.querySelector('.op-label').textContent === l), val = l => { const r = by(l); return r ? r.querySelector('.op-val').textContent : null; }, seg = by('Camera turning'), last = by('Stay on the squad');
+const TUNE = () => { const K = window.__knobs.registry().AUTOCAM, rows = [...document.querySelectorAll('#options .op-row')], by = l => rows.find(x => x.querySelector('.op-label').textContent === l), val = l => { const r = by(l); return r ? r.querySelector('.op-val').textContent : null; }, seg = by('Camera turning'), last = by('Start zooming in from') || by('Stay on the squad');
   // (the pointer onto the mode's row from another: the foot shows its line as it now reads)
   if (last) last.dispatchEvent(new Event('mouseenter')); if (seg) seg.dispatchEvent(new Event('mouseenter')); const line = (document.querySelector('#options .op-desc') || {}).textContent || '';
   let seen = false; if (last) { last.scrollIntoView({ block: 'center' }); const b = last.getBoundingClientRect(); seen = b.height > 0 && b.top >= 0 && b.bottom <= window.innerHeight; }
@@ -51,7 +64,7 @@ const VIEW = () => { const g = window.__game, c = window.__cam, f = c.planarBasi
   const page = await (await browser.newContext({ viewport: { width: 1024, height: 576 }, deviceScaleFactor: 1 })).newPage();
   page.setDefaultTimeout(900000); page.setDefaultNavigationTimeout(900000);   // (a boot on the software adapter is minutes, and the reload is a second one)
   const errs = []; page.on('pageerror', e => errs.push(String(e).slice(0, 300))); page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errs.push(m.text().slice(0, 300)); });
-  const plain = `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute`, url = `${plain}&autotune=0`, wait = ms => new Promise(r => setTimeout(r, ms));   // (`url`: the camera as built, for the lines as built)
+  const plain = `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute`, url = `${plain}&autotune=0&autolock=0`, wait = ms => new Promise(r => setTimeout(r, ms));   // (`url`: the camera as built, for the lines as built)
   const boot = async (again, to = url) => { if (again) await page.reload(); else await page.goto(to); await page.evaluate(async () => { await window.__ready; }); await page.evaluate(STEP, 20); };
   const dist = (a, b) => Math.hypot(a.look[0] - b.look[0], a.look[1] - b.look[1]);
   try {
@@ -104,7 +117,7 @@ const VIEW = () => { const g = window.__game, c = window.__cam, f = c.planarBasi
       `flipped: ${r1['Auto camera']}, kept ${k1} · after a reload: ${r2['Auto camera']}, kept ${k2} · after Reset: ${r3['Auto camera']}, kept ${k3}`);
    }
     // tune: the page as it opens
-    { const D = 180 / Math.PI, near = (a, b) => Math.abs(a - b) < 1e-6, WANT = ['Camera turning', 'Turn when a wall hides you', 'Turn to face the door ahead', 'Turn speed', 'Wait before it turns', 'Time between turns', 'Turn in a fight', 'Lean when you move sideways', 'Lean speed', 'Swing when you double tap', 'Swing speed', 'Framing', 'Framing speed', 'Zoom', 'Zoom speed', 'Stay on the squad'];
+    { const D = 180 / Math.PI, near = (a, b) => Math.abs(a - b) < 1e-6, WANT = ['Camera turning', 'Turn when a wall hides you', 'Turn to face the door ahead', 'Turn speed', 'Wait before it turns', 'Time between turns', 'Turn in a fight', 'Lean when you move sideways', 'Lean speed', 'Swing when you double tap', 'Swing speed', 'Framing', 'Framing speed', 'Zoom', 'Zoom speed', 'Stay on the squad', 'Zoom in when you sneak up', 'Start zooming in from'];
       log(plain); await boot(false, plain); log('booted, the page as it opens');
       // …and its double tap: the swing eased, frame by frame
       { const cap = await page.evaluate(() => (window.__keys && window.__keys.camCap ? window.__keys.camCap() : 'Ctrl')), KEY = cap === 'Ctrl' ? 'Control' : cap;
@@ -115,7 +128,12 @@ const VIEW = () => { const g = window.__game, c = window.__cam, f = c.planarBasi
         let sw = null, v = hs; for (let tries = 0; tries < 3 && v.kept !== '1'; tries++) { await wait(500); await page.keyboard.press(KEY, { delay: 40 }); await wait(60); await page.keyboard.press(KEY, { delay: 40 }); sw = await page.evaluate(SWAY, [[], 300]); v = await page.evaluate(VIEW); }
         check(hs.kept === null && v.kept === '1' && sw && top > 0 && sw.first > 0 && sw.first < 0.1 * top && sw.most <= top * (1 + 1e-6) && v.dot > 0.98,
           `the page as it opens: a real double tap of ${cap} puts the mode on and the view comes round to where he looks eased, from rest and never over the swing's top speed in a frame`,
-          sw ? `the view was ${(Math.acos(Math.max(-1, Math.min(1, hs.dot))) * D).toFixed(0)}° off his facing, now ${(Math.acos(Math.max(-1, Math.min(1, v.dot))) * D).toFixed(1)}° · the first frame ${(sw.first / top * 100).toFixed(1)}% of the top speed's step (${(top * 60 * D).toFixed(0)}° a second), the most ${(sw.most / top * 100).toFixed(0)}%` : 'the double tap was not taken'); }
+          sw ? `the view was ${(Math.acos(Math.max(-1, Math.min(1, hs.dot))) * D).toFixed(0)}° off his facing, now ${(Math.acos(Math.max(-1, Math.min(1, v.dot))) * D).toFixed(1)}° · the first frame ${(sw.first / top * 100).toFixed(1)}% of the top speed's step (${(top * 60 * D).toFixed(0)}° a second), the most ${(sw.most / top * 100).toFixed(0)}%` : 'the double tap was not taken');
+        // …and the soft lock, the mode still on: a man who is not onto him, 9 m off and then 3 m off
+        log('the soft lock'); const l9 = await page.evaluate(LOCK, [9, 150]), l3 = l9 && await page.evaluate(LOCK, [3, 240]), on = (await page.evaluate(VIEW)).kept === '1';
+        check(!!l9 && !!l3 && on && l9.on === true && Math.abs(l9.dist - 9) < 0.3 && Math.abs(l3.dist - 3) < 0.3 && l3.d < l9.d - 2 && l3.most > 0 && l3.most < 0.03 * l9.d && l9.most < 0.03 * l9.d,
+          'the page as it opens, the mode on: put 3 m from a man who is not onto him the camera is metres nearer than at 9 m, and it never moves by a step (under 3% of its distance in a frame)',
+          l9 && l3 ? `at ${l9.dist.toFixed(1)} m from him the camera is ${l9.d.toFixed(2)} m off, at ${l3.dist.toFixed(1)} m ${l3.d.toFixed(2)} m · the most it moves in a frame ${(Math.max(l9.most, l3.most) * 100).toFixed(1)} cm · the mode ${on ? 'still on' : 'WENT OFF'}` : 'no guard with a clear line of 9.5 m on this floor'); }
       let e2 = await page.evaluate(OPEN); if (e2) throw new Error(e2); const t0 = await page.evaluate(TUNE), missing = WANT.filter(l => !t0.labels.includes(l));
       check(!missing.length && t0.secs.includes('Auto camera · trying out') && t0.lit === 'Gentle' && t0.tune === true && near(t0.cap * D, 30) && t0.ahead === false && near(t0.fightMax * D, 15) && t0.move === 0 && t0.speed === '30° a second' && t0.swingSpeed === '180° a second' && near(t0.swingCap * D, 180) && t0.fight === '15°' && t0.wall === 'On' && t0.kept === null && t0.seen && /leans a little toward a fight/.test(t0.line),
         'the page as it opens: Options > Game has the auto camera\'s own section, Gentle lit with nothing kept, the table on gentle\'s numbers, and its last row can be scrolled to',

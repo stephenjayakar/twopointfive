@@ -101,7 +101,7 @@ import { STARTLE } from '../game/startle';
 import { ROWSET } from '../game/rowset';
 import { SMOKEBREAK } from '../game/smokebreak';
 import { SHOWWHY } from '../game/showwhy';
-import { FIRE, FIRE_SIZE } from '../game/fire';
+import { FIRE, FIRE_SIZE, FIRE_SHIMMER, FIRE_PLUME, FIRE_EMBERS } from '../game/fire';
 import { FLINCH } from '../game/flinch';
 import { VERDICT } from '../game/verdict';
 import { DARKDOOR } from '../game/darkdoor';
@@ -282,7 +282,7 @@ export function pageSwitches(q: URLSearchParams): void {
   HANDRING.on = q.get('handring') !== '0';   // his own actions are a ring that stays (game/handring.ts): a tap of the interaction key does the default action, the key kept down a moment puts his rows up as a ring at the cursor that stays with no key held (a digit, a click or the key again does a wedge; a right click or Tab puts it away), the whistle is its last wedge and has no key, the corner shows the default action alone; on the page's board the key is E while empty hands are a slot (host/keymap.ts HAND) — ON in the page; ?handring=0 = the list on a held Space, the corner list and V for the whistle, as it was
   THROWBACK.restMark = !q.has('norestmark');   // the throw preview's ring is where the can comes to REST (game/throwback.ts `restMark`, player.ts throwRest; the overlay's): ?norestmark = the ring on its first touch, as it was
   THROWBACK.on = q.get('throwback') !== '0';   // a can in the wind-up goes back on the belt when a kick, a pick, the wand, hands at work, the keypad or a takedown begins (game/throwback.ts); `?throwback=0` = it freezes in his fist and leaves when the beat ends, as it did
-  AUTOCAM.on = q.get('autocam') !== '0'; AUTOCAM.turn = q.get('autoturn') !== '0'; AUTOCAM.zoom = q.get('autozoom') !== '0'; AUTOCAM.sway = q.get('autosway') !== '0'; AUTOCAM.tune = q.get('autotune') !== '0'; autoTuneApply();   // the camera's key tapped twice and the camera frames things itself (host/autocam.ts: the door ahead, the squad's orders, the men he could shoot; the key held with the mouse moved, or with a walk key, takes it back): ON in the page; `?autocam=0` = the double tap is the Options row's, as it was (`?autoturn=0` = it never turns the view, `?autozoom=0` = it never zooms)
+  AUTOCAM.on = q.get('autocam') !== '0'; AUTOCAM.turn = q.get('autoturn') !== '0'; AUTOCAM.zoom = q.get('autozoom') !== '0'; AUTOCAM.sway = q.get('autosway') !== '0'; AUTOCAM.lock = q.get('autolock') !== '0'; AUTOCAM.tune = q.get('autotune') !== '0'; autoTuneApply();   // the camera's key tapped twice and the camera frames things itself (host/autocam.ts: the door ahead, the squad's orders, the men he could shoot; the key held with the mouse moved, or with a walk key, takes it back): ON in the page; `?autocam=0` = the double tap is the Options row's, as it was (`?autoturn=0` = it never turns the view, `?autozoom=0` = it never zooms)
   OWNBLOW.on = q.get('ownblow') !== '0';   // a charge his own hands set goes off from his own actions — a row of his list, a wedge of his ring — and the squad's key no longer blows it (game/ownblow.ts); `?ownblow=0` = the squad's key blows any set charge, as it did
   RELOAD.auto = !q.has('noautoreload');   // a dry gun in the player's hands starts its own reload (game/autoreload.ts): ON in the page; ?noautoreload = it waits for R, as it did
   TEAMPACE.on = q.get('teampace') !== '0' && !q.has('noteampace');   // teammates walk at four fifths of the player's walk, run with him when he sprints and they follow, and run on their own only for a reason (game/teampace.ts) — ON in the page; ?teampace=0 = the team's old 2.2 m/s cap and no running, as it was
@@ -347,6 +347,8 @@ export function pageSwitches(q: URLSearchParams): void {
   FIRE.on = q.get('fire') !== '0';   // an open fire burns (game/fire.ts: a level's brazier gets a flame, embers, smoke off the solver, a crackle, and its lamp flickers — in the light meter too) — ON in the page; ?fire=0 = the glowing lid and the steady lamp as they were
   FIRE.fog = q.get('firefog') !== '0';   // … drawn under the fog of war as the team last saw it (the picture only): ?firefog=0 = no flame over ground the fog hides, as it was
   FIRE.size = q.get('firesize') === '0' ? 0 : FIRE_SIZE;   // … its lamp the pinpoint the level made it, not the flame's size: the drum's shadow on the ground with a drawn edge, as it was (to compare on a GPU)
+  FIRE.look.shimmer = q.get('fireheat') === '0' ? 0 : FIRE_SHIMMER; FIRE.look.plume = q.get('fireplume') === '0' ? 0 : FIRE_PLUME;   // … the shimmer of the hot air over it, and the smoke drawn off its tips (both the picture only): ?fireheat=0, ?fireplume=0 = without
+  FIRE.embers = q.get('fireembers') === '0' ? 0 : FIRE_EMBERS;   // … and its embers, which are GPU particles: ?fireembers=0 = none
   FIRE.smoke.on = q.get('firesmoke') !== '0';   // … and its smoke, which keeps the smoke solver awake near a fire (picture only): ?firesmoke=0 = the fire with no smoke, to weigh what the smoke costs
   ROWSET.on = q.get('rowset') !== '0';   // a mission row's own hour and weather (game/rowset.ts): a row that names one is always started in it, over the link's — ON in the page; ?rowset=0 = the link's hour and weather as ever (no row names one: nothing to see either way)
   STARTLE.on = q.get('startle') !== '0';   // enemies startle when they first see you (game/startle.ts): a calm man whose own eyes have just told him it is a man jolts, his gun down for a beat, and only then draws — or, green and alone with you close, runs for it: ON in the page; ?startle=0 = he goes for his gun at once, as he did
@@ -387,6 +389,7 @@ export function pageSwitches(q: URLSearchParams): void {
   CLOSE.heldClicks = !q.has('noheldclicks');   // with a man in his arm the two buttons (game/close.ts, player.ts updateHold): left click the knife — he is dead — right click the choke; the arm hold only — ON in the page; ?noheldclicks = neither click does anything there, as it was
   CLOSE.handsLow = q.get('handslow') !== '0';   // crouched in reach behind a standing man his hands stay low until the move: the tell is the hand on the knife, not an open hand held up over his own head (game/close.ts closeReady). ON in the page; ?handslow=0 = the grab's tell reaches from the crouch, as it was
   CLOSE.noKnife = q.get('noknife') !== '0';   // no knife: empty hands knock a man out on the right click and the left click is no blow; nothing draws or names a blade (game/close.ts). ON in the page; ?noknife=0 = the two buttons as they were
+  CLOSE.rmbHold = q.get('rmbhold') !== '0';   // the right button, tapped or held: a tap is the knockout (quick, heard further), kept down it is the choke (game/close.ts). ON in the page; ?rmbhold=0 = the press itself is the knockout
   CLOSE.reachUp = !q.has('noreachup');   // crouched behind a standing man the grab's reach goes UP for his neck and the trunk comes up with it (game/close.ts, character.ts READY_UP): ON in the page; ?noreachup = the hand at the small of his back, as it was
   STALK.only = q.get('stalkonly') !== '0';   // …and it is the only way to a staff man: his 'grab him' row is gone (?stalkonly=0 puts the row back beside the stalk)
   STALK.corner = q.get('stalkcorner') !== '0';   // …and with his back on a wall the held button lies in wait: the man who comes past the corner is grabbed (?stalkcorner=0 = the button on a wall does nothing, as it was)
@@ -571,6 +574,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'THROWBACK.on': 'TPS_THROWBACK=1',
   'AUTOCAM.on': 'TPS_AUTOCAM=1 (the mode itself is the seat\'s, off until the camera\'s key is tapped twice: read only by a tool that steps through host/loop.ts stepFrame)',
   'AUTOCAM.sway': 'TPS_AUTOSWAY=1 (the mode\'s slow turn in a fight and on the move; nothing with the mode off)',
+  'AUTOCAM.lock': 'TPS_AUTOLOCK=1 (the mode\'s soft lock: the frame and the zoom come in on a man who is not onto him as the player closes; nothing with the mode off)',
   'AUTOCAM.tune': 'TPS_AUTOTUNE=1 (the mode\'s numbers are the player\'s: a mode and rows on Options, the gentle mode where nobody has chosen; nothing with the mode off)',
   'AUTOCAM.restAhead': 'TPS_AUTOTUNE=1 (the gentle mode\'s own number, no turn at rest for the thing on the lens\'s side: host/autocam.ts AUTO_MODES)',
   'AUTOCAM.turnCap': 'TPS_AUTOTUNE=1 (the gentle mode\'s own number, a turn of its own eased under a top speed: host/autocam.ts AUTO_MODES)',
@@ -603,6 +607,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'CLOSE.reachUp': 'TPS_REACHUP=1',
   'CLOSE.handsLow': 'TPS_HANDSLOW=1',
   'CLOSE.noKnife': 'TPS_NOKNIFE=1',
+  'CLOSE.rmbHold': 'TPS_RMBHOLD=1',
   'FOOTFALL.once': 'TPS_FOOTFALL=1',
   'FOOTFALL.owed': 'TPS_FOOTOWED=1 (acts only under FOOTFALL.once: with TPS_FOOTFALL=1)',
   'TWOGEARS.on': 'TPS_TWOGEARS=1',

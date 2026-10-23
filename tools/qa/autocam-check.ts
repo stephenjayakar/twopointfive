@@ -33,12 +33,19 @@
 //                shot ends a slow swing where it is; a wall hiding him brings the view round by the eased turn, tick by tick under its top speed,
 //                though the mouse moves; a walk key ends it without a step, and the next turn waits out the gap from there
 //  20 plumbing   the two stands by their words, the FROZEN_HOLDS rows, a recording from before the key (CONTROL)
-// AUTOCAM_BREAK=1 = the switch left off: lines 8, 9, 10, 11 (and 15, 19) must FAIL.   AUTOTUNE_BREAK=1 = the tuning left off: 17, 18 and 19 must FAIL.
+//  21 the lock   (AUTOCAM.lock) a man who is not onto him holds the frame by how near he is: the look-at goes to the middle of the two and the camera
+//                comes in by `lockIn`, more the stronger the lock, from rest and with no step; a held button stills it and a stalk's held click does
+//                not; a second man he could shoot is never zoomed out of the picture; `lockIn` at none comes in nowhere; off = the frame as it was
+//  22 the loop   the whole Game: a man in his line who is not onto him, closed on in stages: the camera comes in at each, never by a step; the man
+//                onto him, it goes back out (it never comes in on a fight); a plain held button stills it
+//  23 plumbing   the two stands by their words, the FROZEN_HOLDS row, a recording from before the key (CONTROL)
+// AUTOCAM_BREAK=1 = the switch left off: lines 8, 9, 10, 11 (and 15, 19, 22) must FAIL.   AUTOTUNE_BREAK=1 = the tuning left off: 17, 18 and 19 must
+// FAIL.   AUTOLOCK_BREAK=1 = the soft lock left off: 21 and 22 must FAIL.
 // exit 0 = all hold · 1 = one does not
 import { standUp, ROOT } from './headless.ts';
 
 export async function autocamCheck(): Promise<boolean> {
-  const BREAK = process.env.AUTOCAM_BREAK === '1', SWAYBREAK = process.env.AUTOSWAY_BREAK === '1', TUNEBREAK = process.env.AUTOTUNE_BREAK === '1';
+  const BREAK = process.env.AUTOCAM_BREAK === '1', SWAYBREAK = process.env.AUTOSWAY_BREAK === '1', TUNEBREAK = process.env.AUTOTUNE_BREAK === '1', LOCKBREAK = process.env.AUTOLOCK_BREAK === '1';
   const { stepFrame, FIXEDSTEP } = await import(`${ROOT}/src/host/loop.ts`);
   const { digestGame, diffDigest } = await import(`${ROOT}/src/game/digest.ts`);
   const { mulberry32: seeded } = await import(`${ROOT}/src/math/dice.ts`);
@@ -48,17 +55,19 @@ export async function autocamCheck(): Promise<boolean> {
   const J: any = await import(`${ROOT}/src/game/journal.ts`);
   const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
   const { STAND_ENV } = await import(`${ROOT}/src/host/standEnv.ts`);
+  const { isHostile } = await import(`${ROOT}/src/game/teams.ts`);
   const { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`);
   const { AUTOCAM: K, AUTOCAM_STATS: ST } = A, { AUTOVIEW, FINDME } = F;
   let all = true;
   const line = (ok: boolean, s: string, detail = '') => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${s}${detail ? `\n    ${detail}` : ''}`); };
-  console.log(`\n=== autocam: the camera's key tapped twice and the camera frames things itself${BREAK ? ' (the switch left off: 8, 9, 10, 11, 15 and 19 must fail)' : ''}${SWAYBREAK ? ' (the sway left off: 14 and 15 must fail)' : ''}${TUNEBREAK ? ' (the tuning left off: 17, 18 and 19 must fail)' : ''} ===`);
+  console.log(`\n=== autocam: the camera's key tapped twice and the camera frames things itself${BREAK ? ' (the switch left off: 8, 9, 10, 11, 15, 19 and 22 must fail)' : ''}${LOCKBREAK ? ' (the soft lock left off: 21 and 22 must fail)' : ''}${SWAYBREAK ? ' (the sway left off: 14 and 15 must fail)' : ''}${TUNEBREAK ? ' (the tuning left off: 17, 18 and 19 must fail)' : ''} ===`);
   const knobs0 = knobsCopy(), rnd0 = Math.random, fixedWas = FIXEDSTEP.on, viewWas = AUTOVIEW.on, behindWas = FINDME.behind, found = K.on;
   const DT = 1 / 60, f2 = (v: number) => v.toFixed(2), deg = (r: number) => (r * 180 / Math.PI).toFixed(1), wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
   const ctxOf = (W: any, extra: Record<string, unknown> = {}): any => ({ game: W.game, input: W.input, cam: W.cam, view: W.canvas, host: W.engine, render: () => { W.engine.world.upload(); }, betweenTicks: () => { W.engine.world.upload(true); },
     smoke: null, audio: null, demo: null, attract: null, hud: null, bubbles: null, time: 0, updateMs: 0, frozen: () => false, present: () => false, fixedStep: () => true, ...extra });
-  const stand = async (seed: number) => { Math.random = seeded(1); const W: any = await standUp({ seed }); W.game.godMode = true; W.game.aiEnabled = false; if (stoodSway === null) stoodSway = K.sway; K.sway = false; if (stoodTune === null) stoodTune = K.tune; K.tune = false; A.autoTuneApply(); return W; };   // (the sway is off for every line but its own: 1 to 13 are the turn rule as it was built)
+  const stand = async (seed: number) => { Math.random = seeded(1); const W: any = await standUp({ seed }); W.game.godMode = true; W.game.aiEnabled = false; if (stoodSway === null) stoodSway = K.sway; K.sway = false; if (stoodTune === null) stoodTune = K.tune; K.tune = false; A.autoTuneApply(); if (stoodLock === null) stoodLock = K.lock; K.lock = false; return W; };   // (the sway is off for every line but its own: 1 to 13 are the turn rule as it was built)
   let stoodTune: boolean | null = null; const tune0 = JSON.parse(JSON.stringify(A.AUTOTUNE));   // (the tuning is off for every line but its own, 17 to 20; the mode and rows as found are put back at the end)
+  let stoodLock: boolean | null = null;   // (the soft lock is off for every line but its own, 21 to 23)
   let stoodSway: boolean | null = null;   // (as the first stand of the run left it: this stand's own word)
   try {
     const STOOD = { on: false }; { await stand(5); STOOD.on = K.on; }
@@ -368,6 +377,103 @@ export async function autocamCheck(): Promise<boolean> {
       line(had && before === false && asBuilt && carried && kept && stoodTune === want && (STAND_ENV as string[]).includes('TPS_AUTOTUNE') && typeof row === 'string' && row.startsWith('TPS_AUTOTUNE=1') && !rowsHeld.length,
         `20 CONTROL — this stand (${shipped ? 'the page\'s' : 'frozen'}) stands the tuning ${want ? 'on' : 'off'} by its words, FROZEN_HOLDS carries its row and one for each number gentle moves, and a recording from before the key replays on the numbers as built with the ones it carries left alone`,
         `stood ${stoodTune} (wanted ${want}) · row: '${row}' · numbers with no row: ${rowsHeld.join(', ') || 'none'} · a recording carries the key and the gentle numbers ${had} · from before the key: tune ${before}, the numbers as built ${asBuilt}, its own lean in a fight kept ${carried} · recorded on: ${kept}`); }
+    // ------------------------------------------------------------ the soft lock (AUTOCAM.lock)
+    // 21 the frame
+    { K.tune = false; A.autoTuneApply(); K.lock = !LOCKBREAK;
+      const far = (c: any) => up(c, 2), lockAt = (c: any, s: number, o: any = {}) => scene({ threats: [far(c)], lock: { at: far(c), s, stalk: false }, ...o });
+      const rest = (S: (c: any) => any, secs = 10) => { const c = cam0(), st = begin(c), look = settle(S(c), c, st, secs), B = c.planarBasis(); return { d: c.desiredDistance, toward: (look[0] - 20) * B.fwd[0] + (look[2] - 14) * B.fwd[2] }; };
+      const s0 = rest(c => lockAt(c, 0)), s5 = rest(c => lockAt(c, 0.5)), s1 = rest(c => lockAt(c, 1)), none = rest(c => scene({ threats: [far(c)] }));
+      // from none to full: the distance leaves from rest and never steps
+      const c = cam0(), st = begin(c); settle(lockAt(c, 0), c, st, 6); let first = 0, most = 0, prev = c.desiredDistance, pd = 0, jerk = 0, back = false;
+      for (let i = 0; i < 60 * 8; i++) { const look = A.autoFrame(st, lockAt(c, 1), c, DT); c.step(DT, look, null); const d = prev - c.desiredDistance; if (!i) first = d; most = Math.max(most, d); jerk = Math.max(jerk, Math.abs(d - pd)); if (d < -1e-9) back = true; pd = d; prev = c.desiredDistance; }
+      // a held button stills it; a stalk's held click does not
+      const heldAt = (stalk: boolean) => { const c2 = cam0(), st2 = begin(c2); settle(lockAt(c2, 0), c2, st2, 6); const d0 = c2.desiredDistance; settle(scene({ threats: [far(c2)], lock: { at: far(c2), s: 1, stalk }, hold: true }), c2, st2, 6); return d0 - c2.desiredDistance; };
+      const plain = heldAt(false), stalk = heldAt(true);
+      // a second man he could shoot, well to one side: the camera comes in less, and he stays inside the picture's reach
+      const two = rest(c2 => scene({ threats: [far(c2), side(c2, 9)], lock: { at: far(c2), s: 1, stalk: false } }));
+      // `lockIn` at none: nowhere in; the frame still goes to the middle of the two
+      const in0 = K.lockIn; K.lockIn = 0; const flat0 = rest(c2 => lockAt(c2, 1)), sky0 = rest(c2 => lockAt(c2, 1, { zoomK: 1.15 })); K.lockIn = in0;
+      const full = 21 * (1 - K.lockIn);
+      // where the place's own zoom is not the hand's (under the sky, in a room): a share off where it would be — no dead zone, and no step as the lock begins
+      const sky = rest(c2 => scene({ threats: [far(c2)], zoomK: 1.15 })), skyE = rest(c2 => lockAt(c2, 0.001, { zoomK: 1.15 })), skyF = rest(c2 => lockAt(c2, 1, { zoomK: 1.15 })), roomE = rest(c2 => lockAt(c2, 0.1, { zoomK: 0.92 })), roomN = rest(c2 => scene({ threats: [far(c2)], zoomK: 0.92 }));
+      // the frame among several men: from the middle of them all to the middle of the two (the lock's share told apart from the fight's)
+      const k0 = K.lockK; K.lockK = 0.8; const both = (c2: any, o: any) => scene({ threats: [far(c2), side(c2, 3)], ...o }), lean = (S: (c: any) => any) => { const c2 = cam0(), st2 = begin(c2), look = settle(S(c2), c2, st2, 10), B = c2.planarBasis(); return { f: (look[0] - 20) * B.fwd[0] + (look[2] - 14) * B.fwd[2], r: (look[0] - 20) * B.right[0] + (look[2] - 14) * B.right[2], d: c2.desiredDistance }; };
+      const m0 = lean(c2 => both(c2, {})), m1 = lean(c2 => both(c2, { lock: { at: far(c2), s: 1, stalk: false } })), arm = lean(c2 => both(c2, { lock: { at: null, s: 1, stalk: false } })); K.lockK = k0;
+      // a stalk he broke with the button still down: the lock's man gone, it lets go though a button is held
+      const brk = (() => { const c2 = cam0(), st2 = begin(c2); settle(scene({ threats: [far(c2)], lock: { at: far(c2), s: 1, stalk: true }, hold: true }), c2, st2, 6); const d0 = c2.desiredDistance; settle(scene({ hold: true }), c2, st2, 4); const kept = c2.desiredDistance; settle(scene({ threats: [far(c2)], hold: true, onto: true }), c2, st2, 8); return { d0, kept, d1: c2.desiredDistance }; })();
+      // a door ahead (it holds the zoom out with no lock) does not hold the lock out in full; the hand's share of the zoom at none: no lock zoom either
+      const doorN = rest(c2 => scene({ threats: [far(c2)], door: { at: side(c2, 14), w: 1 } })), doorL = rest(c2 => lockAt(c2, 1, { door: { at: side(c2, 14), w: 1 } }));
+      const za = K.zoomAmt; K.zoomAmt = 0; const amt0 = rest(c2 => lockAt(c2, 1, { zoomK: 0.92 })); K.zoomAmt = 0.5; const amtH = rest(c2 => lockAt(c2, 1, { zoomK: 0.8 })); K.zoomAmt = za;
+      // the zoom's own rule: held out while a man is in his line — as it was with no lock's man, in a fight, with the lock's zoom at none and with the
+      // switch off — and let back in by the lock's man
+      const ratchet = (full: boolean, o: any = {}, lockIn = in0) => { K.lockIn = lockIn; const c2 = cam0(), st2 = begin(c2), S2 = (zoomK: number) => scene({ threats: [far(c2)], zoomK, ...(full ? { lock: { at: far(c2), s: 1, stalk: false } } : {}), ...o }); settle(scene({ threats: [far(c2)], zoomK: 1.15 }), c2, st2, 6); settle(S2(0.92), c2, st2, 10); K.lockIn = in0; return c2.desiredDistance; };
+      const rIn = ratchet(true), rNo = ratchet(false), rFight = ratchet(false, { onto: true }), rNone = ratchet(true, {}, 0); K.lock = false; const rOff = ratchet(true); K.lock = !LOCKBREAK;
+      // its man out of his line for a moment is framed as he was in it; the view gone to somebody else: the lock lets go and the distance is the zoom's own
+      const lin = rest(c2 => scene({ lock: { at: far(c2), s: 0.5, stalk: false } }));
+      const gone = (() => { const c2 = cam0(), st2 = begin(c2); settle(lockAt(c2, 1), c2, st2, 6); const d0 = c2.desiredDistance; A.autoRest(st2, c2); return { d0, d1: c2.desiredDistance, s: st2.lockS }; })();
+      const half = (21 + (21 * 0.8 - 21) * 0.5) * (1 - in0 * 0.5);   // (the hand's share at a half: half the place's zoom, less half the lock's share)
+      const more2 = doorN.d > 21 + 1 && Math.abs(doorL.d - s1.d) < 0.05 && Math.abs(amt0.d - 21) < 1e-9 && Math.abs(amtH.d - half) < 0.05 && Math.abs(rIn - 21 * 0.92 * (1 - in0)) < 0.05 && Math.abs(rNo - 21 * 1.15) < 0.05 && Math.abs(rFight - 21 * 1.15) < 0.05 && Math.abs(rNone - rNo) < 1e-9 && Math.abs(rOff - rNo) < 1e-9
+        && Math.abs(lin.toward - s5.toward) < 0.02 && gone.d0 < 21 - 2 && Math.abs(gone.d1 - 21) < 1e-9 && gone.s === 0;
+      const more = more2 && Math.abs(sky0.d - sky.d) < 1e-9 && Math.abs(skyE.d - sky.d) < 0.02 && Math.abs(skyF.d - sky.d * (1 - K.lockIn)) < 0.05 && roomE.d < roomN.d - 0.5
+        && Math.abs(m0.f - K.fight * 1) < 0.02 && Math.abs(m0.r - K.fight * 1.5) < 0.02 && Math.abs(m1.f - 0.8 * 2) < 0.02 && Math.abs(m1.r) < 0.02 && Math.abs(arm.f - m0.f) < 1e-6 && Math.abs(arm.r - m0.r) < 1e-6 && arm.d < m0.d - 2
+        && brk.d0 < 21 - 2 && Math.abs(brk.kept - brk.d0) < 0.05 && brk.d1 > 21 - 0.05;
+      line(Math.abs(s0.d - none.d) < 1e-6 && Math.abs(none.d - 21) < 0.05 && s5.d < s0.d - 1 && s1.d < s5.d - 1 && Math.abs(s1.d - full) < 0.05 && Math.abs(s1.toward - K.lockK * 2) < 0.02 && Math.abs(s0.toward - K.fight * 2) < 0.02
+        && first >= 0 && first < 0.15 * most && most > 0 && jerk < 0.2 * most && !back && Math.abs(plain) < 1e-9 && stalk > 0.9 * (21 - full) && two.d > s1.d + 1 && two.d < 21 * K.fitMost + 1e-6 && Math.abs(flat0.d - 21) < 1e-9 && more,
+        '21 the soft lock: a man who is not onto him holds the frame by how near he is — the look-at at the middle of the two, the camera in by its share of where it would be, from rest and with no step, under the sky and in a room alike; a held button stills it and a stalk\'s held click does not, and under the button it lets go only for a fight; a second man is not zoomed out of the picture and a door ahead does not hold it out; a man in his arm zooms and leaves the frame; at none, and with the hand\'s share of the zoom at none, it comes in nowhere, and at a half by a half; the zoom held out for a man in his line is let in by the lock\'s man alone; out of his line for a moment he is framed as he was; the view gone to somebody else, it lets go',
+        `a man 2 m up the screen, the lock at none / half / full: the camera at ${f2(s0.d)} / ${f2(s5.d)} / ${f2(s1.d)} m (no lock at all: ${f2(none.d)}; in full it should be ${f2(full)}), the look-at ${f2(s1.toward)} m toward him`
+        + `\n    none to full: the first step ${(first / Math.max(1e-12, most) * 100).toFixed(1)}% of the largest, the most one step differs from the one before ${(jerk / Math.max(1e-12, most) * 100).toFixed(0)}% of the largest, ${back ? 'goes BACK ✗' : 'never back out'} · a button held: ${f2(plain)} m in; the stalk's held click: ${f2(stalk)} m in · a second man 9 m to one side: ${f2(two.d)} m · the share at none: ${f2(flat0.d)} m`
+        + `\n    under the sky (the place's zoom 1.15): no lock ${f2(sky.d)} m, the lock just begun ${f2(skyE.d)}, in full ${f2(skyF.d)}, the share at none ${f2(sky0.d)} · in a room (0.92): no lock ${f2(roomN.d)} m, a tenth of the lock ${f2(roomE.d)} · two men, one 2 m up and one 3 m to a side, the lock's share 0.8: the look-at ${f2(m0.f)} up / ${f2(m0.r)} across with no lock, ${f2(m1.f)} / ${f2(m1.r)} on the man up the screen, ${f2(arm.f)} / ${f2(arm.r)} with a man in his arm and the camera at ${f2(arm.d)} m · the button still down and his man gone: ${f2(brk.kept)} m with nobody onto him (from ${f2(brk.d0)}), back out to ${f2(brk.d1)} in a fight`
+        + `\n    a door 14 m to a side: ${f2(doorN.d)} m with no lock, ${f2(doorL.d)} in full · the hand's share of the zoom at none: ${f2(amt0.d)} m in full, at a half with the place's zoom 0.8: ${f2(amtH.d)} m (it should be ${f2(half)}) · the place's zoom from 1.15 to 0.92 with a man in his line: ${f2(rNo)} m (held out, as it was), ${f2(rIn)} with him the lock's man, ${f2(rFight)} in a fight, ${f2(rNone)} with the lock's zoom at none, ${f2(rOff)} with the switch off · the lock's man out of his line at half strength: the look-at ${f2(lin.toward)} m toward him (in it: ${f2(s5.toward)}) · the view gone to somebody else at ${f2(gone.d0)} m: ${f2(gone.d1)} m, the strength ${gone.s}`); }
+    // 22 through the loop
+    { const rows: string[] = []; let ok = true;
+      for (const fixed of [false, true]) {
+        F.setAutoView(false); F.setFindMe('behind', false); FIXEDSTEP.on = fixed; const W = await stand(5), T = tapper(), ctx = ctxOf(W, T), g = W.game, c = g.player.char, I = W.input; K.on = !BREAK; K.turn = false; K.lock = !LOCKBREAK; g.fogOfWar.hidden = () => false;
+        const men = g.guards.filter((x: any) => x.state !== 'dead' && !x.civ && isHostile('player', x.team)), gd = men[0]; for (const o of g.guards) if (o !== gd) { o.char.pos[0] = 1; o.char.pos[2] = 1; }
+        // a clear line of 8.5 m from where he stands, floor he can stand on for the first 6.5 m of it, and the man 8 m along it
+        const p0: [number, number, number] = [c.pos[0], 0, c.pos[2]]; let dir: [number, number] | null = null;
+        for (let i = 0; i < 16 && !dir; i++) { const a = i * Math.PI / 8, dx = Math.sin(a), dz = Math.cos(a); let clear = true; for (let m = 0.5; m <= 8.5 && clear; m += 0.5) if (m <= 6.5 && g.col.nav.isBlocked(p0[0] + dx * m, p0[2] + dz * m) || g.col.segmentBlocked([p0[0], 1.3, p0[2]], [p0[0] + dx * m, 1.3, p0[2] + dz * m]) || g.col.segmentBlocked([p0[0], 0.4, p0[2]], [p0[0] + dx * m, 0.4, p0[2] + dz * m])) clear = false; if (clear) dir = [dx, dz]; }
+        if (!dir) { ok = false; rows.push(`${fixed ? 'fixed' : 'free'} step: no clear line of 8.5 m from where he stands ✗`); continue; }
+        // (a man on a round walks it with the AI off, and one onto him goes to search: each is put back where and how the line wants him before every frame)
+        const gp: [number, number] = [p0[0] + dir[0] * 8, p0[2] + dir[1] * 8]; const o2 = men[1]; let p2: [number, number] | null = null, onto: any = null;
+        const pin = () => { for (const o of g.guards) { const q = o === gd ? gp : o === o2 && p2 ? p2 : [1, 1]; o.char.pos[0] = q[0]; o.char.pos[2] = q[1]; if (o === gd || o === o2) o.state = 'patrol'; } if (onto) { onto.state = 'alert'; onto.awareness = 1; onto.lastSeenT = g.time; onto.lastKnown = [g.player.char.pos[0], 0, g.player.char.pos[2]]; } }; pin(); const at = (m: number) => g.teleportPlayer([gd.char.pos[0] - dir![0] * m, 0, gd.char.pos[2] - dir![1] * m]);
+        at(8); run(ctx, 10, pin); T.tap(); run(ctx, 240, pin); if (!ctx.auto) { ok = false; rows.push(`${fixed ? 'fixed' : 'free'} step: the mode never came on ✗`); continue; }
+        const base = ctx.auto.base, d9 = W.cam.desiredDistance;
+        let most = 0, prev = W.cam.desiredDistance; const each = () => { pin(); most = Math.max(most, Math.abs(W.cam.desiredDistance - prev)); prev = W.cam.desiredDistance; };
+        const ds: number[] = []; for (const m of [7, 5.5, 4, 3, 2]) { at(m); run(ctx, 150, each); ds.push(W.cam.desiredDistance); }
+        const closer = ds.every((d, i) => d < (i ? ds[i - 1] : d9) - 0.15), bound = base * K.lockIn * K.zoomRate * DT;
+        // a plain button held: the lock's strength stands though he is moved back out, and the camera goes out no further than keeps the man in the picture
+        const s2 = ctx.auto.lockS; I.buttons = 4; at(6); run(ctx, 120, each); const heldD = W.cam.desiredDistance, heldS = ctx.auto.lockS; I.buttons = 0; run(ctx, 150, each); const freeD = W.cam.desiredDistance, stilled = heldS === s2 && heldD > ds[4] - 0.15 && heldD < freeD - 0.5;
+        // the lock's man: the one it has until another is clearly nearer; the man stalked over both; a man in his arm; nobody with somebody onto him
+        let pick = '', picks = !!o2;
+        if (o2) { const along = (m: number): [number, number] => [gp[0] - dir![0] * m, gp[1] - dir![1] * m], au = ctx.auto, who = (x: any) => x === gd ? 'the first' : x === o2 ? 'THE SECOND' : 'nobody';
+          at(5); p2 = null; run(ctx, 20, pin); const a = au.lockGd; p2 = along(0.4); run(ctx, 20, pin); const b = au.lockGd; p2 = along(1.5); run(ctx, 20, pin); const d = au.lockGd;
+          const stalked = A.autoLock(au, g, gd), plain = A.autoLock(au, g, null), held0 = g.player.holding; g.player.holding = {} as any; const arm = A.autoLock(au, g, null); g.player.holding = held0;
+          const near2 = stalked && plain && Math.hypot(stalked.at![0] - gp[0], stalked.at![2] - gp[1]) < 0.05 && stalked.stalk && Math.hypot(plain.at![0] - p2[0], plain.at![2] - p2[1]) < 0.05 && !plain.stalk;
+          p2 = null; run(ctx, 20, pin);
+          // behind a pillar for half a second it is still his man, and for a second and a half it is nobody's; with the rifle up it is nobody's, but for a stalk
+          const blocked0 = g.col.segmentBlocked; g.col.segmentBlocked = () => true; run(ctx, 30, pin); const half = au.lockGd; run(ctx, 60, pin); const gone = au.lockGd; g.col.segmentBlocked = blocked0; run(ctx, 20, pin);
+          const pl = g.player; Object.defineProperty(pl, 'rifleUp', { get: () => true, configurable: true }); const up = pl.rifleUp, rifle = A.autoLock(au, g, null), rifleStalk = A.autoLock(au, g, gd); delete pl.rifleUp;
+          const drag0 = pl.dragging; pl.dragging = {} as any; const tow = A.autoLock(au, g, null); pl.dragging = drag0; const corner = A.autoLock(au, g, null, true);
+          const extra = half === gd && gone === null && au.lockGd === gd && up && rifle === null && !!rifleStalk && tow === null && !!corner && corner.stalk;
+          picks = extra && a === gd && b === gd && d === o2 && !!near2 && !!arm && arm.at === null && arm.s === 1;
+          pick = ` · a second man 0.4 m nearer: it keeps ${who(b)}, 1.5 m nearer: it takes ${who(d) === 'THE SECOND' ? 'the second' : who(d) + ' ✗'}; with the first stalked the lock is ${near2 ? 'his, and the stalk\'s' : 'NOT his ✗'}; a man in his arm: ${arm && arm.at === null ? 'in full, no place' : 'NOT so ✗'}; out of his line for 0.5 s: ${who(half)}, for 1.5 s: ${who(gone)}; the rifle up: ${rifle === null && up ? 'nobody' : 'A LOCK ✗'}, and a stalk ${rifleStalk ? 'still has his man' : 'HAS NOBODY ✗'}; a body in tow: ${tow === null ? 'nobody' : 'A LOCK ✗'}; the wait at a corner: ${corner && corner.stalk ? 'its click stills nothing' : 'STILLED ✗'}`; }
+        // …and the man onto him: back out
+        prev = W.cam.desiredDistance; at(2); run(ctx, 150, each); const in2 = W.cam.desiredDistance; onto = gd; run(ctx, 300, each); const fought = A.autoLock(ctx.auto, g, gd) === null && (() => { const h = g.player.holding; g.player.holding = {} as any; const r = A.autoLock(ctx.auto, g, null); g.player.holding = h; return r === null; })(); const out = W.cam.desiredDistance;
+        // …and not the moment the last man loses him: nobody's for `lockCalm`, then his again
+        onto = null; run(ctx, 60, each); const calm1 = A.autoLock(ctx.auto, g, null); run(ctx, Math.round(K.lockCalm * 60), each); const calm2 = A.autoLock(ctx.auto, g, null);
+        // …and a fight stamped later than the clock now stands (a checkpoint loaded) is no fight
+        ctx.auto.lockFightT = g.time + 2; run(ctx, 12, each); const stale = !ctx.auto.lockFight, calmed = calm1 === null && !!calm2 && stale;
+        const good = AUTOVIEW.on && base > 0 && closer && most <= bound && most > 0 && stilled && picks && fought && calmed && in2 < d9 - 2 && out > in2 + 2; if (!good) ok = false;
+        rows.push(`${fixed ? 'fixed' : 'free'} step: a man who is not onto him at 8 m: the camera at ${f2(d9)} m (the hand's own ${f2(base)}); closed on to 7 / 5.5 / 4 / 3 / 2 m: ${ds.map(f2).join(' / ')} m ${closer ? '' : '(NOT nearer at each ✗)'}, the most it moves in a step ${(most / bound * 100).toFixed(0)}% of what the two eases allow · a button held and he is moved back to 6 m: ${stilled ? `the lock's strength stands and the camera is at ${f2(heldD)} m (let go: ${f2(freeD)})` : `NOT STILLED: ${f2(heldD)} m, let go ${f2(freeD)} ✗`} · at 2 m again ${f2(in2)} m, then the man onto him: back out to ${f2(out)} m, and no lock for a stalk or a man in his arm ${fought ? '' : '✗'}; a second after he loses him ${calm1 === null ? 'still nobody' : 'A LOCK ✗'}, ${K.lockCalm} s on ${calm2 ? 'his again' : 'STILL NOBODY ✗'}; a fight stamped ahead of the clock ${stale ? 'is none' : 'STANDS ✗'}${pick}`); }
+      line(ok, '22 the whole Game: a man in his line who is not onto him, closed on in stages, brings the camera in at each and never by a step; a held button stills it; with the man onto him it goes back out', rows.join('\n    ')); }
+    // 23 the lock's plumbing
+    { const W = await stand(5), g = W.game, E = process.env, shipped = E.TPS_PROFILE === 'shipped', row = FROZEN_HOLDS['AUTOCAM.lock'], want = E.TPS_AUTOLOCK !== undefined ? E.TPS_AUTOLOCK === '1' : shipped;
+      const snap = () => JSON.parse(JSON.stringify(J.knobsSnapshot(g))), isOn = (): boolean => K.lock;
+      K.lock = true; const old = snap(), had = old.tables.AUTOCAM?.lock === true; delete old.tables.AUTOCAM.lock; J.applyKnobs(g, old); const before = isOn();
+      K.lock = true; const on = snap(); K.lock = false; J.applyKnobs(g, on); const kept = isOn();
+      line(had && before === false && kept && stoodLock === want && (STAND_ENV as string[]).includes('TPS_AUTOLOCK') && typeof row === 'string' && row.startsWith('TPS_AUTOLOCK=1'),
+        `23 CONTROL — this stand (${shipped ? 'the page\'s' : 'frozen'}) stands the soft lock ${want ? 'on' : 'off'} by its words, FROZEN_HOLDS carries its row, and a recording from before the key replays with it off`,
+        `stood ${stoodLock} (wanted ${want}) · row: '${row}' · a recording carries the key ${had} · from before the key: ${before} · recorded on: ${kept}`); }
   } finally {
     A.autoTuneLoad(tune0); knobsBack(knobs0); Math.random = rnd0; FIXEDSTEP.on = fixedWas; F.setAutoView(viewWas); F.setFindMe('behind', behindWas);
   }
