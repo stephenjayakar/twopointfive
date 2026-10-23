@@ -222,6 +222,7 @@ export function pageSwitches(q: URLSearchParams): void {
   SEENWALK.on = q.get('seenwalk') !== '0';   // the walk an order gives a man keeps off lit floor that a room nobody has cleared has a sight line to, through glass as through anything an eye sees through (game/seenwalk.ts): ON in the page; ?seenwalk=0 = the walks as they were
   DOORTOOLS.bangInto = q.get('banginto') !== '0';   // a bang and clear's can leaves the thrower's own hand and is thrown deep into the room (the deepest point its burst lights nearly all the floor from), going off as it gets there (game/doortools.ts bangSpot): ON in the page; ?banginto=0 = it appears in the door frame and goes off 1.6 m inside, as it was
   DOORTOOLS.haltBack = q.get('haltback') !== '0';   // a pair halted 'found shut' on a door the OTHER pair is charging steps back to rear security, out of the backblast, as a pair stacked there before the charge was ordered does (game/doortools.ts haltBack: the same stepBacks / makeRoom; it was asked only as the charge order was given, and the halted pair stood inside the blast): ON in the page; ?haltback=0 = it stays stacked where it halted, as it was
+  DOORTOOLS.tossMate = q.get('tossmate') !== '0';   // a bang and clear asks about teammates again as the can is about to leave the hand: one of ours beyond the door, in its reach, and the can stays in the kit and they go in (game/doortools.ts mateBehind): ON in the page; ?tossmate=0 = asked when the row is given and never again, as it was
   DOORTOOLS.behindSam = q.get('behindsam') !== '0';   // Sam beyond a door is one of ours to the squad's own stun can: the word at a held door steps them in with the can kept, and a bang row on it is refused in words (game/doortools.ts samBehind): ON in the page; ?behindsam=0 = only teammates counted, as it was
   DOORTOOLS.podFrames = q.get('podframes') !== '0';   // no point of an entry is dealt in ANOTHER door's frame, or beyond one (game/doortools.ts inFrame; the barracks' n_end entry had a man on n4b's threshold): ON in the page; ?podframes=0 = the points as they were
   DOORTOOLS.thrHand = q.get('thrhand') !== '0';   // a threshold's can is thrown only by a man within reach of the frame, and waits for one (game/doortools.ts thrHand: a frag had run the stack off the door and the can left a doorway nobody stood at): ON in the page; ?thrhand=0 = the thrower wherever he stands
@@ -383,6 +384,7 @@ export function pageSwitches(q: URLSearchParams): void {
   CMDRING.planLook = CMDRING.plan && CMDRING.planRts && q.get('planlook') !== '0';   // …a right press dragged is an order with a way to look: on the floor they go there and face it, on a man he covers it from where he stands (`?planlook=0` = a right press is a click or the ring)
   CMDRING.planWaits = CMDRING.plan && q.get('planwaits') !== '0';   // …the word's waits are the plan's own: a left click on a stop steps them on, and the word frees only the chains stood waiting (`?planwaits=0` = the build's own pauses and the early press)
   CMDRING.planKnee = CMDRING.plan && CMDRING.planRts && q.get('planknee') !== '0';   // …he takes a knee at the radio while the mode is up, and the view eases back to him when it comes down (`?planknee=0` = he stands, the view's point jumps)
+  CMDRING.planOne = CMDRING.plan && q.get('planone') !== '0';   // …one word that frees two or more doors of a plan puts their entries on one signal: the doors open together and two cans wait each other's burst (`?planone=0` = each chain's entry on its own clock, as it was)
   CMDRING.only = CMDRING.on && q.get('qonly') !== '0';   // the squad's only keys are the command key and the word's: the ring carries every order (a row off a letter on a spare wedge, 'more' where a page has more rows than wedges), the letters are nobody's while it is up, the middle button opens nothing (`?qonly=0` = the wedges and the letters as they were; host/keymap.ts takes the orders key and the who key off the board with it)
   AUTOPILOT.on = !q.has('noautopilot');   // B is the squad's autopilot (game/autopilot.ts): on a door the men wait on they go in by the entry they pick, and the plan of a B order is drawn a little longer before it fades. ON in the page, ?noautopilot = B is the target's first row, as it was; off on the frozen stand (TPS_AUTOPILOT=1 raises it)
   SQUADTHROW.on = !q.has('nosquadthrow');   // teammates throw a frag or a stun canister where he points (game/squadthrow.ts): X on a spot of floor, G, then 1 or 2. ON in the page, ?nosquadthrow = no such row; off on the frozen stand (TPS_SQUADTHROW=1)
@@ -641,11 +643,13 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'CMDRING.planLook': 'TPS_PLANLOOK=1 (needs TPS_QPLAN=1)',
   'CMDRING.planWaits': 'TPS_PLANWAITS=1 (needs TPS_QPLAN=1)',
   'CMDRING.planKnee': 'TPS_PLANKNEE=1 (needs TPS_QPLAN=1)',
+  'CMDRING.planOne': 'TPS_PLANONE=1 (needs TPS_QPLAN=1)',
   'CMDRING.only': 'TPS_QONLY=1 (needs TPS_QRING=1)',
   'DOORTOOLS.bangInto': 'TPS_BANGINTO=1',
   'SEENWALK.on': 'TPS_SEENWALK=1',
   'DOORTOOLS.haltBack': 'TPS_HALTBACK=1',
   'DOORTOOLS.behindSam': 'TPS_BEHINDSAM=1',
+  'DOORTOOLS.tossMate': 'TPS_TOSSMATE=1',
   'DOORTOOLS.podFrames': 'TPS_PODFRAMES=1',
   'DOORTOOLS.thrHand': 'TPS_THRHAND=1',
   'DOORTOOLS.thrNoCan': 'TPS_THRNOCAN=1 (acts only with the can\'s wait for a hand up as well: TPS_THRHAND=1)',

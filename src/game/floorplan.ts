@@ -130,14 +130,14 @@ export function planTag(callsign: string): string {
   return (w[0][0].toUpperCase() + w.slice(1).map(x => NUM[x.toLowerCase()] ?? x[0].toUpperCase()).join('')).slice(0, 3);
 }
 
-interface Leg { key: string; t: number; pts: Vec3[] | null }
+interface Leg { key: string; t: number; pts: Vec3[] | null; /** where the leg was asked from */ from: Vec3 }
 const legs = new SideMap<Guard, Leg[]>('floorplan.legs');   // picture only (see the head): the nav grid's answer for a leg, kept PLAN.reaskSecs
 function leg(g: Game, gd: Guard, k: number, a: Vec3, b: Vec3, iters = 3000): Vec3[] | null {
   let L = legs.get(gd); if (!L) legs.set(gd, L = []);
   const key = `${b[0].toFixed(1)},${b[2].toFixed(1)}`, c = L[k], dt = c ? g.time - c.t : -1;
   if (c && c.key === key && dt >= 0 && dt < PLAN.reaskSecs) return c.pts;   // (dt < 0: the clock went back on a load)
   const pts = g.col.nav.findPath(a, b, iters);   // (null: the floor has no way — nothing is drawn, never a line through a wall)
-  L[k] = { key, t: g.time, pts }; return pts;
+  L[k] = { key, t: g.time, pts, from: [a[0], 0, a[2]] }; return pts;
 }
 
 /** the way an order walks a man from where he stands to his mark: his feet, then every corner, then the mark — empty where the floor has none */
@@ -150,9 +150,12 @@ function wayOf(g: Game, gd: Guard, A: Assignment, mark: Vec3): Vec3[] {
   if (own) for (let i = gd.pathI; i < P.length; i++) add(P[i]);
   else {
     const pts = leg(g, gd, 0, p, stops[0]); if (!pts) return [];
-    let i0 = 0, best = Infinity;   // (an answer kept from a stride ago starts behind him: from the point he is nearest on)
-    for (let i = 0; i < Math.min(pts.length, 6); i++) { const d = flat(p, pts[i]); if (d < best) { best = d; i0 = i; } }
-    for (let i = best < 0.6 ? i0 + 1 : i0; i < pts.length; i++) add(pts[i]);
+    // an answer kept from a stride ago starts behind him: from the end of the leg he is nearest on — looked for over its first two metres only, never 'the
+    // corner nearest him' of its first six (a way that doubles back passes near him again further on: the corners between were skipped and the line cut
+    // the wall; attention.ts attentionWay draws a guard's thread the same way)
+    let k = 0, best = Infinity, arc = 0, a = legs.get(gd)![0].from;
+    for (let i = 0; i < pts.length && arc <= 2; i++) { const b = pts[i], dx = b[0] - a[0], dz = b[2] - a[2], l2 = dx * dx + dz * dz, u = l2 > 1e-9 ? Math.min(1, Math.max(0, ((p[0] - a[0]) * dx + (p[2] - a[2]) * dz) / l2)) : 0, d = Math.hypot(p[0] - a[0] - dx * u, p[2] - a[2] - dz * u); if (d < best - 1e-6) { best = d; k = i; } arc += Math.sqrt(l2); a = b; }
+    for (let i = k < pts.length - 1 && flat(p, pts[k]) < 0.3 ? k + 1 : k; i < pts.length; i++) add(pts[i]);
   }
   add(stops[0]);
   for (let k = 1; k < stops.length; k++) { const pts = leg(g, gd, k, stops[k - 1], stops[k]); if (!pts) return []; for (const q of pts) add(q); add(stops[k]); }

@@ -144,6 +144,14 @@ export const CMDRING = {
    *  false: he stands as he stood and the view's point is on him the tick the mode goes down, as it was built. Off here; the page raises it with
    *  the mode (`?planknee=0` off) */
   planKnee: false,
+  /** ONE WORD IS ONE SIGNAL (the maintainer, 10-22, of a plan with a pair on each of a room's two doors: "simultaneous breach on mission 2 didn't
+   *  really work. and the second team threw a flashbang when our guys were already on the inside"): the press that frees two or more chains waiting
+   *  at doors puts the entries it starts on ONE word of the door tools (doortools.ts oneWord — the four's own word, wordTick): nobody makes a sound
+   *  until every stack on it is formed, the cans go first, a door with no can keeps its leaf shut for the men behind the can beside it, and they
+   *  step in together. A press that frees one door is the entry it always was. false: every chain's entry is its own order with its own clock, as
+   *  it was built — the stack that needs no can, or forms sooner, is inside before the other's can lands. Off here; the page raises it with the
+   *  mode (`?planone=0` off) */
+  planOne: false,
   /** … how long the view's point takes to come back to him (s) */
   planBackSecs: 0.7,
   /** THE SQUAD'S ONLY KEYS (the maintainer, 10-22: "squad is now just q and f. everything is through the radial menu (which is 1-5? is that
