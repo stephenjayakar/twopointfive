@@ -1365,6 +1365,9 @@ export class CharacterAnimator {
    *  layer weight > 0.5) or BOTH round a held man (the hold layer > 0.5 on its knife side, holdGunSide false: the pistol rides the thigh; the gun side keeps it in
    *  the hand). Whoever draws the hand props (game.ts handProps, the viewer) reads this and shows an empty hand + the holstered sidearm instead. */
   hideHeldItem = false;
+  /** HIS OWN GUN IS OUT OF HIS HANDS FOR A TWO-HANDED JOB (game/workstow.ts writes it every frame of one, a teammate's alone; false = his hands are his own): the
+   *  work hands take the right as an empty hand whatever it carried, and a long gun's two keep nothing back. Read by workLayer and its gate only. */
+  stowed = false;
   /** THE BIG SLOT'S TOOL IN HIS HANDS (bigkit.ts writes it every frame of the beat; null = his hands are his own). All times in seconds on the beat's own
    *  clock `t` (0 = his hands leave his gun). `equip` s: gun away, the tool into both hands. `blows`: the times each blow LANDS (hammer) / each shell goes
    *  (shotgun); a blow is wound up over the `windup` s before it. `end` ≥ 0: from then, `stow` s put the tool back and his hands return to his gun.
@@ -2254,9 +2257,9 @@ export class CharacterAnimator {
     }
     if (this.wk.last || this.sw.t >= 0 || this.rx.left > 0 || this.rx.w.x > 0.003) {   // handwork (handwork.ts): the swap (right arm), the work hands, the radio hand (left) — each stood down, eased, by whatever has the arms
       const taken = wHd > 0.003 || wHe > 0.003 || wLp > 0.003 || wHl > 0.003 || kt >= 0 || this.throwT >= 0 || this.strikeT >= 0 || this.hitT >= 0 || this.reloadT >= 0 || this.sigT >= 0 || this.mvHands || this.mvs.tsT >= 0 || wSt * wl > 0.003;
-      const rifleUp = this.longGun && this.upperW.aim > 0.3;   // (a shouldered long gun keeps both hands)
+      const rifleUp = this.longGun && this.upperW.aim > 0.3 && !this.stowed;   // (a shouldered long gun keeps both hands — but one let go of for the job: workstow.ts)
       if (this.sw.t >= 0) this.swapLayer(dt, taken, y, -p * 0.35);
-      this.workLayer(dt, !taken && !rifleUp, armed, y, -p * 0.35);
+      this.workLayer(dt, !taken && !rifleUp, armed && !this.stowed, y, -p * 0.35);
       this.radioLayer(dt, !taken && !rifleUp && this.tellT < 0 && this.shootT < 0 && !this.wk.fed && this.wk.shown < 0.003);
     }
     if (this.creep || this.crW > 0) {   // the close-in mode's carriage: under the ready pose (whose arms win), let go of — eased — by whatever else has the body or the arms
@@ -4638,7 +4641,7 @@ export class CharacterAnimator {
     if (!live && wWas <= 0.003) { K.wL.x = K.wL.v = K.wR.x = K.wR.v = 0; K.okL = K.okR = false; K.shown = 0; if (!K.fed && K.tw.x < 0.003) K.last = null; return; }
     const done = L.t > L.dur;
     if (live && !done) {   // (which hands: settled while the verb runs, kept while it comes away)
-      const rFree = L.hand !== 0 && !armed && this.upper !== 'torch' && !this.longGun && !this.grip[1] && this.throwT < 0 && this.sw.t < 0;
+      const rFree = L.hand !== 0 && !armed && this.upper !== 'torch' && (!this.longGun || this.stowed) && (!this.grip[1] || this.stowed) && this.throwT < 0 && this.sw.t < 0;
       K.main = rFree ? 1 : 0; K.two = (L.kind === 'charge' || L.kind === 'take') && rFree;
     }
     const main = K.main, t = L.t, dur = L.dur;
