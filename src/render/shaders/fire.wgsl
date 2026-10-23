@@ -9,7 +9,7 @@
 struct FireRec { a: vec4f, b: vec4f, c: vec4f, d: vec4f, pop: array<vec4f, 4> };
 
 const FIRE_STEPS = 18.0;        // samples of the flame along a pixel's ray
-const FIRE_SIGMA = 6.0;         // 1/m: how soon a flame hides what is behind it. A flame is THIN: a hand's width of it keeps half of what is behind, so a long path
+const FIRE_SIGMA = 8.0;         // 1/m: how soon a flame hides what is behind it. A flame is THIN: a hand's width of it keeps half of what is behind, so a long path
                                 // through the heart is bright, the edges are dim and deep in colour, and the coals show through from above
 const FIRE_GAIN = 2.0;          // scene radiance of full flame at its hottest (the drum's coals are authored at 11)
 const FIRE_EMBER_GAIN = 2.5;   // … of an ember just thrown (a point far smaller than a pixel: what reaches the picture is this × its share of the pixel)
@@ -59,7 +59,7 @@ fn fireFlame(F: FireRec, P: vec3f) -> vec2f {
 fn fireColor(hot: f32) -> vec3f {
   var c = mix(vec3f(0.85, 0.09, 0.004), vec3f(1.0, 0.28, 0.02), smoothstep(0.0, 0.3, hot));
   c = mix(c, vec3f(1.0, 0.60, 0.14), smoothstep(0.3, 0.85, hot));
-  return c * (0.10 + 2.6 * hot * hot * hot);   // (a wide range: the rim stays under the tone curve's shoulder and keeps its red, the heart goes yellow)
+  return c * (0.22 + 2.5 * hot * hot * hot);   // (a wide range: the rim stays under the tone curve's shoulder and keeps its red, the heart goes yellow)
 }
 /** where the vertical cylinder of radius R about `c` between heights y0 and y1 cuts the ray: (near, far), near > far = it does not */
 fn fireCyl(ro: vec3f, rd: vec3f, c: vec3f, R: f32, y0: f32, y1: f32) -> vec2f {

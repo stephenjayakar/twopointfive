@@ -3,7 +3,7 @@
 // flame's look is set: a page that boots in seconds, so a number can be changed and looked at again. What it is NOT: the game's picture (no bloom, no firelight
 // on anything, no smoke, no upscaling) — tools/qa/fire-page.cjs looks at that.
 //   node tools/qa/fire-lab.cjs            a sheet of frames 1/15 s apart from the play camera's distance and from close by, into OUT
-//   env: OUT (folder, default a temp one) · DIST (m, default 5) · PITCH (degrees, default 55) · WIND (x,z m/s, default 0,0) · T0 (s, default 3) · N (frames a
+//   env: OUT (folder, default a temp one) · DIST (m, default 5) · PITCH (degrees, default 55) · WIND (x,z m/s, default 0,0) · ALB (the ground's albedo, default 0.5) · T0 (s, default 3) · N (frames a
 //        row, default 8) · DT (s between frames, default 1/15) · W / H (a frame's size, default 320 × 360) · HEAT (default 1) · POP (age of a crack at the
 //        first frame, s; default 0.05) · BED (the bed of coals' radius, m; default 0.27, 0 = the lid bare)
 // Headless Chromium on the software adapter. Exit 0 = the shader compiled, the pipeline was made and every frame was written with no error on the page (what is IN a
@@ -14,6 +14,7 @@ const OUT = process.env.OUT || fs.mkdtempSync(path.join(os.tmpdir(), 'fire-lab-'
 const DIST = +(process.env.DIST || 5), PITCH = +(process.env.PITCH ?? 55), T0 = +(process.env.T0 ?? 3), N = +(process.env.N || 8), DT = +(process.env.DT ?? 1 / 15);
 const W = +(process.env.W || 320), H = +(process.env.H || 360), HEAT = +(process.env.HEAT ?? 1), POP = +(process.env.POP ?? 0.05);
 const WIND = (process.env.WIND || '0,0').split(',').map(Number);
+const ALB = +(process.env.ALB ?? 0.5);   // how much of the fire's light the ground gives back (0.5 = packed earth; 0.85 = snow, the hardest ground to see a flame against)
 const BED = +(process.env.BED ?? 0.27);   // the bed of coals' radius (0 = the bare lid, as the game lights it: clipped white by the lamp a hand above it)
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const fire = fs.readFileSync(path.join(__dirname, '../../src/render/shaders/fire.wgsl'), 'utf8');
@@ -41,7 +42,7 @@ fn agx(cin: vec3f) -> vec3f {
   if (rd.y < 0.0) { let t = -ro.y / rd.y; let P = ro + rd * t; let d = lightP - P; let d2 = dot(d, d); tS = t;
     let sh = fireCyl(P, normalize(d), base - vec3f(0.0, base.y, 0.0), 0.29, 0.0, base.y);   // the drum's own shadow
     let lit = select(1.0, 0.0, sh.x <= sh.y && sh.y > 0.0);
-    col = vec3f(0.5, 0.48, 0.46) * (Li * (lit * max(d.y, 0.0) / (d2 * sqrt(d2))) + vec3f(0.004, 0.005, 0.008)) / 3.14159; }
+    col = vec3f(${ALB}, ${(ALB * 0.96).toFixed(3)}, ${(ALB * 0.92).toFixed(3)}) * (Li * (lit * max(d.y, 0.0) / (d2 * sqrt(d2))) + vec3f(0.004, 0.005, 0.008)) / 3.14159; }
   let dc = fireCyl(ro, rd, base - vec3f(0.0, base.y, 0.0), 0.29, 0.0, base.y);
   if (dc.x <= dc.y && dc.x > 0.0 && dc.x < tS) { tS = dc.x; let P = ro + rd * dc.x;
     if (P.y > base.y - 0.002) { let r = length(P.xz - base.xz); col = select(vec3f(0.05, 0.02, 0.01), vec3f(40.0, 30.0, 18.0), length(P.xz - base.xz) < 0.275); }
