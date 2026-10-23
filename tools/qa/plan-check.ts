@@ -5,20 +5,25 @@
 // them). What is checked is `floorPlan(g)`: who is listed, the way from each man's feet to his mark, the mark, the fan, the menu's rings, the switch —
 // and that asking for the plan every frame leaves the run's digest where it was.
 // PLAN_BREAK=1 = the switch left off and the same lines asked: they must fail.   exit 0 = all hold · 1 = one does not
+// PLANKEPT_BREAK=1 = the asked run also searches on the nav grid's own tables, as the plan did before its kept legs were the asker's: line 9 must fail.
 import { standUp, ROOT } from './headless.ts';
 
 const FP: any = await import(`${ROOT}/src/game/floorplan.ts`);
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`);
 const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
-const { PLAN, floorPlan, planTag, capOf } = FP;
+const { PLAN, planTag, capOf } = FP;
+// the plan is asked as the page asks it: with the asker's own store of kept legs, one a game (floorplan.ts PlanKept) — never the game's
+const stores = new WeakMap<object, unknown>();
+const floorPlan = (g: any) => { let k = stores.get(g); if (!k) stores.set(g, k = FP.planKept()); return FP.floorPlan(g, k); };
+const { stateHash } = await import(`${ROOT}/src/game/rollback.ts`);
 
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const dist = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const f1 = (x: number) => (Number.isFinite(x) ? x.toFixed(1) : '—');
 const len = (p: number[][]) => { let s = 0; for (let i = 1; i < p.length; i++) s += dist(p[i - 1], p[i]); return s; };
-const BREAK = process.env.PLAN_BREAK === '1', LITBREAK = process.env.KEYLIT_BREAK === '1';   // (KEYLIT_BREAK=1 = PLAN.keyLit left off: line 6b' must fail)
+const BREAK = process.env.PLAN_BREAK === '1', LITBREAK = process.env.KEYLIT_BREAK === '1', KEPTBREAK = process.env.PLANKEPT_BREAK === '1';   // (KEYLIT_BREAK=1 = PLAN.keyLit left off: line 6b' must fail)
 
 async function rig(seed: number, ask: boolean, squad = 4) {
   const squad0 = NIGHTBREACH.squad; Object.assign(NIGHTBREACH, { squad });
@@ -30,7 +35,11 @@ async function rig(seed: number, ask: boolean, squad = 4) {
   Object.assign(NIGHTBREACH, { squad: squad0 });
   const R = { W, game, O, why, asked: 0,
     get team(): any[] { return O.squad(); },
-    step(n = 1) { for (let i = 0; i < n; i++) { game.player.visibility = 0.05; W.step(DT); if (ask) { floorPlan(game); R.asked++; } } },
+    step(n = 1) { for (let i = 0; i < n; i++) { game.player.visibility = 0.05; W.step(DT); if (ask) {   // asked twice: as he walks, and with his own path set aside for the ask, so the nav grid is asked for his way and a leg is kept
+      floorPlan(game); const T: any[] = O.squad(), pg = T.map(m => m.pathGoal);
+      try { for (const m of T) m.pathGoal = null; floorPlan(game); } finally { T.forEach((m, i) => { m.pathGoal = pg[i]; }); }
+      if (KEPTBREAK && T[0]) game.col.nav.findPath(T[0].char.pos, game.player.char.pos, 3000);   // (the search on the grid's own tables, as the plan asked before)
+      R.asked += 2; } } },
     until(pred: () => boolean, secs: number) { for (let i = 0; i < secs * 60 && !pred(); i++) R.step(); return pred(); },
   };
   R.step(30);
@@ -230,10 +239,10 @@ async function planLines(): Promise<boolean> {
       const Q = await rig(7, ask); const sp = farFloor(Q);
       if (sp) Q.O.give('move', Q.O.targetAt(sp), 'all'); Q.step(60 * 6);
       Q.O.give('fallIn', Q.O.targetAt(Q.game.player.char.pos), 'all'); Q.step(60 * 3);
-      return { d: JSON.stringify(digestGame(Q.game, true)), asked: Q.asked };
+      return { d: JSON.stringify(digestGame(Q.game, true)), h: stateHash(Q.game, true, true) as string, asked: Q.asked };
     };
     const a = await run(false), b = await run(true);
-    line(a.d === b.d && b.asked > 500 && !BREAK, 'asked every frame, the run is the same', `digest ${a.d === b.d ? 'equal' : 'DIFFERS'} · asked ${b.asked} times against ${a.asked}`);
+    line(a.d === b.d && a.h === b.h && b.asked > 1000 && !BREAK, 'asked every frame, the run is the same, and so is its whole state (the kept legs are the asker\'s)', `digest ${a.d === b.d ? 'equal' : 'DIFFERS'} · whole state ${a.h === b.h ? 'equal' : 'DIFFERS'} · asked ${b.asked} times against ${a.asked}`);
   }
   // 10. the pair's room clear drill: F stacks them, and the door it will go through then carries the key
   {

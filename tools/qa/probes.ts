@@ -57,7 +57,7 @@
 //     materials: materials-arealight materials-finish materials-frame materials-presets materials-vndf materials-wear
 //     needs: needs-determinism needs-frozen-up needs-identity needs-interrupts needs-one-away needs-telegraph
 //     particles: particles-determinism particles-off particles-queue particles-sites
-//     perf: perf-cards perf-flags perf-texpool
+//     perf: ladder perf-cards perf-flags perf-texpool
 //     qrf: qrf-element qrf-gating qrf-limits qrf-perimeter qrf-reset qrf-timeline qrf-trigger qrf-wave qrfsquad response
 //     sdfrig: sdfrig-fit sdfrig-pack sdfrig-presets
 //     cast: cast-loader cast-file cast-fit cast-game cast-look cast-beam   (the look switch: both files, OFF = today's masks, one digest under either look;  a statured man's laser leaves his drawn muzzle;  the operators' and defenders' meshes: the loader's contract, the shipped file, each variant's proxy fit, the game on it)
@@ -3389,6 +3389,7 @@ async function runScript(file: string, args: string[] = []): Promise<boolean> {
   return code === 0;
 }
 if (on('quality-plan', 'perf', 'all')) await run('quality-plan', () => runScript('quality-plan.ts'));   // auto quality on paper (quality-plan.ts): plan()'s picks for the synthetic machines + the 39 state checks of the Quality controller (calibration, the ladder, the climb) — two-space '  PASS — …' lines
+if (on('ladder', 'perf', 'all')) await run('ladder', () => runScript('ladder-replay.ts', ['--selftest']));   // the quality ladder on synthetic machines (ladder-replay.ts --selftest: the aims, the paced checks) and ONE CACHE GRID's lines (ONEGRID_BREAK=1 fails four) — under a second, two-space '  PASS — …' lines
 if (on('frame-layout', 'perf', 'all')) await run('frame-layout', async () => !(await import('./frame-layout.ts')).frameLayoutFailures());   // the static tables four lanes append to: struct Frame's byte layout vs writeFrame + FRAME_BYTES, one feature per frame-flag bit on both sides, BoxFlag ⇄ BOX_*
 { let ran = false;   // the renderer perf pass's CPU-held parts (perf-probes.ts): the bounce card's geometry / energy / nomination, the flags table
   if (on('perf-cards', 'perf', 'all')) { ran = true; await run('perf-cards', async () => (await import('./perf-probes.ts')).perfCards()); }

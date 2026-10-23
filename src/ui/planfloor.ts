@@ -4,16 +4,20 @@
 // under the close-in windows and the throw arc; drawn through walls (it is our own plan). Something waiting on the player's key has a bar across its
 // doorway (along its wall's foot), and the key on the one the key would send now. No words but that key and the tags.
 // index.html `.plan …` is the look; `PLAN.on` false (`?noplan`) = the group stays empty. An attribute is written only when it changes.
-import type { Game } from '../game/game';
+import type { Game, Guard } from '../game/game';
 import type { FollowCamera } from '../game/camera';
 import type { Vec3 } from '../math/vec';
-import { floorPlan, PLAN, capOf } from '../game/floorplan';
+import { floorPlan, PLAN, capOf, type PlanKept, type PlanLeg } from '../game/floorplan';
 
 const NS = 'http://www.w3.org/2000/svg';
 const Y = 0.04;          // just off the floor
 const RING_N = 48, FAN_N = 5;   // (a ring is a floor circle through the camera: enough points that no corner shows at any zoom)
 const NEAR_W = 0.5;      // a point this near the camera's own plane (or behind it) is not drawn: its projection is anywhere
 const TAG_DROP = 15;     // px: a standing man's tag sits under his ring, clear of his body
+/** each man's kept legs and the tables the grid is searched on (game/floorplan.ts PlanKept): the PICTURE'S own — a game drawn and the same game not
+ *  drawn hold the same state */
+const keptLegs = new WeakMap<Guard, PlanLeg[]>();
+const kept: PlanKept = { get: gd => keptLegs.get(gd), set: (gd, L) => keptLegs.set(gd, L), nav: {} };
 
 interface ManEls { g: SVGGElement; way: SVGPathElement; mark: SVGPolygonElement; fan: SVGPolygonElement; sight: SVGLineElement; feet: SVGPolygonElement; tag: SVGTextElement }
 interface ThrowEls { g: SVGGElement; reach: SVGPolygonElement; walk: SVGPathElement; spot: SVGPolygonElement; who: SVGPolygonElement; arc: SVGPathElement; land: SVGPolygonElement; tag: SVGTextElement }
@@ -87,7 +91,7 @@ export class PlanFloor {
     return E;
   }
   update(game: Game, cam: FollowCamera, w: number, h: number) {
-    const bc = document.body.classList, P = PLAN.on && !(bc.contains('blinded') || bc.contains('attract')) ? floorPlan(game) : null;   // (hidden by the page under those: nothing asked)
+    const bc = document.body.classList, P = PLAN.on && !(bc.contains('blinded') || bc.contains('attract')) ? floorPlan(game, kept) : null;   // (hidden by the page under those: nothing asked)
     let n = 0, k = 0, nd = 0, nt = 0, nl = 0, you = false;
     if (P) {
       const f1 = (v: number) => v.toFixed(1);
