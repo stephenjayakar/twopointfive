@@ -100,7 +100,7 @@ const lead = (g: Game): Player => g.player;
 const mate = (gd: Guard) => gd.team === 'operative' && !!gd.unit;
 
 /** Sam is sneaking: low, on a wall, or with the wheel right down — and not sprinting */
-export function samSneaks(pl: Player): boolean { return !pl.down && !pl.sprinting && (pl.crouch || !!pl.wall || pl.pace <= UNSEEN.paceAt + 1e-6); }
+export function samSneaks(pl: Player): boolean { return !pl.down && !pl.sprinting && !pl.dash && (pl.crouch || !!pl.wall || pl.pace <= UNSEEN.paceAt + 1e-6); }
 /** what has given the squad away (null: nothing): loud in a teammate's ears inside the room fight's hot clock, or a defender roused */
 export function squadFound(g: Game, men: Guard[]): string | null {
   for (const gd of men) if (g.fight.hotFor(gd)) return 'loud';

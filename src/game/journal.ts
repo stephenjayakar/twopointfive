@@ -66,7 +66,8 @@ import { FRAG } from './frag';
 import { GUNWALL } from './gunwall';
 import { REARWATCH } from './rearwatch';
 import { CLOSE } from './close';
-import { FOOTFALL, TWOGEARS } from './player';
+import { FOOTFALL, TWOGEARS, CROUCHRUN } from './player';
+import { SAMLOOK } from './samlook';
 import { STALK, stalkPolish } from './stalk';
 import { KITANIM } from './kitanim';
 import { WORK } from './workthings';
@@ -385,6 +386,8 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
     if (T.yankWith === undefined) { STALK.yankWith = false; HOLD.catchShape = false; }   // (…one from before its eighth pass: the man was yanked back into Sam, who chased him and stepped clear on the hold's first frame; the arm came round past his ear, and the two stood upright in the hold. Before the next line: a file from before the fourth pass has neither key and gets all of the polish down)
     if (T.turnIn === undefined) stalkPolish(false); }   // (…and one from before its fourth pass: he turned to the man's back in the step's first frames, a long step took no longer, and the wait at a corner was the wall stance alone)
   { const T = k.tables.HOLD as { hitShape?: boolean } | undefined; if (!T || T.hitShape === undefined) { HOLD.hitShape = false; HOLD.layAhead = 0; } }   // (a file from before the stalk's ninth pass: the body landed with no beat of its own, and the choked man was laid down where he knelt, his legs under Sam's boots — whatever the file's stalk table says: the lay is of every choke's end)
+  if (!k.tables.CROUCHRUN) CROUCHRUN.on = false;   // (a file from before Shift in a crouch stayed down: it stood him up into the sprint)
+  if (!k.tables.SAMLOOK) SAMLOOK.on = SAMLOOK.slip = false;   // (a file from before his head went to a man or he gave one room: neither pose)
   if (!k.tables.TWOGEARS) TWOGEARS.on = false;   // (a file from before two gears: the wheel was his pace and the crouch-walk the tune's)
   if (!k.tables.FOOTFALL) FOOTFALL.once = FOOTFALL.owed = false; else if ((k.tables.FOOTFALL as Partial<typeof FOOTFALL>).owed === undefined) FOOTFALL.owed = false;   // (a file from before one footfall a step: every crossing of the walk cycle's half filed one, a rocking cycle one a frame — and one from before a footfall the legs owe: only an edge filed one)
   if (!k.tables.STEALTHPOSE) STEALTHPOSE.on = false;   // (a file from before the stealth poses: his arms were the crouch clip's and he knelt at a door with the wand as at a lock)

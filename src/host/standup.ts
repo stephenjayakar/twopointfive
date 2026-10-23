@@ -48,7 +48,8 @@ import { HAULHOME } from '../game/digin';
 import { HARD } from '../game/difficulty';
 import { GUNHOLD } from '../game/gunhold';
 import { CLOSE } from '../game/close';
-import { FOOTFALL, TWOGEARS } from '../game/player';
+import { FOOTFALL, TWOGEARS, CROUCHRUN } from '../game/player';
+import { SAMLOOK } from '../game/samlook';
 import { STALK, stalkPolish } from '../game/stalk';
 import { KITANIM } from '../game/kitanim';
 import { HANDS } from '../game/hands';
@@ -456,6 +457,9 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_STALKKEY')) STALK.key = String((globalThis as any).process?.env?.TPS_STALKKEY ?? '') === '1';   // …the row's key finishing a stalk (stalk.ts STALK.key): off, so the hold becomes the grab by itself as on the stalk's own recordings
     if (pinned('TPS_STALKLOW')) STALK.low = String((globalThis as any).process?.env?.TPS_STALKLOW ?? '') === '1';   // …and the lower, hands-down way in (STALK.low): off, the arm up and the rise
     if (pinned('TPS_STALKPOLISH')) stalkPolish(String((globalThis as any).process?.env?.TPS_STALKPOLISH ?? '') === '1');   // …and the stalk's polish (stalk.ts stalkPolish, with the hold's share in character.ts): down, so a frozen run raised with TPS_STALK=1 is the stalk as it first stood; acts only under STALK.on
+    if (pinned('TPS_CROUCHRUN')) CROUCHRUN.on = String((globalThis as any).process?.env?.TPS_CROUCHRUN ?? '') === '1';   // Shift in a crouch (src/game/player.ts CROUCHRUN): off, so it stands him up into the sprint
+    if (pinned('TPS_SAMLOOK')) SAMLOOK.on = String((globalThis as any).process?.env?.TPS_SAMLOOK ?? '') === '1';   // his head on a man (src/game/samlook.ts): off
+    if (pinned('TPS_SAMSLIP')) SAMLOOK.slip = String((globalThis as any).process?.env?.TPS_SAMSLIP ?? '') === '1';   // the room he gives a man in passing (src/game/samlook.ts): off
     if (pinned('TPS_TWOGEARS')) TWOGEARS.on = String((globalThis as any).process?.env?.TPS_TWOGEARS ?? '') === '1';   // two gears, not a dial (src/game/player.ts TWOGEARS): off, so the wheel is his pace and the crouch-walk the tune's, as on every frozen recording
     if (pinned('TPS_FOOTFALL')) FOOTFALL.once = String((globalThis as any).process?.env?.TPS_FOOTFALL ?? '') === '1';   // one footfall a step (src/game/player.ts): off, so every crossing of the walk cycle's half files one, as on every frozen recording
     if (pinned('TPS_FOOTOWED')) FOOTFALL.owed = String((globalThis as any).process?.env?.TPS_FOOTOWED ?? '') === '1';   // a footfall the legs owe (src/game/player.ts; under the first key, so a frozen run that wants it raises both words): off, so only an edge of the walk cycle files one

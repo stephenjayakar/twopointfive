@@ -5,6 +5,8 @@
 //   hold    2.6 m behind him, the left button pressed on him and kept down (the mouse's own events on the canvas): he is in Sam's arm inside six seconds.
 //   let     the same, let go after two thirds of a second: nobody stalked, Sam at rest; pressed again: in his arm.
 //   slider  the lab's first slider moved by its own input event writes the stalk's top speed.
+//   dash    crouched, Shift and a move key held (the keyboard's own events): he stays down and goes at the fast crouch walk's pace, no sprint.
+//   look    2.2 m behind the man with the cursor elsewhere his head has the man; a metre off the man's side he leans away with the low arm out.
 //   (with the key the finish, stalk.ts `key`, as a plain address has it: `key` is that E takes him from in reach, and `hold` / `let` that the held button
 //    brings him to a stop in reach with nobody grabbed, and E then takes him.)
 // ONLY=nokey: the lab under ?stalkkey=0&stalklow=0 — the four scenes as written above.
@@ -79,6 +81,33 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
         await behind(0.85); [x, y] = await chest(); await page.mouse.move(x, y); await frames(2); await page.mouse.down({ button: 'right' }); await frames(3); await page.mouse.up({ button: 'right' }); const t = await frames(60);
         const down = await page.evaluate(() => window.__game.guards[0].state === 'dead');
         say(!t.held && down, `a quick right click from the same spot: in his arm ${t.held}, the man down a second later ${down}`);
+        await page.evaluate(async () => { window.__game.restart(); await window.__runFrames(90, 1 / 60, [], 'none'); });
+      }
+    }
+    { // (player.ts CROUCHRUN, samlook.ts SAMLOOK: Shift in a crouch is a fast crouch walk; his head goes to the man; beside a man he gives him room)
+      const K = await page.evaluate(() => { const R = window.__knobs.registry(); return { run: !!R.CROUCHRUN.on, look: !!R.SAMLOOK.on, slip: !!R.SAMLOOK.slip, pace: R.CROUCHRUN.pace }; });
+      if (K.run) {
+        await page.evaluate(async () => { window.__game.restart(); await window.__runFrames(90, 1 / 60, [], 'none'); window.__game.player.holstered = true; window.__game.player.crouch = true; await window.__runFrames(10, 1 / 60, [], 'none'); });
+        let best = { v: 0, down: false, dash: false, spr: false };
+        for (const code of ['KeyW', 'KeyS', 'KeyA', 'KeyD']) {   // (whichever way the lab's floor is open from where he starts)
+          await page.keyboard.down('ShiftLeft'); await page.keyboard.down(code);
+          const r = await page.evaluate(async () => { const g = window.__game; let v = 0, down = true, dash = false, spr = false; for (let f = 0; f < 50; f++) { await window.__runFrames(1, 1 / 60, [], 'none'); const c = g.player.char; v = Math.max(v, Math.hypot(c.vel[0], c.vel[2])); down = down && g.player.crouch; dash = dash || g.player.dash; spr = spr || g.player.sprinting; } return { v, down, dash, spr }; });
+          await page.keyboard.up(code); await page.keyboard.up('ShiftLeft'); await frames(20); if (r.v > best.v) best = r; if (best.v > 2.2) break;
+        }
+        say(best.down && best.dash && !best.spr && best.v > 2.2 && best.v < K.pace + 0.2, `crouched with Shift and a move key held: still down ${best.down}, the fast crouch walk ${best.dash}, a sprint ${best.spr}, up to ${best.v.toFixed(2)} m/s (its pace ${K.pace})`);
+      }
+      if (K.look) {
+        await page.evaluate(async () => { window.__game.restart(); await window.__runFrames(90, 1 / 60, [], 'none'); });
+        await behind(2.2);
+        { const [mx, my] = await page.evaluate(() => { const g = window.__game, c = g.player.char.pos, A = g.guards[0].char.pos, a = Math.atan2(A[0] - c[0], A[2] - c[2]) + 1.0, v = document.getElementById('view'), r = v.getBoundingClientRect(), [x, y] = window.__cam.project([c[0] + Math.sin(a) * 3, 1.2, c[2] + Math.cos(a) * 3], r.width, r.height); return [r.left + x, r.top + y]; });
+          await page.mouse.move(Math.max(20, Math.min(1260, mx)), Math.max(20, Math.min(700, my))); await frames(70); }   // (the cursor about a radian off the man's line: the aim is not on him)
+        const L = await page.evaluate(() => { const g = window.__game, an = g.player.char.anim; return { w: an.watchShown.w, at: !!an.watchAt }; });
+        say(L.at && L.w > 0.5, `2.2 m behind the man with the cursor a radian off his line: his head has the man (a point to watch ${L.at}, the look ${L.w.toFixed(2)} of whole)`);
+        if (K.slip) {
+          await page.evaluate(async () => { const g = window.__game, B = g.guards[0], y = B.char.bodyYaw; g.player.holstered = true; g.teleportPlayer([B.char.pos[0] + Math.cos(y) * 1.0, 0, B.char.pos[2] - Math.sin(y) * 1.0]); g.player.crouch = true; await window.__runFrames(60, 1 / 60, [], 'none'); });
+          const P = await page.evaluate(() => { const an = window.__game.player.char.anim; return { slip: an.watchShown.slip, at: !!an.slipAt }; });
+          say(P.at && P.slip > 0.5, `a metre off the man's side, crouched with empty hands: he gives the man room (${P.at}, the lean ${P.slip.toFixed(2)} of whole)`);
+        }
         await page.evaluate(async () => { window.__game.restart(); await window.__runFrames(90, 1 / 60, [], 'none'); });
       }
     }

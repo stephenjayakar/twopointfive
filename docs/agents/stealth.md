@@ -1265,6 +1265,36 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   grab's and the knife's: `KNIFE_AS_IT_WAS` in probes.ts) hold the key down as they hold the knife. WHAT IT COSTS: behind a man, a tap's knockout waits for the button to come up (a frame or five later than the
   press). NOT DONE: the choke out of a held button has no pose of its own (it is the grab, then the hold's choke); no sound of its
   own. Nobody has played it or seen it on a GPU.
+- **He watches the man who matters, and gives a man room as he passes (10-23; `SAMLOOK` in `samlook.ts`, the poses `WATCH` in
+  character.ts; `?samlook=0` / `TPS_SAMLOOK=1`, `?slip=0` / `TPS_SAMSLIP=1`).** The maintainer: "another thing CT did really well is
+  having sam look at enemies! curious how that might fit with our control scheme" and "i'm also curious if we can make the experience
+  of 'slithering' through guards also feel just as amazing as approaching them for a grab". Both ON in the page, OFF in the module
+  and on the frozen stand, two `FROZEN_HOLDS` rows, the tables `SAMLOOK` and `WATCH` in `JOURNAL_KNOBS` (a recording from before them replays with both off).
+  HOW IT FITS THE CONTROLS: the cursor still aims and nothing is added to press. It is his HEAD that goes to a man, and the game picks
+  the man, so the head is something to read. THE LOOK (`samLookStep`, once a step after `updatePlayer`; the pick is `samLookMan`,
+  exported for a camera that wants the same man): the man a held click is creeping up on, else of the men the fog shows inside
+  `nearM` 8 m, within `backDeg` 120° of his aim's line, with nothing solid between the heads, the lowest score: distance, less
+  `noticeM` 3 for a man who is onto him or has him in view with his notice risen, less `swapM` 0.75 for the man he already has.
+  Nobody while he is down, sprinting, holds a man, drags one, is in a takedown, kicks, picks, wands, codes, is on a wall, has a
+  hand on a door or a breaker, or has a gun in the aim. He looks at the man's head where it is, so a man on the floor or a crouched one
+  is looked down at. The
+  animator (`watchLayer`) turns chest, neck and head (0.14 / 0.34 / 0.52) up to 72° off the chest's line, following at 6 /s; the
+  close-in carriage's own look (`creepLayer`) gives way by this one's eased weight, so the two never add up or snap. THE SLIP (`samSlipMan`): crouched, empty hands,
+  off a wall, the nearest man not onto him inside `slipFrom` 2.6 m at any bearing, whole by `slipBy` 1.2 m: the trunk tips 9° away
+  with the head brought level, the pelvis 3.5 cm lower and 3 cm off his side over feet left where they were, and the arm on his side
+  out low with an open hand (at 0.7 of the arm; a hand with something in it is left alone). It lets go behind a man's back
+  (`backCos`), where the creep's own body has him. NOT ONLY LOOKS: his head and chest joints move a few centimetres with both, and
+  those are what the eyes that look for him read, so a run with them on is not the same run to the digit. THE CHECK is
+  `samlook-check.ts` (`probes.ts samlook`, the stealth family; `SAMLOOK_BREAK=1` reds five of its eight lines), both stands: a man
+  40° off his aim at 3 m has his head inside a second and a half (28° at 0.67 s, 40° at 1.67 s) with his aim unmoved; of two men the
+  nearer is his until the further one notices him, and again when that one has lost him; two men at one distance do not trade him
+  (0.4 m nearer does not, 1.3 m does); nobody behind him, past the range, in the fog, or over an aimed gun; the stalked man; the
+  slip (chest 4.9 cm further from the man and 3.5 cm lower, the near hand out and under the chest, either side; none standing, for a
+  man onto him, from 3 m, or behind a back); off; the harness line. One seed: fixed stagings. The sneak lab has both toggles and
+  sliders for the range, the notice bonus, the head's turn, the slip's range and its lean, and a "lights out" box that puts every
+  lamp on the floor off; the debugger has both toggles under the close-in rows. `close-stills.ts` has scenes `pass` and
+  `pass-back`. NOT DONE: nothing in the look reads the dark; the camera's soft lock (another thread's) picks its own man. Nobody has
+  played either or seen them on a GPU: the stills show the low arm clearly and the lean and the head only faintly.
 - **A lesson line names the move, not its key (`lesson.ts` `TOKENS`, `LESSON_TOKENS`, `lessonToken`; 10-23).** `{grab him}`,
   `{grab him from behind}`, `{knock him out}`, `{take him out}` in a lesson's text are written out by `lessonLine` in the build's own
   words: the held click with the stalk up (`STALK.on` and `.only`), the grab's key without, the knockout with bare hands, the knife
