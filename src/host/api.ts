@@ -19,6 +19,7 @@ import type { MeshShadows } from '../render/meshShadows';
 import type { RigFit } from '../render/sdfrig';
 import type { Decals } from '../render/decals';
 import type { ProbeLike } from '../game/sensors';
+import type { BreathShown } from '../game/snowBreath';
 import type { Vec3 } from '../math/vec';
 import type { FireRecord } from '../render/passes';
 import type { FireShown } from '../game/fire';
@@ -49,6 +50,10 @@ export interface HostApi {
   readonly effectiveScale: number;
   /** the view's look-at point as of the last render (the smoke solver spends its pool by distance from it; wind.ts reads it) */
   viewFocus?: Vec3;
+  /** the breath's book of what was shown (game/snowBreath.ts BreathShown: steam through the solver or puffs, whose source rides whose mouth, the records
+   *  filed): the host's, so in no snapshot. Dropped when a save in memory is put back (host/putback.ts), by a reseed, and by the breath itself where the game's
+   *  frame count jumps; a row is bound to the man it was written for, so a restart's fresh men start fresh rows */
+  breathShown?: BreathShown;
   /** the open fires to draw this frame (game/fire.ts writes the list; the engine hands it to the composite — render/passes.ts setFires). Absent on a stand-in */
   fires?: FireRecord[];
   /** the fires' book of what was filed with the smoke solver and asked of the mixer (game/fire.ts FireShown): the host's, so in no snapshot. Dropped (set
