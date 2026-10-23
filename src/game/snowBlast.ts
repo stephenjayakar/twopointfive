@@ -72,7 +72,7 @@ export const SNOWBLAST = {
   flakeLife: 3,       // s
 };
 
-/** a blast of the last half second (LIVE_S): where, how big, how low, how old. What it still owes the particle pool is the host's (SnowBlastShown) */
+/** a blast of the last half second (LIVE_S, or its throw's time where that is tuned longer): where, how big, how low, how old. What it still owes the particle pool is the host's (SnowBlastShown) */
 interface Live { x: number; z: number; size: number; hk: number; t: number; serial: number }
 const LIVE_S = 0.5;
 /** the read-out: the game's own tallies, and beside them the host's (`puffs`, `thrown`, `throwFrames`: records its pool took) as they stood when asked */
@@ -85,25 +85,30 @@ const hooked = new SideSet<object>('snowBlast.hooked');
 const stateOf = (g: Game): State => { let s = states.get(g); if (!s) { s = { live: [], digs: [], restore: false, serial: 0, stats: { blasts: 0, marked: 0, craters: 0, why: 'no blast yet', last: null, dug: 0 } }; states.set(g, s); } return s; };
 /** WHAT A BLAST STILL OWES THE POOL IS THE HOST'S (host/api.ts `HostBooks.snowBlast`), not the game's: how much of its puff and of its thrown flakes the pool
  *  has yet to take, whose turn the grains' throw is, and the records filed all follow the particle pool (a host with none files nothing), and no rule of the
- *  game reads them. The game keeps only the blast itself for LIVE_S, on any host alike. A row here is a live blast's, known by its serial and place; a live
- *  blast the book has no row for (a fresh book after the host put the game back, the pool's ring emptied in the same call) is owed whole again. */
-interface Owed { serial: number; x: number; z: number; t: number; puffLeft: number; flakeLeft: number }
-export interface SnowBlastShown { owed: Owed[]; turn: number; puffs: number; thrown: number; throwFrames: number }
-const shownOf = (g: Game): SnowBlastShown => (g.engine.hostBooks ??= {}).snowBlast ??= { owed: [], turn: 0, puffs: 0, thrown: 0, throwFrames: 0 };
-/** the book's rows for the live blasts, in their order (a blast that is gone has its row dropped; one older than its row is another timeline's: owed afresh) */
+ *  game reads them. The game keeps only the blast itself for LIVE_S, on any host alike. A row here is a live blast's, by its serial; `seen` is the highest
+ *  serial the book has met. A live blast past `seen` is new to the book and owed whole: so is every live blast under a FRESH book, which is what the host leaves
+ *  when it puts the game back, the pool's ring emptied in the same call. A live blast at or under `seen` with no row is the game put back under a host that
+ *  was not told (a check's own restore, a tick played again): the ring still holds what was filed, so it is owed nothing, as the kicks are (snowFx.ts kicksDue). */
+interface Owed { serial: number; puffLeft: number; flakeLeft: number }
+export interface SnowBlastShown { owed: Owed[]; seen: number; turn: number; puffs: number; thrown: number; throwFrames: number }
+const shownOf = (g: Game): SnowBlastShown => (g.engine.hostBooks ??= {}).snowBlast ??= { owed: [], seen: 0, turn: 0, puffs: 0, thrown: 0, throwFrames: 0 };
+/** the book's rows for the live blasts, in their order (a blast that is gone has its row dropped) */
 function owedOf(B: SnowBlastShown, live: Live[]): Owed[] {
-  const K = SNOWBLAST, was = B.owed;
-  return B.owed = live.map((b) => { const o = was.find((o) => o.serial === b.serial && o.x === b.x && o.z === b.z && o.t <= b.t);
-    if (o) { o.t = b.t; return o; }
-    return { serial: b.serial, x: b.x, z: b.z, t: b.t, puffLeft: Math.max(0, Math.round(K.puff * b.hk)), flakeLeft: Math.max(0, Math.round(K.flakes * b.hk)) }; });
+  const K = SNOWBLAST, was = B.owed, seen = B.seen;
+  B.owed = live.map((b) => was.find((o) => o.serial === b.serial)
+    ?? { serial: b.serial, puffLeft: b.serial > seen ? Math.max(0, Math.round(K.puff * b.hk)) : 0, flakeLeft: b.serial > seen ? Math.max(0, Math.round(K.flakes * b.hk)) : 0 });
+  for (const b of live) if (b.serial > B.seen) B.seen = b.serial;
+  return B.owed;
 }
+/** the read-out. It makes no row of the game's: a game whose blasts were only ever asked after holds what one never asked holds */
+export const snowBlastStats = (g: Game): SnowBlastStats => { const s = states.get(g), B = g.engine.hostBooks?.snowBlast;
+  return { blasts: 0, marked: 0, craters: 0, why: 'no blast yet', last: null, dug: 0, ...s?.stats, live: s?.live.length ?? 0, puffs: B?.puffs ?? 0, thrown: B?.thrown ?? 0, throwFrames: B?.throwFrames ?? 0 }; };
 /** the live blasts beside their rows in the host's book, or null with none live (the rows of blasts that are over go then) or the switch off */
 function owing(g: Game): { live: Live[]; B: SnowBlastShown; owed: Owed[] } | null {
   const s = states.get(g); if (!s || !SNOW_LOOK.blast) return null;
   if (!s.live.length) { const B = g.engine.hostBooks?.snowBlast; if (B) B.owed.length = 0; return null; }
   const B = shownOf(g); return { live: s.live, B, owed: owedOf(B, s.live) };
 }
-export const snowBlastStats = (g: Game): SnowBlastStats => { const s = stateOf(g), B = g.engine.hostBooks?.snowBlast; return { ...s.stats, live: s.live.length, puffs: B?.puffs ?? 0, thrown: B?.thrown ?? 0, throwFrames: B?.throwFrames ?? 0 }; };
 
 /** hear the level's blasts (once per destruction engine: a new level's engine is heard afresh). Called every frame; costs a set lookup. */
 export function attachSnowBlast(g: Game) {
@@ -164,7 +169,7 @@ export function stepSnowBlast(g: Game, dt: number) {
   const s = states.get(g); if (!s || !s.live.length) return;
   if (!SNOW_LOOK.blast) { s.live.length = 0; return; }
   for (const b of s.live) b.t += Math.max(0, dt);
-  s.live = s.live.filter((b) => b.t < LIVE_S);
+  s.live = s.live.filter((b) => b.t < Math.max(LIVE_S, SNOWBLAST.throwS + 1e-6));   // (a throw tuned longer than LIVE_S is seen out)
 }
 /** THE THROW: this frame's blast for the grains' step (render/particles.ts grainCfg floats 8‥15 = particles.wgsl grain.c / .d). One blast a frame — with two
  *  alive they take turns. No blast throwing: the rate is 0 and the step's test costs one compare. */

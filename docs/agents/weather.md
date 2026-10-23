@@ -330,18 +330,42 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     listed kicks. CHECKS, both stands: `snow-check` line `book` (the game's state hash before any snow frame, after sixty over a pool, after a snapshot of
     frame thirty put back, and sixty frames on: one word each side of the host's put-back; the book dropped, the ring emptied, one make-up fill on the next
     frame) and `snowmarks-check` line `kickbook` (nine marks: owed 9, 6, 3, 0 over the frames, nine records at nine places, the game's list and state hash
-    as they were). `SNOWBOOK_BREAK=1` fails each (the book hung on the game; the list cut as the pool's path once did). NOT YET THE WHOLE OF THE SNOW, by
-    measurement on the shipped stand: the same update's pool path still writes what a blast owes the pool (`snowBlast.states`: `puffLeft`, `flakeLeft`,
-    `turn`, and after one blast `stats.puffs` 28 against 0 and `stats.thrown` 180 against 0 for good) and the air's row (`airSim.states`: it exists only where a
-    field does, `want`, `stats.why`, `puffs`); the wind keeps two scratch vectors the pool's path writes (`game.wind.scratch`, `scratchP`; its list for the pool,
-    `forParticles`, went to the host the same day); the rain's own recycler (`rainFx.states`) is the table this one was, not measured. `book` passes because it flies no blast and has no air
-    field. ALSO MEASURED, the snapshot's own: the host's put-back moves the game's state hash by itself, because the books of what was last sent to the GPU
+    as they were). `SNOWBOOK_BREAK=1` fails each (the book hung on the game; the list cut as the pool's path once did). NOT YET THE WHOLE OF THE SNOW: with
+    an air field the same update's pool path still writes the air's row (`airSim.states`: it exists only where a field does, `want`, `stats.why`, `puffs`),
+    measured 10-23 on the shipped stand; a blast's owed snow and the rain's own recycler went to the host after it (the next bullet), and the wind's two
+    scratch vectors left the state the same day (`wind.ts`). `book` passes because it has no air field. ALSO MEASURED, the snapshot's own: the host's put-back moves the game's state hash by itself, because the books of what was last sent to the GPU
     are in the state (`world.visibleSent` 7711 values and `gbSent` 4608, `game.chars.instSent` 744, the epochs, `game.snowLookWas`): a hash taken after
     `hostAfterPutBack` is not the saved moment's (`docs/agents/replays.md`, the rollback snapshot's KNOWN LIMITS). ON A PAGE (headless Chromium, the software
     adapter, very low quality, the pass's room clear with four, 40 frames): 119 pipelines, none failed; snowing with 800 of 800 flakes reckoned in the air after
     ten frames; a save kept in memory loaded — a fresh book on the next frame, 640 flakes laid at once, 800 of 800 eight frames on, and the kicks the game
     still listed thrown up again (14 to 33 filed across the load); a restart the same; no console, page or GPU error. Never seen on a real GPU, and
     nobody has looked at the frame after a load on a snow level.
+  - **Whose the rain's table and a blast's owed snow are** (10-23, no switch: the picture's own books moved, nothing a rule reads). Two more tables of the
+    kind the bullet above names were in the game's state. `rainFx.states`, the particle rain's whole recycler (the births and their dice, the drops under
+    the disc, the drip lines and the walk that finds them, the lattice's lean, the read-outs), is `engine.hostBooks.rain` (`rainFx.ts RainShown`).
+    MEASURED on the office's storm, seed 7, 300 frames, the particle rain's switch on in two games and a stand-in pool under one: seven values of the table
+    apart (`seed`, `serial` 560 against 1, `birthAcc`, `dripAcc`, `pop` 1394 against 0, `popLog`, `wasActive`) AND 649 of the collision world's query stamps
+    (`game.col.stamp` 235, `cellStamp` 414): the drip walk's rays and gathers ran whole on the host with a pool and in shares on the one without. The walk
+    asks the collision world aside now (`scene/collision.ts aside`, its own stamps kept in the book), so a host that looks for drip lines and one that does
+    not hold one state too. After: 0 values apart, one state word. What a blast in the snow owes the pool (`puffLeft`, `flakeLeft`), whose turn the grains'
+    throw is and the three records' counts (`puffs`, `thrown`, `throwFrames`) are `engine.hostBooks.snowBlast` (`snowBlast.ts SnowBlastShown`); MEASURED on
+    the pass, shipped stand, one blast: `puffs` 28 over a pool, 0 over none, and the game's state of the blast the same in both. What changed in the GAME's
+    table to make that so: a blast is kept half a second on any host (`LIVE_S`, or its throw's time where tuned longer; it was let go at 0.14 s once a pool
+    had taken everything, at 0.5 s where none had), and `snowBlastStats` is a copy that makes no row (asking the read-out of a game nobody had blasted used
+    to add a row to its state: the Scene panel's Blast line did it on the page). WHAT A PUT-BACK DOES, both books dropped whole with the bag in the call that
+    empties the ring (a save loaded, a restart): the rain's dice, drift and lean start over and the lattice stands in under the disc while drops fall in again
+    (as a restart always did); the drip lines are found again, at once where rain is drawn (the office's 973 points: 7 ms the median of fifteen walks under
+    bun, 20 ms the worst), where a restart used to keep them; a blast still live is owed whole again (a blast under half a second old at a load throws its
+    puff into the emptied ring once more). The game put back with the host NOT told (a check's own restore, a tick played again) files nothing twice: a
+    live blast whose serial the book has met and has no row for is owed nothing, as the kicks are. CHECKS, both stands: `bun run tools/qa/rainbook-check.ts`
+    (`probes.ts rainbook`, in `weather`), 4 lines — twins (240 frames, one state word, 0 values apart, 447 records taken) / aside (the whole walk leaves the
+    state word alone) / putback (the host's own put-back: the book gone, the ring empty, the same drip lines found on the next frame, the air full 120
+    frames on, the twins one state) / restart; `RAINBOOK_BREAK=1` (the book hung on the game) fails 3 of 4. `snowblast-check` line `owed` (pool against
+    none, the read-out asked of a fresh game, two restores with the host not told, the host's put-back with a blast live); `SNOWBLASTBOOK_BREAK=1` fails
+    it. NOT DONE, and whose: the drip lines are found again only when the COUNT of statics changes (furniture blown away in its own slot keeps its drip
+    points: an older rule of the rain's, the reviewer measured nine such points in the office), and each book tells a put-back it was not told of by its
+    own sign (the kicks and the blasts by a count gone back, the rain by the ring's count) where one signal from the snapshot would serve all. Never
+    seen on a GPU: nobody has looked at rain on the frame after a load.
   - **The rain is as it was**: no rain number, shader path or still changes on a page that is not a snow level (the `WX_SNOW` branches are compile-time false there).
   - **Check**: `bun run tools/qa/snow-check.ts` (`probes.ts snow`, in `weather`), 12 lines — born / off / others / row / senses / same / flakes ×2 / book / walls / save / old; 12 of 12 on BOTH stands
     (10-23), `SNOW_BREAK=1` (the switch never raised) fails 9 of 12 on both. `same` is five PLAYED runs of the pass's room clear (`playthrough.ts --one pass-four:<seed>`, `PT_DIGEST=1`, a process

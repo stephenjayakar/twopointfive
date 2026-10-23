@@ -4,6 +4,7 @@
 //
 //   bun run tools/qa/snowblast-check.ts [--verbose]      exit 0 = all pass, 1 = a FAIL line
 //   SNOWBLAST_BREAK=1 …   = the switch never raised and the same lines asked: must fail
+//   SNOWBLASTBOOK_BREAK=1 …   = the host's book of what a blast owes hung on the game itself, as its counts were: the `owed` line must fail
 //   bun run tools/qa/probes.ts snowblast      (also under `snow` and `weather`)
 //   Run it on BOTH stands (TPS_PROFILE=shipped in front for the page's): it puts the switches where each line needs them by the stand's own words —
 //   TPS_SNOWBLAST, TPS_SNOWLOOK, TPS_SNOWTRACKS, TPS_SNOWGRAINS, TPS_SNOWWISPS, TPS_AIR, TPS_SNOW.
@@ -21,6 +22,8 @@
 //   throw     the grains' numbers carry the blast for its throw (place, disc, a rate, the speeds) and then let go; the dash's three numbers ride behind them
 //   puff      wisp records at the blast with no gust length, SNOWBLAST.puff of them; none with the wisps off
 //   air       one short radial source in the air's list, gone when its time is up
+//   owed      what a blast owes the pool is the host's book (snowBlast.ts SnowBlastShown): over a pool and over none the game holds one state of the blast;
+//             the game put back under a host not told files nothing twice; the host's own put-back owes a live blast whole again; a read-out makes no row
 //   off       the switch off: a blast leaves the bytes, the pool and the air as they were
 //   digest    the game does not know: 300 stepped frames of the pass with three blasts in them, on and off — one game digest
 //   text      the shaders: the throw stands in the grains' step behind the grains' own guard, off open ground only, and a grain's light is capped (a grain
@@ -79,7 +82,7 @@ export async function snowBlastCheck(o: { verbose?: boolean } = {}): Promise<boo
   const mk = () => { const recs: any[] = []; let queue: any[] = []; const P: any = { params: { rain: { gravity: 9.8, drag: 9.8 / 9, restitution: 6, keep: 0.06, sleepV: 0.2, holdOrFade: 0.09, shutterOrGrowth: 1 / 30, brightOrOpacity: 1 } }, rainLook: { refractReachM: -1, refractClamp: -1, refractDepth: -1 }, rainStats: { live: 0, emitted: 0 }, grainCfg: new Float32Array(20).fill(-1), cleared: 0,
       emit(kind: string, pos: number[], dir: number[], count: number, opts: any) { if (queue.length >= 12) return 0; const r = { kind, pos: [...pos], count, opts: { ...opts } }; queue.push(r); recs.push(r); return count; },
       draw() { let room = 640; for (const r of queue) { const n = Math.min(r.count, room); room -= n; P.rainStats.emitted += n; P.rainStats.live += n; } queue = []; },
-      clearRain() { P.cleared++; queue = []; P.rainStats.live = 0; } }; return { P, recs }; };
+      clearRain() { P.cleared++; queue = []; P.rainStats.live = 0; }, clear() { P.clearRain(); } }; return { P, recs }; };
   const isPuff = (r: any) => (r.opts.aspect ?? 1) > 1.5 && (r.opts.aspect ?? 1) < 2.5 && Array.isArray(r.opts.color) && r.opts.color[2] === 0;
   /** the recycler run `frames` drawn frames against `pool` with the view at `target`; `each(i)` runs before frame i (a blast goes off there); `play` steps the game too */
   const fly = (R: any, pool: { P: any; recs: any[] }, frames: number, target: number[], each?: (i: number) => void, play = false) => {
@@ -224,18 +227,21 @@ export async function snowBlastCheck(o: { verbose?: boolean } = {}): Promise<boo
       if (process.env.SNOWBLASTBOOK_BREAK === '1') (A2.g as any).snowBlastBook = book(A2);   // (the break: the book hung on the game itself, as its counts were)
       const apart = (RB.stateAlike(A2.g, B2.g, 20000) as string[]).filter(l => /snowBlast/.test(l)); const SA = snowBlastStats(A2.g), SN = snowBlastStats(B2.g);
       const tally = (S: any) => [S.blasts, S.marked, S.craters, S.dug, S.live].join(' ');
-      // a put-back while the blast is live: the ring was emptied with the book, so the blast is owed whole again; one that is over is owed nothing
-      const C = await rig('pass.json', true); C.step(3); const pc = mk(); (pc.P as any).clear = () => pc.P.clearRain(); const snap = RB.takeSnapshot(C.g);
-      fly(C, pc, 6, Y, (i) => { if (i === 0) snowBlastAt(C.g, Y, R0); }); const n1 = puffN(pc.recs), live1 = snowBlastStats(C.g).live;
-      { const e = C.g.engine as any, had = e.particles; e.particles = pc.P; await hostPutBack(C.g); e.particles = had; } const gone = book(C) === undefined;
-      fly(C, pc, 6, Y); const n2 = puffN(pc.recs) - n1, fresh = book(C)?.puffs;
-      fly(C, pc, 40, Y); const n3 = puffN(pc.recs) - n1 - n2, live3 = snowBlastStats(C.g).live, rows3 = book(C)?.owed.length;
-      // the game put back to before the blast with the host not told (a check's own restore): the blast made again is another one under the same serial, owed whole
-      RB.restoreSnapshot(snap); const m0 = puffN(pc.recs); fly(C, pc, 6, Y, (i) => { if (i === 0) snowBlastAt(C.g, Y, R0); }); const n4 = puffN(pc.recs) - m0;
-      verdict(apart.length === 0 && SA.puffs === K.puff && SN.puffs === 0 && SA.throwFrames > 0 && SN.throwFrames === 0 && tally(SA) === tally(SN) && SA.live === 1
-        && n1 === K.puff && live1 === 1 && gone && n2 === K.puff && fresh === K.puff && n3 === 0 && live3 === 0 && rows3 === 0 && n4 === K.puff,
-        'owed — what a blast owes the pool is the host\'s book: a pool and none leave the game one state, a put-back owes a live blast whole again',
-        `one blast, twelve frames, over a pool and over none: values of the blast's apart in the game's state ${apart.length}${apart.length ? ` (${apart.slice(0, 2).map(s => s.split(': ')[0]).join(', ')})` : ''} · the game's tallies (blasts, marked, craters, dug, live) ${tally(SA)} | ${tally(SN)} · the host's: ${SA.puffs} | ${SN.puffs} wisps filed, ${SA.throwFrames} | ${SN.throwFrames} throw frames · six frames in (${n1} filed, ${live1} live) the host's put-back: the book dropped ${gone}; six more: ${n2} filed by a fresh book (its count ${fresh}); forty more: ${n3} filed, ${live3} live, ${rows3} rows · the game put back to before the blast, the host not told, and the blast made again: ${n4} filed${process.env.SNOWBLASTBOOK_BREAK === '1' ? ' (SNOWBLASTBOOK_BREAK=1: the book hung on the game — this line must fail)' : ''}`); }
+      // a game nobody blasted, its read-out asked: no row of the game's is made by the asking
+      const Q = await rig('pass.json', true); Q.step(3); const q0 = RB.stateHash(Q.g, false, true); const asked = snowBlastStats(Q.g).blasts; const q1 = RB.stateHash(Q.g, false, true);
+      // the game put back under a host that is NOT told (a check's own restore, a tick played again): the ring still holds what was filed, so nothing is filed twice
+      const C = await rig('pass.json', true); C.step(3); const pc = mk(); const snap0 = RB.takeSnapshot(C.g); let snap4: any = null;
+      fly(C, pc, 6, Y, (i) => { if (i === 0) snowBlastAt(C.g, Y, R0); if (i === 4) snap4 = RB.takeSnapshot(C.g); }); const n1 = puffN(pc.recs), live1 = snowBlastStats(C.g).live;
+      RB.restoreSnapshot(snap4); fly(C, pc, 6, Y); const nBack = puffN(pc.recs) - n1;
+      RB.restoreSnapshot(snap0); fly(C, pc, 6, Y, (i) => { if (i === 0) snowBlastAt(C.g, Y, R0); }); const nAgain = puffN(pc.recs) - n1 - nBack, liveA = snowBlastStats(C.g).live;
+      // the host's own put-back while the blast is live: the ring was emptied with the book, so the blast is owed whole again; one that is over is owed nothing
+      { const e = C.g.engine as any, had = e.particles; e.particles = pc.P; await hostPutBack(C.g); e.particles = had; } const gone = book(C) === undefined; const m0 = puffN(pc.recs);
+      fly(C, pc, 6, Y); const n2 = puffN(pc.recs) - m0, fresh = book(C)?.puffs;
+      fly(C, pc, 40, Y); const n3 = puffN(pc.recs) - m0 - n2, live3 = snowBlastStats(C.g).live, rows3 = book(C)?.owed.length;
+      verdict(apart.length === 0 && SA.puffs === K.puff && SN.puffs === 0 && SA.throwFrames > 0 && SN.throwFrames === 0 && tally(SA) === tally(SN) && SA.live === 1 && asked === 0 && q1 === q0
+        && n1 === K.puff && live1 === 1 && nBack === 0 && nAgain === 0 && liveA === 1 && gone && n2 === K.puff && fresh === K.puff && n3 === 0 && live3 === 0 && rows3 === 0,
+        'owed — what a blast owes the pool is the host\'s book: a pool and none leave the game one state, nothing is filed twice, a put-back owes a live blast whole again',
+        `one blast, twelve frames, over a pool and over none: values of the blast's apart in the game's state ${apart.length}${apart.length ? ` (${apart.slice(0, 2).map(s => s.split(': ')[0]).join(', ')})` : ''} · the game's tallies (blasts, marked, craters, dug, live) ${tally(SA)} | ${tally(SN)} · the host's: ${SA.puffs} | ${SN.puffs} wisps filed, ${SA.throwFrames} | ${SN.throwFrames} throw frames · a read-out asked of a game with no blast: the state word ${q0} before, ${q1} after · six frames in: ${n1} filed, ${live1} live; the game put back two frames with the host not told and six frames played: ${nBack} more; put back to before the blast and the blast made again: ${nAgain} more (${liveA} live) · then the host's own put-back: the book dropped ${gone}; six frames: ${n2} filed by a fresh book (its count ${fresh}); forty more: ${n3} filed, ${live3} live, ${rows3} rows${process.env.SNOWBLASTBOOK_BREAK === '1' ? ' (SNOWBLASTBOOK_BREAK=1: the book hung on the game — this line must fail)' : ''}`); }
     // ---- off
     { const B = await rig('pass.json', false); B.g.tune.chaos = 0.5; B.step(3); const pool = mk(); const m0 = marks(B.g); let ret: boolean[] = [];
       DESTRUCTION.on = true; const r = fly(B, pool, 30, Y, (i) => { if (i === 3) { ret.push(snowBlastAt(B.g, Y, R0)); hush(() => B.g.destr?.blast?.([Y[0] + 2, 0.2, Y[2]], { who: 0, radius: R0, power: 1 })); } }); DESTRUCTION.on = was.destr;
