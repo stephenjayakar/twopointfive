@@ -21,6 +21,7 @@ import type { Decals } from '../render/decals';
 import type { ProbeLike } from '../game/sensors';
 import type { Vec3 } from '../math/vec';
 import type { FireRecord } from '../render/passes';
+import type { FireShown } from '../game/fire';
 
 export interface HostApi {
   // ---- per frame
@@ -50,6 +51,9 @@ export interface HostApi {
   viewFocus?: Vec3;
   /** the open fires to draw this frame (game/fire.ts writes the list; the engine hands it to the composite — render/passes.ts setFires). Absent on a stand-in */
   fires?: FireRecord[];
+  /** the fires' book of what was filed with the smoke solver and asked of the mixer (game/fire.ts FireShown): the host's, so in no snapshot. Dropped (set
+   *  undefined) when a save in memory is put back (host/putback.ts) and by a load's own paint: the smoke and the bed are then asked for afresh */
+  fireShown?: FireShown;
   /** the light rig swapped wholesale (day ↔ night): the radiance cache re-primes (game/lighting.ts calls it `?.()`) */
   invalidateWorldCache?(): void;
   /** the level was put back to its start under the picture (game/cleanrestart.ts): every temporal history and the radiance cache start from nothing, as on a boot's

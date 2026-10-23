@@ -283,7 +283,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   mixer's room. Which take of each is the game's is the maintainer's pick.
 - **A fire's two voices (2026-10-23)** (`src/audio/sfx.ts` rows `fireBed`, `fireCrack`; played by `game/fire.ts`, the whole rule in `docs/agents/render.md`, "An
   open fire burns"). `fireBed` is 7.6 s of low, slowly swelling noise with sparse ticks, looped between `FIRE_LOOP`'s marks 0.12 and 7.12 s (`rollLoop` takes a
-  span now; `audio.ts FOLLOW_LOOPS` has the row) and held as a follow voice at the drum: the fire asks for one on its first frame, again when it is lit again, and
+  span now; `audio.ts FOLLOW_LOOPS` has the row) and held as a follow voice at the drum: the fire asks for one on its first frame, again when it is lit again or a save is put back (the book of what was asked is the host's, `engine.fireShown`,
+  dropped by a load: the abandoned moment's voice lets go), and
   hands on to a fresh one every `FIRE.bedSecs` 12 s (a followed voice is let go after its own time, and one the mixer never took is asked for again then); its
   level and pitch follow the fire's heat (the follow voice's `k`, ⅔ at full heat). `fireCrack` 0.3 s plays with each pop of the wood, the same pop that throws embers and kicks the light, at
   `FIRE.crack` 0.55 × how hard, its rate 0.8 to 1.3. Levelled by hand under a footstep on a hard floor (`HEARD` 0.03 and 0.075). The mixer's alone: no sound

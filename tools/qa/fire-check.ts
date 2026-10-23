@@ -36,7 +36,7 @@ const DT = 1 / 60;
 export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean> {
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
-  const { FIRE, fireStats, fireFlicker, fireSeed, isFire } = await import(`${ROOT}/src/game/fire.ts`);
+  const { FIRE, fireStats, fireShown, fireFlicker, fireSeed, isFire, updateFire } = await import(`${ROOT}/src/game/fire.ts`);
   const { lightEstimateAt } = await import(`${ROOT}/src/game/guards.ts`);
   const J = await import(`${ROOT}/src/game/journal.ts`);
   const BREAK = process.env.FIRE_BREAK === '1';
@@ -104,6 +104,15 @@ export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean>
         verdict(A.sw && dI < 1e-9 && dp < 1e-9 && de < 1e-9 && Math.abs(A.g.time - at.time) < 1e-9 && at.I !== base,
           'load — a checkpoint put back: the lamp, its place and the coals are that moment\'s the frame it loads, not the steady lamp',
           `saved with the lamp at ${at.I.toFixed(3)} (authored ${base}); 91 frames later, loaded: the lamp ${l.intensity.toFixed(3)} (${dI.toExponential(1)} off), its place ${dp.toExponential(1)} m off, the coals ${de.toExponential(1)} off`);
+        // ---- … and the host's side of a load: the book of what was asked of the mixer is dropped (host/putback.ts's line for a save in memory; a file's load and a
+        //      restart drop it in their own paint, dt 0), so the bed is asked for again on the next frame and the voice of the abandoned moment lets go
+        { const log = A.W.audioLog as any[], asked = (from: number) => log.slice(from).filter(c => c.name === 'fireBed').length, held = () => log.filter(c => c.name === 'fireBed' && !!c.opts?.follow?.()).length;
+          const hLoad = held(); let n = log.length; A.step(1); const b1 = asked(n), h1 = held();   // (the checkpoint just put back above painted the fire with dt 0)
+          n = log.length; A.step(3); const idle = asked(n);
+          n = log.length; A.g.engine.fireShown = undefined; const hDrop = held(); A.step(1); const b2 = asked(n), h2 = held();   // (host/putback.ts's own line)
+          verdict(A.sw && hLoad === 0 && b1 === 1 && h1 === 1 && idle === 0 && hDrop === 0 && b2 === 1 && h2 === 1,
+            'load — … and the host\'s book of the bed is dropped with it: the voice of the abandoned moment lets go and one bed is asked for on the next frame (a checkpoint\'s or a restart\'s own paint; a save in memory put back by the host)',
+            `the checkpoint put back: ${hLoad} held, ${b1} asked for on the next frame (${h1} held), ${idle} more in the three frames after · the host's put-back line: ${hDrop} held the moment the book is dropped, ${b2} asked for on the next frame (${h2} held)`); }
       }
     }
     // ---- smoke through a solver
@@ -115,6 +124,14 @@ export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean>
         `${S.length} sources in twelve seconds (${A.sources.length} filed in all by the game) · coarse lattice: ${S.every((e: any) => e.lattice === 'coarse')} · thickest ${Math.max(0, ...S.map((e: any) => e.density))} against the table's ${K.smoke.density}${S[0] && F ? ` · ${(S[0].pos[1] - F.pos[1]).toFixed(2)} m over the coals, its foot ${(S[0].pos[1] - S[0].radius).toFixed(2)} m over the floor, ${S[0].radius} m in radius` : ''}`);
       const B = await rig(true, false); B.step(6 * 60);
       verdict(B.sw && mine(B).length === 0, 'smoke — … and with no solver drawing, no source at all', `${mine(B).length} sources`);
+      // … and the book of the smoke is the host's (fire.ts FireShown, on the engine): the game that smoked for twelve seconds and the one nothing drew are the same game
+      { const RB = await import(`${ROOT}/src/game/rollback.ts`); B.step(6 * 60);
+        const all: string[] = RB.stateDiff(A.g, B.g, 64), own = all.filter(d => d.startsWith('fire.')), cut = all.some(d => d.startsWith('(the shapes part')) || all.length >= 64, P = fireShown(A.g), Q = fireShown(B.g);
+        // (what the fire writes outside its own table, asked by name: the lamp, its place, what the steady readers are told, the coals. Another module's own word for the solver is its own: named, not judged)
+        const la = A.t.light, lb = B.t.light, ba = A.t.boxes.length ? A.g.engine.world.statics[A.t.boxes[0]] : null, bb = B.t.boxes.length ? B.g.engine.world.statics[B.t.boxes[0]] : null;
+        const lamp = la.intensity === lb.intensity && la.pos.every((v: number, i: number) => v === lb.pos[i]) && la.steady?.intensity === lb.steady?.intensity && (!ba || !bb || ba.emissive.every((v: number, i: number) => v === bb.emissive[i]));
+        verdict(A.sw && B.sw && own.length === 0 && !cut && lamp && P?.smokes === S.length && Q?.smokes === 0, 'smoke — … and what remembers the smoke is the host\'s, not the game\'s: after twelve seconds the game whose fire smoked and the one nothing drew differ in nothing of the fire\'s',
+          `${P?.smokes} sources counted with a solver drawing, ${Q?.smokes} with none · the two games' states differ in ${own.length} of the fire's rows${own.length ? `: ${own.slice(0, 4).join(' | ')}` : ''} and ${all.length - own.length} of other modules'${all.length > own.length ? ` (${all.filter(d => !d.startsWith('fire.')).slice(0, 3).map(d => d.split(':')[0]).join(', ')})` : ''}${cut ? ' · THE WALK WAS CUT SHORT: not all of it was compared' : ''} · the lamp, its place and the coals ${lamp ? 'the same to the bit' : 'DIFFER'}`); }
       // … and by the graphics preset on (ui/quality.ts FIRE SMOKE SHED): the REAL Quality over this game's own settings, a preset put on by hand as the menu does
       { const { Quality } = await import(`${ROOT}/src/ui/quality.ts`); const D = await rig(true, true), S = D.g.engine.settings;
         S.fireSmokeShed = process.env.FIRESHED_BREAK !== '1';   // (FIRESHED_BREAK=1: the rule's switch off, and this line must FAIL)
