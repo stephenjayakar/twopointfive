@@ -53,8 +53,9 @@
 //                   beam, at any capsule). The frame says the same: from the store's first line to the shot no button of the close-in mode is his —
 //                   the right button and the trigger from `nook`, and from `corner` (the first line inside the door) the interaction key as well, because the held left click that
 //                   stalks a man is the frame's wherever that key is his and his hands are empty (rails.ts gate), whatever a step denies.
-//   WHERE FROM      the dark corner he is sent to has no line to the man (the doorway's own wall is in the way, and a launcher with no line sends
-//                   nothing and says nothing). So the corner is where the rifle comes out and the load is swapped, and a line of its own then puts a
+//   WHERE FROM      the dark corner he is sent to has no line to the man: the doorway's own wall is in the way. A round let go from there does not
+//                   reach him (on the real page one left the tube and he turned to the knock; in the harness on the page's stand none left it, on the
+//                   frozen stand one did). So the corner is where the rifle comes out and the load is swapped, and a line of its own then puts a
 //                   mark on the floor where the shot can be made: on the doorway's line, 2.6 m behind his back. That floor is in the doorway's light
 //                   (the hall's bulb through it); the dark floor with a line to him is a strip under half a metre wide along the light's edge, too thin
 //                   to send a player to. Nobody is looking that way: the man has his back to it and a wall stands between it and the table.

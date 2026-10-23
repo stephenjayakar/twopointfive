@@ -184,8 +184,8 @@ export const steps: Record<string, (B: Bot) => void> = {
     if (!P.rifleUp) B.fail('the rifle\'s key did not bring it into his hands');
   },
   // the swap: 2 with the rifle up steps what is on the right button (the setup's load row where the setup is a mode). The right button is not his yet:
-  // held on the man before the swap, nothing leaves the tube. (Tried from the doorway's line, where the launcher HAS a line to him: from the corner it
-  // sends nothing whatever the frame says, and the check passed with the frame's locks broken. Then back to the corner for the swap)
+  // held on the man before the swap, nothing leaves the tube. (Tried from the doorway's line, where the launcher HAS a line to him: from the corner no
+  // round reaches him whatever the frame says, and the check passed with the frame's locks broken. Then back to the corner for the swap)
   load: B => {
     const P = B.g.player, rf = P.rifle, H = man(B, 'hall'), had = `${rf.shells}/${rf.rings}`;
     B.crouch(true); B.go(TQ.shot, 10, { near: 0.15 }); rightHold(B, head(H)); B.wait(0.5);
@@ -195,9 +195,9 @@ export const steps: Record<string, (B: Bot) => void> = {
     B.say(`  the launcher: ${loadName(rf.attachment)} up (a right click held on him from the doorway's line before the swap sent nothing)`);
     if (rf.attachment !== 'ring') B.fail(`the rifle's key did not put the sponge round up (${loadName(rf.attachment)})`);
   },
-  // out of the corner to the mark on the doorway's line, crouched: the corner itself has no line to him (from it the launcher sends nothing)
+  // out of the corner to the mark on the doorway's line, crouched: the corner itself has no line to him
   // (the reason this line exists is asked of the level itself, with no round spent: from the corner a straight line to his head meets a wall, from the
-  //  mark it does not. The page's stand sends nothing down a blocked line; the frozen stand would send the round into the wall)
+  //  mark it does not. A round let go down the blocked line is spent on the wall, where one leaves the tube at all, and its knock is one he looks at)
   behind: B => {
     const H = man(B, 'hall'), n0 = seen(B);
     const line = (from: number[]) => { const to = head(H), p = [from[0], 1.0, from[2]], d = [to[0] - p[0], to[1] - p[1], to[2] - p[2]], len = Math.hypot(d[0], d[1], d[2]), dir = d.map(v => v / len);

@@ -1671,8 +1671,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   next man needs). 24 steps now, and a sixth checkpoint, 'the doorway', on `under`: a beam broken there no longer puts him back before the shot. WHY GRABBING IS NOT THE ANSWER: the chest beam (`TQ.beamHigh`) is moved to 0.45 m behind the hall man's heels, so a man
   who comes up behind him breaks it, crouched or not (the reaching arm on the page's stand, the grab's own stance on the frozen one); a sponge round
   breaks no beam (`devices.ts`: only the player's own body, a dragged body and a thrown can do). He keeps his back to the store, so the lesson does not
-  rest on what the page's meter reads there. WHERE THE SHOT IS MADE FROM: the dark corner (`TQ.nook`) has no line to him, and a launcher with no line
-  sends nothing and says nothing; so the corner is where the rifle comes out and the load is swapped, and `behind` marks the floor on the doorway's
+  rest on what the page's meter reads there. WHERE THE SHOT IS MADE FROM: the dark corner (`TQ.nook`) has no line to him (the doorway's own wall; a round let
+  go from there does not reach him: on the real page one left the tube and he turned to the knock, suspicious; in the harness on the page's stand
+  none left it, on the frozen stand one did); so the corner is where the rifle comes out and the load is swapped, and `behind` marks the floor on the doorway's
   line (`TQ.shot`, 2.6 m behind him, a clear line from anywhere within half a metre). That floor is in the doorway's light (the harness reads 0.74
   there): the dark floor with a line to him is a strip under half a metre wide along the light's edge, measured on a 0.3 m grid, too thin to send a
   player to. THE KIT: the level issues its own card (`scenarios.issue.members.0`: the rifle, one grenade, five sponge rounds, no cans and no frag),
@@ -1698,8 +1699,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   which rows issue or pack; no tutorial mission played alone is left without a card, so `standRow`'s `kitSolo` line is not walked). `lived-check`'s row
   for this level is moved to the commit that carries this. ON THE REAL PAGE: `tools/qa/tut-quiet-page.cjs` (headless Chromium, the software adapter,
   real keys and real mouse buttons; staged to the store and stood on each spot, not walked) reads the lines and their key caps, the card, the kit
-  strip before and after the swap ("HE ×1" to "SPONGE ×5"), both locks from the doorway's line, that the right button sends nothing from the
-  corner once it is his, the shot and the hands' key. `levelData.ts` refuses a `loaded` the card carries none of. NOBODY HAS SEEN OR PLAYED
+  strip before and after the swap ("HE ×1" to "SPONGE ×5"), both locks from the doorway's line, the shot from the mark and the hands' key. `levelData.ts` refuses a `loaded` the card carries none of. NOBODY HAS SEEN OR PLAYED
   IT ON A GPU. The maintainer's to judge: the shot is taken from the doorway's light and not from the dark; whether the beam reads as "right behind
   him" from the store; whether a first-time player fires the one grenade once the right button opens (he cannot before the swap; after it he can swap
   back); the card's words; five sponge rounds.

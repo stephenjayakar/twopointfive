@@ -4,7 +4,7 @@
 // What the headless lesson run (tools/qa/lessons/tut-quiet.ts) cannot see: that the bundle boots the level with its own card (the launcher up on the grenade),
 // that each line is up with the player's own key on a key cap, that the card comes up with the rifle in his hands and closes, that the gun's setup takes the
 // swap from two real presses of the rifle's key, that neither button does anything to the man until the sponge round is on (both tried from the doorway's
-// line, where there IS a way to him), that the right button then fires it, and that the hands' key is drawn as the board has it.
+// line, where there IS a way to him), that the right button then fires it from the mark, and that the hands' key is drawn as the board has it.
 // STAGED, NOT PLAYED, up to the store's doorway: the lesson is put on the line that sends him in, the court's man is marked down and the player stood a stride
 // inside the back door, then in the store's dark corner (the lane, the whistle and the grab are the lesson run's and are not walked here: a boot alone is five minutes on this adapter). Inside
 // the store he is stood on each spot too (the corner, the doorway's line): what is asked of the page is its keys and its buttons, not his feet.
@@ -72,6 +72,7 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
     for (const d of g.doors.list) d.locked = false;
     if (court) { court.script = null; court.state = 'dead'; }
     g.lesson.i = L.steps.findIndex(x => x.id === 'nook'); g.teleportPlayer([nook[0], 0, nook[2]]); if (!g.player.crouch) g.player.crouch = true; window.__runFrames(12, 1 / 60, [], 'none'); }, INSIDE);
+  await run(150);   // (the view rides to him: he was put here, he did not walk)
   const stand = p => page.evaluate(p => { const g = window.__game; g.teleportPlayer([p[0], 0, p[2]]); g.player.crouch = true; window.__runFrames(6, 1 / 60, [], 'none'); }, p);
   const I0 = await read();
   log('picture', await shot('0-inside'));
@@ -107,11 +108,9 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
     `2: ${s(S1)} rows [${S1.rows}]\n    2 again: ${s(S2)}\n    the kit strip before: "${D.strip}"\n    the kit strip after:  "${S2.strip}"`);
 
   // ---- the shot: the right button held on him and let go
-  // on the mark the shot's own line comes up, and the right button is his. From the corner the launcher still has no line to him: held there, it lets
-  // nothing go (tried on this line and not the one before, where the frame would have dropped the button)
-  await stand(SHOT); await run(20); const M = await read(); await stand(NOOK); await point(await head()); await right(30); const N = await read(); await stand(SHOT);
-  check(M.id === 'sponge' && same(M.line, step('sponge').line) && N.rings === S2.rings && N.id === 'sponge' && N.hall?.state === M.hall?.state, 'on the mark in the doorway\'s line the shot\'s own line comes up; back in the corner the right button, now his, lets nothing go',
-    `on the mark: ${s(M)} at ${M.at}\n    in the corner: ${s(N)} at ${N.at} · him ${JSON.stringify(N.hall)}`);
+  // on the mark the shot's own line comes up, and the right button is his
+  await stand(SHOT); await run(20); const M = await read();
+  check(M.id === 'sponge' && same(M.line, step('sponge').line) && M.rings === S2.rings, 'on the mark in the doorway\'s line the shot\'s own line comes up', `${s(M)} at ${M.at}`);
   const trips0 = S2.trips; await point(await head()); log('picture', await shot('4-aim'));
   await page.mouse.down({ button: 'right' }); await run(36); await point(await head()); await page.mouse.up({ button: 'right' }); let H = await read();
   for (let n = 0; n < 30 && H.hall?.state !== 'dead'; n++) { await run(10); H = await read(); }
