@@ -992,8 +992,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   state (read every frame against never read: whole state and digest equal), same (the pick aside on the kept store is the pick straight on all
   480 frames: kind, place, door and side, man, wall, thing). `HOVERPICK_BREAK=1` (the pick asked straight) fails ask and state on both stands:
   one break for all five wrappers, it does not prove each apart. One seed, one level. NOT ON THE CURSOR'S WAY: a man of the other side, a
-  thing to be worked, a leaf drawn in the fog of war, the room seen through a doorway. STILL OPEN, not the pick and not this module's: on the
-  shipped stand the HUD's own ROW LIST (`SquadOrders.hud`) fills the wall charge's memo of digitless rows (`wallcharge.ts standIns`, a table
-  hung off the object, so `asMemo` does not take it out of the state) the first time it lists a floor's rows, so a game whose whole HUD is
-  read still differs there from one never read until a menu is first opened. The store is outside the rollback snapshot (scratch and a list a
+  thing to be worked, a leaf drawn in the fog of war, the room seen through a doorway. THE HUD'S ROW LIST IS HELD TOO (10-23): on the
+  shipped stand `SquadOrders.hud` filled the wall charge's memo of digitless rows (`wallcharge.ts standIns`) the first time it listed a
+  floor's rows; that memo is a module `SideMap` marked `asMemo()` now (the charges' own mend), and the check's read asks `hud(kept)` every
+  frame after the pick, so `ask` and `state` stand for the whole HUD read. The store is outside the rollback snapshot (scratch and a list a
   second old). Never seen in a page.
