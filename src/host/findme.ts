@@ -98,6 +98,15 @@ function movedRows(): string { const moved: Record<string, unknown> = {}; for (c
 function keep() { try { globalThis.localStorage?.setItem(LS, movedRows()); } catch { /* no store */ } }
 try { const was = globalThis.localStorage?.getItem(LS); Object.assign(FINDME, findMeRead(was)); if (was != null && was !== movedRows()) keep(); } catch { /* no store */ }
 
+// ---- the camera running itself (host/autocam.ts): is the mode on
+/** THE AUTO CAMERA'S MODE, the seat's own: on = the camera frames things itself (the camera's key tapped twice), off = it is the hand's (the key held with
+ *  the mouse moved, or with a walk key). Kept per machine (localStorage `twopointsix.autocam`), read once as this module loads; a harness has no store and
+ *  starts with it off. Nothing reads it while AUTOCAM.on is off. */
+export const AUTOVIEW = { on: false };
+const LS_AUTO = 'twopointsix.autocam';
+export function setAutoView(on: boolean): void { if (AUTOVIEW.on === on) return; AUTOVIEW.on = on; try { if (on) globalThis.localStorage?.setItem(LS_AUTO, '1'); else globalThis.localStorage?.removeItem(LS_AUTO); } catch { /* no store */ } }
+try { AUTOVIEW.on = globalThis.localStorage?.getItem(LS_AUTO) === '1'; } catch { /* no store */ }
+
 // ---- Ctrl + the mouse
 /** the view's turn for `dx` pixels of the mouse under Ctrl (rad), the way round the `turn` row says: the one place the rate and the sign are written (the
  *  loop's orbit in play, the engine replay's own view) */
@@ -155,11 +164,12 @@ export function watchCtrlTaps(win: Window, idle: () => boolean, key: () => strin
 export const BEHIND = { rate: 12, done: 1e-3 };
 /** the yaw of a view that looks where a man with this `aimYaw` looks (the camera's yaw 0 looks toward −Z, a man's toward +Z) */
 export function behindYaw(aimYaw: number): number { return aimYaw + Math.PI; }
-/** one step of the view at `yaw` coming round to `goal` the short way: the turn to give the camera, and whether that lands it */
-export function behindStep(yaw: number, goal: number, dt: number): { turn: number; done: boolean } {
+/** one step of the view at `yaw` coming round to `goal` the short way: the turn to give the camera, and whether that lands it (`rate`: the auto camera's own
+ *  turns come round slower — host/autocam.ts) */
+export function behindStep(yaw: number, goal: number, dt: number, rate = BEHIND.rate): { turn: number; done: boolean } {
   let d = goal - yaw; d = Math.atan2(Math.sin(d), Math.cos(d));
   if (Math.abs(d) <= BEHIND.done) return { turn: d, done: true };
-  return { turn: d * Math.min(1, dt * BEHIND.rate), done: false };
+  return { turn: d * Math.min(1, dt * rate), done: false };
 }
 
 // ---- his aim carried round with that view
@@ -170,7 +180,7 @@ export function behindStep(yaw: number, goal: number, dt: number): { turn: numbe
  *  any key that is not on `CARRY_KEYS` (it may read the cursor: an order, a throw, a thing to work). Then the cursor is the real one, to the pixel, before the
  *  tick reads it, and he turns to it as a moved mouse always meant. The system's own pointer is never moved: while the carry holds it is not where he aims.
  *  `minM`: a cursor nearer his feet than this faces nowhere; the point is taken this far out along his facing. */
-export const CARRY = { letGoPx: 10, minM: 1.5 };
+export const CARRY = { letGoPx: 10, minM: 1.5, /** carryStep's `aimOf`: how far off his line the cursor's ray may land (rad) before another point of the line is tried · the shares of the distance tried · and the heights, after the point's own */ offRad: 0.02, tries: [0.6, 1.6, 0.35, 2.5, 0.2, 1, 4], heights: [1.3, 0.5, 2], /** …and how little his point may have moved in the view (px) for last tick's answer to stand */ restPx: 0.25 };
 /** the keys the carry holds under: walking and its pace, his stance, his light, his goggles, a reload, and the camera key itself */
 export const CARRY_KEYS: ReadonlySet<string> = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ShiftLeft', 'ShiftRight', 'ControlLeft', 'ControlRight', 'KeyC', 'KeyL', 'KeyN', 'KeyR']);
 export interface AimCarry {
@@ -178,6 +188,8 @@ export interface AimCarry {
   dx: number; dz: number; dist: number; y: number;
   /** the real mouse (CSS px of the view): where it lay at the tap, where it is now, and where the game's cursor was last put (NaN = not yet) */
   fromX: number; fromY: number; realX: number; realY: number; putX: number; putY: number;
+  /** carryStep's `aimOf`: where his point stood in the view when the line was last searched (absent = never) */
+  atX?: number; atY?: number;
 }
 /** the carry a double tap begins: he faces `aimYaw` from `pos`, the cursor's point in the world is `aim`, the mouse is at (mx, my) */
 export function aimCarry(aimYaw: number, pos: ArrayLike<number>, aim: ArrayLike<number>, mx: number, my: number): AimCarry {
@@ -186,10 +198,26 @@ export function aimCarry(aimYaw: number, pos: ArrayLike<number>, aim: ArrayLike<
 /** One tick of it, before the tick samples its input: the game's cursor stands at (mx, my) — where the carry put it, or where a moved mouse has since — `used` =
  *  a button or a key off CARRY_KEYS this tick, `project` = a world point to the view's pixels and whether it is in front of the eye. Returns the cursor to give
  *  the game and whether the carry still holds (false = that cursor is the real mouse, and the carry is over). */
-export function carryStep(c: AimCarry, mx: number, my: number, used: boolean, pos: ArrayLike<number>, project: (x: number, y: number, z: number) => [number, number, boolean]): { x: number; y: number; held: boolean } {
+export function carryStep(c: AimCarry, mx: number, my: number, used: boolean, pos: ArrayLike<number>, project: (x: number, y: number, z: number) => [number, number, boolean],
+  aimOf?: (sx: number, sy: number) => ArrayLike<number> | null): { x: number; y: number; held: boolean } {
   if (mx !== c.putX || my !== c.putY) { c.realX = mx; c.realY = my; }   // not where it was put: the hand moved it there
   if (!used && Math.hypot(c.realX - c.fromX, c.realY - c.fromY) <= CARRY.letGoPx) {
-    const [sx, sy, front] = project(pos[0] + c.dx * c.dist, c.y, pos[2] + c.dz * c.dist);
+    let [sx, sy, front] = project(pos[0] + c.dx * c.dist, c.y, pos[2] + c.dz * c.dist);
+    // (`aimOf`, the auto camera's — host/autocam.ts: a view that comes round a long way looks at that point past things it did not look past before, and the cursor's
+    // ray stops on the first of them, off to one side of where he faced. Where it does, the cursor is put on another point of the same line from his feet whose ray
+    // lands on that line: nearer, further, at chest height. Absent = the point as it is, as the double tap always carried it)
+    if (front && aimOf) {
+      if (c.atX !== undefined && Math.abs(sx - c.atX) < CARRY.restPx && Math.abs(sy - c.atY!) < CARRY.restPx && c.putX === c.putX) { sx = c.putX; sy = c.putY; }   // (the view and his feet at rest: the cursor where it was put, and no ray asked)
+      else {
+        c.atX = sx; c.atY = sy;
+        const off = (x: number, y: number): number => { const p = aimOf(x, y); if (!p) return Math.PI; const ax = p[0] - pos[0], az = p[2] - pos[2]; return Math.abs(Math.atan2(ax * c.dz - az * c.dx, ax * c.dx + az * c.dz)); };
+        let best = off(sx, sy);
+        search: if (best > CARRY.offRad) for (const y of [c.y, ...CARRY.heights]) for (const k of CARRY.tries) {
+          const d = Math.max(CARRY.minM, c.dist * k), [tx, ty, tf] = project(pos[0] + c.dx * d, y, pos[2] + c.dz * d); if (!tf) continue;
+          const e = off(tx, ty); if (e < best) { best = e; sx = tx; sy = ty; } if (best <= CARRY.offRad) break search;
+        }
+      }
+    }
     if (front) { c.putX = sx; c.putY = sy; return { x: sx, y: sy, held: true }; }
   }
   return { x: c.realX, y: c.realY, held: false };

@@ -350,6 +350,24 @@ async function planLines(): Promise<boolean> {
       w ? `refused: ${w}` : `just given ${flash} · ${f1(PLAN.freshSecs + 0.5)} s on ${quiet} listed with ${walking} still walking · a module's re-assign ${reassigned} · menu up ${up} · closed ${down} · the switch off ${always}`);
     PLAN.menuOnly = menuOnly0;
   }
+  // 18. a door held from outside: its key is dark until the men have called 'holding · on your word', then lit (PLAN.thrTold; THRTOLD_BREAK=1 = the
+  //     switch left off: this line must fail). Squad sense's finding, 10-23: pressed before that call the key cuts their slice of the room short.
+  if (!BREAK) {
+    const H = await rig(3, false), hg = H.game, HO = H.O, T = hg.doorTools, sam = hg.player.char.pos, told0 = PLAN.thrTold, lit0 = PLAN.keyLit; PLAN.keyLit = true; PLAN.thrTold = process.env.THRTOLD_BREAK !== '1';
+    const doors = [...hg.doors.list].sort((a: any, b: any) => dist(a.frameCentre, sam) - dist(b.frameCentre, sam)), tg = (d: any) => HO.targetAt([d.frameCentre[0], 0, d.frameCentre[2]]);
+    let got = 'no door took the order', early = '', late = '', toldAt = -1, setAt = -1;
+    for (const d of doors.slice(0, 6)) { const t = tg(d); if (t.kind !== 'door' || HO.give('thresholdHold', t, 'all')) continue;
+      const op = () => T.ops.find((o: any) => o.door === d && o.thr), mine = () => (floorPlan(hg).doors as any[]).find(x => x.door === d);
+      const feet = (o: any) => o.men.every((m: any) => { const A = HO.of(m); return !!A && (A.arrived || !A.post || dist(m.char.pos, A.post) < 0.5); });
+      H.until(() => { const o = op(); return !!o && o.phase === 'thr' && feet(o); }, 40); const o = op(); if (!o || o.phase !== 'thr' || !o.thr.hold) { got = `the hold never stood on ${d.def.name}`; break; }
+      setAt = hg.time; const m0 = mine(); early = m0 ? `${capOf(m0)}${o.thr.told ? ' (TOLD ALREADY)' : ''}` : 'no cap'; const wasTold = !!o.thr.told;
+      H.until(() => !!op()?.thr.told, 30); toldAt = hg.time; H.step(2); const m1 = mine(); late = m1 ? capOf(m1) : 'no cap';
+      got = `${d.def.name}: feet on the jambs, not yet called: ${early} · called ${(toldAt - setAt).toFixed(1)} s later: ${late}`;
+      line(!wasTold && !!op()?.thr.told && early === 'dark' && late === 'lit', 'a door held from outside: the key is dark until the men call that they are holding it, then lit', got); got = '';
+      break; }
+    if (got) line(false, 'a door held from outside: the key is dark until the men call that they are holding it, then lit', got);
+    PLAN.thrTold = told0; PLAN.keyLit = lit0;
+  }
   console.log(fails ? `plan-check: ${fails} FAIL` : 'plan-check: ALL PASS');
   return fails === 0;
 }
