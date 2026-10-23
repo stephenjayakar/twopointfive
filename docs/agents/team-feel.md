@@ -928,3 +928,36 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   goggles down — the default boot holds 0 and the left edge of the picture reads 152 of 255 where the oval left 7 (centre 187 both ways); `?nvoval=1`
   boots with 1; no page error. NOT SEEN: never on a GPU; and with no dark rim behind them the HUD's grey labels at the screen's edge (CONDITION,
   LIGHT, SOUND) sit on a bright picture and read worse in the still — the HUD's own to answer if the try is kept.
+- **A teammate shows why he is not acting** (2026-10-23; `src/game/showwhy.ts`, table `SHOWWHY {on, line, stack, door, hurt, keep, say, …}`; the head
+  comment has every number). A man who was not doing the plain thing looked like one who was idle, and the only read of it was a row in the corner panel.
+  On, he shows it on himself, a hand first and a short line second, and NOTHING when he is doing what he was asked. LINE: the fire gate held his round
+  this frame for the PLAYER (roomfight.ts now stamps its own answer on the man's Op, `lineBy` / `lineAt`: the lane or the round's cone; not under a fire
+  hold, and not a man with a mate nearer in that line than the player: one man waves, not a file of four in step) → the animator's new left-hand
+  signal `'aside'` (character.ts `signal('aside', side)`: the open hand pushed twice, out wide to his left, or across his front when the player is
+  clearly to his right), once more 2.6 s later and then every 6 s (the count carries over a short break), and "you're in my line." over him while it is
+  true, one voice at a time and 4 s before another man takes it up. His head is NOT turned to the player: a head is what a man sees with. STACK: a door
+  order made and waiting (`ready` on the word, a gated stack, a charge armed, the jambs held; not once the word is given) → the squeeze up the file from
+  each man who faces a mate in reach ahead of him (the bang's stack has one; the plain entry's back men face out on rear security and keep their hands;
+  none with `MOVES.squeeze` off, where the animator plays it as a fist), then the lead's fist, again after 8 s and 16 s, three in all. Hands only.
+  DOOR: doorway.ts holds his walk short of the PLAYER standing in a doorway (its own answer, `doorwayHeldBy`) and no fight is on → the knife hand that
+  points the way (`'go'`) and "after you.", once in 10 s for the squad. HURT (condition.ts): "I'm hit." once when he is back on his feet; fallen in
+  behind a running player, "I can't keep up.", twice a man at most. KEEP (rearwatch.ts `roomKept`): "I've got this door.", two keepers 1.5 s apart, a
+  man not again inside 30 s. A line waits until his own words are spent, is said only while its cause still stands, and is spent when SAID, not when
+  queued. `showWhyOf(g, gd)` is the standing read (`'line' | 'stack' | 'door' | 'hurt' | 'keep' | null`, the player's men only) for a menu row or a voice.
+  SWITCH: on in the page (`?showwhy=0` puts it off), off in the module and on the frozen stand (`TPS_SHOWWHY=1` raises it; `FROZEN_HOLDS` has the row),
+  in the knob registry and the journal (a recording from before the key replays with it off). Off = the tick returns on its first line. On, it moves
+  nobody's feet, gun, eyes or rounds: it writes the left arm (picture only; never over a hand at work: `anim.signalFree`) and a bubble through `g.say`,
+  as every squad line is, which the run digest carries and the bark clocks read; so a run with it on equals the run with it off by digest ONLY with the
+  bubbles left out (the check's 'same' line), and a bark that waits behind one of these lines is a difference the rule may make. OTHER FILES TOUCHED:
+  roomfight.ts (two fields written on the Op, read by nobody else), doorway.ts (`St.by`, `doorwayHeldBy`), the viewer's shot list (13 and 14, appended).
+  CHECK: `bun run tools/qa/showwhy-check.ts` (`probes.ts showwhy`, in families squadorders, roomfight and doortools; `SHOWWHY_BREAK=1` fails it), ten
+  lines, both stands: plain (fall in and a move: nothing shown, digest equal to off), stack, line, quiet (fire held: nothing), hurt, keep, door, off,
+  same (the stack's and the line's runs on against off, bubbles left out: equal), old. MEASURED, one seed, the warehouse: on the page's stand the
+  squeeze then the fist 0.97 s after the stack is made (the frozen stand has the squeeze move off: no squeeze, the fist at 0.62 s), 2 fists in 12 s,
+  the lead's wrist from 0.20 m under his head joint to 0.13 m over it; the front man waves twice in 7 s and alone, his wrist 0.56 m out from his spine,
+  the line said once and gone 0.72 s after the player steps out, 18 rounds from the team in the next four seconds with nothing shown; "I'm hit." once
+  and "I can't keep up." once in a 7 s run. The poses on the mesh with no GPU: `tools/qa/pose-mesh.ts operator_1 signal-aside | signal-aside-in |
+  signal-aside-right` (gun low; the arm out wide to his side in the overhead view; the push to his right is the smaller one). NOT SEEN: never on a GPU
+  and never played; the wave's read at game size, the `'go'` hand for "after you.", and the timing of every line are first pass. NOT RE-ASKED: the
+  fire holds' finer points (a man half-noticed under the unseen hold, the pair's watch, the spotted hold): there he shows nothing or, under those two
+  sandbox switches, may wave at a round the order was holding anyway. The lines open on no capital, as the squad's other bubbles do.

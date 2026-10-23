@@ -317,7 +317,7 @@ interface Op {
   stepT: number; stepBy: { by: Guard; t: number; at: Vec3 } | null;
   /** ROOMFIGHT.doorEars: the door an enemy's hand has just opened where he heard it and has a line to its doorway — who worked it, when, the doorway point he looks at */
   doorBy: { by: Guard; t: number; at: Vec3; door: Door } | null;
-  funnelT: number; lineT: number; /** seconds on his man with his gun in a wall (gunwall.ts) */ wallT: number; stepUntil: number; reloadUntil: number; saidT: number;
+  funnelT: number; lineT: number; /** who the round was last held for, and when (showwhy.ts reads it: the fire gate's own answer, lane or cone) */ lineBy: Guard | 'player' | null; lineAt: number; /** seconds on his man with his gun in a wall (gunwall.ts) */ wallT: number; stepUntil: number; reloadUntil: number; saidT: number;
   rounds: number; heldForFriend: number; heldForLine: number; blockT: number;
   /** the feet his hands still remember (aimcost.ts `feetHold`; only fed under AIMCOST.move) */
   feetSm?: number;
@@ -928,7 +928,7 @@ export class RoomFight {
   private newOp(gd: Guard): Op {
     const aim: Vec3 = [0, 0, 0];
     return { gd, meters: new Map(), tgt: null, turn: null, pass: null, kept: null, track: 0, pre: false, readyAt: 0, n: 0, next: 0, lostAt: -100, first: true, aim, ov: { aimAt: aim, face: null }, step: null, hotT: -100, stepT: -100, stepBy: null, doorBy: null,
-      funnelT: 0, lineT: 0, wallT: 0, stepUntil: 0, reloadUntil: 0, saidT: -100, rounds: 0, heldForFriend: 0, heldForLine: 0, blockT: 0, shortSeen: -100, shortSince: -100, shortT: -100 };
+      funnelT: 0, lineT: 0, lineBy: null, lineAt: -100, wallT: 0, stepUntil: 0, reloadUntil: 0, saidT: -100, rounds: 0, heldForFriend: 0, heldForLine: 0, blockT: 0, shortSeen: -100, shortSince: -100, shortT: -100 };
   }
   /** a friend — Sam, or another living operative — within a body's breadth of the line from → to (and a metre past it), wider for one on the move */
   friendInLine(from: Vec3, to: Vec3, self: Guard, samStill = false): 'player' | Guard | null {   // (samStill: asked AS IF the player stood still where he is — clearline.ts's question, never the fire gate's)
@@ -1042,7 +1042,7 @@ export class RoomFight {
     const h = O.tgt, hc = h.char; const chest = chestOf(hc), dist = flat(c.pos, hc.pos);
     const brg = this.point(O, chest, dt, speed);
     const samIn = this.samInLine(O, chest); if (samIn) this.holdShort(O);
-    if (samIn && g.time >= O.readyAt && g.time >= O.reloadUntil) { O.heldForFriend++; this.stats.heldForFriend++; O.lineT += dt; if (!clearLineBlocked(g, gd, h, chest, 'player')) this.sideStep(O, chest, speed); this.letGo(O); if (!O.tgt) return; }   // (the fire gate's own answer to a friend in the line, taken here: with the gun down he never gets that far)
+    if (samIn && g.time >= O.readyAt && g.time >= O.reloadUntil) { O.heldForFriend++; this.stats.heldForFriend++; O.lineT += dt; O.lineBy = 'player'; O.lineAt = g.time; if (!clearLineBlocked(g, gd, h, chest, 'player')) this.sideStep(O, chest, speed); this.letGo(O); if (!O.tgt) return; }   // (the fire gate's own answer to a friend in the line, taken here: with the gun down he never gets that far)
     if (CLEARLINE.on && !samIn && g.time >= O.readyAt && g.time >= O.reloadUntil) { const m = this.friendInLine(c.bones.upperArmR ?? v3.add(c.pos, [0, 1.4, 0]), chest, gd); if (m && m !== 'player') clearLineBlocked(g, gd, h, chest, m); }   // (clearline.ts: a MATE in his line — the runner has his gun down for it, so the fire gate below is never reached and nothing asked him to move)
     this.doorway(O, dt, speed);
     // ---- the track (aim.ts's law, this side's K) and the pair
@@ -1067,7 +1067,7 @@ export class RoomFight {
     const wide = hands * lerp(P.unsettledK, 1, clamp(O.track, 0, 1)) * supK + (str > 1 ? gunStringGrow(gd, O.n % str) : 0) + (AIMCOST.move && !g.touring ? Math.max(speed, O.feetSm ?? 0) * AIMCOST.moveK : speed) * P.shooterMoveK * 0.5;   // (how wide this round would be thrown: asked of here so that the care below can ask about the round as it would fly)
     let inLine = this.friendInLine(c.muzzle, to, gd);
     if (!inLine) { inLine = friendInCone(g, gd, c.muzzle, to, wide + (gd.weapon.def.pellets ? gd.weapon.def.pellets.cone * 2 : 0), undefined, hc); if (inLine) ffHeld(); }   // (friendlyfire.ts, a return of null with the switch off: a friend anywhere this round could go — past his man, at the edge of its spread — holds it as one in the lane does)
-    if (inLine) { O.heldForFriend++; this.stats.heldForFriend++; O.lineT += dt; if (inLine === 'player') this.holdShort(O); if (!clearLineBlocked(g, gd, h, to, inLine)) this.sideStep(O, to, speed); this.letGo(O); return; }
+    if (inLine) { O.heldForFriend++; this.stats.heldForFriend++; O.lineT += dt; O.lineBy = inLine; O.lineAt = g.time; if (inLine === 'player') this.holdShort(O); if (!clearLineBlocked(g, gd, h, to, inLine)) this.sideStep(O, to, speed); this.letGo(O); return; }
     O.lineT = 0;
     if (!gd.weapon.fire()) { if (sideOut(g, gd, dist)) return;   // (gunslots.ts: dry on a man close in front of him — his sidearm, not a magazine change)
       O.reloadUntil = g.time + feedBegin(gd.weapon).dur; this.speak(O, 'reloading.', 0); return; }

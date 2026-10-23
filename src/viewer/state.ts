@@ -27,8 +27,8 @@ export const WALL_TURN = 55 * DEG, WALL_PEEK_LOOK = 30 * DEG;
 /** loopable one-shots. Indices 0‥5 are the old viewer's TAC_SHOTS (what __tac.loop(on, shot, every) takes); the rest were separate buttons or are the pair /
  *  door beats: reload · a round (K) · the takedown's cross (anim.strike) · the hold's E (arm ↔ gun, the layers ease the hand-over) · letting the man go and
  *  taking him again (the layers' way out and the reach) · the door hand coming off the leaf and going back on · the game's fourth signal, the stack's shoulder
- *  squeeze (character.ts SignalKind; LAST: the list is append-only, a script's loop index must keep meaning what it meant) */
-export const TAC_SHOTS = ['kick door', 'signal: hold', 'signal: go', 'signal: rally', 'flinch', 'throw', 'reload', 'shoot (K)', 'strike (takedown cross)', 'hold: swap arm ↔ gun (E)', 'hold: let go / re-grab', 'door hand: off / on', 'signal: squeeze'];
+ *  squeeze, and its fifth, 'aside', both ways (character.ts SignalKind; appended: the list is append-only, a script's loop index must keep meaning what it meant) */
+export const TAC_SHOTS = ['kick door', 'signal: hold', 'signal: go', 'signal: rally', 'flinch', 'throw', 'reload', 'shoot (K)', 'strike (takedown cross)', 'hold: swap arm ↔ gun (E)', 'hold: let go / re-grab', 'door hand: off / on', 'signal: squeeze', 'signal: aside (off my line)', 'signal: aside, to his right'];
 /** root motion: the gait lab's four */
 export const PATHS = ['treadmill (in place)', 'walk a 2 m circle', 'back and forth 5 m (starts / stops / turns)', 'turn on the spot (90° every 2 s)'];
 /** what the GAME drives (game.ts tune / guards.ts speeds), so what you see is what plays — not the clips' natural speeds */
