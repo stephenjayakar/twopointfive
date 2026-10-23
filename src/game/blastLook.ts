@@ -39,6 +39,7 @@
 // 'sparks bounce off surfaces' row: with that off it is the fountain it was).
 //
 // Hooks (one line each): game.ts update → blastLookTick · particleFx.ts bangFx → blastSparks. wallcharge.ts, combat.ts and destruction.ts are untouched.
+import { PLAYER_ID } from './consts';
 import { SideMap } from '../math/side';
 import type { Game } from './game';
 import type { Particles, EmitOpts, PKind } from '../render/particles';
@@ -159,7 +160,8 @@ const near = (a: Vec3, b: Vec3, m: number) => Math.abs(a[0] - b[0]) + Math.abs(a
 const burstAt = (W: WallSpot): Vec3 => wallPt(W, 0, 0.15, 0.5 + fx.bang.height);
 
 /** game.ts update, once a frame after the frame's other boxes: the set charges drawn, a blown one's flash warmed, the queued stages of a blast let go */
-export function blastLookTick(g: Game, out: Box[]) {
+export function blastLookTick(g: Game, out: Box[]) { const was = g.fogOfWar.begin(PLAYER_ID); try { blastLookTickRaw(g, out); } finally { g.fogOfWar.done(was); } }   // (a wall charge and every stage of its blast are the team's doing: fogofwar.ts FOG.ours)
+function blastLookTickRaw(g: Game, out: Box[]) {
   const S = STATE.get(g); const WC = g.wallCharge;
   if (!WC || !live(g)) { if (S) { S.seen.length = 0; S.queue.length = 0; } return; }
   const set = WC.set;
@@ -237,7 +239,7 @@ function warmOf(c: Vec3): Vec3 {
 
 function afterglow(g: Game, W: WallSpot) {
   const A = AFTERGLOW, at = holed(g, W) ? wallPt(W, 0, -thick(W) / 2, A.y) : wallPt(W, 0, 0.15, A.y);
-  const l = g.engine.lights.flash(at, A.color, A.intensity, A.range, A.ttl, 0); l.radius = A.radius;
+  const l = g.fogOfWar.lightBy(g.engine.lights.flash(at, A.color, A.intensity, A.range, A.ttl, 0), PLAYER_ID); l.radius = A.radius;   // (a wall charge is the team's: FOG.ours)
 }
 
 /** particleFx.ts bangFx, in place of its one spark record: true = the fragments were thrown here (a wall charge's two ways out of the wall, or a thrown can's

@@ -130,6 +130,7 @@ import { peekEye } from './peeksight';
 import { STICKY_STATS, stickyEyes } from './stickycam';
 import { toldLastSeen } from './told';   // (called inside lastSeen() only)
 import { runnerNobody } from './runner';   // (asked inside a tick only: false with its switch off)
+import { gpuFx } from './particleFx';   // (called inside begin() / done() / hush() only)
 
 /** The knobs (Tab ▸ Sandbox ▸ Fog of war, __fow.knobs; read every frame). */
 export const FOG = {
@@ -217,10 +218,19 @@ export const FOG = {
    *  too, dimmed with the ground behind it on the screen — a fire's plume, a grenade's cloud (the maintainer, 10-23, on a fire with no flame in the fog:
    *  'I think we should at least show everything in the environment visible at the start of the level all the time?'). What a hidden MAN breathes, smokes or fires
    *  is not filed with the solver at all (snowBreath.ts, smokebreak.ts and combat.ts ask the fog at the source — airHides below), and a hidden light still gives
-   *  a plume nothing (lightFogK). The puffs the PARTICLES draw (a blast's dust ring, a round's chip of plaster) are still cut there: particles_draw.wgsl. false = the
+   *  a plume nothing (lightFogK). The puffs the PARTICLES draw (a blast's dust ring, a round's chip of plaster) are `ours`'s, below: particles_draw.wgsl. false = the
    *  march takes no density over unseen floor, as it was (common.wgsl fogSmoke). ON in the page since 10-23 (?fogair=0 puts it off; the frozen stand pins it
    *  off — src/host/standup.ts, `TPS_FOGAIR=1`). Never seen on a GPU */
   air: true,
+  /** WHAT THE TEAM DOES IS ALWAYS SHOWN (the picture — and, with it, what the cursor's ray meets: the boxes handed to the renderer; under `full` alone; the maintainer, of the tutorial's wall charge: 'still can't see the wall shot detonate' — the
+   *  fog was taken off that mission for it): the flash of a blast one of the team set or threw lights the fog's picture too (lights.ts RtLight.fogBy: its
+   *  class is the doer's, as a carried light's is its carrier's), the streak of a teammate's round is drawn its whole length, the rubble the team throws is drawn
+   *  on its way down and lies where it fell (things(): debris.ts Chunk.who), and the sparks, dust and chips
+   *  of what the team fires or blows are drawn over floor nobody sees (particles.ts Particles.ours → PB_OURS; particles_draw.wgsl). It adds NO EYE: the
+   *  room a charge opens is the fog's picture of it, dimmed, and nobody in it is drawn until one of the team has a line. An enemy's blast, round and
+   *  sparks are as they were: cut where the team does not see; a round of the team's that stops in a man nobody sees throws nothing up off him (combat.ts hush). false = every flash nobody carries lights only what the team sees, and no particle but the
+   *  weather's is drawn there, as it was. ON in the page since 10-23 (?fogours=0; the frozen stand pins it off — `TPS_FOGOURS=1`). Never seen on a GPU */
+  ours: true,
   /** … a fill added on top of the dimmed frame: this share of `flat`'s level, corner-shaped by `litAo` / `litAoM` (0 = none — a dark room is dark in the fog) */
   fullFill: 0,
   /** THE FOG'S SOFT EDGE (the maintainer, 10-15, on the pass level: 'fog of war edges shouldn't be so sharp'; the picture only; under `full` alone — it reads the
@@ -276,8 +286,8 @@ export const FOG_EDGE_ON = 0.5;
 /** ?fogown / ?fogown=0 · ?fogcalls=0 — the two options for a visit, over the kept rows (the Game's constructor, right after teamfeel.ts has read those back;
  *  no page — the harness — nothing) */
 export function fogFlags() { try { const q = new URLSearchParams(location.search); if (q.has('fogown')) FOG.own = q.get('fogown') !== '0'; if (q.has('fogcalls')) FOG.calls = q.get('fogcalls') !== '0';
-  if (q.has('fogflat')) { const v = parseFloat(q.get('fogflat') ?? ''); FOG.flat = Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : FOG_FLAT_ON; } if (q.has('foglit')) { const v = parseFloat(q.get('foglit') ?? ''); FOG.lit = Number.isFinite(v) ? Math.min(4, Math.max(0, v)) : FOG_LIT_ON; } if (q.has('fogfull')) FOG.full = q.get('fogfull') !== '0'; if (q.has('fogair')) FOG.air = q.get('fogair') !== '0'; if (q.has('fogdesat')) { const v = parseFloat(q.get('fogdesat') ?? ''); FOG.desat = Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : FOG_DESAT_WAS; } if (q.has('fogedge')) { const v = parseFloat(q.get('fogedge') ?? ''); FOG.edge = Number.isFinite(v) ? Math.min(1.5, Math.max(0, v)) : FOG_EDGE_ON; } if (q.has('fogthings')) FOG.things = q.get('fogthings') !== '0'; if (q.has('squaddoors')) FOG.squadDoors = q.get('squaddoors') !== '0'; if (q.has('squadfire')) FOG.squadFire = q.get('squadfire') !== '0'; if (q.has('fogdesat')) FOG_PAGE.desat = FOG.desat; if (q.has('fogedge')) FOG_PAGE.edge = FOG.edge; if (q.has('fogair')) FOG_PAGE.air = FOG.air; } catch { /* no page */ } }
-/** THE FOG'S LOOK ON THIS PAGE (`desat`, `edge`, `air`: the picture alone), as the module ships it and the address words change it (fogFlags) — never what a tape's knob
+  if (q.has('fogflat')) { const v = parseFloat(q.get('fogflat') ?? ''); FOG.flat = Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : FOG_FLAT_ON; } if (q.has('foglit')) { const v = parseFloat(q.get('foglit') ?? ''); FOG.lit = Number.isFinite(v) ? Math.min(4, Math.max(0, v)) : FOG_LIT_ON; } if (q.has('fogfull')) FOG.full = q.get('fogfull') !== '0'; if (q.has('fogair')) FOG.air = q.get('fogair') !== '0'; if (q.has('fogours')) FOG.ours = q.get('fogours') !== '0'; if (q.has('fogdesat')) { const v = parseFloat(q.get('fogdesat') ?? ''); FOG.desat = Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : FOG_DESAT_WAS; } if (q.has('fogedge')) { const v = parseFloat(q.get('fogedge') ?? ''); FOG.edge = Number.isFinite(v) ? Math.min(1.5, Math.max(0, v)) : FOG_EDGE_ON; } if (q.has('fogthings')) FOG.things = q.get('fogthings') !== '0'; if (q.has('squaddoors')) FOG.squadDoors = q.get('squaddoors') !== '0'; if (q.has('squadfire')) FOG.squadFire = q.get('squadfire') !== '0'; if (q.has('fogdesat')) FOG_PAGE.desat = FOG.desat; if (q.has('fogedge')) FOG_PAGE.edge = FOG.edge; if (q.has('fogair')) FOG_PAGE.air = FOG.air; } catch { /* no page */ } }
+/** THE FOG'S LOOK ON THIS PAGE (`desat`, `edge`, `air`: the picture alone — NOT `ours`: what it hands the renderer is what the cursor's ray meets, so a tape keeps its own), as the module ships it and the address words change it (fogFlags) — never what a tape's knob
  *  tables laid over FOG. THE ENGINE REPLAY SHOWS A TAPE UNDER THIS, not under the look the tape was recorded with (FogOfWar.pageLook, which it alone calls):
  *  the maintainer judged both on a replay, and a recording from before either would otherwise show the old fog for ever. The tape's own values still ride its
  *  knobs — the harness replays them as recorded (journal.ts applyKnobs: a file from before `edge` replays with the hard line). A tape from before the full
@@ -587,7 +597,7 @@ export class FogOfWar {
     this.pending.length = 0;
   }
   /** A fresh encounter (Game.restartEncounter — a restart, a checkpoint load, the start of an F10 recording and of its replay): nobody has been seen, no pair asked. */
-  reset() { this.rawAt = -1; this.bared = false; this.lampRecs.clear(); this.doorRecs.clear(); this.doorsHeld = 0; this.thingRecs.clear(); this.thingSince = -1; this.recs = new SideMap(); this.asked.clear(); this.pending.length = 0; this.turn = 0; this.frameNo = 0; this.hiddenChars.clear(); this.firedN = new SideMap(); this.firedAt = new SideMap(); this.shown = new SideSet(); this.fireClock = 0;
+  reset() { this.rawAt = -1; this.bared = false; this.lampRecs.clear(); this.doorRecs.clear(); this.doorsHeld = 0; this.thingRecs.clear(); this.ourLanded.clear(); this.thingSince = -1; this.recs = new SideMap(); this.asked.clear(); this.pending.length = 0; this.turn = 0; this.frameNo = 0; this.hiddenChars.clear(); this.firedN = new SideMap(); this.firedAt = new SideMap(); this.shown = new SideSet(); this.fireClock = 0;
     this.callClock = 0; this.lastCall = -1e9; this.calledT = new SideMap(); this.knownT = new SideMap(); this.toldStep = new SideMap(); this.callN = 0; this.callLog = []; this.callStats = { contact: 0, heard: 0 }; }
 
   /** one eye on one living man, walls and leaves only: the game's own line-of-sight test (guards.ts eyeContact: statics and leaves against his chest AND his head,
@@ -803,11 +813,23 @@ export class FogOfWar {
     if (this.thingSince < 0 || f < this.thingSince) this.thingSince = f;
     const prime = f - this.thingSince < THING_PRIME;   // (the first half second of an encounter — or of the rule: everything is taken as it stands, the building as the team knows it)
     this.cellSeen.clear();
+    const ours = this.oursOn, team = this.g.engine.lights.fogTeam.owners;
+    // THE TEAM'S OWN RUBBLE (FOG.ours): a chunk one of the team threw (debris.ts Chunk.who: the round or the charge that set it going) is the team's doing on
+    // its FIRST way down — until the picture has it at rest (the frame it lands unseen would otherwise drop it as 'last seen on the move'). After that it is a
+    // thing like any other: woken where nobody sees (a body falls on it, the chair under it moves — nobody is re-blamed for those) it stays where the picture has
+    // it. A piece a boot slides is nobody's. A kinked panel's second box (Chunk.mate) is a thing of its own key: both are taken.
+    const mineK = this.ourChunks, landed = this.ourLanded; if (mineK.size) mineK.clear();
+    const D = ours && !prime ? this.g.destr?.debris.list : undefined;
+    if (D && D.length) { for (const c of D) { if (c.foot || !team.has(c.who)) continue;
+      const k = thingKeyOf(c.box); if (landed.has(k)) continue;
+      if (c.rest) { const r = recs.get(k); if (r && !r.moving) { landed.add(k); continue; } }
+      mineK.add(k); if (c.mate && c.mate.mkey !== undefined) mineK.add(thingKeyOf(c.mate)); }
+    } else if (landed.size) landed.clear();   // (the pool is empty — a restart, an encounter's end: its serials start a new life)
     const n = list.length;
     for (let i = 0; i < n;) {
       const b = list[i];
       if (i >= this.rigFrom && i < this.rigTo) { out.push(b); i++; continue; }
-      if (b.mkey === undefined) { if (prime || this.cellSeenAt(b.c[0], b.c[2])) out.push(b); else S.out++; i++; continue; }   // (a tracer's streak among them: where its middle is seen)
+      if (b.mkey === undefined) { if (prime || (ours && b.owner !== 0 && team.has(b.owner)) || this.cellSeenAt(b.c[0], b.c[2])) out.push(b); else S.out++; i++; continue; }   // (a tracer's streak among them: where its middle is seen — a teammate's own, FOG.ours, its whole length)
       const tk = thingKeyOf(b); if (tk < 0) { out.push(b); i++; continue; }
       let j = i + 1; while (j < n && list[j].mkey !== undefined && thingKeyOf(list[j]) === tk) j++;
       let x = 0, z = 0; for (let k = i; k < j; k++) { x += list[k].c[0]; z += list[k].c[2]; } x /= j - i; z /= j - i;
@@ -820,14 +842,15 @@ export class FogOfWar {
         for (let k = i; k < j; k++) { const s = list[k]; G[k - i] = { ...s, c: [s.c[0], s.c[1], s.c[2]], h: [s.h[0], s.h[1], s.h[2]], rot: s.rot ? [s.rot[0], s.rot[1], s.rot[2], s.rot[3]] : undefined }; }
         r.x = x; r.z = z; r.ox = ox; r.oz = oz; r.moving = moving; r.held = false;
       };
-      if (!r) { if (prime || this.thingSeen(x, z, ox, oz)) { take(!prime); r!.f = f; live(); } else S.out++; i = j; continue; }   // (first seen in play: nobody knows yet that it is at rest — the next frame it stands unmoved says so; lost to sight before that, it was last seen on the move)
+      const mine = mineK.size > 0 && mineK.has(tk);
+      if (!r) { if (prime || mine || this.thingSeen(x, z, ox, oz)) { take(!prime); r!.f = f; live(); } else S.out++; i = j; continue; }   // (first seen in play: nobody knows yet that it is at rest — the next frame it stands unmoved says so; lost to sight before that, it was last seen on the move)
       r.f = f;
       let same = r.ghost.length === j - i;
       for (let k = i; same && k < j; k++) { const s = list[k], q = r.ghost[k - i];
         same = Math.abs(s.c[0] - q.c[0]) + Math.abs(s.c[1] - q.c[1]) + Math.abs(s.c[2] - q.c[2]) < THING_EPS && Math.abs(s.yaw - q.yaw) < THING_EPS
           && (!s.rot || !q.rot || Math.abs(s.rot[0] - q.rot[0]) + Math.abs(s.rot[1] - q.rot[1]) + Math.abs(s.rot[2] - q.rot[2]) + Math.abs(s.rot[3] - q.rot[3]) < THING_EPS); }
       if (same) { r.moving = false; r.held = false; live(); i = j; continue; }   // where the picture has it
-      if (prime || ((!r.held || (f + tk) % THING_EVERY === 0) && this.thingSeen(x, z, ox, oz))) { take(true); live(); i = j; continue; }   // it moved in the team's sight
+      if (prime || mine || ((!r.held || (f + tk) % THING_EVERY === 0) && this.thingSeen(x, z, ox, oz))) { take(true); live(); i = j; continue; }   // it moved in the team's sight (or is the team's own rubble, on its way down)
       // it moved (or is still moving) where nobody sees it
       if (!r.held) { if (r.moving || this.thingSeen(r.x, r.z, r.ox, r.oz)) { recs.delete(tk); S.out++; i = j; continue; } r.held = true; }   // (last seen on the move, or the team is looking at the place it left: it is simply not there)
       else if ((f + tk) % THING_EVERY === 1 && this.thingSeen(r.x, r.z, r.ox, r.oz)) { recs.delete(tk); S.out++; i = j; continue; }
@@ -893,6 +916,27 @@ export class FogOfWar {
   }
   /** left out of the picture this frame (what combat.ts handProps, the HUD's markers and the bubbles ask) — false for everybody while it is off */
   hidden(gd: Guard): boolean { return !this.bared && this.hiddenChars.size > 0 && this.hiddenChars.has(gd.char); }
+  /** this frame's things that are the team's own rubble on its first way down · the ones the picture has since taken at rest (things()) */
+  private ourChunks = new Set<number>(); private ourLanded = new Set<number>();
+  /** the rule is live: the row on, the fog on, and the full picture's block filled this frame (the team's ids are the lights' own list, fullBlock) */
+  private get oursOn(): boolean { return FOG.ours && this.active && this.fullOn; }
+  /** IS WHAT `who` DOES THE TEAM'S OWN TO SEE (FOG.ours)? — false while the fog is off (nothing is cut then), with the row off, outside the full picture, for
+   *  nobody (0), and for anybody not on the team. Read off the list of the team the fog filled for the lights (LightSet.fogTeam.owners — the dead too: a can
+   *  thrown by a man since shot is still the team's), never off g.guards: a blast is judged with that list swapped out (combat.ts detonateStun's callers) */
+  oursId(who: number | undefined): boolean { return !!who && this.oursOn && this.g.engine.lights.fogTeam.owners.has(who); }
+  /** A LIGHT `who` MADE WITHOUT CARRYING IT (a blast's flash, a round's ember): its fog class is its doer's (lights.ts fogClass), so the team's own lights the
+   *  fog's picture too and anybody else's is cut there as an ownerless flash always was. Nothing with the row off */
+  lightBy(l: RtLight, who: number | undefined): RtLight { if (FOG.ours && who) l.fogBy = who; return l; }
+  /** WHAT IS FILED FROM HERE TO done() IS `who`'S DOING: the particles are marked the team's own when he is on it (Particles.ours — drawn under the fog), and
+   *  not when he is not; nobody (0) leaves the doing as it stands, so a blast inside a blast keeps its first cause. Returns what done() puts back (−1: nothing —
+   *  the row off, nobody, no GPU particles). A caller pairs the two in a try / finally (no closure on the round's path) */
+  begin(who: number | undefined): number { const P = FOG.ours && who ? gpuFx(this.g) : null; if (!P) return -1; const was = P.ours ? 1 : 0; P.ours = this.oursId(who); return was; }
+  done(was: number) { if (was < 0) return; const P = gpuFx(this.g); if (P) P.ours = was === 1; }
+  /** begin() / done() round `fn` (the blasts: a closure a blast is nothing) */
+  doing<T>(who: number | undefined, fn: () => T): T { const was = this.begin(who); try { return fn(); } finally { this.done(was); } }
+  /** THE REST OF THIS DOING IS NOT SHOWN (a round that stopped in a man nobody on the team sees: no spray off him says where he stands). The done() that closes
+   *  the doing puts the mark back */
+  hush() { if (!FOG.ours) return; const P = gpuFx(this.g); if (P) P.ours = false; }
   /** WHAT A HIDDEN MAN PUTS INTO THE AIR IS NOT FILED (FOG.air: smoke is drawn under the fog, so the gas of a shot nobody on the team sees fired would hang
    *  at his muzzle and ride it): true = `c` is out of the picture and what he would hand the smoke solver now is left out — as his breath and his cigarette
    *  already are. False with FOG.air off: the march cuts all smoke there, and the solver gets everything, as it was */

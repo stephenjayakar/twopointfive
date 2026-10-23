@@ -809,8 +809,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   filed with the solver at all — his breath and his cigarette already (`snowBreath.ts`, `smokebreak.ts`), and now the gas of his shot
   (`FogOfWar.airHides`, asked by `combat.ts` of every shooter; `effects.ts spawnShot`'s `gas: false` files no emitter and gives the same flash; only
   while `FOG.air` is on — off, the solver gets everything as it did). A hidden light still gives a plume nothing (`lightFogK`), so an enemy's flashlight
-  draws no cone in smoke the team does not see. The PARTICLES' puffs (a blast's dust ring, a round's chip of plaster: `particles_draw.wgsl`) are still
-  cut over unseen floor: whose they are is the next step's. WHAT IT NOW SHOWS THAT IT DID NOT: ALL the solver's smoke, whoever made it — an enemy
+  draws no cone in smoke the team does not see. The PARTICLES' puffs (a blast's dust ring, a round's chip of plaster: `particles_draw.wgsl`) are cut
+  over unseen floor unless the team made them: `FOG.ours`, the next bullet. WHAT IT NOW SHOWS THAT IT DID NOT: ALL the solver's smoke, whoever made it — an enemy
   grenade's cloud in a room nobody watches (it was heard), and smoke drifting through a door opened unseen (a hint that it is open). The stricter rule
   (only the place's smoke) would need the solver to know whose smoke is whose; that is the maintainer's call and is asked. NOT HELD, each a tell or a
   flaw to judge on a GPU: (1) a hidden man walking through a plume still stirs it (`game.ts smokeWake` pushes the solver for every man) — live movement
@@ -829,6 +829,44 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `fireWeapon` and the team then ordered in, two seeds, 21 s each, digesting the same with it as without, dice and all, his gas left out only with it.
   NOT CHECKED: the picture itself. **Never seen on a GPU**, and not seen moving; whether a plume dimmed to the fog's 0.4 reads as part of the fog or as
   something seen is the maintainer's to judge.
+- **What the team does is always shown under the fog (`FOG.ours`, 10-23; the maintainer, of the tutorial's wall charge: "still can't see the wall
+  shot detonate" — the fog was taken off that whole mission for it).** The second step of sorting the fog by whose a thing is; under the full picture
+  alone (`FogOfWar.oursOn`: the row, the fog on, `FOG.full`'s block filled). It adds NO EYE: the room a charge opens is the fog's picture of it,
+  dimmed — the room as last seen, with nobody hidden drawn and nobody hidden casting a shadow (the men the fog filters out hand over no capsules) — and
+  nobody in it is drawn until one of the team has a line. A grenade is not a look through a wall. FOUR THINGS TAKE THEIR DOER'S SIDE
+  (`FogOfWar.oursId`, read off the team list the fog fills for the lights, `LightSet.fogTeam.owners`, never off `g.guards`: a blast swaps that list
+  out while it works). (1) A FLASH NOBODY CARRIES: `lights.ts RtLight.fogBy` = who made it, read by `LightSet.fogClass` in place of `owner` (which
+  stays 0: `owner` is also the shadow rule); set through `FogOfWar.lightBy(light, who)` at a round's strike (`combat.ts`), the stun charge
+  (`detonateStun`, `it.who`), the frag (`frag.ts`, `spec.who`), the wall charge's afterglow (`blastLook.ts`, the player's) and a tracer's ember
+  (`tracers.ts`, through the `Tracers.fog` hook `game.ts` sets: the class stays Game-free). The team's lights the fog's picture, an enemy's and an
+  ownerless one only what the team sees, as before. (2) A TEAMMATE'S TRACER is drawn its whole length (`things()`: an unkeyed box whose `owner` is one
+  of the team). (3) THE TEAM'S RUBBLE (`debris.ts Chunk.who`, a kinked panel's `mate` box too) is drawn on its FIRST way down and lies in the picture
+  where it fell; once the picture has it at rest it is a thing like any other (woken unseen, it stays where the picture has it), and a piece a boot
+  slides is nobody's, so walking through rubble still shows nobody. (4) THE PARTICLES: `FogOfWar.begin(who)` / `done()` (or `doing(who, fn)`) name
+  the doer round a cause — `fireWeapon`, `detonateStun`, `frag.ts blast`, `Destruction.blast`, the wall and door charges' `blow`, `blastLookTick`,
+  `blastFeelTick` (the wall charge's later stages: the dust ring, the roll, the soot, the crumbs), a tracer's ember — and what is filed inside
+  carries `Particles.ours` → the emit record's bit 18 → `PB_OURS` (128) on the particle, which `particles_draw.wgsl` leaves uncut over unseen floor.
+  A doing by nobody inside another keeps its cause; an enemy's inside a teammate's is his own; a particle that has lain and is woken (a kick, the
+  wind, its support gone) loses the mark in the kernel, so litter the team made does not jump under the fog when somebody unseen disturbs it. A
+  ROUND THAT STOPS IN A MAN NOBODY SEES (`combat.ts`: `FogOfWar.hidden(hitGuard)` → `hush()`): nothing filed after it met him is marked and its
+  flash is nobody's, so no spray and no flash say where he stands. NOT THE PICTURE ALONE IN ONE WAY: the boxes it hands the renderer (streaks,
+  rubble) are what the cursor's ray meets (`world.dynamics`), as with every thing the fog shows or holds — so the row is the tape's, not the replay
+  page's look (`FOG_PAGE` does not carry it, no visit word). NOT HELD: (a) a lamp shot out by the team (`combat.ts`, `destruction.ts` lamp flashes)
+  and what a team's chunk throws up when it lands or breaks on a later frame (`breakTable.ts`) are not marked and are cut as before; (b) a marked
+  particle stays marked while it flies, so a team's spark that bounces on into another unseen room is drawn there; (c) the STREAK of a teammate's
+  round that stops in a hidden man still ends at him (as its head light, a carried light, always did); (d) with `FOG.air` a team's flash now lights
+  the plume over unseen floor too; (e) the first frame the fog is live has no team list yet: a blast on that frame is not marked. SWITCH: ON in the
+  module and the page; `?fogours=0` = as it was; the debugger's fog page has the row; frozen stand: off, `TPS_FOGOURS=1` raises it
+  (`FROZEN_HOLDS['FOG.ours']`, `host/standup.ts`, `host/standEnv.ts`); the journal carries it (a recording without the `ours` key replays with it
+  off). CHECK: `probes.ts fog-ours` (family `fog`; 8 lines; `FOGOURS_BREAK=1` red on whose, the lights', the boxes' and the particles' lines) on
+  both stands — whose a doing is; a made flash's class by its doer and the real stun charge's set off unseen by the player and by a defender; a
+  streak and a chunk of rubble over unseen floor by owner, in flight, under a boot and at rest; the mark round a real round fired by a teammate and
+  by a defender on a stand-in for the GPU system, a teammate's round put into a hidden man (hushed, no flash given), and the record, kernel and draw
+  lines as written; the address; the journal, and that the replay leaves the row alone; the stands; the night breach fought under the full picture,
+  two seeds, 21 s each, the same digest and dice with it as without (the harness has no cursor). NOT CHECKED: the picture. **Never seen on a GPU**:
+  whether a blast under the fog reads as the team's own doing or as a hole in the fog, and how bright the flash should be there (it is dimmed with
+  the frame, `FOG.dim`), are the maintainer's to judge. The tutorial's first mission still has its fog off: whether it wants it back is that
+  mission's owner's call.
 - **A held man drops his gun** (`HOLD.dropGun`, the table in `src/game/character.ts`; the rule is `player.ts startGrab`; ON in the page, `?nogundrop` puts it
   off; OFF in the module and on the frozen stand, `TPS_HOLDDROP=1`; a `FROZEN_HOLDS` row; a recording from before the key replays with it off). The maintainer,
   10-15, of a rifleman in his arm with the rifle up in his fist: "held enemies should drop their gun". As the arm goes round, the weapon in his hand (rifle or
