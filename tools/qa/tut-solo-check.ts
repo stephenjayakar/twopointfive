@@ -1,5 +1,5 @@
 // TUT-SOLO-CHECK: the tutorial's solo loud mission (levels/tut-solo.json, its fights in levels/tut-solo.script.ts) played by its scripted player
-// (tools/qa/lessons/tut-solo.ts, through the input only) on the tutorial's frame (game/rails.ts: raised here on the frozen stand), eight ways a seed:
+// (tools/qa/lessons/tut-solo.ts, through the input only) on the tutorial's frame (game/rails.ts: raised here on the frozen stand), nine ways a seed:
 //   · as the lines say                      → every step goes by and the mission ends
 //   · the sandbags walked STANDING          → the player goes down at that line (the gun's traverse is over a crouched head and through a standing chest)
 //   · the gap crossed with NO SMOKE up      → the player goes down at that line (the gap is hosed until a smoke can has gone off between it and the gun)
@@ -8,12 +8,14 @@
 //     aimed at places, never at him; a dud lets nobody go and leaves the line up)
 //   · the RIGHT BUTTON held on the last two before the grenade is loaded → it fires nothing (the launcher is on a sponge round until he swaps, and a
 //     round at the two lets them go), then the swap and the grenade → every step still goes by
+//   · the stun grenade thrown down the store's doorway and THE LINE NOT LEFT → his own can blinds him (where the page's rule for it is on: samstun.ts) and
+//     every step still goes by; as the lines say he steps aside and it must not
 //   · the four CHECKPOINTS                  → down at the sandbags and again at the gap, Enter puts him back at the gate each time; the other three are put
 //     back by the harness a step after each is kept; every beat played again from its first line, the last two men spawned once → every step goes by
 // The two lessons that are about not getting shot are only lessons if they can be failed: a mission where the wrong way also works teaches nothing.
 //   bun run tools/qa/tut-solo-check.ts [--seeds 1,2]        and again with TPS_PROFILE=shipped in front (the stand the page opens on)
 //   TUT_SOLO_BREAK=1 …   the standing arm is played crouched, as the line says: nobody goes down there, and the check must be RED
-// EXIT: 0 = all eight as said on every seed · 1 = a fault, each a line.
+// EXIT: 0 = all nine as said on every seed · 1 = a fault, each a line.
 // Then THE SHOP'S LAMP: the ground beside the door is lit by that lamp and dark without it (the line that has him shoot it out says the dark is cover).
 // Last, THE PAGE'S KIT: on a lesson's page (kit.ts kitIssuedPage) he carries this level's own card, not the plain issue every other lesson is played with.
 // Headless: no GPU, no smoke sight lines, nothing here saw a picture or heard a round.
@@ -34,6 +36,7 @@ const ARMS: { word: string; say: string; downAt?: string; after?: string }[] = [
   { word: 'piers', say: 'four seconds at each pier of the arch under the last two\'s fire' },
   { word: 'dud', say: 'the first grenade fired from too close (a dud), the second from the arch' },
   { word: 'sponge', say: 'the right button held on the last two before the grenade is loaded (it fires nothing), then the swap and the grenade' },
+  { word: 'flash', say: 'the stun grenade thrown down the store\'s doorway and the line not left: his own can blinds him where that rule is on, and he goes on' },
   { word: 'again', say: 'down twice and back by Enter, the other checkpoints put back by hand, each beat played again' },
 ];
 const faults: string[] = [];

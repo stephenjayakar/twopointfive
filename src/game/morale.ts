@@ -74,7 +74,7 @@ import type { Eye } from './guards';
 import { fireWeapon } from './combat';
 import { feedBegin } from './gunreload';
 import { isHostile, teamOfId } from './teams';
-import { w } from './words';
+import { w, wg } from './words';
 
 /** the switch and its numbers: off in the module, raised by the page (host/profile.ts pageSwitches; ?nomorale = every man as steady as he was) and by the shipped
  *  stand; the harness's frozen stand leaves it off (TPS_MORALE=1 turns it on). Dread is 0‥1: `jumpy` / `broken` are the rungs' lines, `hyst` how far under its
@@ -135,13 +135,13 @@ const blastsOf = new SideMap<Game, Blast[]>('morale.blastsOf');
  *  on the net. lost: a green man with mates about him and his leader down, shouted. order: the leader to the green man on the floor beside him, spoken.
  *  okay: the green man's answer as he gets up. */
 type LineKind = 'duck' | 'call' | 'again' | 'out' | 'spent' | 'clear' | 'lost' | 'order' | 'okay';
-const LINES: Record<LineKind, { say: string[]; he?: string[]; they?: string[]; dark?: string[]; lit?: string[] }> = {
+const LINES: Record<LineKind, { say: string[]; he?: string[]; they?: string[]; dark?: string[]; lit?: string[]; /** (WORDS.guide) `say` as the writing guide has it, place for place */ now?: string[] }> = {
   duck: { say: ['down! get down!', 'get down — stay down!', 'heads down!'] },
   call: { say: [], dark: ['can\'t see a thing — somebody get in here!'], lit: ['right in my room — somebody get in here!'], he: ['he\'s coming in — I\'ve got nobody in here!', 'anyone on this net? he\'s right on top of me!'],
     they: ['they\'re coming in — I\'ve got nobody in here!', 'anyone on this net? they\'re right on top of me!'] },
   again: { say: ['is anybody there? answer me!', 'nobody\'s coming. nobody\'s coming—', 'please — somebody answer!'] },
   out: { say: ['I\'m out! I\'m out!', 'empty — I\'m empty!', 'I\'m dry! changing!'] },
-  spent: { say: ['no — no, stay back!', 'keep away from me!', 'don\'t — don\'t come in!'] },
+  spent: { say: ['no — no, stay back!', 'keep away from me!', 'don\'t — don\'t come in!'], now: ['no — no, stay back!', 'stay away from me!', 'don\'t — don\'t come in!'] },
   clear: { say: ['breach on my room. I\'m alone in here.'], he: ['he\'s breached. I\'m on my own in here.', 'he\'s through. holding it on my own.'],
     they: ['they\'ve breached. I\'m on my own in here.', 'they\'re through. holding it on my own.'] },
   lost: { say: ['they got him! they got him!', 'he\'s down. oh no, he\'s down.', 'we\'ve lost him! what do we do?'] },
@@ -149,12 +149,12 @@ const LINES: Record<LineKind, { say: string[]; he?: string[]; they?: string[]; d
   okay: { say: ['okay — okay.', 'yeah. yeah, I\'m up.', 'I\'m up. I\'m up.'] },
 };
 /** this file's lines — every kind's, or one kind's (the check: a line said came from the right pool; the words lint's bubble length and blocklist) */
-export function moraleLines(kind?: LineKind): string[] { return (kind ? [LINES[kind]] : Object.values(LINES)).flatMap(l => [...l.say, ...(l.dark ?? []), ...(l.lit ?? []), ...(l.he ?? []), ...(l.they ?? [])]); }
+export function moraleLines(kind?: LineKind): string[] { return (kind ? [LINES[kind]] : Object.values(LINES)).flatMap(l => [...l.say, ...wg(l.now ?? [], []).filter(t => !l.say.includes(t)), ...(l.dark ?? []), ...(l.lit ?? []), ...(l.he ?? []), ...(l.they ?? [])]); }
 /** one line of a kind from this man — on the net or shouted — unless he said one of this file's inside `barkSecs` (`force`: the call and the 'out' are the
  *  telegraph, never held back) */
 function bark(g: Game, gd: Guard, S: Mind, kind: LineKind, radio: boolean, force = false): boolean {
   if (!force && S.bark < MORALE.barkSecs) return false;
-  const L = LINES[kind], pool = [...L.say, ...((S.dark ? L.dark : L.lit) ?? []), ...((gd.team !== 'guard' ? w(L.they, L.he) : L.he) ?? [])];   // (words.ts: 'they' is a scenario's defender under the pass — off, every man's intruder is 'he', as it was)
+  const L = LINES[kind], pool = [...wg(L.now ?? L.say, L.say), ...((S.dark ? L.dark : L.lit) ?? []), ...((gd.team !== 'guard' ? w(L.they, L.he) : L.he) ?? [])];   // (words.ts: 'they' is a scenario's defender under the pass — off, every man's intruder is 'he', as it was)
   g.say(gd, pool[Math.floor(simRandom() * pool.length) % pool.length], radio); S.bark = 0;
   if (radio) MORALE_STATS.calls++; else MORALE_STATS.shouts++;
   return true;

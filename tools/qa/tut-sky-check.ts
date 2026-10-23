@@ -47,8 +47,8 @@ const L = JSON.parse(readFileSync(resolve(ROOT, 'levels/tut-sky.json'), 'utf8'))
   line(close.length === 0, 'no two doors share 2 m of wall (a stack has a jamb each side to itself)', close.length ? close.join(', ') : `${doors.length} doors`);
 }
 { const steps: any[] = L.scenarios.lesson.steps, ids = steps.map(s => s.id), b = steps.find(s => s.id === 'breaker'), t = steps[ids.indexOf('nv') + 1];
-  const card = b?.explain, says = !!card && /dark/i.test(card.text) && /torch/i.test(card.text) && /night vision/i.test(card.text);
-  line(says && t?.id === 'torches' && t.done?.is === 'cue', 'the mains\' step carries the card on light (the dark, their torches, the squad\'s night vision) and the step after the goggles is the torches\'', card ? `"${card.title}" · after 'nv': '${t?.id}'` : 'no card');
+  const card = b?.explain, says = !!card && /dark/i.test(card.text) && /flashlight/i.test(card.text) && /night vision/i.test(card.text);
+  line(says && t?.id === 'torches' && t.done?.is === 'cue', 'the mains\' step carries the card on light (the dark, their flashlights, the squad\'s night vision) and the step after the goggles is the flashlights\'', card ? `"${card.title}" · after 'nv': '${t?.id}'` : 'no card');
   const emergency = L.switchables.filter((s: any) => s.group === 'emergency'), owned = L.beacons.every((bc: any) => emergency.some((s: any) => s.boxes.includes(bc.box)));
   line(L.beacons.length >= 4 && owned && emergency.every((s: any) => s.on === false && s.mains === false), 'at least four emergency beacons, each a dome of group \'emergency\' off the mains and dark as authored', `${L.beacons.length} beacons, ${emergency.length} domes`);
 }

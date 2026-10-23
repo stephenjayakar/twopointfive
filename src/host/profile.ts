@@ -206,6 +206,7 @@ export function pageSwitches(q: URLSearchParams): void {
   ORDERS.roundCap = q.get('roundcap') === '0' ? 0 : ROUND_CAP;   // the way round an uncleared room is taken only when it is worth it (game/orders.ts route / roundRooms: a way round that still crosses floor nobody has been on, or is longer than this many times the short way + 3 m, is refused — the short way, as with no way round); ?roundcap=0 = any way round with less unknown floor on it, however long, as it was
   ORDERS.roundOwn = q.get('roundown') !== '0';   // …and the cap never refuses a pair a way round that keeps it off the door it is to stack on (game/orders.ts route): ?roundown=0 = the cap as it was first made, a pair behind the ordered door walks through it
   ORDERS.sameWay = q.get('sameway') !== '0';   // a pair handed one order on one door from one spot goes round a building by one side (game/orders.ts sameWays): ?sameway=0 = each man his own short way, as it was
+  ORDERS.trailDoors = q.get('traildoors') !== '0';   // a follower goes by the doors Sam took where his own short way to his place would take others (game/orders.ts trailWay): ?traildoors=0 = his own short way, as it was
   ROOMFIGHT.coverKeep = q.get('coverkeep') !== '0';   // a man told to cover keeps his angle: an enemy off the way he was given whom a mate is already shooting at is not his (src/game/roomfight.ts)
   PAIR.steady = q.get('pairsteady') !== '0';   // a partner on his way to a man's back does not turn about: never back to a corner he has passed, and a short wait on a watched way does not square him to the man (game/pairorders.ts takeTick): ?pairsteady=0 = as it was
   COVER.rearRead = q.get('rearread') !== '0';   // a rear man on a mark with no door (a wall charge's stand-off, the mate covering a man at work) watches what the ground round him offers — a way in, a long run of floor — not the spot he stood on when the order came (game/cover.ts readRear over roomfit.ts watchablesAt): ON in the page; ?rearread=0 = 'the way he came', as it was
@@ -391,6 +392,7 @@ export function pageSwitches(q: URLSearchParams): void {
   CMDRING.planWaits = CMDRING.plan && q.get('planwaits') !== '0';   // …the word's waits are the plan's own: a left click on a stop steps them on, and the word frees only the chains stood waiting (`?planwaits=0` = the build's own pauses and the early press)
   CMDRING.planKnee = CMDRING.plan && CMDRING.planRts && q.get('planknee') !== '0';   // …he takes a knee at the radio while the mode is up, and the view eases back to him when it comes down (`?planknee=0` = he stands, the view's point jumps)
   CMDRING.planOne = CMDRING.plan && q.get('planone') !== '0';   // …one word that frees two or more doors of a plan puts their entries on one signal: the doors open together and two cans wait each other's burst (`?planone=0` = each chain's entry on its own clock, as it was)
+  CMDRING.planNear = CMDRING.plan && CMDRING.planRts && q.get('plannear') !== '0';   // …the view of plan mode stays within a few metres of Sam, a room's worth and not the level's (`?plannear=0` = the reach as it was: 25 m past him and every teammate)
   CMDRING.only = CMDRING.on && q.get('qonly') !== '0';   // the squad's only keys are the command key and the word's: the ring carries every order (a row off a letter on a spare wedge, 'more' where a page has more rows than wedges), the letters are nobody's while it is up, the middle button opens nothing (`?qonly=0` = the wedges and the letters as they were; host/keymap.ts takes the orders key and the who key off the board with it)
   AUTOPILOT.on = !q.has('noautopilot');   // B is the squad's autopilot (game/autopilot.ts): on a door the men wait on they go in by the entry they pick, and the plan of a B order is drawn a little longer before it fades. ON in the page, ?noautopilot = B is the target's first row, as it was; off on the frozen stand (TPS_AUTOPILOT=1 raises it)
   SQUADTHROW.on = !q.has('nosquadthrow');   // teammates throw a frag or a stun canister where he points (game/squadthrow.ts): X on a spot of floor, G, then 1 or 2. ON in the page, ?nosquadthrow = no such row; off on the frozen stand (TPS_SQUADTHROW=1)
@@ -629,6 +631,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'ORDERS.walkTries': 'TPS_WALKTRIES=1',
   'ORDERS.roundCap': 'TPS_ROUNDCAP=1',
   'ORDERS.sameWay': 'TPS_SAMEWAY=1',
+  'ORDERS.trailDoors': 'TPS_TRAILDOORS=1',
   'PAIR.steady': 'TPS_PAIRSTEADY=1',
   'ROOMFIGHT.coverKeep': 'TPS_COVERKEEP=1',
   'COVER.rearRead': 'TPS_REARREAD=1',
@@ -656,6 +659,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'CMDRING.planWaits': 'TPS_PLANWAITS=1 (needs TPS_QPLAN=1)',
   'CMDRING.planKnee': 'TPS_PLANKNEE=1 (needs TPS_QPLAN=1)',
   'CMDRING.planOne': 'TPS_PLANONE=1 (needs TPS_QPLAN=1)',
+  'CMDRING.planNear': 'TPS_PLANNEAR=1 (needs TPS_QPLAN=1)',
   'CMDRING.only': 'TPS_QONLY=1 (needs TPS_QRING=1)',
   'DOORTOOLS.bangInto': 'TPS_BANGINTO=1',
   'SEENWALK.on': 'TPS_SEENWALK=1',
@@ -734,6 +738,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'WORDS.on': 'TPS_WORDS=1',
   'WORDS.doors': 'TPS_DOORNAMES=1',
   'WORDS.radioHome': 'TPS_RADIOHOME=1',
+  'WORDS.guide': 'TPS_GUIDEWORDS=1',
   'UNSEEN.on': 'TPS_UNSEEN=1',
   'HOLDFIRE.on': 'TPS_HOLDFIRE=1',
   'SILENT.stackSet': 'TPS_SILENTSET=1',

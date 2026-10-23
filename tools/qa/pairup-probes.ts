@@ -267,7 +267,7 @@ export const pairupCaughtJob = guarded(async () => {
   const stage = async (give = true) => { const R = await rig({ up: true }); const T1 = R.tango(1), T2 = R.tango(2); R.only(T1, T2);
     R.pin(T1, { at: AISLE_MID, yaw: EAST }); R.pin(T2, { at: [20, 0, 11], yaw: EAST });   // (the third man: in the corridor, a wall between him and the aisle)
     R.game.teleportPlayer([11, 0, 18.5]); R.put(R.mate, AISLE_W, EAST); R.step(10); if (give) R.O.give('pairMark', R.foe(T1), 'all'); return { R, T1, T2 }; };
-  const ownLines = /onto us|seen me|going loud|he's watched|^\[[^\]]+\] he's down/;
+  const ownLines = /onto us|seen me|going loud|he's watched|watching him|^\[[^\]]+\] he's down/;
   { const { R, T1, T2 } = await stage(); const m = R.mate; R.step(120);
     const J = R.P.jobOf(m), d0 = flat(m.char.pos, T1.char.pos), c0 = PUM.PAIRUP_STATS.caughtOff, n0 = mine(R).length, f0 = R.frames;
     const staged = !!J && !J.set && !J.go && !J.going;
@@ -290,7 +290,7 @@ export const pairupCaughtJob = guarded(async () => {
   { const { R, T1, T2 } = await stage(false); const m = R.mate, t = R.foe(T1), valid = (id: string) => R.O.defs.find((d: any) => d.id === id)?.valid?.(R.O, t);
     const v0 = valid('pairMark'); R.pin(T2, { at: [20, 0, 11], yaw: EAST, state: 'alert', aw: 1, eyesOn: 'sam' }); const caught = R.until(() => SPM.spottedMode(R.game, m) === 'caught', 1);
     const v1 = valid('pairMark'), v2 = valid('pairTake'), e1 = R.O.give('pairMark', t, 'all'), e2 = R.O.give('pairTake', t, 'all'); R.step(5);
-    verdict(v0 === true && caught && v1 === "they're onto us. no hands." && v2 === v1 && e1 !== null && e2 !== null && !R.P.jobOf(m) && T1.state !== 'dead', 'caught before the order: a take is refused at the menu, in words',
+    verdict(v0 === true && caught && /^they're onto us\. (no hands|can't grab him)\.$/.test(String(v1)) && v2 === v1 && e1 !== null && e2 !== null && !R.P.jobOf(m) && T1.state !== 'dead', 'caught before the order: a take is refused at the menu, in words',
       `calm: ${v0 === true ? 'valid' : v0} · caught: on your mark '${v1}', now '${v2}' · given anyway: ${e1} / ${e2} · a job ${!!R.P.jobOf(m)}`); }
   return done();
 });

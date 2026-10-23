@@ -209,7 +209,7 @@ export async function standoffFlank() {
     if (!two) {
       const T = tracks.get(A)!;
       if (T.firstLineT < 0 || T.firstLineT - T.enterT > 9) fails.push(`Kowalski's flank line opened ${T.firstLineT < 0 ? 'never' : f2(T.firstLineT - T.enterT) + ' s after entering'} (want within ~8 s)`);
-      if (discipline) { if (T.lineFrames * DT < 3) fails.push(`Kowalski held a clean line for only ${f1(T.lineFrames * DT)} s of 16 (want ≥ 3 s planted on it)`); if (!lines.some(l => l.who === A.callsign && !l.radio && l.t > t0 && /have him|got a line|there you are/.test(l.text))) fails.push('no \'I have him\' from Kowalski with the line his'); }
+      if (discipline) { if (T.lineFrames * DT < 3) fails.push(`Kowalski held a clean line for only ${f1(T.lineFrames * DT)} s of 16 (want ≥ 3 s planted on it)`); if (!lines.some(l => l.who === A.callsign && !l.radio && l.t > t0 && /have him|got him|got a line|there you are/.test(l.text))) fails.push('no \'I have him\' from Kowalski with the line his'); }
       else if (!T.shots.length) fails.push('Kowalski never fired from the flank (discipline off: the old rule should)');
       if ((A.standoff?.orbitM ?? 0) < 2 && T.firstLineT < 0) fails.push(`he walked only ${f2(A.standoff?.orbitM ?? 0)} m`);
     } else {

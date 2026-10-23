@@ -103,7 +103,7 @@ export async function guardKey() {
     const clack = log.filter(c => c.name === 'lockPick' && Math.abs(c.t - landT) < DT + 1e-6);
     if (clack.length !== 1) fails.push(`lockPick ×${clack.length} on the frame the key was taken (want 1 — the clip off his belt)`);
     else { const c = clack[0]; const d = c.pos ? Math.hypot(c.pos[0] - A.char.pos[0], c.pos[2] - A.char.pos[2]) : 99; if (d > 0.5 || !c.pos || c.pos[1] < 0.8 || c.pos[1] > 1.2 || !((c.opts?.rate as number) > 1.3)) fails.push(`the clack at ${c.pos ? posS(c.pos as Vec3) + ' y ' + f2(c.pos[1]) : 'nowhere'} rate ${c.opts?.rate} (want on him at hip height, pitched up)`); }
-    if (!msgs.some(m => m.t === landT && /^took Kowalski's key/.test(m.text))) fails.push(`no 'took Kowalski's key…' log line that frame (log: ${msgs.slice(-4).map(m => m.text).join(' | ')})`);
+    if (!msgs.some(m => m.t === landT && /^you took Kowalski's key/.test(m.text))) fails.push(`no 'took Kowalski's key…' log line that frame (log: ${msgs.slice(-4).map(m => m.text).join(' | ')})`);
     if (game.mission.stats.keys !== 1) fails.push(`stats.keys ${game.mission.stats.keys} (want 1)`);
     const line = remark ? D.SAM_LINES.find((l: any) => l.id === remark.id) : null;
     if (remarkT < 0) fails.push("Sam's word on the key never went up");
@@ -206,7 +206,7 @@ export async function guardKey() {
     if (pushedAt < 0 || throughAt < 0) fails.push(`walking into it: unlatched at ${pushedAt >= 0 ? f2(pushedAt) : 'never'}, through at ${throughAt >= 0 ? f2(throughAt) : 'never'} (Sam at ${posS(game.player.char.pos)}) — the leaf walled him`);
     if (game.player.kick || game.player.picking) fails.push('walking into it started a kick / pick');
     notes.push(`walk-in → unlatched +${pushedAt >= 0 ? f2(pushedAt) : '—'} s, through +${throughAt >= 0 ? f2(throughAt) : '—'} s`);
-    if (msgs.some((m: any) => m.t >= tTap && /kicked it in|picking the lock|locked — pick it/.test(m.text))) fails.push(`a lock line reached the log with the key in his pocket: ${msgs.filter((m: any) => m.t >= tTap).map((m: any) => m.text).join(' | ')}`);
+    if (msgs.some((m: any) => m.t >= tTap && /kicked it in|picking the lock|locked\. pick it/.test(m.text))) fails.push(`a lock line reached the log with the key in his pocket: ${msgs.filter((m: any) => m.t >= tTap).map((m: any) => m.text).join(' | ')}`);
     verdict(fails.length === 0, '(b) keyed: the server door offers unlock + ease; a tap (unlock highlighted) = the key\'s clack + the creak and it swings (lock still thrown, nothing loud, no pick / kick), through, and it latches locked behind him (the closer — or, where doors stay where they are left, his own hand pulling it to); the ease row on the storage door takes it round in silence; walked into, the leaf gives',
       notes.join(' · '), fails);
   }
@@ -273,7 +273,7 @@ export async function guardKey() {
       let remark = false; for (let i = 0; i < 60 * 9; i++) { S.W.step(DT); const sb = game.player.bubble; if (sb && Math.abs(sb.t - game.time) < 1e-9 && D.SAM_LINES.find((l: any) => l.id === D.samMemoryOf(game).last)?.s === 'key') remark = true; }
       const clacks = log.filter(c => c.name === 'lockPick').length;
       if (gave !== 'door') fails.push(`staging: Kowalski gave ${gave}`);
-      if (clacks || remark || game.mission.stats.keys !== statsBefore || msgs.some(m => /^took /.test(m.text)) || A.keys.size || game.player.keys.size !== 1) fails.push(`a key Sam already had: clacks ${clacks}, remark ${remark}, tally ${game.mission.stats.keys - statsBefore}, log ${msgs.filter(m => /^took /.test(m.text)).length}, belt [${[...A.keys].join(',')}], pocket [${[...game.player.keys].join(',')}] (want nothing to happen but the belt emptying)`);
+      if (clacks || remark || game.mission.stats.keys !== statsBefore || msgs.some(m => /^you took /.test(m.text)) || A.keys.size || game.player.keys.size !== 1) fails.push(`a key Sam already had: clacks ${clacks}, remark ${remark}, tally ${game.mission.stats.keys - statsBefore}, log ${msgs.filter(m => /^took /.test(m.text)).length}, belt [${[...A.keys].join(',')}], pocket [${[...game.player.keys].join(',')}] (want nothing to happen but the belt emptying)`);
       notes.push(`second holder → clacks ${clacks} remark ${remark} belt [${[...A.keys].join(',')}]`);
     }
     // the cubicle man: no keyed door on his beat — six exchanges, never the door, never a key

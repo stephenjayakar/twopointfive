@@ -153,6 +153,22 @@ export const CMDRING = {
    *  it was built — the stack that needs no can, or forms sooner, is inside before the other's can lands. Off here; the page raises it with the
    *  mode (`?planone=0` off) */
   planOne: false,
+  /** PLAN MODE REACHES ONE ROOM, NOT THE LEVEL (the maintainer, 10-23: "balancing plan mode: it's too easy to just play this like an RTS. we should
+   *  instead make it so you can only move a bounded amount from the player. like maybe the player has to roughly be on screen but can be in a corner.
+   *  the mental model is that it should be good for clearing one room but not the whole level"): with the mode up the view's point stays where SAM
+   *  IS STILL ON THE SCREEN — a box round him in the camera's own basis (below), whichever way the men have gone — in place of `planPanReachM`
+   *  outside the box he and the men stand in, which walked the view down the level behind them. At an edge the view stops going out and slides
+   *  along it; in a corner of the box he is in a corner of the screen. A view found outside the box (a file from before, a frame's lock let go) is
+   *  walked in at twice the pan's speed, not jumped. He is parked while the mode is up, so to plan further on he puts it down and walks. NOT
+   *  where a tutorial frame has taken his feet (rails `move` locked: he cannot walk nearer, so the frame's view is the old one). false: the reach as
+   *  it was built. Off here; the page raises it with the mode (`?plannear=0` off) */
+  planNear: false,
+  /** … that box, metres from him to the view's point AT THE CAMERA'S OWN DISTANCE (21): to either side · with the view pushed away from the camera
+   *  (he is then at the bottom of the screen) · with it pulled toward the camera (he is at the top). Zoomed IN the box shrinks with the camera's
+   *  distance, so he stays on the screen; zoomed out it does not grow (a room's worth is metres, not a screen's). At the camera's tilt the ground on a
+   *  16:10 screen runs 8.4 m to either side of its middle (7.4 along its bottom edge), 5.5 m toward the camera and 7.8 m away: these leave his body
+   *  on it. What is drawn from an edge then runs to about 15 m from him */
+  planNearSideM: 6.5, planNearAwayM: 4.5, planNearBackM: 6,
   /** … how long the view's point takes to come back to him (s) */
   planBackSecs: 0.7,
   /** THE SQUAD'S ONLY KEYS (the maintainer, 10-22: "squad is now just q and f. everything is through the radial menu (which is 1-5? is that

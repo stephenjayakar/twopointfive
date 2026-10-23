@@ -159,11 +159,11 @@ export async function ownchargeDoor(): Promise<boolean> {
       'while his hands are on it a plain save waits; a step breaks it off with nothing spent', `started ${started} · save: ${busy} · running verb ${verb} · the row: ${running} · after the step: charging ${!!g.player.charging}, count ${D.charges}, set ${D.set.length} · said: ${R.said.slice(-2).join(' / ')}`);
     // set, to the end
     const secs = setByHand(R, d, side), c = D.set[0]; R.step(3); const line = doorRows(g).map((r: any) => r.line1).join(' | ');
-    F.verdict(Math.abs(secs - DOORTOOLS.setSecs) < 0.25 && D.charges === 1 && D.set.length === 1 && c?.door === d && c.by === 'Sam' && c.side === side && /charge set · F blows it/.test(line) && !doorRows(g).some((r: any) => r.verb === 'charge'),
+    F.verdict(Math.abs(secs - DOORTOOLS.setSecs) < 0.25 && D.charges === 1 && D.set.length === 1 && c?.door === d && c.by === 'Sam' && c.side === side && /charge set · press F to blow it/.test(line) && !doorRows(g).some((r: any) => r.verb === 'charge'),
       'held to the end it is on the door after the squad\'s own setSecs, one spent, and the door\'s lines say F blows it', `${f2(secs)} s (setSecs ${DOORTOOLS.setSecs}) · count ${D.charges} · set ${D.set.length} by ${c?.by} · rows: ${line}`);
     // the door comes open: the charge is off it, back in the count
     d.latched = false; d.angle = (d.swing || 1) * 1.2; R.step(2);
-    F.verdict(D.set.length === 0 && D.charges === 2 && R.said.some((t: string) => /came open — the charge is off it/.test(t)), 'the door comes open under it: the charge is off the door and back in the count', `set ${D.set.length} · count ${D.charges} · said: ${R.said.slice(-1)[0]}`);
+    F.verdict(D.set.length === 0 && D.charges === 2 && R.said.some((t: string) => /came open, so the charge came off/.test(t)), 'the door comes open under it: the charge is off the door and back in the count', `set ${D.set.length} · count ${D.charges} · said: ${R.said.slice(-1)[0]}`);
     // F, on another door (a locked one: the row is one more row there)
     const m = R.door('manager'); shut(m); g.player.crouch = true; OWNCHARGE.on = false; const ms: 1 | -1 = standAt(R, m, 1).some((r: any) => r.verb === 'pick') ? 1 : -1; const lockRows0 = standAt(R, m, ms).map((r: any) => r.verb); raise(); const lockRows = standAt(R, m, ms).map((r: any) => r.verb); g.player.crouch = false;
     F.verdict(m.locked && lockRows0.includes('pick') && lockRows0.length === 3 && lockRows.includes('charge') && lockRows0.every((v: string) => lockRows.includes(v)) && lockRows.length === lockRows0.length + 1,
