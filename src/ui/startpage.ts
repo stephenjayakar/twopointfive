@@ -98,6 +98,7 @@ const CSS = `
 #missions.one .mfact { display: flex; align-items: baseline; gap: 8px; padding: 0; border: 0; border-radius: 0; background: none; }
 #missions.one .mfact i { font: 600 11px/1 var(--m-head); letter-spacing: 0.18em; color: var(--m-dim); }
 #missions.one .mfact b { margin: 0; font: 600 11px/1 var(--m-head); letter-spacing: 0.18em; text-transform: uppercase; color: var(--m-text); }
+#missions.one:not(.pane-loadout) .mfacts.nodef { display: none; }   /* (the Defenders cell was this step's only one: with the count a mystery — ui/missions.ts MYSTERY — the row is not drawn) */
 #missions.one .mfact[data-fact="level"], #missions.one .mfact[data-fact="team"], #missions.one .mfact[data-fact="approach"] { display: none; }   /* (the name over it says where, the rail's Team row says who, the list's own tag says how) */
 /* the plan: a map sheet. Crop ticks at its corners, the place's own line and a scale at its foot (the canvas draws the grid and the scale) */
 #missions.one .mmap { --tick: rgba(var(--m-edge),0.34); position: relative; margin: 14px 0 0; padding: 0;
