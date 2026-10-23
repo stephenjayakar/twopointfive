@@ -171,6 +171,23 @@ export const CMDRING = {
   planNearSideM: 6.5, planNearAwayM: 4.5, planNearBackM: 6,
   /** … how long the view's point takes to come back to him (s) */
   planBackSecs: 0.7,
+  /** THE TREE IS TWO RINGS DEEP (the maintainer, 10-23, at a wall with three rings between him and one greyed row: "radial menu tree needs some
+   *  work, way too nested"; "loud and quiet should be an option on squad wheel"). With `only`: the ring is not the menu's pages any more — it holds
+   *  every order of the thing it was opened on (orders.ts flatRows: the first page's rows and the rows of every page behind it), seated by flatSeats:
+   *  wedge 1 what a tap gives there, wedges 2 to 4 the same orders on every thing of that kind (FLAT_TOP), wedge 5 'more', ONE ring of the rest — or,
+   *  with the rest fitting the wedges left, no 'more' at all (a ring never has one row: that row is on a wedge of the first). A row for kit the squad
+   *  never carried, or for a tool this door never takes, is not offered (OrderDef.gone); one that is off only for now stays, greyed. The squad's
+   *  posture row (go silent / go loud) closes every second ring, and is on the first where the ring is the squad's own (fall in stays on wedge 3 and
+   *  hold position on 4 there, as fingers have them; a row that says what wedge 1 says has no wedge of its own, and its digit is wedge 1's:
+   *  orders.ts seats `same`). Not on a tutorial mission (rails live: its lines name the digits of the tree as it was, "[X], then press [3]"; the tutorial's own
+   *  to move). false: the menu's pages, as built. Off here and on the frozen
+   *  stand (`TPS_RINGFLAT=1` beside `TPS_QRING=1 TPS_QONLY=1`); the page raises it with `only` (`?ringflat=0` off) */
+  flat: false,
+  /** NO GLYPH AT THE CURSOR (the maintainer, 10-23: "let's remove the icons on mouse position from squad orders entirely"): the mark of what the
+   *  key orders on is the thing's own outline on the floor and nothing else — no glyph beside the cursor, none in the ring's middle (orders.ts
+   *  hintView `glyph`; a picture only). false: the glyph, as built. Off here and on the frozen stand (`TPS_PLAINHINT=1`); the page raises it
+   *  (`?plainhint=0` off) */
+  plainHint: false,
   /** THE SQUAD'S ONLY KEYS (the maintainer, 10-22: "squad is now just q and f. everything is through the radial menu (which is 1-5? is that
    *  sufficient) so we don't need all the other keys"): the ring carries EVERY order of the menu it is — a row the menu had on a letter of its own
    *  (throw there on G, frag and clear on G, the big slot's tool on H, a look under the door on V) takes a spare wedge of its page, and where a page has
@@ -268,6 +285,39 @@ export function ringSeats(rows: readonly SeatRow[], place: boolean, wordKey: str
   if (row[more] >= 0) { over.unshift(row[more]); row[more] = -1; }
   for (const d of spare) row[d] = over.shift()!;
   return { row, more, over: over.slice(0, W) };
+}
+
+/** a row as the flat tree reads it (orders.ts OrderDef) */
+export interface FlatRow extends SeatRow { id: string }
+/** (CMDRING.flat) THE FIRST RING'S OWN ORDERS, by the kind of thing it was opened on: each on the same wedge on every thing of that kind — 'fall in'
+ *  is 3 and 'hold position' 4 wherever the ring has them, as the menu's digits always had them (a row the level leaves out leaves its wedge empty for
+ *  the rest) */
+export const FLAT_TOP: Readonly<Record<string, Readonly<Record<string, number>>>> = { floor: { cover: 2, fallIn: 3, hold: 4 }, door: { cover: 2, openClear: 3, bangClear: 4 }, none: { fallIn: 3, hold: 4 }, foe: {} };
+/** … and the orders a kind's ring does not carry: they are not about the thing (on a door 'fall in' and 'hold position' gave their wedges to the two
+ *  entries; they are on every ring that is not a door's) */
+export const FLAT_LEFT: Readonly<Record<string, readonly string[]>> = { door: ['fallIn', 'hold'] };
+/** WHICH ROW IS ON WHICH WEDGE OF THE FLAT TREE (CMDRING.flat; the shape ringSeats gives). `rows`: every order of the thing, no row that opens a
+ *  page among them · `lead`: the row a tap gives (wedge 1; -1 none — and on its own wedge too where FLAT_TOP names it: on the squad's own ring 3 is
+ *  still 'fall in'). FLAT_TOP's rows on their wedges. The rest: where they fit the wedges left, on them — the squad's posture rows (free, the
+ *  squad's own menu's) from the last wedge back, so 'go silent' is 5 where the ring has room; else the wedges short of the last take the first of
+ *  them and the last is 'more', ONE ring of what remains from wedge 1, the posture row its last. A 'more' never has one row (that row is on the
+ *  last wedge itself), and with more left than a ring holds the posture row gives up its place first (it is on the squad's own ring), then the last
+ *  tools. The word's own rows are left out (`wordKey`: its key gives them) */
+export function flatSeats(rows: readonly FlatRow[], kind: string, wordKey: string, lead: number): { row: number[]; more: number; over: number[] } {
+  const W = CMDRING.wedges, row = new Array<number>(W + 1).fill(-1), top = FLAT_TOP[kind] ?? {}, left = FLAT_LEFT[kind] ?? [], rest: number[] = [], last: number[] = [];
+  if (lead >= 0) row[1] = lead;
+  rows.forEach((r, i) => {
+    if (r.opens || r.hotKey === wordKey || left.includes(r.id)) return;
+    const k = top[r.id] ?? 0; if (k >= 2 && k <= W && row[k] < 0) { row[k] = i; return; }
+    if (i === lead) return;
+    (r.free && !r.hotKey && (r.listed ?? r.targets).includes('none') ? last : rest).push(i);   // (the squad's own: its posture — as ringSeats tells them)
+  });
+  const spare: number[] = []; for (let d = 2; d <= W; d++) if (row[d] < 0) spare.push(d);
+  if (rest.length + last.length <= spare.length) { rest.forEach((i, n) => { row[spare[n]] = i; }); last.forEach((i, n) => { row[spare[spare.length - last.length + n]] = i; }); return { row, more: 0, over: [] }; }
+  for (const d of spare) if (d < W && rest.length) row[d] = rest.shift()!;   // (wedges a level's own list left empty: the first of the rest)
+  const over = rest.length + last.length > W ? rest.slice(0, W) : [...rest, ...last];
+  if (over.length === 1) { row[W] = over[0]; return { row, more: 0, over: [] }; }
+  return { row, more: over.length ? W : 0, over };
 }
 
 /** how long the key is kept down before its ring goes up (s): `stayHoldSecs` for a ring that stays, `holdSecs` for one that goes with its key */
