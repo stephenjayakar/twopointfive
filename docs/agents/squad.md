@@ -326,9 +326,16 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   man, so its line began "from the corner nearest him" of its first six: on a way that doubles back that skipped the corners between and the line cut
   the wall. Now from the end of the leg he is nearest on, looked for over the way's first two metres (`Leg.from` is where it was asked), the same way
   `attention.ts attentionWay` draws a guard's thread. Checked by `probes.ts plan` on both stands; the doubling-back case itself has no line of its own
-  here (the attention thread's check plays it for its copy). STILL OPEN: `floorplan.legs` is a side table of the game and its search runs on the
-  grid's own tables, so a game drawn and one not drawn differ in the full state hash (`NavGrid.findPathAside` and a store on the picture's side are
-  the mend, not taken yet). Never seen on a GPU.
+  here (the attention thread's check plays it for its copy). THE KEPT LEGS ARE THE ASKER'S (2026-10-23): `floorplan.legs` was a side table of the game and its search ran on the
+  grid's own tables, so a game drawn and one not drawn differed in the full state hash. Now `floorPlan(g, kept)` takes the asker's own store
+  (`PlanKept`: the overlay's in `ui/planfloor.ts`, a check's own from `planKept()`; with none, nothing is kept past the one ask) and searches with
+  `NavGrid.findPathAside` on that store's tables; the module keeps nothing. `probes.ts plan` line 9 asks every frame, once as he walks and once with
+  his own path set aside so the grid is asked, and holds the run's digest AND its whole state (`stateHash`) equal to the run never asked: red on the
+  code before ("whole state DIFFERS") and with `PLANKEPT_BREAK=1` (the search put back on the grid's own tables), green on both stands. A kept leg is
+  used again only when asked from within 2.5 m of where it was asked (the store is outside the rollback snapshot: a restore leaves it an answer from
+  the other time line). STILL OPEN, not this module's: with the THROW PAGE up `floorPlan` reads `squadthrow.ts squadThrowPlans`, whose `view`
+  question keeps its answer in that module's own table and searches on the game's, so a game drawn and one not drawn still differ in the whole
+  state there (digest equal); line 9 does not play the throw page. Never seen on a GPU.
 - **One word is one signal** (`CMDRING.planOne`: ON in the page with the mode, `?planone=0`; off in the module and on the frozen stand,
   `TPS_PLANONE=1` beside `TPS_QPLAN=1`; the journal carries it, a recording without the key replays with it off; debugger: 'Tab ▸ plan mode ▸ one word,
   one signal'). The maintainer, 10-22, of a plan with a pair on each of a room's two doors: "simultaneous breach on mission 2 didn't really work. and
@@ -787,7 +794,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **The squad's plan is drawn on the floor** (`src/game/floorplan.ts` = WHAT, `src/ui/planfloor.ts` = the drawing, index.html `.plan …` = the look; `PLAN.on` ON on every stand — it is picture only —
   `?noplan` = nothing drawn; Tab ▸ Squad ▸ Order menu & keys ▸ 'plan drawn on the floor' + three part rows, this visit only; page rebuild/plan-on-floor/read-first.md).
   `floorPlan(g)` ONLY READS: the squad's assignments as they stand (`orders.of(gd)`), each man's own nav path (`gd.path` from `gd.pathI` where `gd.pathGoal` is this order's and the path runs
-  to it, else the nav grid's answer kept ≤ `reaskSecs` in a WeakMap — the file's one piece of state, in no checkpoint; no way on the floor = nothing drawn, never a line through a wall), the
+  to it, else the nav grid's answer kept ≤ `reaskSecs` in the ASKER'S own store (`PlanKept`, since 2026-10-23: the module keeps nothing; see 'An order's line starts on the leg he is on'); no way on the floor = nothing drawn, never a line through a wall), the
   open menu's men, and the books of whatever waits on the key. Per living teammate WITH A MARK (`Assignment.post`, or the order's own `goal` a step off it with no `via`: the unasked cover's
   step; a follower has none and is not drawn): walking = the dotted WAY feet → corners (`via`) → mark, a dashed ring at the mark with his two-character tag IN it (`planTag`: 'R1'), the fan
   he WILL watch; standing (his feet within 0.45 m of the mark — not `A.arrived`, which also wants his gun round) = the ring filled, the tag UNDER it, the fan along his gun AS IT POINTS
