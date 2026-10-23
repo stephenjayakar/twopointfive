@@ -204,7 +204,8 @@ const FIREFLY_K = 4;   // the bound every preset but ultra runs the gather with 
 export const PRESETS: Record<QualityName, Preset> = {
   // the cascade probe volume is only a radiance CACHE now (read at the final gather's hit points, one bounce from the
   // eye), so it can be coarse: 1 m probes look the same as 0.5 m ones through the gather and cost a third.
-  // rbIters = red/black pairs of the smoke pressure solve (4 pairs ≈ the old 20 Jacobi sweeps, better converged)
+  // rbIters = red/black pairs of the smoke pressure solve (4 pairs ≈ the old 20 Jacobi sweeps, better converged) — the rows run only under ?onesolve=0: the page
+  // solves with high's at every preset (ONE SMOKE SOLVE below; smoke.ts's own default is the same 4 for a host with no Quality)
   // trade-offs folded in after a side-by-side eyeball with all five on (08-07): ultra stays the untouched reference; high takes the three measured invisible at
   // rest (third-res gather −3.4 ms, checkerboard rays −0.9, dim-pixel rays) and keeps half-res beams + full-rate cascades; medium and low take all five.
   // low and verylow raise the near-black threshold to 0.02 (≈ 4 % of display white after AgX instead of 2 %): more of a dark floor's pixels take the one-ray path.
@@ -231,6 +232,14 @@ export const PRESETS: Record<QualityName, Preset> = {
   low:     { restir: { rays: 3, spatial: 2, history: 20, held: 3, motionMin: 0.5, motionTaps: 6 }, rt: RT_OFF, p5: P5_OFF, dn: { shIters: 2, shCap: 8, giIters: 3, giCap: 12, spIters: 1 }, iq: IQ_C3J, scale: 0.6,  taau: { phases: 16, clipGamma: 1.2,  sharpen: 0.5 }, maxH: 720,  volSteps: 10, rc: { nx: 40, ny: 4, nz: 28 }, rcCoarse: { nx: 32, ny: 3, nz: 22 }, cascades: 4, rbIters: 3, ds: [4, 2, 2], hist: 0.5, mesh: false, cards: false, lossy: { checkerDirect: true, gatherThird: true, rcHalfRate: false, volQuarter: true,  dimRays: true, dimBelow: 0.02, fireflyK: FIREFLY_K, rcPeriods: [1, 2, 3, 6] }, caps: { volK: 2, volEvery: 2, volStep: 2.0, births: 192, debris: 32, rain: 1500, marchLights: 0, vol: 'froxel' }, froxel: { h: 80, d: 32, k: 2, hist: 0.93, topRays: 1 } },
   verylow: { restir: { rays: 2, spatial: 1, history: 20, held: 2, motionMin: 1.0, motionTaps: 6 }, rt: RT_OFF, p5: P5_OFF, dn: { shIters: 2, shCap: 8, giIters: 2, giCap: 8, spIters: 1 }, iq: IQ_C3J, scale: 0.5,  taau: { phases: 16, clipGamma: 1.25, sharpen: 0.5 }, maxH: 600,  volSteps: 8,  rc: { nx: 40, ny: 4, nz: 28 }, rcCoarse: { nx: 32, ny: 3, nz: 22 }, smokeOwn: true, cascades: 4, rbIters: 3, ds: [1, 1, 2], hist: 0.7, mesh: false, cards: false, lossy: { checkerDirect: true, gatherThird: true, rcHalfRate: false, volQuarter: true,  dimRays: true, dimBelow: 0.02, fireflyK: FIREFLY_K, rcPeriods: [1, 2, 4, 8] }, caps: { volK: 2, volEvery: 2, volStep: 2.0, births: 128, debris: 32, rain: 800, marchLights: 0, vol: 'froxel' }, froxel: { h: 64, d: 24, k: 2, hist: 0.93, topRays: 1 } },
 };
+/** ONE SMOKE SOLVE (settings.oneSmokeSolve, default on, `?onesolve=0`; off = each preset's own `rbIters`, as it was: ultra 5, high 4, the rest 3). A sight line through smoke
+ *  (a defender's eye to the player, the room fight's pairs, a camera's: game/sensors.ts → render/shaders/probe.wgsl kind 1) is the optical depth of the SOLVER's density along the
+ *  line. The red/black pairs of the pressure solve decide how well the velocity field is projected each step, so how a plume rolls and spreads: with the pairs a preset row, the
+ *  cloud that hides a man had a different shape at medium than at high, and the auto ladder changed it under a fight each time it stepped. A game rule that read the graphics
+ *  setting, as the light meter's cache grid was (ONE CACHE GRID below). One count for every preset, high's: the cloud drawn at ultra is no longer finer than the one sight reads
+ *  at medium. Price: one pair more (two dispatches over the live bricks) a solver step on medium, low and verylow, one fewer on ultra — the cost model does not price the solver
+ *  (it lands in the measured fixed part) and nobody has timed it. How far a plume's shape moved between 3, 4 and 5 pairs was never measured either. */
+export function rbItersOf(p: Preset, one: boolean): number { return one ? PRESETS.high.rbIters : p.rbIters; }
 /** ONE CACHE GRID (settings.oneCacheGrid, default on, `?onegrid=0`; off = low and verylow on their `rcCoarse`, as it was). The light meter the guards and teammates see by is the
  *  shadowed direct light PLUS the cache's dice (render/shaders/probe.wgsl), read trilinearly at the asked point — so the probe lattice is part of the reading. On the coarser lattice
  *  (1.25 m cells, three layers up the wall against 1 m and four) the same tight shadow read two to three times darker on low and verylow than on medium and up (a night yard's low
@@ -245,7 +254,7 @@ export const rcGridOf = (p: Preset, one: boolean) => one || !p.rcCoarse ? p.rc :
  *  light the march with fewer lights a step and, on low and verylow, a longer step that combs a plume's shadow edges. 1 = on medium and low the SMOKE's rows are the better of
  *  its own and high's — the march at half size, high's lights a step (`caps.volK`, `caps.marchLights`), its shadow refresh and step length — on the preset's own path (the
  *  froxel haze stays: beams are not the smoke); everything else on the rung is still shed, and the ladder's render scale pays the difference. 2 = high's whole volumetric path
- *  too (`caps.vol` 'classic', high's beam steps): the smoke exactly as high draws it, at the preset's pixel count. The solver's iterations (`rbIters`) stay the preset's own.
+ *  too (`caps.vol` 'classic', high's beam steps): the smoke exactly as high draws it, at the preset's pixel count. The solver's iterations (`rbIters`) are not a look row: ONE SMOKE SOLVE above.
  *  A row with `smokeOwn` keeps its smoke at 1 and 2: verylow, the floor — the rung with nothing beneath it to pay, so the smoke is the LAST thing the ladder sheds.
  *  Every reader takes the preset through withSmoke — the rows put on, the live preset and the cost tables — so 0 is the ladder as it was, prices included. */
 export const SMOKE_KEEP_DEFAULT = 1;
@@ -497,6 +506,7 @@ export class Quality {
   }
   /** ONE CACHE GRID as the engine has it (a stub engine without the setting counts as on — the default) */
   private oneGrid(): boolean { return this.engine.settings.oneCacheGrid !== false; }
+  private oneSolve(): boolean { return this.engine.settings.oneSmokeSolve !== false; }
   /** SMOKE KEEP as the engine has it, 0 ‥ 2 (a stub engine without the setting counts as the default) */
   private smokeKeep(): number { return smokeKeepOf(this.engine.settings.smokeKeep); }
   /** The label for menus: 'auto (high)' or the pinned preset. */
@@ -533,7 +543,7 @@ export class Quality {
     S.particleRainCount = K.rain;                                                                          // … the particle rain's drop cap (rainFx.ts; nothing runs while settings.particleRain is off) …
     const cur = this.engine.rc.cfg, grid = rcGridOf(p, this.oneGrid());   // (ONE CACHE GRID: the same lattice under every preset, so the light meter's reading is not the setting's)
     if (cur.nx !== grid.nx || cur.ny !== grid.ny || cur.nz !== grid.nz || cur.cascades !== p.cascades) this.engine.rebuildRc({ ...defaultRcConfig, ...grid, cascades: p.cascades, interval0: cur.interval0 });
-    this.smoke.params.rbIters = p.rbIters;
+    this.smoke.params.rbIters = rbItersOf(p, this.oneSolve());   // (ONE SMOKE SOLVE: the same pressure pairs under every preset, so what smoke hides is not the setting's)
     this.climbed = []; this.roomy = 0; this.sinceClimb = 0; this.failed.clear(); this.failCount.clear(); this.dipping = 0;   // (the climb's rungs and failures were the previous preset's: this one starts from its own rows)
     if (this.motionCalm) this.applyMotionCalm(true);   // (the opt-in motion-calm rows ride over the preset's own while the switch is on)
     this.lastChange = `preset ${name}`; this.cooldown = 3; this.slow = this.fast = 0;
