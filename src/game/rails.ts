@@ -63,6 +63,11 @@ export const RAILS = { on: false,
    *  ringed in his pair's colour, the men the next order goes to drawn full (planmode.ts planView, drawn by ui/cmdring.ts; needs plan mode on in the page).
    *  Picture only: the mode itself is not up, and nothing of it is taught here. false: no such picture in that seat, as it was */
   skyPlan: true,
+  /** SHIFT WITH THE COMMAND KEY ON THE MOVE: where a step gives him his feet and plan mode but not his sprint, a walk key held is no sprint's — so Shift
+   *  with the command key, pressed, is the mode's there too, and the walk keys are out of that one tick (the Shift that gets through never meets a walk
+   *  key to run with: nor on the tick the mode comes down). false: with a walk key down the pair did nothing at all until he stood still, and the tick
+   *  the mode came down with Shift and a walk key held was a tick at a run, as it was */
+  planWalk: true,
   /** a step's `after`: seconds its line stands in for the step's own once the order it asks for has gone out and its men stand where it sent them (while one
    *  is still walking the line stays) — then the step asks again: the men could not do it, or it was the wrong place, and a line that only ever says 'they
    *  are on it' is a player left waiting. 0: never shown */
@@ -262,7 +267,15 @@ export class Rails {
     //  key held is a sprint's only where his feet are his: on a mission that never gives them it cannot stand between Shift and the key)
     const WALK = ACTS.move.keys!, planOn = A.has('plan') && CMDRING.plan, planUp = planOn && !!g.orders?.plan.up, walking = A.has('move') && WALK.some(k => input.keys.has(k));
     if (planUp) { buttons |= 5; if (CMDRING.planRts) for (const k of WALK) keys.add(k); }   // (the walk keys are the view's only in the mode as an RTS's: without it they are his feet)
-    if (planOn && (planUp || (!walking && (input.pressed.has('KeyB') || input.keys.has('KeyB'))))) { keys.add('ShiftLeft'); keys.add('ShiftRight'); if (shift) keys.add('KeyB'); }
+    // (RAILS.planWalk · …and where his feet are his and his sprint is not, a walk key held is nobody's sprint: the pair PRESSED is the mode's with a walk key
+    //  down too, and the walk keys leave that one tick with it — planmode.ts planShift, under `planRun`, reads a walk key as a run, and a Shift that
+    //  reached his feet would be one. The same tick the other way: the pair or the back key that takes the mode DOWN lets Shift through because the
+    //  mode was up when the tick began, and with a walk key in it he ran for that tick. Only on the press: the key kept down toggles nothing)
+    const cmdKey = input.pressed.has('KeyB') || input.keys.has('KeyB');
+    const toggles = input.pressed.has('KeyB') || (planUp && (input.pressed.has('Escape') || input.pressed.has('Tab')));
+    const halt = RAILS.planWalk && planOn && walking && shift && toggles && !A.has('sprint');
+    if (halt) for (const k of WALK) { input.keys.delete(k); input.pressed.delete(k); }
+    if (planOn && (planUp || ((!walking || halt) && cmdKey))) { keys.add('ShiftLeft'); keys.add('ShiftRight'); if (shift) keys.add('KeyB'); }
     // THE SETUP OF THE GUN IN HIS HANDS, up (slotsetup.ts): a row's digit is the row's there, whatever slot that digit is anywhere else, so it is let through
     // by what the ROW does and never by the slot: the selector with `mode`, the lamp with `light`, the launcher's load with `alt` (the right button fires
     // what that row loads: a lesson that opens the setup before it has taught the launcher keeps the row shut) or with `load`, the row alone, for a lesson that has him swap

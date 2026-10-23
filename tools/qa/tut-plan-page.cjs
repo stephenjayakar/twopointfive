@@ -116,6 +116,8 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
   let pairA = [];
   /** the mode up, if a walk left it down (a hand reads the line that says how, and does it) */
   const modeUp = async () => { if (!(await read()).plan) await mode(); };
+  /** …and the pair pressed by a hand that has not let go of its walk key yet (rails.ts RAILS.planWalk; URL_ADD='&planwalk=0' = the page without that rule, where this does nothing) */
+  const modeWalking = async () => { await page.keyboard.down('KeyS'); await run(8); await page.keyboard.down('ShiftLeft'); await run(2); await page.keyboard.down('KeyQ'); await run(2); await page.keyboard.up('KeyQ'); await run(2); await page.keyboard.up('ShiftLeft'); await page.keyboard.up('KeyS'); await run(4); };
   /** THE WALK TO A MARKED SPOT: Tab puts the mode away (in it the walk keys are the view's), then the walk keys along the game's own path to the spot — which
    *  key is which way is the picture's (the camera's across and up), two keys together for a slant, as a hand does */
   const walkTo = async (s, what) => {
@@ -156,7 +158,9 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
       check(a.orders === b.orders + 1 && a.chains === 1, 'a right click on the real mouse is one order to all four (and no browser menu took it)', `orders ${b.orders} → ${a.orders} (${a.last}) · chains ${a.chains}`);
       await until(x => x.id !== 'send', 40); await run(90); },
     up1: async s => { const r = await read(); check(r.keys.includes('Tab'), "the first walk's line names the key that closes plan mode on a key cap", `"${r.line}" keys [${r.keys}]`); await walkTo(s, 'the spot behind his squad'); },
-    pick: async s => { const d = await read(); await modeUp(); const u = await read();
+    pick: async s => { const d = await read(); await modeWalking(); const w = await read();
+      check(w.plan && w.crouch, 'at the end of the walk, Shift + Q on the real keyboard with a walk key still down puts plan mode up and him on his knee', `mode ${w.plan} · on a knee ${w.crouch}`);
+      await modeUp(); const u = await read();
       check(!d.plan && /plan mode again/.test(d.line) && d.keys.includes('Shift') && u.plan && u.line === s.line, 'after a walk the mode is down on a step done in it, and the line is what puts it up again; up, the step\'s own line is back', `down: "${d.line}" keys [${d.keys}] · up: "${u.line}"`);
       const got = await box(await twoOf([16, 0, 12])); check(got.length === 2, 'a left drag on the real mouse is a box that picks two men', `picked ${got.join(', ') || 'nobody'}`); },
     door1: async s => { await panTo(s.at); await seen(s, 'the door\'s mark'); await rclick(s.at); },
