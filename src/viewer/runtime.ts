@@ -125,6 +125,7 @@ export class Runtime {
     if (!host.input) canvas.addEventListener('mousedown', () => { const ae = document.activeElement; if (ae instanceof HTMLElement && ae.closest('.pnl, #topbar')) ae.blur(); this.input.focusGame(); });   // a field that had focus lets go of the keyboard: a click in the view hands the hotkeys back (Input ignores keys while an input / select has focus)
     this.lastMX = this.input.mouseX; this.lastMY = this.input.mouseY;
     this.gizmo = new RigGizmo(canvas, cam, this.input);
+    { const og = new URLSearchParams(location.search).get('onegrid'); if (og !== null) engine.settings.oneCacheGrid = !(og === '0' || og === 'off' || og === 'false'); }   // ?onegrid=0, as on the game page (main.ts): before the Quality below puts its first preset on
     this.quality = new Quality(engine, this.smoke);
     { const qp = new URLSearchParams(location.search).get('quality'); if (qp && (QUALITY_NAMES as string[]).includes(qp)) { this.quality.auto = false; this.quality.apply(qp as QualityName); } }
     { const q = new URLSearchParams(location.search); if ((meshAuthored(ch.mesh) || q.has('charmats')) && !q.has('nocharmats')) engine.settings.charMats = true; }   // character materials: as on the game page (main.ts) — on for a mesh with slot-named materials, ?charmats dresses the mannequin, ?nocharmats holds the two tints

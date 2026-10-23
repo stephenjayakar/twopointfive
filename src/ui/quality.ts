@@ -38,7 +38,7 @@ export const MOTION_CALM_OFF = { restirSpatialAll: false, restirPenRays: false, 
 export const LADDER = { cutFps: 45, aimFps: 50, restoreFps: 58, starvedFps: 40, cruisingFps: 57, cutGpuFrac: 0.55, hopFits: 0.9, cruiseWindows: 6, cruiseWindowsBlind: 12, hopFailSecs: 30, hopHoldSecs: 60, stepCooldown: 2.0 };   // (cutGpuFrac: a cut / a preset drop only when the GPU's union is at least this share of the aim's 20 ms frame budget (11 ms: the union leaves out the raster passes and any overlap, so a truly GPU-limited frame reads well over it; a paced one with an idle GPU well under) — a page paced to 30 fps by the browser or the display with the GPU idle two thirds of the time is not helped by fewer pixels, and half resolution makes the direct light shimmer: the maintainer's ultra ×0.50 at 8.6 ms, 08-13))
 // (cruising = 'auto may go UP a preset': it used to ask for avg > 62 fps, which a 60 Hz display's rAF can never average — auto ↑ only ever fired on faster panels, and a machine calibrated low
 //  during a loaded boot or stepped down by a transient stayed down all session. Now: the rate at the display's own (≥ cruisingFps 57, under any refresh) AND — when GPU timings exist — the
-//  compute union PRICED AT THE NEXT PRESET by the cost model (COST: medium → high ≈ ×1.5, low → medium / verylow → low ≈ ×2.2 on this window) under hopFits × PLAN_BUDGET_MS, for
+//  compute union PRICED AT THE NEXT PRESET by the cost model (COST: medium → high ≈ ×1.5, low → medium ≈ ×1.9 — ×2.1 on the coarse cache grid — on this window) under hopFits × PLAN_BUDGET_MS, for
 //  cruiseWindows windows; without timings the rate alone for twice as long. A hop that comes straight back down (auto ↓ within hopFailSecs of the ↑) holds that hop off hopHoldSecs,
 //  doubling per repeat — the one memory apply() does not clear.)
 /** THE HEADROOM-AWARE CLIMB (settings.ladderClimb; docs/internal/gi-motion.md §A): frame RATE alone cannot see headroom past the display's refresh — a machine presenting 60 fps with the GPU
@@ -137,7 +137,7 @@ export function displayRateOf(intervals: ArrayLike<number>, tol = 0.03): number 
   return best > 0 && best < Infinity ? snapRate(1000 * (K - 1) / best, tol) : 0;
 }
 const rungKey = (s: ClimbStep) => s.kind === 'scale' ? `scale:${s.to.toFixed(2)}` : s.kind === 'cap' ? `cap:${s.to}` : s.kind;
-const probesOf = (p: Preset) => p.rc.nx * p.rc.ny * p.rc.nz;
+const probesOf = (p: Preset, one = true) => { const g = rcGridOf(p, one); return g.nx * g.ny * g.nz; };   // (rcGridOf: under the table below)
 
 /** the lossy trade-offs a preset switches (engine settings of the same names; engine.render mirrors them into passes.setDivisors / rc.halfRate / the CheckerDirect frame
  *  flag / frame.lossyCfg.z every frame, so writing the booleans IS what the pause-menu rows do) + the near-black threshold dimRays works under + the final gather's
@@ -197,7 +197,7 @@ export const IQ_OFF: IqTier = { sharp: false, decouple: false, gbaa: false, hist
 export const IQ_C3J: IqTier = { sharp: true, decouple: true, gbaa: true, histSharp: 0.5 };
 // (The SDF character rig has no tier: the fitted round cones are every ray's character test at every preset — measured free, −0.3 … +0.5 ms at high, docs/internal/sdf-characters.md §8 —
 // and its two extras, the smooth-union closest hit in reflections and the drawn character shadows, are rows no preset touches: engine settings sdfRigSmooth / charSoftShadow.)
-export interface Preset { restir: RestirTier; rt: RtTier; p5: P5Tier; dn: Dn; iq: IqTier /* the resolve configuration for the tier (IMAGE-QUALITY program: sharp direct + decoupled jitter + GBAA + the history de-blur — IqTier above; ?sharp / ?nosharp / ?noiq force it for the visit) */; scale: number /* the render scale the preset starts at UNDER TAAU, relative to its cap (ultra 1.0 = TAA only … verylow 0.5 = a 2× upscale per axis); with TAAU off every preset starts at 1.0 as before — maxH is the preset's OUTPUT resolution either way; the ladder / the Tab slider trim below it */; taau: Taau; maxH: number; volSteps: number; rc: { nx: number; ny: number; nz: number }; cascades: number; rbIters: number; ds: [number, number, number]; hist: number; mesh: boolean | 'near'; cards: boolean; lossy: Lossy; caps: Caps; froxel: FroxelTier; }   // cards = settings.torchBounceCards (the carried spots' footprints as analytic one-bounce emitters, docs/internal/perf-2026-08-10.md: +0.13 ms gather at high, +0.27 at ultra, and the torch's first bounce off a wall comes back at its physical level instead of 4–15 % of it — a LOOK change, so on where it was eyeballed: ultra + high); ds = direct-light shadow samples [strongest light, other leaders, adaptive stop] — measured: 8/4/3 → 1/1/2 halves the direct pass (7.2 → 3.8 ms at 1600×1000), so the cheaper presets spend fewer rays as well as fewer pixels; hist = settings.directHistory (temporal reuse of the direct estimate: 0.5 = the default ≈ 2 frames, 0.7 ≈ 3 — verylow leans on it to hide its one-ray penumbra grain)
+export interface Preset { restir: RestirTier; rt: RtTier; p5: P5Tier; dn: Dn; iq: IqTier /* the resolve configuration for the tier (IMAGE-QUALITY program: sharp direct + decoupled jitter + GBAA + the history de-blur — IqTier above; ?sharp / ?nosharp / ?noiq force it for the visit) */; scale: number /* the render scale the preset starts at UNDER TAAU, relative to its cap (ultra 1.0 = TAA only … verylow 0.5 = a 2× upscale per axis); with TAAU off every preset starts at 1.0 as before — maxH is the preset's OUTPUT resolution either way; the ladder / the Tab slider trim below it */; taau: Taau; maxH: number; volSteps: number; rc: { nx: number; ny: number; nz: number }; rcCoarse?: { nx: number; ny: number; nz: number } /* the row's cache grid with ONE CACHE GRID off (rcGridOf below the table) */; cascades: number; rbIters: number; ds: [number, number, number]; hist: number; mesh: boolean | 'near'; cards: boolean; lossy: Lossy; caps: Caps; froxel: FroxelTier; }   // cards = settings.torchBounceCards (the carried spots' footprints as analytic one-bounce emitters, docs/internal/perf-2026-08-10.md: +0.13 ms gather at high, +0.27 at ultra, and the torch's first bounce off a wall comes back at its physical level instead of 4–15 % of it — a LOOK change, so on where it was eyeballed: ultra + high); ds = direct-light shadow samples [strongest light, other leaders, adaptive stop] — measured: 8/4/3 → 1/1/2 halves the direct pass (7.2 → 3.8 ms at 1600×1000), so the cheaper presets spend fewer rays as well as fewer pixels; hist = settings.directHistory (temporal reuse of the direct estimate: 0.5 = the default ≈ 2 frames, 0.7 ≈ 3 — verylow leans on it to hide its one-ray penumbra grain)
 const RC_WHOLE = [1, 1, 1, 1] as const;   // every cascade level whole every frame
 const ALL_OFF: Lossy = { checkerDirect: false, gatherThird: false, rcHalfRate: false, volQuarter: false, dimRays: false, dimBelow: 0.01, fireflyK: 0, rcPeriods: RC_WHOLE };
 const FIREFLY_K = 4;   // the bound every preset but ultra runs the gather with (was the engine-wide default)
@@ -209,7 +209,9 @@ export const PRESETS: Record<QualityName, Preset> = {
   // rest (third-res gather −3.4 ms, checkerboard rays −0.9, dim-pixel rays) and keeps half-res beams + full-rate cascades; medium and low take all five.
   // low and verylow raise the near-black threshold to 0.02 (≈ 4 % of display white after AgX instead of 2 %): more of a dark floor's pixels take the one-ray path.
   // verylow (08-08) = low with one shadow sample per leader (the measured half of the direct pass), more temporal reuse to carry it, 8 beam steps and a 600-px
-  // internal cap — the rung auto drops to when low at the floor still starves; same cache grid as low, so low ↔ verylow never rebuilds the cascades.
+  // internal cap — the rung auto drops to when low at the floor still starves.
+  // rc: ONE grid for every preset since ONE CACHE GRID (below the table); `rcCoarse` on low and verylow is the grid those two ran before it and run with it off. Every reader
+  // goes through rcGridOf — the preset put on, the grids parked at boot and the cost model — so the switch off is the ladder as it was, prices included.
   // fireflyK: every ladder preset keeps the gather's relative firefly bound at 4; ultra runs without it (see Lossy) — the Tab slider still moves it by hand.
   // hist: high runs the direct estimate's temporal reuse at 0.7 (perf-2026-08-10 §D: the one free knob that moved the torch-shadow boil beside a lying body — per-pixel
   // temporal sd p99 1.57 → 1.21, −23 %, at +0 ms; verylow was already there for its one-ray penumbrae); ultra keeps 0.5 as the reference.
@@ -226,9 +228,17 @@ export const PRESETS: Record<QualityName, Preset> = {
   ultra:   { restir: { rays: 4, spatial: 5, history: 20, held: 8, motionMin: 0.3, motionTaps: 6 }, rt: { on: true, div: 2, rays: 2, maxRough: 0.55, atrous: 4 }, p5: { gi: 'temporal', giRays: 2, mesh: true, reuse: false }, dn: { shIters: 4, shCap: 16, giIters: 5, giCap: 32, spIters: 2 }, iq: IQ_C3J, scale: 0.9,  taau: { phases: 8,  clipGamma: 1.0,  sharpen: 0.2 }, maxH: 1200, volSteps: 24, rc: { nx: 40, ny: 4, nz: 28 }, cascades: 4, rbIters: 5, ds: [8, 4, 3], hist: 0.5, mesh: true, cards: true, lossy: ALL_OFF, caps: { volK: 6, volEvery: 2, volStep: 1.5, births: 512, debris: 64, rain: 6000, marchLights: 4, vol: 'classic' }, froxel: { h: 180, d: 56, k: 5, hist: 0.93, topRays: 3 } },
   high:    { restir: { rays: 4, spatial: 3, history: 20, held: 4, motionMin: 0.35, motionTaps: 6 }, rt: { on: true, div: 2, rays: 1, maxRough: 0.45, atrous: 3 }, p5: P5_OFF, dn: { shIters: 3, shCap: 12, giIters: 4, giCap: 24, spIters: 1 }, iq: IQ_C3J, scale: 0.77, taau: { phases: 8,  clipGamma: 1.0,  sharpen: 0.25 }, maxH: 1000, volSteps: 20, rc: { nx: 40, ny: 4, nz: 28 }, cascades: 4, rbIters: 4, ds: [8, 4, 3], hist: 0.7, mesh: 'near', cards: true, lossy: { checkerDirect: true, gatherThird: true, rcHalfRate: false, volQuarter: false, dimRays: true, dimBelow: 0.01, fireflyK: FIREFLY_K, rcPeriods: RC_WHOLE }, caps: { volK: 4, volEvery: 2, volStep: 1.5, births: 384, debris: 64, rain: 4000, marchLights: 3, vol: 'classic' }, froxel: { h: 135, d: 64, k: 4, hist: 0.93, topRays: 2 } },
   medium:  { restir: { rays: 4, spatial: 2, history: 20, held: 4, motionMin: 0.2, motionTaps: 6 }, rt: { on: true, div: 3, rays: 1, maxRough: 0.35, atrous: 3 }, p5: P5_OFF, dn: { shIters: 3, shCap: 10, giIters: 3, giCap: 16, spIters: 1 }, iq: IQ_C3J, scale: 0.67, taau: { phases: 16, clipGamma: 1.1,  sharpen: 0.4 }, maxH: 900,  volSteps: 14, rc: { nx: 40, ny: 4, nz: 28 }, cascades: 4, rbIters: 3, ds: [6, 3, 3], hist: 0.5, mesh: false, cards: false, lossy: { checkerDirect: true, gatherThird: true, rcHalfRate: false, volQuarter: true,  dimRays: true, dimBelow: 0.01, fireflyK: FIREFLY_K, rcPeriods: [1, 1, 2, 4] }, caps: { volK: 3, volEvery: 2, volStep: 1.5, births: 256, debris: 32, rain: 2500, marchLights: 2, vol: 'froxel' }, froxel: { h: 108, d: 48, k: 3, hist: 0.93, topRays: 2 } },
-  low:     { restir: { rays: 3, spatial: 2, history: 20, held: 3, motionMin: 0.5, motionTaps: 6 }, rt: RT_OFF, p5: P5_OFF, dn: { shIters: 2, shCap: 8, giIters: 3, giCap: 12, spIters: 1 }, iq: IQ_C3J, scale: 0.6,  taau: { phases: 16, clipGamma: 1.2,  sharpen: 0.5 }, maxH: 720,  volSteps: 10, rc: { nx: 32, ny: 3, nz: 22 }, cascades: 4, rbIters: 3, ds: [4, 2, 2], hist: 0.5, mesh: false, cards: false, lossy: { checkerDirect: true, gatherThird: true, rcHalfRate: false, volQuarter: true,  dimRays: true, dimBelow: 0.02, fireflyK: FIREFLY_K, rcPeriods: [1, 2, 3, 6] }, caps: { volK: 2, volEvery: 2, volStep: 2.0, births: 192, debris: 32, rain: 1500, marchLights: 0, vol: 'froxel' }, froxel: { h: 80, d: 32, k: 2, hist: 0.93, topRays: 1 } },
-  verylow: { restir: { rays: 2, spatial: 1, history: 20, held: 2, motionMin: 1.0, motionTaps: 6 }, rt: RT_OFF, p5: P5_OFF, dn: { shIters: 2, shCap: 8, giIters: 2, giCap: 8, spIters: 1 }, iq: IQ_C3J, scale: 0.5,  taau: { phases: 16, clipGamma: 1.25, sharpen: 0.5 }, maxH: 600,  volSteps: 8,  rc: { nx: 32, ny: 3, nz: 22 }, cascades: 4, rbIters: 3, ds: [1, 1, 2], hist: 0.7, mesh: false, cards: false, lossy: { checkerDirect: true, gatherThird: true, rcHalfRate: false, volQuarter: true,  dimRays: true, dimBelow: 0.02, fireflyK: FIREFLY_K, rcPeriods: [1, 2, 4, 8] }, caps: { volK: 2, volEvery: 2, volStep: 2.0, births: 128, debris: 32, rain: 800, marchLights: 0, vol: 'froxel' }, froxel: { h: 64, d: 24, k: 2, hist: 0.93, topRays: 1 } },
+  low:     { restir: { rays: 3, spatial: 2, history: 20, held: 3, motionMin: 0.5, motionTaps: 6 }, rt: RT_OFF, p5: P5_OFF, dn: { shIters: 2, shCap: 8, giIters: 3, giCap: 12, spIters: 1 }, iq: IQ_C3J, scale: 0.6,  taau: { phases: 16, clipGamma: 1.2,  sharpen: 0.5 }, maxH: 720,  volSteps: 10, rc: { nx: 40, ny: 4, nz: 28 }, rcCoarse: { nx: 32, ny: 3, nz: 22 }, cascades: 4, rbIters: 3, ds: [4, 2, 2], hist: 0.5, mesh: false, cards: false, lossy: { checkerDirect: true, gatherThird: true, rcHalfRate: false, volQuarter: true,  dimRays: true, dimBelow: 0.02, fireflyK: FIREFLY_K, rcPeriods: [1, 2, 3, 6] }, caps: { volK: 2, volEvery: 2, volStep: 2.0, births: 192, debris: 32, rain: 1500, marchLights: 0, vol: 'froxel' }, froxel: { h: 80, d: 32, k: 2, hist: 0.93, topRays: 1 } },
+  verylow: { restir: { rays: 2, spatial: 1, history: 20, held: 2, motionMin: 1.0, motionTaps: 6 }, rt: RT_OFF, p5: P5_OFF, dn: { shIters: 2, shCap: 8, giIters: 2, giCap: 8, spIters: 1 }, iq: IQ_C3J, scale: 0.5,  taau: { phases: 16, clipGamma: 1.25, sharpen: 0.5 }, maxH: 600,  volSteps: 8,  rc: { nx: 40, ny: 4, nz: 28 }, rcCoarse: { nx: 32, ny: 3, nz: 22 }, cascades: 4, rbIters: 3, ds: [1, 1, 2], hist: 0.7, mesh: false, cards: false, lossy: { checkerDirect: true, gatherThird: true, rcHalfRate: false, volQuarter: true,  dimRays: true, dimBelow: 0.02, fireflyK: FIREFLY_K, rcPeriods: [1, 2, 4, 8] }, caps: { volK: 2, volEvery: 2, volStep: 2.0, births: 128, debris: 32, rain: 800, marchLights: 0, vol: 'froxel' }, froxel: { h: 64, d: 24, k: 2, hist: 0.93, topRays: 1 } },
 };
+/** ONE CACHE GRID (settings.oneCacheGrid, default on, `?onegrid=0`; off = low and verylow on their `rcCoarse`, as it was). The light meter the guards and teammates see by is the
+ *  shadowed direct light PLUS the cache's dice (render/shaders/probe.wgsl), read trilinearly at the asked point — so the probe lattice is part of the reading. On the coarser lattice
+ *  (1.25 m cells, three layers up the wall against 1 m and four) the same tight shadow read two to three times darker on low and verylow than on medium and up (a night yard's low
+ *  wall: E 0.044 against 0.115, software adapter, 10-23): a game rule that read the graphics setting, and one the auto ladder moved under a mission each time it stepped between
+ *  medium and low. One lattice for every preset takes the setting out of the reading, and the cache swap (a parked grid's stale field for some frames) out of that step. It does
+ *  NOT make the read right: the meter still blends the cells around the man, some of them inside the wall beside him (docs/agents/render.md, BOUNCE WALLS 'not mended').
+ *  Price: low and verylow trace 2.1 × the probes at their own refresh periods — in the cost model their fixed part 1.9 → 2.4 and 1.4 → 1.9 model-ms. */
+export const rcGridOf = (p: Preset, one: boolean) => one || !p.rcCoarse ? p.rc : p.rcCoarse;
 /** ?nortreflect (main.ts): the RT reflections held OFF for this visit whatever preset auto or a menu applies — the by-hand Tab row still works. Module state, so every Quality instance
  *  and every apply() honours it. */
 export const rtVeto = { on: false };
@@ -260,7 +270,7 @@ export const startScale = (p: Preset, taauOn: boolean) => taauOn ? p.scale : 1.0
 // 0.01, ×0.95 at 0.02 — a guess). Shadow-ray budget (e235894, 1600×1000): direct 7.2 ms at 8/4/3 → 3.8 at 1/1/2 (×0.53); 6/3/3 and 4/2/2 interpolated
 // on rays actually spent (≈85 % of pixel×leader pairs agree and stop at the adaptive minimum, the rest spend the budget): 8/4/3 ≈ 3.5 rays, 6/3/3 ≈ 3.25
 // (×0.95), 4/2/2 ≈ 2.15 (×0.745 — the adaptive stop 3 → 2 is most of it), 1/1/2 = 1 (×0.53).
-// So, per pixel at equal pixel count (ultra = 1): high 0.77 · medium 0.72 · low 0.63 · verylow 0.55; fixed (ultra/high = 1): medium 0.63 · low/verylow 0.33.
+// So, per pixel at equal pixel count (ultra = 1): high 0.77 · medium 0.72 · low 0.63 · verylow 0.55; fixed (ultra/high = 1): medium 0.63 · low/verylow 0.33 on their coarse cache grid (0.38 / 0.30 of ultra's on the one grid).
 // The lead re-measures per-preset pass timings at one fixed scale and corrects REF / FACTOR; everything downstream follows.
 export const REF = { direct: 9.8, softblur: 3.3, gather: 6.6, temporal: 1.0, vol20: 0.8, vol2D: 0.3, froxelHigh: 0.8, bloom: 0.2, rc: 3.0, probe: 0.2, mpx: 1.777, taau: 0.25, reflect: 1.3, sharp: 1.7, gbaa: 0.15, mesh: 0.13, meshNearDirect: 0.12 };   // mesh: the skin + refit pass with the men on the floor (a fixed 0.13 ms at high AND ultra, M4 Max); meshNearDirect: what high's near-only walk + the self-shadow add to the direct rays in a lit-men view (docs/internal/render-defects-0812.md §1)   // gbaa: the copy + blend pass at high's 1777×1000 output (image-quality.md §3), per output pixel   // sharp: 'sharpU' + 'compS' at high's 1777×1000 OUTPUT in the calm cubicles still (0.92 + 0.79 ms serialized, M4 Max, docs/internal/sharp-direct.md §2) — scales with the preset's output pixels like the resolve   // reflect: the RT reflections (trace + their denoise chain) per REF.mpx INTERNAL pixels at a ÷2 target, 1 ray, on a lino-heavy view (docs/internal/p4-materials.md §2); ×(1 + 0.58 (rays − 1)), × (2/div)² for other divisors   // vol2D / froxelHigh (renderer v3 phase 2b, froxel volumetrics ON — the default): the 2D pass keeps only the smoke march + rain (≈0.3 ms at REF.mpx in the gate minute, per pixel, ÷4 under volQuarter) and 'volFroxel' is a FIXED ≈0.8 ms at high's 240×135×64 grid, k 4 + the strongest light's second stratum, scaling with froxels × (k + strata + 1) — measured docs/internal/p2b-froxels.md §2; vol20 stays for the march (froxelVol off)   // taau: the resolve at high's 1777×1000 OUTPUT (renderer v3 phase 1; measured 0.24 ms there, 0.34 at ultra's 2133×1200, serialized, M4 Max) — it scales with the preset's output pixels (maxH²), not with the render scale, so the model files it under 'fixed'
 export const FACTOR = { checker: 0.92, third: 0.485, quarter: 0.375, halfRate: 0.6, dim: { 0.01: 0.97, 0.02: 0.95 } as Record<number, number>, rays: { '8/4/3': 1, '6/3/3': 0.95, '4/2/2': 0.745, '1/1/2': 0.53 } as Record<string, number>, cards: 1.055,
@@ -274,7 +284,7 @@ export const dnGiFactor = (iters: number) => 2.0 * (0.5 + 0.125 * iters);   // c
  *  GPU pays; the M4 itself is latency-bound there and gains less) divided by its refresh period. [1,1,1,1] → 1; medium's [1,1,2,4] → 0.51; verylow's [1,2,4,8] → 0.31 */
 export const rcPeriodsFactor = (p: readonly number[]) => { const share = [0.10, 0.15, 0.30, 0.45]; let f = 0; for (let n = 0; n < 4; n++) f += share[n] / Math.max(1, n === 0 ? 1 : (p[Math.min(n, p.length - 1)] || 1)); return f; };
 /** modelled compute cost of a preset on the reference machine at the reference pixel count: per-pixel passes (ms at REF.mpx internal megapixels) and the fixed part, itemised */
-export function presetCost(p: Preset) {
+export function presetCost(p: Preset, oneGrid = true) {   // oneGrid: settings.oneCacheGrid — false prices low and verylow on their coarse cache grid, as they were
   const L = p.lossy; const rays = FACTOR.rays[p.ds.join('/')] ?? 1;
   // the direct pass is the ReSTIR estimator now (settings.restir defaults on and no preset switches it): priced by its rays per pixel; the leader/tail formula it replaces —
   // REF.direct × rays × checker × dim — is what ?norestir costs (the runtime ladder catches the difference if somebody boots that way)
@@ -285,7 +295,7 @@ export function presetCost(p: Preset) {
   const vol = (classicVol ? REF.vol20 * (p.volSteps / 20) : REF.vol2D) * (L.volQuarter ? FACTOR.quarter : 1);   // (froxels on: the 2D pass = smoke march + rain; the beams' cost is the fixed froxel term below — a smaller error than the model's own on this pass)
   const F = p.froxel, FH = PRESETS.high.froxel;
   const froxel = classicVol ? 0 : REF.froxelHigh * (F.h / FH.h) ** 2 * (F.d / FH.d) * ((F.k + F.topRays + 1) / (FH.k + FH.topRays + 1));   // 'volFroxel' (0 on the classic tiers): ∝ froxels (rows² at a fixed aspect × slices) × shadow rays per lit froxel
-  const rc = REF.rc * (probesOf(p) / probesOf(PRESETS.ultra)) * (p.cascades / 4) * (L.rcHalfRate ? FACTOR.halfRate : 1) * rcPeriodsFactor(L.rcPeriods);
+  const rc = REF.rc * (probesOf(p, oneGrid) / probesOf(PRESETS.ultra)) * (p.cascades / 4) * (L.rcHalfRate ? FACTOR.halfRate : 1) * rcPeriodsFactor(L.rcPeriods);
   const taau = REF.taau * (p.maxH / PRESETS.high.maxH) ** 2;   // the resolve at this preset's output size (with TAAU off the machine simply measures a smaller fixed part; the ratios stay close)
   const sharp = p.iq.sharp && p.scale < 1 ? (REF.sharp + (p.iq.gbaa ? REF.gbaa : 0)) * (p.maxH / PRESETS.high.maxH) ** 2 : 0;   // sharp direct's output-size kernels ('sharpU' + 'compS') where the preset places it (Preset.sharp): per OUTPUT pixel like the resolve, live only where the preset renders below its cap (docs/internal/sharp-direct.md §2)
   const reflect = p.rt.on ? REF.reflect * (1 + 0.58 * Math.max(0, p.rt.rays - 1)) * (2 / Math.max(1, p.rt.div)) ** 2 : 0;   // RT reflections ('reflect' + 'rdenoise'): per pixel of the reflection target, roughly linear in rays past the first
@@ -294,6 +304,9 @@ export function presetCost(p: Preset) {
   return { pixel, fixed, passes: { direct, softblur, gather, temporal, volumetrics: vol, volFroxel: froxel, bloom: REF.bloom, reflect, rc, probe: REF.probe, taau, sharp, mesh } };
 }
 export const COST = Object.fromEntries(QUALITY_NAMES.map(n => [n, presetCost(PRESETS[n])])) as Record<QualityName, ReturnType<typeof presetCost>>;
+/** the same table with ONE CACHE GRID off: low and verylow priced on their coarse grid (the table as it was) */
+export const COST_COARSE = Object.fromEntries(QUALITY_NAMES.map(n => [n, presetCost(PRESETS[n], false)])) as typeof COST;
+export const costTable = (oneGrid: boolean) => oneGrid ? COST : COST_COARSE;
 
 export interface Plan { preset: QualityName; scale: number; predicted: number; note: string }
 /** The pure part of auto's boot decision (Quality.decide), exercised with synthetic numbers by tools/qa/quality-plan.ts: given the measured compute ms (total and its
@@ -302,11 +315,12 @@ export interface Plan { preset: QualityName; scale: number; predicted: number; n
  *  (PLAN_BUDGET_MS: 15 ms ≈ a presented 50–55 fps once the render passes, the CPU and vsync slop are added). Order of preference: high → medium → low at full scale; low
  *  with the scale solved for the budget (never under the floor); verylow at full scale; verylow solved down to the floor; and if even that misses, verylow at the floor
  *  flagged 'below target' (the runtime ladder has nothing cheaper either). */
-export function plan(gpuMs: number, fixedMs: number, cur: QualityName, effNow: number, cssH: number, dpr: number, budgetMs = PLAN_BUDGET_MS, taauOn = true): Plan {
-  const pixelMs = Math.max(0.5, gpuMs - fixedMs); const c0 = COST[cur];
+export function plan(gpuMs: number, fixedMs: number, cur: QualityName, effNow: number, cssH: number, dpr: number, budgetMs = PLAN_BUDGET_MS, taauOn = true, oneGrid = true): Plan {
+  const table = costTable(oneGrid);   // (the grid the presets run: settings.oneCacheGrid)
+  const pixelMs = Math.max(0.5, gpuMs - fixedMs); const c0 = table[cur];
   const capOf = (p: Preset) => Math.min(1, p.maxH / Math.max(1, cssH * dpr));                            // the effective scale that preset's cap gives this window at render scale 1.0
-  const fixedOf = (name: QualityName) => fixedMs * (COST[name].fixed / c0.fixed);
-  const perEff2 = (name: QualityName) => pixelMs * (COST[name].pixel / c0.pixel) / Math.max(1e-4, effNow * effNow);   // ms per unit of effective scale² at that preset
+  const fixedOf = (name: QualityName) => fixedMs * (table[name].fixed / c0.fixed);
+  const perEff2 = (name: QualityName) => pixelMs * (table[name].pixel / c0.pixel) / Math.max(1e-4, effNow * effNow);   // ms per unit of effective scale² at that preset
   const predict = (name: QualityName, scale: number) => fixedOf(name) + perEff2(name) * (capOf(PRESETS[name]) * Math.min(1, scale)) ** 2;
   const start = (name: QualityName) => startScale(PRESETS[name], taauOn);   // the scale a preset starts at: its TAAU scale, or 1.0 with the resolve off
   for (let i = AUTO_LADDER.length - 1; i >= 1; i--) {            // high → medium → low at their starting scale
@@ -347,7 +361,7 @@ export class Quality {
   /** auto's preset hops: the last hop up (for 'straight back down = that hop failed') and the pairs held off since, `${from}>${to}` → until / repeat count — NOT cleared by apply() */
   private lastHop: { from: QualityName; to: QualityName; at: number } | null = null; private hopHold = new Map<string, { until: number; n: number }>();
   /** the cost model's price of running preset `next` at its starting scale on this window, relative to `cur` at its current scale (COST's per-pixel and fixed parts; the union × this =
-   *  the union to expect after the hop): medium → high ≈ 1.5, low → medium and verylow → low ≈ 2.2 at 720 CSS rows — never the flat '×2' a threshold would assume */
+   *  the union to expect after the hop): medium → high ≈ 1.5, low → medium and verylow → low ≈ 2.2 at 720 CSS rows on the coarse cache grid (low → medium ≈ 1.9 on the one grid) — never the flat '×2' a threshold would assume */
   hopRatio(next: QualityName, cur: QualityName = this.current as QualityName): number {
     if (!(cur in COST) || !(next in COST)) return 2;
     const cv = this.engine.gpu.canvas as HTMLCanvasElement; const cssH = cv?.clientHeight || 720, cssW = cv?.clientWidth || 1280; const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
@@ -357,8 +371,9 @@ export class Quality {
     const costOf = (c: ReturnType<typeof presetCost>, maxH: number, scale: number) => c.fixed + c.pixel * mpx(maxH, scale) / REF.mpx;
     // the CURRENT preset priced as it is being rendered — the live scale (climbed above the start or cut below it), the live lossy divisors, the live cap — not as its rows say
     const pc = PRESETS[cur]; const live: Preset = cur === this.current ? this.livePreset(cur) : pc;
-    const curCost = costOf(cur === this.current ? presetCost(live) : COST[cur], live.maxH, cur === this.current ? S.renderScale : startScale(pc, taauOn));
-    return costOf(COST[next], PRESETS[next].maxH, startScale(PRESETS[next], taauOn)) / Math.max(0.1, curCost);
+    const one = this.oneGrid(), table = costTable(one);   // (the grid the presets run: ONE CACHE GRID)
+    const curCost = costOf(cur === this.current ? presetCost(live, one) : table[cur], live.maxH, cur === this.current ? S.renderScale : startScale(pc, taauOn));
+    return costOf(table[next], PRESETS[next].maxH, startScale(PRESETS[next], taauOn)) / Math.max(0.1, curCost);
   }
   /** preset `cur` (the current one) as it is being rendered: the live lossy divisors, cap and scale over its rows (scale + iq.sharp as they are: presetCost prices sharp direct by `iq.sharp && scale < 1`) */
   private livePreset(cur: QualityName): Preset { const S = this.engine.settings; const pc = PRESETS[cur]; return { ...pc, lossy: { ...pc.lossy, gatherThird: !!S.gatherThird, volQuarter: !!S.volQuarter, rcHalfRate: !!S.rcHalfRate }, maxH: S.maxInternalHeight || pc.maxH, scale: S.renderScale, iq: { ...pc.iq, sharp: !!S.sharpDirect && S.taau !== false } }; }
@@ -411,9 +426,10 @@ export class Quality {
     try { mode = localStorage.getItem(LS_MODE); } catch { /* private mode etc. */ }
     if (mode && (QUALITY_NAMES as string[]).includes(mode)) { this.auto = false; this.apply(mode as QualityName); }
     else this.startAuto();
-    // the cascade grids the presets can ask for (two today: ultra‥medium's and low / verylow's), built now behind the start card so the ladder's first medium ↔ low step — or a
-    // pin from the menu — swaps a parked instance in instead of building one mid-game (engine.ts rebuildRc / prewarmRc; the stub engines of tools/qa have none)
-    const grids = new Map<string, RcConfig>(); for (const n of QUALITY_NAMES) { const p = PRESETS[n]; grids.set(`${p.rc.nx}x${p.rc.ny}x${p.rc.nz}/${p.cascades}`, { ...defaultRcConfig, ...p.rc, cascades: p.cascades, interval0: this.engine.rc.cfg.interval0 }); }
+    // the cascade grids the presets can ask for (one under ONE CACHE GRID — nothing to build; with it off two: ultra‥medium's and low / verylow's), built now behind the start card so
+    // the ladder's first medium ↔ low step — or a pin from the menu — swaps a parked instance in instead of building one mid-game (engine.ts rebuildRc / prewarmRc; the stub engines of tools/qa have none)
+    const one = this.oneGrid();
+    const grids = new Map<string, RcConfig>(); for (const n of QUALITY_NAMES) { const p = PRESETS[n], g = rcGridOf(p, one); grids.set(`${g.nx}x${g.ny}x${g.nz}/${p.cascades}`, { ...defaultRcConfig, ...g, cascades: p.cascades, interval0: this.engine.rc.cfg.interval0 }); }
     this.engine.prewarmRc?.([...grids.values()]);
   }
   /** Auto from here: start at the preset (and scale) auto last settled on ON THIS MACHINE if it remembers one — else the current preset when it is on the ladder,
@@ -437,6 +453,8 @@ export class Quality {
     this.lastChange = `auto: starting at ${this.current}${sc !== null ? ` ×${this.engine.settings.renderScale.toFixed(2)}` : ''}${onLadder(remembered) ? ' (this machine\'s last pick)' : ''} — calibrating`;
   }
 
+  /** ONE CACHE GRID as the engine has it (a stub engine without the setting counts as on — the default) */
+  private oneGrid(): boolean { return this.engine.settings.oneCacheGrid !== false; }
   /** The label for menus: 'auto (high)' or the pinned preset. */
   get label() { return this.auto ? `auto (${this.current})` : this.current; }
 
@@ -469,8 +487,8 @@ export class Quality {
     S.particleBirths = K.births;                                                                           // … GPU particle births a frame (engine.render hands it to Particles.prepare; the queue carries the rest) …
     S.debrisCap = K.debris;                                                                                // … the destruction lane's rigid-debris pool (game/debris.ts reads it live: a full pool demotes new break-offs to particles) …
     S.particleRainCount = K.rain;                                                                          // … the particle rain's drop cap (rainFx.ts; nothing runs while settings.particleRain is off) …
-    const cur = this.engine.rc.cfg;
-    if (cur.nx !== p.rc.nx || cur.ny !== p.rc.ny || cur.nz !== p.rc.nz || cur.cascades !== p.cascades) this.engine.rebuildRc({ ...defaultRcConfig, ...p.rc, cascades: p.cascades, interval0: cur.interval0 });
+    const cur = this.engine.rc.cfg, grid = rcGridOf(p, this.oneGrid());   // (ONE CACHE GRID: the same lattice under every preset, so the light meter's reading is not the setting's)
+    if (cur.nx !== grid.nx || cur.ny !== grid.ny || cur.nz !== grid.nz || cur.cascades !== p.cascades) this.engine.rebuildRc({ ...defaultRcConfig, ...grid, cascades: p.cascades, interval0: cur.interval0 });
     this.smoke.params.rbIters = p.rbIters;
     this.climbed = []; this.roomy = 0; this.sinceClimb = 0; this.failed.clear(); this.failCount.clear(); this.dipping = 0;   // (the climb's rungs and failures were the previous preset's: this one starts from its own rows)
     if (this.motionCalm) this.applyMotionCalm(true);   // (the opt-in motion-calm rows ride over the preset's own while the switch is on)
@@ -493,7 +511,7 @@ export class Quality {
     if (c.dts.length >= 54 || c.t > 3) this.decide();
   }
   /** The pure decision (module-level `plan`), kept on the instance for the console: `__quality.plan(58, 9, 'high', 1, 900, 2)`. */
-  plan(gpuMs: number, fixedMs: number, cur: QualityName, effNow: number, cssH: number, dpr: number, budgetMs = PLAN_BUDGET_MS): Plan { return plan(gpuMs, fixedMs, cur, effNow, cssH, dpr, budgetMs, this.engine.settings.taau !== false); }
+  plan(gpuMs: number, fixedMs: number, cur: QualityName, effNow: number, cssH: number, dpr: number, budgetMs = PLAN_BUDGET_MS): Plan { return plan(gpuMs, fixedMs, cur, effNow, cssH, dpr, budgetMs, this.engine.settings.taau !== false, this.oneGrid()); }
   private decide() {
     const c = this.calib; c.done = true;
     const med = (a: number[]) => { const b = [...a].sort((x, y) => x - y); return b.length ? b[Math.floor(b.length / 2)] : NaN; };
@@ -635,7 +653,7 @@ export class Quality {
       // spending that room at the top of the ladder. Long windows + cooldowns so it settles.
       const i = AUTO_LADDER.indexOf(this.current as QualityName);
       const atFloor = sc <= SCALE_FLOOR + 0.02;                               // adaptive will not step from here
-      const cutDeep = sc <= this.maxScale - 0.14;                             // a real cut has already been taken off — a cheaper preset (fewer rays, coarser cache) buys more than pixels now
+      const cutDeep = sc <= this.maxScale - 0.14;                             // a real cut has already been taken off — a cheaper preset (fewer rays, a slower cache refresh) buys more than pixels now
       const floorHit = !this.adaptive || atFloor || cutDeep;
       if (avg > 1 / B.starvedFps && floorHit && gpuBound) this.starved++; else this.starved = 0;   // (a paced page with an idle GPU never starves its preset away either)
       // cruising: the display's rate held (a threshold UNDER any refresh, so a 60 Hz panel can reach it) with the scaler holding nothing back, AND — with GPU timings — the union priced at
@@ -690,7 +708,7 @@ export class Quality {
   pixelShare(): number {
     const cur = this.current as QualityName; if (!(cur in COST)) return 0.6;
     const cv = this.engine.gpu?.canvas as HTMLCanvasElement | undefined; const cssH = cv?.clientHeight || 720, cssW = cv?.clientWidth || 1280; const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
-    const live = this.livePreset(cur); const c = presetCost(live); const rows = Math.min(live.maxH, cssH * dpr) * live.scale; const pixel = c.pixel * (rows * rows * (cssW / cssH) / 1e6) / REF.mpx;
+    const live = this.livePreset(cur); const c = presetCost(live, this.oneGrid()); const rows = Math.min(live.maxH, cssH * dpr) * live.scale; const pixel = c.pixel * (rows * rows * (cssW / cssH) / 1e6) / REF.mpx;
     return pixel / Math.max(1e-6, pixel + c.fixed);
   }
   /** an aim's 'is the GPU the limit?' with timings: the frame no more than HOLD.pacedMs over the union (the usual overhead: nothing else paces it), or the union alone past the aim's budget

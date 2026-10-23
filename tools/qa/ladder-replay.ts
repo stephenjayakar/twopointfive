@@ -16,7 +16,7 @@
 //             not in a dump, so the window phase and the roomy count are tried over their few values and the best fit is named. Exit 1 if no start state reproduces the take.
 //   --selftest  synthetic closed-loop machines: what each aim must do (PASS / FAIL lines, exit 1 on a FAIL).
 import { readFileSync } from 'node:fs';
-import { PRESETS, REF, SCALE_FLOOR, LADDER, CLIMB, HOLD, PACED, AIM_DISPLAY, PLAN_BUDGET_MS, ladderBands, ladderAimOf, displayRateOf, presetCost, type QualityName, type Preset } from '../../src/ui/quality.ts';
+import { PRESETS, REF, SCALE_FLOOR, LADDER, CLIMB, HOLD, PACED, AIM_DISPLAY, PLAN_BUDGET_MS, QUALITY_NAMES, ladderBands, ladderAimOf, displayRateOf, presetCost, plan, type QualityName, type Preset } from '../../src/ui/quality.ts';
 import type { PerfDump, PerfFrame } from '../../src/ui/perfrec.ts';
 
 const G = globalThis as unknown as Record<string, any>;
@@ -41,7 +41,7 @@ const rowsOf = (s: State, w: Win) => Math.min(s.maxH, w.cssH * w.dpr) * s.scale;
 function modelCost(s: State, w: Win, base: Record<string, any>): number {
   const pc = PRESETS[s.preset];
   const live: Preset = { ...pc, lossy: { ...pc.lossy, gatherThird: s.gatherThird, volQuarter: s.volQuarter }, maxH: s.maxH, scale: s.scale, iq: { ...pc.iq, sharp: !!base.sharpDirect && base.taau !== false } };
-  const c = presetCost(live); const rows = rowsOf(s, w); const mpx = rows * rows * (w.cssW / w.cssH) / 1e6;
+  const c = presetCost(live, base.oneCacheGrid === true); const rows = rowsOf(s, w); const mpx = rows * rows * (w.cssW / w.cssH) / 1e6;   // (a take from before ONE CACHE GRID carries no such setting: its low and verylow ran the coarse grid and are priced on it, as replay() has the ladder price them)
   return (s.preset === 'high' || s.preset === 'ultra' ? 1 : MODEL.under) * (c.fixed + MODEL.extraFixed + c.pixel * mpx / REF.mpx);
 }
 
@@ -58,7 +58,7 @@ function mkQuality(w: Win, preset: QualityName, auto: boolean, settings: Record<
   store.clear();
   const E = mkEngine(w, {}); const q: any = new Quality(E as never, { params: { rbIters: 4 } } as never);
   q.auto = auto; q.apply(preset); q.adaptive = true; q.climbAllowed = true; q.calib = { ...q.calib, done: true };
-  for (const k of ['renderScale', 'gatherThird', 'volQuarter', 'ladderClimb', 'capClimb', 'ladderPaced', 'ladderHeld', 'taau', 'sharpDirect', 'rcHalfRate', 'maxInternalHeight']) if (k in settings) E.settings[k] = settings[k];
+  for (const k of ['renderScale', 'gatherThird', 'volQuarter', 'ladderClimb', 'capClimb', 'ladderPaced', 'ladderHeld', 'oneCacheGrid', 'taau', 'sharpDirect', 'rcHalfRate', 'maxInternalHeight']) if (k in settings) E.settings[k] = settings[k];
   E.settings.ladderAim = aim; q.displayHzPin = hz; q.cooldown = 0; q.lastChange = '';
   return { E, q };
 }
@@ -89,6 +89,7 @@ function replay(d: PerfDump, aim: number, opts: { hz?: number; warm?: Warm } = {
   const w = windowOf(d); const hz = opts.hz ?? hzOf(d); const S0 = d.settingsAtStart as Record<string, any>;
   const first = d.frames[0]; const { preset: p0, auto } = presetOfLabel(first.preset);
   const { E, q } = mkQuality(w, p0, auto, S0, aim, hz); if (pacedForce !== undefined) E.settings.ladderPaced = pacedForce; if (heldForce !== undefined) E.settings.ladderHeld = heldForce; else if (!('ladderHeld' in S0)) E.settings.ladderHeld = false;
+  if (!('oneCacheGrid' in S0)) E.settings.oneCacheGrid = false;   // (a take from before ONE CACHE GRID: its low and verylow ran the coarse grid — the replayed ladder prices them so, as modelCost does)
   if (opts.warm) { q.sinceClimb = 99; q.acc = opts.warm.acc; q.frames = Math.max(1, Math.round(opts.warm.acc / (first.dt / 1000))); q.roomy = opts.warm.roomy; q.unionAcc = (first.gpuUnion ?? 0) * q.frames; q.unionN = first.gpuUnion ? q.frames : 0; }
   // the recorded ladder's state per frame: the scale off the resolution, the divisors off the 'settings' events, the preset off the label
   const rec: State = { preset: p0, scale: S0.renderScale, gatherThird: !!S0.gatherThird, volQuarter: !!S0.volQuarter, maxH: S0.maxInternalHeight };
@@ -195,7 +196,7 @@ function report(name: string, d: PerfDump, rs: Result[], md: boolean, timeline: 
 // ---- --selftest: synthetic machines ------------------------------------------------------------------------------------------------------------------------------------------------------------
 function selftest(): boolean {
   let fails = 0; const check = (ok: boolean, what: string) => { console.log(`  ${ok ? 'PASS' : 'FAIL'} — ${what}`); if (!ok) fails++; };
-  const w: Win = { cssW: 1456, cssH: 873, dpr: 2 }; const S0 = { sharpDirect: true, taau: true };
+  const w: Win = { cssW: 1456, cssH: 873, dpr: 2 }; const S0 = { sharpDirect: true, taau: true, oneCacheGrid: true };   // (the synthetic machines run the page as it opens: one cache grid, as the ladder's own cost table prices it)
   /** `secs` on a machine whose union is `k`(t) × the model's cost of what the ladder is rendering, shown on a `hz` display (`vrr`: a frame takes what it takes above the display's interval;
    *  else whole display intervals), with `paceMs` = something else holding every frame to at least that; returns the 1-s fps windows and the moves */
   const run = (q: any, E: any, secs: number, hz: number, k: (t: number) => number, o: { vrr?: boolean; paceMs?: number | ((t: number) => number); timed?: boolean; t0?: number; hitch?: () => number } = {}) => {
@@ -395,6 +396,29 @@ function selftest(): boolean {
     // (7) a GPU-bound machine nothing holds: the switch changes no move (the fight of the first block: 11 → 17 → 11 ms on a 120 Hz variable-rate display)
     const load = (t: number) => at(t < 20 ? 11 : t < 80 ? 17 : 11); const o7 = mkH(false), n7 = mkH(true); const ro7 = watch(o7, 200, 120, load), rn7 = watch(n7, 200, 120, load);
     check(JSON.stringify(rn7.moves) === JSON.stringify(ro7.moves) && rn7.moves.length > 0, `nothing holding the page (a fight on a GPU-bound machine): the same ${rn7.moves.length} moves with the switch on and off`);
+  }
+  console.log('\nOne light-cache grid at every preset (settings.oneCacheGrid: the light meter reads the cache, so its probe grid is part of what a guard sees):');
+  {
+    const ON = process.env.ONEGRID_BREAK !== '1';   // ONEGRID_BREAK=1: the walk runs with the switch off and the first three must FAIL
+    const walk = (on: boolean) => {
+      store.clear(); const E = mkEngine(w, { oneCacheGrid: on }); const grid = () => `${E.rc.cfg.nx}x${E.rc.cfg.ny}x${E.rc.cfg.nz}`;
+      let rebuilds = 0; const real = E.rebuildRc; E.rebuildRc = function (cfg: any) { rebuilds++; real.call(this, cfg); };
+      const parked = new Set<string>(); E.prewarmRc = (cfgs: any[]) => { for (const c of cfgs) parked.add(`${c.nx}x${c.ny}x${c.nz}`); };
+      const q: any = new Quality(E as never, { params: { rbIters: 4 } } as never); const seen: Record<string, string> = {};
+      for (const n of [...QUALITY_NAMES, ...[...QUALITY_NAMES].reverse()]) { q.apply(n); seen[n] = grid(); }   // (ultra down to verylow and back up: every step the ladder or a menu can take)
+      return { seen, rebuilds, parked: [...parked] };
+    };
+    const on = walk(ON), off = walk(false), fine = '40x4x28', coarse = '32x3x22';
+    check(QUALITY_NAMES.every(n => on.seen[n] === fine), `every preset reads the one grid: ${QUALITY_NAMES.map(n => `${n} ${on.seen[n]}`).join(' · ')}`);
+    check(on.rebuilds === 0, `the cache is not rebuilt on any step from ultra down to verylow and back: ${on.rebuilds} rebuilds`);
+    check(on.parked.length === 1 && on.parked[0] === fine, `the boot parks no second grid: ${on.parked.join(', ')}`);
+    check(off.seen.low === coarse && off.seen.verylow === coarse && off.seen.ultra === fine && off.seen.high === fine && off.seen.medium === fine && off.rebuilds === 2 && off.parked.length === 2,
+      `the switch off = the grids as they were: ${QUALITY_NAMES.map(n => `${n} ${off.seen[n]}`).join(' · ')}, ${off.rebuilds} rebuilds on the walk, ${off.parked.length} grids parked`);
+    // the ladder prices the grid that runs: a 4.5 × machine's boot pick (61.1 ms at high, 25.0 of it fixed, 1440 × 900 at 2) on the ladder's own tables, and a live Quality's hop price
+    const pick = (one: boolean) => { const r = plan(61.1, 25.0, 'high', 0.43, 900, 2, PLAN_BUDGET_MS, true, one); return `${r.preset} ×${r.scale.toFixed(2)}`; };
+    const hop = (one: boolean) => { const x = mkQuality(w, 'low', true, { oneCacheGrid: one }, 60, 120); return x.q.hopRatio('medium') as number; };
+    check(pick(false) === 'low ×0.50' && pick(ON) === 'verylow ×0.50' && hop(false) > hop(ON) + 0.1,
+      `the ladder prices the grid that runs: a 4.5 × machine boots at ${pick(false)} with the switch off (as it was) and ${pick(ON)} with it on; low → medium priced ×${hop(false).toFixed(2)} off, ×${hop(ON).toFixed(2)} on`);
   }
   if (fails) console.log(`\n${fails} check(s) FAILED`); else console.log('\n=== ladder-replay selftest: ALL PASS ===');
   return fails === 0;
