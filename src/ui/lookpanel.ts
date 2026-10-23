@@ -19,6 +19,7 @@ const ROWS: readonly [keyof typeof lookAmounts, string, string, number][] = [
   ['marks', 'Painted marks', 'signs, stripes and rugs drawn as brushed, rubbed paint in place of square cells', 1],
   ['men', 'Men', 'the men drawn as cloth, webbing, steel and skin: a print on the uniforms, folds, scuffs, snow on their shoulders', 1.5],
   ['tailor', 'Kit detail', 'what was cut and sewn on the men: seams, pockets and patches, a combat shirt, bar tacks on the webbing, sand boots, knee pads, buttons', 1],
+  ['print', 'Printed cloth', "the uniform's print as it is on the bolt: a ground that drifts from tan to sage, green and brown shapes, cream flecks. 0 = the first print", 1],
   ['air', 'Air', '× the haze that shows a lamp in the air', 4],
   ['size', 'Map size', '× the 2 m a map covers', 2],
 ];

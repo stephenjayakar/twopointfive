@@ -56,7 +56,7 @@ fn lookSnow(cls: u32, wp: vec3f, gn: vec3f, bi: u32, lc: vec3f, hf: vec4f, paint
 `;
 }
 /** the look page's panel numbers, as look.wgsl's LookCfg takes them (a, b: the eight amounts; the layers' base roughness follows, and `snow` after it) */
-export const LOOK_DEFAULTS = { paint: 1, relief: 1, shine: 1, weather: 1, untile: 1, edges: 1, cavity: 1, size: 1, snow: 1, air: 1, ground: 1.5, crust: 1, men: 1, stone: 1, marks: 1, tailor: 1 };   // (`air` is not the shader's: × settings.hazeDensity, ui/lookpanel.ts)
+export const LOOK_DEFAULTS = { paint: 1, relief: 1, shine: 1, weather: 1, untile: 1, edges: 1, cavity: 1, size: 1, snow: 1, air: 1, ground: 1.5, crust: 1, men: 1, stone: 1, marks: 1, tailor: 1, print: 1 };   // (`air` is not the shader's: × settings.hazeDensity, ui/lookpanel.ts)
 export const lookAmounts = { ...LOOK_DEFAULTS };
 
 export interface SkinnedDrawable {
@@ -166,7 +166,7 @@ export class GBuffer {
   setLook() {
     if (!this.lookCfg) return;
     const k = lookAmounts;
-    this.device.queue.writeBuffer(this.lookCfg, 0, new Float32Array([k.paint, k.relief, k.shine, k.weather, k.untile, k.edges, k.cavity, k.size, ...LOOK_ROUGH.slice(0, 11), k.snow, k.ground, k.crust, k.men, k.stone, k.marks, k.tailor, 0, 0]));
+    this.device.queue.writeBuffer(this.lookCfg, 0, new Float32Array([k.paint, k.relief, k.shine, k.weather, k.untile, k.edges, k.cavity, k.size, ...LOOK_ROUGH.slice(0, 11), k.snow, k.ground, k.crust, k.men, k.stone, k.marks, k.tailor, k.print, 0]));
   }
   // ---- THE SNOW'S SURFACE (render/snowField.ts, shaders/snow.wgsl): the field's texture, its uniform block, and the hills' mesh — one (tx, tz) per lattice quad, six corners each
   private snowTex: GPUTexture; private snowView: GPUTextureView; private readonly snowCfg: GPUBuffer;
