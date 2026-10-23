@@ -206,7 +206,7 @@ export function viewerUrl(id: number): string { return new URL(`replay.html#id=$
 /** the address words a replay page keeps from the VISIT, not from the run it plays (replay/engineplay.ts tapeSearch): how the page is looked at and listened to is the
  *  viewer's — which sound table the mixer plays is the listener's, a replay holds no sound. The end card's Replay hands the game page's own on to its tab, bar the
  *  harness's `paused`: the replay of a run played at a chosen quality, or muted, opens the same way. */
-export const VISIT_FLAGS = ['paused', 'mute', 'quality', 'hud', 'oldsounds', 'newsounds', 'onetheme', 'shuffle', 'teamnerves', 'soundlanes', 'fogedge', 'fogdesat', 'nobouncewalls', 'surf'];   // (nobouncewalls: the picture's walled bounce read off — render/frame.ts bounceWallsConfig — so a page tool can play one replay both ways)
+export const VISIT_FLAGS = ['paused', 'mute', 'quality', 'hud', 'oldsounds', 'newsounds', 'onetheme', 'shuffle', 'teamnerves', 'soundlanes', 'fogedge', 'fogdesat', 'nobouncewalls', 'surf', 'look'];   // (nobouncewalls: the picture's walled bounce read off — render/frame.ts bounceWallsConfig — so a page tool can play one replay both ways)
 export function engineUrl(id: number, file: ReplayFile): string | null {
   const T = file.rerun; if (!T || 'dead' in T) return null;
   const r0 = lastRun(file), seen = r0 > 0 ? file.samples.find(s => s.r >= r0)?.n ?? 0 : 0;

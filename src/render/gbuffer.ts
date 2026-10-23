@@ -1,7 +1,7 @@
 // G-buffer targets + raster pipelines (boxes, skinned characters).
 import { makeShader, makeBuffer, renderPipelineAsync, renderPipelineOrNull } from '../gpu/device';
 import { cutSwap } from './cutSwap';
-import { scenePrelude, snowLookConfig } from './frame';
+import { scenePrelude, snowLookConfig, lookConfig } from './frame';
 import { decalWgslConsts } from './decals';
 import { TexturePool } from './texpool';
 import { BoxWorld, GEO_STRIDE, MAT_STRIDE } from '../scene/boxes';
@@ -15,6 +15,8 @@ import snowSrc from './shaders/snow.wgsl' with { type: 'text' };   // THE SNOW'S
 import { SNOW_CFG_FLOATS } from './snowField';
 import gdownSrc from './shaders/gdown.wgsl' with { type: 'text' };     // SHARP DIRECT: the internal-size view of an output-size raster (encodeDown)
 import surfaceSrc from './shaders/surface.wgsl' with { type: 'text' };   // SURFACES, A TRY (render/frame.ts surfTryConfig): fsBox's materials — dead code unless the prelude's SURF_TRY is up
+import lookSrc from './shaders/look.wgsl' with { type: 'text' };         // THE LOOK PROTOTYPE (render/frame.ts lookConfig): fsBox's materials off real maps — in the module only on that page
+import { LOOK_N, LOOK_LAYERS, LOOK_ROUGH, lookLayer, lookMip } from './lookTex';
 import { GWOT_PALETTE, type GwotMat } from '../scene/gwotPalette';
 
 /** which stuff each paint of the 2010s palette is drawn as under the try (shaders/surface.wgsl's classes, by number); a paint with no row draws plain */
@@ -31,6 +33,13 @@ function surfaceWgsl(): string {
   const dark = (Object.keys(SURF_OF) as GwotMat[]).map(m => `  { let p = ${v(m)}; let k = dot(a, p) / dot(p, p); if (k > 0.55 && k < 0.99 && all(abs(a - k * p) < vec3f(0.006))) { return ${SURF_OF[m]}u; } }   // ${m}, darkened`);
   return `fn surfClass(a: vec3f) -> u32 {\n${exact.join('\n')}\n${dark.join('\n')}\n  return 0u;\n}\n` + surfaceSrc;
 }
+
+/** look.wgsl on the look page; on every other, the two names fsBox's dead call needs and nothing else (no binding: the bind group is the page's as it was) */
+function lookWgsl(): string {
+  return lookConfig.on ? lookSrc : 'struct LookOut { albedo: vec3f, n: vec3f, rough: f32, tilted: bool };\nfn lookSurface(cls: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, albedoIn: vec3f, roughIn: f32, dwx: vec3f, dwy: vec3f, fp: f32) -> LookOut { return LookOut(albedoIn, n, roughIn, false); }\n';
+}
+/** the look page's panel numbers, as look.wgsl's LookCfg takes them (a, b: the eight amounts; the layers' base roughness follows) */
+export const lookAmounts = { paint: 1, relief: 1, shine: 1, weather: 1, untile: 1, edges: 1, cavity: 1, size: 1 };
 
 export interface SkinnedDrawable {
   vertexBuf: GPUBuffer;      // interleaved: pos f32x3, normal f32x3, weights f32x4, matSel f32 (44 B)
@@ -76,7 +85,7 @@ export class GBuffer {
 
   constructor(private device: GPUDevice, private sceneLayout: GPUBindGroupLayout, readonly pool: TexturePool = new TexturePool(device), maxBoxes = 4096) {
     this.geoBytes = maxBoxes * GEO_STRIDE * 4;
-    const mod = makeShader(device, scenePrelude() + `const PREV_MAT_BASE: u32 = ${maxBoxes * GEO_STRIDE / 4}u;   // prevBoxes: vec4 index where the mat rows start (after maxBoxes geo rows of 2 vec4 each)\n` + decalWgslConsts(3) + decalsSrc + detailSrc + surfaceWgsl() + snowSrc + markingsSrc + gbufSrc, 'gbuffer');   // decals.wgsl: the experiment's per-pixel marks (group 1 binding 3), read by fsBox under FrameFlags.Decals
+    const mod = makeShader(device, scenePrelude() + `const PREV_MAT_BASE: u32 = ${maxBoxes * GEO_STRIDE / 4}u;   // prevBoxes: vec4 index where the mat rows start (after maxBoxes geo rows of 2 vec4 each)\n` + decalWgslConsts(3) + decalsSrc + detailSrc + surfaceWgsl() + lookWgsl() + snowSrc + markingsSrc + gbufSrc, 'gbuffer');   // decals.wgsl: the experiment's per-pixel marks (group 1 binding 3), read by fsBox under FrameFlags.Decals
     this.objLayout = device.createBindGroupLayout({ label: 'gbufObj', entries: [
       { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
       { binding: 1, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
@@ -89,13 +98,19 @@ export class GBuffer {
       { binding: 8, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '2d' } },   // the snow field (render/snowField.ts; rgba16float over the world's XZ — a 1×1 zero on every page but a snow level's) …
       { binding: 9, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },   // … and its place + the look's numbers (snow.wgsl SnowCfg; all zero = not live)
       { binding: 10, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '2d' } },   // the prints pressed into the snow (game/snowTracks.ts; r8unorm over the world's XZ — a 1×1 zero until a snow level hands one over)
+      ...(lookConfig.on ? [   // THE LOOK PROTOTYPE (look.wgsl; on its page only): the two map arrays, their sampler and the panel's numbers
+        { binding: 11, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' as const, viewDimension: '2d-array' as const } },
+        { binding: 12, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' as const, viewDimension: '2d-array' as const } },
+        { binding: 13, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' as const } },
+        { binding: 14, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' as const } },
+      ] : []),
     ] });
     this.pipeLayout = device.createPipelineLayout({ bindGroupLayouts: [sceneLayout, this.objLayout] });
     this.targets = [{ format: 'rgba8unorm' }, { format: 'rgb10a2unorm' }, { format: 'r32uint' }, { format: 'rg16float' }, { format: 'rg8unorm' }, { format: 'rg8unorm' }];   // (+ the material and GBAA edge targets: 8 + 8 + 4 + 4 + 2 + 2 = 28 bytes per sample of the 32 the default limits allow, by WebGPU's attachment accounting — rgba8 / rgb10a2 count 8 each)
     this.depthStencil = { format: 'depth32float', depthWriteEnabled: true, depthCompare: 'less' };
     this.mod = mod;   // (the box pipeline: init(), awaited by the engine before the first frame)
     // CUT BOXES: the same text + gbuffer_cut.wgsl as a second module, made only in a build with the switch — the module above and its pipelines are the build's without it
-    if (cutConfig.on) this.cutMod = makeShader(device, scenePrelude(true) + `const PREV_MAT_BASE: u32 = ${maxBoxes * GEO_STRIDE / 4}u;\n` + decalWgslConsts(3) + decalsSrc + detailSrc + surfaceWgsl() + snowSrc + markingsSrc + gbufSrc + gbufCutSrc, 'gbufferCut');
+    if (cutConfig.on) this.cutMod = makeShader(device, scenePrelude(true) + `const PREV_MAT_BASE: u32 = ${maxBoxes * GEO_STRIDE / 4}u;\n` + decalWgslConsts(3) + decalsSrc + detailSrc + surfaceWgsl() + lookWgsl() + snowSrc + markingsSrc + gbufSrc + gbufCutSrc, 'gbufferCut');
     const S = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST;
     this.prevBoxes = makeBuffer(device, maxBoxes * (GEO_STRIDE + MAT_STRIDE) * 4, S, 'prevBoxes');
     this.prevJoints = makeBuffer(device, 256, S, 'prevJointsDummy');   // (replaced by one the size of the skin's palette the first time a skin is drawn)
@@ -110,6 +125,30 @@ export class GBuffer {
     this.trackView = this.trackTex.createView();
     this.snowCfg = makeBuffer(device, SNOW_CFG_FLOATS * 4, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'snowCfg');
     device.queue.writeBuffer(this.snowCfg, 0, new Float32Array(SNOW_CFG_FLOATS));
+    if (lookConfig.on) this.makeLook();
+  }
+  // ---- THE LOOK PROTOTYPE (render/lookTex.ts, shaders/look.wgsl): the eight materials as two mipped texture arrays, made here at boot; the panel's numbers
+  private lookView: [GPUTextureView, GPUTextureView] | null = null; private lookSamp: GPUSampler | null = null; private lookCfg: GPUBuffer | null = null;
+  private makeLook() {
+    const d = this.device; let mips = 1; for (let n = LOOK_N; n > 1; n >>= 1) mips++;
+    const tex = [0, 1].map(i => d.createTexture({ label: i ? 'lookB' : 'lookA', size: [LOOK_N, LOOK_N, LOOK_LAYERS], mipLevelCount: mips, format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST }));
+    for (let l = 0; l < LOOK_LAYERS; l++) {
+      const m = lookLayer(l); let lv = [m.a, m.b];
+      for (let mip = 0, n = LOOK_N; mip < mips; mip++, n >>= 1) {
+        for (let i = 0; i < 2; i++) d.queue.writeTexture({ texture: tex[i], mipLevel: mip, origin: [0, 0, l] }, lv[i], { bytesPerRow: n * 4 }, [n, n, 1]);
+        if (n > 1) lv = [lookMip(lv[0], n, false), lookMip(lv[1], n, true)];
+      }
+    }
+    this.lookView = [tex[0].createView({ dimension: '2d-array' }), tex[1].createView({ dimension: '2d-array' })];
+    this.lookSamp = d.createSampler({ label: 'look', addressModeU: 'repeat', addressModeV: 'repeat', magFilter: 'linear', minFilter: 'linear', mipmapFilter: 'linear', maxAnisotropy: 8 });
+    this.lookCfg = makeBuffer(d, 64, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'lookCfg');
+    this.setLook();
+  }
+  /** the panel moved a number (lookAmounts): the uniform block again. Nothing on a page without the look. */
+  setLook() {
+    if (!this.lookCfg) return;
+    const k = lookAmounts;
+    this.device.queue.writeBuffer(this.lookCfg, 0, new Float32Array([k.paint, k.relief, k.shine, k.weather, k.untile, k.edges, k.cavity, k.size, ...LOOK_ROUGH]));
   }
   // ---- THE SNOW'S SURFACE (render/snowField.ts, shaders/snow.wgsl): the field's texture, its uniform block, and the hills' mesh — one (tx, tz) per lattice quad, six corners each
   private snowTex: GPUTexture; private snowView: GPUTextureView; private readonly snowCfg: GPUBuffer;
@@ -301,6 +340,7 @@ export class GBuffer {
       { binding: 4, resource: { buffer: this.prevBoxes } }, { binding: 5, resource: { buffer: this.prevJoints } }, { binding: 6, resource: this.wearView },
       { binding: 7, resource: { buffer: cm } },
       { binding: 8, resource: this.snowView }, { binding: 9, resource: { buffer: this.snowCfg } }, { binding: 10, resource: this.trackView },
+      ...(this.lookView ? [{ binding: 11, resource: this.lookView[0] }, { binding: 12, resource: this.lookView[1] }, { binding: 13, resource: this.lookSamp! }, { binding: 14, resource: { buffer: this.lookCfg! } }] : []),
     ] });
     this.objBGKey = key; return this.objBG;
   }

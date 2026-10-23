@@ -145,7 +145,13 @@ fn cutEdgeTake(s0: f32, g: vec2f, best: ptr<function, f32>, d: ptr<function, vec
     let dt = detailSurface(v.wp, n, bi, albedo, rough, metal, frame.matCfg.w);
     albedo = dt.albedo; rough = dt.rough; metal = dt.metal;
   }
-  if (SURF_TRY && !cap && own < 0) {                         // SURFACES, A TRY (surface.wgsl; as fsBox): the box's own faces keep the pattern they had before the cut; a cut face shows the bare material
+  var lookTilt = false; let gn = n;
+  if (LOOK && !cap && own < 0) {                            // THE LOOK PROTOTYPE (look.wgsl; as fsBox, the class found here a pixel): a cut face shows the bare material
+    let lk = lookSurface(surfClass(v.albedo), v.wp, n, bi, v.lc, v.hf, albedo, rough, dwx, dwy, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y);
+    albedo = lk.albedo; rough = lk.rough;
+    if (!(SNOW_SURF || SNOW_GLOW || SNOW_SPARKLE)) { n = lk.n; lookTilt = lk.tilted; }
+  }
+  if (SURF_TRY && !LOOK && !cap && own < 0) {                         // SURFACES, A TRY (surface.wgsl; as fsBox): the box's own faces keep the pattern they had before the cut; a cut face shows the bare material
     let sf = surfaceTry(v.wp, n, bi, v.lc, v.hf, v.albedo, albedo, rough, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y);
     albedo = sf.albedo; n = sf.n; rough = sf.rough;
   }
@@ -155,13 +161,15 @@ fn cutEdgeTake(s0: f32, g: vec2f, best: ptr<function, f32>, d: ptr<function, vec
   }
   if ((frame.flags & FLAG_DECALS) != 0u) {
     let fp = distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y;
+    let nl = n; if (lookTilt) { n = gn; }                   // (as fsBox: the mark on the face, the relief put back under it, the two held inside LOOK_MAX_TILT)
     var d = decalSurface(v.wp, n, v.id & 0xFFFFFu, albedo, fp);
     for (var r = 1u; r < DECAL_REPEAT; r++) { d = decalSurface(v.wp, n, v.id & 0xFFFFFu, albedo, fp); }   // (measurement only, as fsBox: render/decals.ts decalDebug)
     albedo = d.albedo; n = d.n; keep = d.keep;
+    if (lookTilt) { n = normalize(n + nl - gn); let c = dot(n, gn); if (c < 0.8773) { n = normalize(gn * 0.8773 + normalize(n - gn * c) * 0.48); } }
   }
   if (gone) { discard; }
   o.albedo = vec4f(albedo, keep);
-  o.normal = vec4f(n * 0.5 + 0.5, 1.0);
+  o.normal = vec4f(n * 0.5 + 0.5, select(1.0, 0.0, LOOK && lookTilt));
   o.id = v.id;
   o.vel = motionOf(v.wp, v.wpPrev);
   o.mat = vec2f(rough, metal);

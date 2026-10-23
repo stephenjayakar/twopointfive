@@ -143,6 +143,17 @@ const MARK_BASE: u32 = MAX_BOXES * 4u;
 /** raster orientation of box i as a unit quaternion (equals its yaw for ordinary boxes; raster-only props may tilt) */
 fn boxRot(i: u32) -> vec4f { return boxMat[i * 4u + 2u]; }
 fn quatRotate(q: vec4f, v: vec3f) -> vec3f { let t = 2.0 * cross(q.xyz, v); return v + q.w * t + cross(q.xyz, t); }
+/// THE LOOK PROTOTYPE (look.wgsl; the prelude's LOOK): the FACE under a g-buffer normal the look tilted (the normal target's alpha 0 marks one). `n` = that unit
+/// normal, `id` = the pixel's id. The tilt is held under 38° from the face (LOOK_MAX_TILT), so the box axis the normal leans on most is the face it lies on: exact.
+/// A pixel that is no box's (the sky's clear also reads alpha 0) is handed back as it came.
+fn lookGeoN(n: vec3f, id: u32) -> vec3f {
+  let bi = id & 0xFFFFFu;
+  if (bi >= scene.numBoxes || ((id >> 28u) & 1u) != 0u) { return n; }
+  let q = boxRot(bi); let l = quatRotate(vec4f(-q.xyz, q.w), n); let a = abs(l);
+  var g = vec3f(0.0, 0.0, sign(l.z));
+  if (a.x >= a.y && a.x >= a.z) { g = vec3f(sign(l.x), 0.0, 0.0); } else if (a.y >= a.z) { g = vec3f(0.0, sign(l.y), 0.0); }
+  return quatRotate(q, g);
+}
 fn boxOwner(b: BoxGeo) -> u32 { return (b.flags >> 8u) & 0xffu; }
 /** The surface finish of box i (boxes.ts matWord in boxMat row 1's w: roughness 0‥1 + 2 if bare metal + 4 if anisotropic — three disjoint ranges of one
  *  float): the material half of the one BRDF (base colour = boxAlbedo). The g-buffer writes roughness / metalness per pixel from it (+ its detail layer);

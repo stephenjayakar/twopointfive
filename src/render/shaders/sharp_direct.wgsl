@@ -102,11 +102,14 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
   var E0 = vec3f(0.0); var E1 = vec3f(0.0);
   var topW = array<f32, 2>(0.0, 0.0); var topI = array<i32, 2>(-1, -1); var topE = array<vec3f, 2>(vec3f(0.0), vec3f(0.0));   // the strongest reaching light per class at this pixel (the edge / sliver ray's candidate)
   var N = vec3f(0.0, 1.0, 0.0);
+  var Nl = N; var look = false; var Us0 = vec3f(0.0); var Us1 = vec3f(0.0);   // THE LOOK PROTOTYPE (below)
   var code = 0u;                                             // SLIVERS: the fallback code that rides out in outE0.a (header)
   var wantsRays = false;                                     // a sliver under rule 1 with a live light to decide (voted into the tile's ballot below)
   var remR = vec2f(1.0);                                     // rule 1: the ratio the class's REMAINDER (everything but the rayed light) rides on, per class
   if (live) {
-    N = normalize(textureLoad(oNormal, gxy, 0).xyz * 2.0 - 1.0);
+    let nT = textureLoad(oNormal, gxy, 0); N = normalize(nT.xyz * 2.0 - 1.0);
+    Nl = N; look = LOOK && nT.a < 0.17;            // THE LOOK PROTOTYPE (look.wgsl): a tilted normal. Everything below runs on the box's own FACE as it always did; the relief only re-weighs each class's light at the end (Us ∕ U)
+    if (look) { N = lookGeoN(Nl, textureLoad(oId, gxy, 0).x); }
     // ---- U per class at THIS output pixel: the estimators' scoring loop (same order, same early-outs; walled-off lights stay in U here as there) ----
     for (var s = 0u; s < nIter; s++) {
       var i = s; if (tileCull) { i = wgList[s]; }
@@ -118,6 +121,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
       let c = select(0u, 1u, lightBroad(li));
       if (c == 1u) { U1 += ev.E; } else { U0 += ev.E; }
       if (lightReachLevel(i, P) == 0u) { if (c == 1u) { Uw1 += ev.E; } else { Uw0 += ev.E; } continue; }   // walled off from this cell: known dark — in U, never the ray's target
+      if (look) { let es = evalLight(li, P, Nl); if (c == 1u) { Us1 += es.E; } else { Us0 += es.E; } }   // (THE LOOK PROTOTYPE: the lights that reach this cell, scored again on the tilted normal)
       if (w > topW[c]) { topW[c] = w; topI[c] = i32(i); topE[c] = ev.E; }
     }
     // ---- the visibility ratio from the internal estimate: joint-bilateral over the 2×2 internal texels round this pixel (a 4×4 search if none of them lies on this surface) ----
@@ -230,6 +234,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
     }
   }
   { let ou = 0.25 * max(luminance(U0 + U1 - Uw0 - Uw1), 1e-4); if (overturn < -ou) { code |= 16u; } else if (overturn > ou) { code |= 32u; } }   // census bits: 16 = the ray found DARK what the neighbours would have lent lit (a leak under rule 0), 32 = the reverse
+  if (look) { E0 *= clamp(Us0 / max(U0 - Uw0, vec3f(1e-5)), vec3f(0.0), vec3f(4.0)); E1 *= clamp(Us1 / max(U1 - Uw1, vec3f(1e-5)), vec3f(0.0), vec3f(4.0)); }   // THE LOOK PROTOTYPE: each class's light as the relief takes it, over as the face took it (the live lights' sums)
   if (sliverPaint == 1u && (code & 3u) != 0u) { E0 = select(vec3f(5.0, 5.0, 0.0), vec3f(6.0, 0.0, 6.0), (code & 3u) == 2u); E1 = vec3f(0.0); }   // paint 1: slivers magenta, ring-only pixels yellow
   if (sliverPaint == 2u && (code & 48u) != 0u) { E0 = select(vec3f(0.0, 5.0, 6.0), vec3f(7.0, 0.0, 0.0), (code & 16u) != 0u); E1 = vec3f(0.0); }   // paint 2: red = the ray found DARK what the neighbours lent lit (a leak the old rule drew), cyan = the reverse
   if (onScreen) {

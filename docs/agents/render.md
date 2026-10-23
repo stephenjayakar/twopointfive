@@ -315,3 +315,30 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   pattern, its cut faces are bare. No check holds any of this. SEEN: on the software adapter only (the compound, squad of four, very low, 800×500, one seed,
   night and midday, 118 of 118 pipelines, no GPU or console error, the same two views with and without the word). Never seen on a GPU: the look at the play
   resolution, motion, shimmer under the temporal blend, the noise it adds to bounce light, and the cost (it is raster work, which no trusted timer covers).
+- **THE LOOK PROTOTYPE** (`?look` at boot, or the page `/look` = the game's page with `look` on the compound at midday; `render/frame.ts lookConfig`,
+  `shaders/look.wgsl`, `render/lookTex.ts`, the panel `ui/lookpanel.ts`; OFF on every other page). A place to find out how far materials carry a world of boxes,
+  NOT the look (`STYLE.md` rule 1 stands until the maintainer says otherwise). Where the surfaces try above writes a pattern in the shader, this one samples MAPS:
+  eight tiling materials (the try's eight classes, by the same `surfClass`) made on the CPU at boot, 512 × 512 over 2 m, as two mipped `rgba8unorm` texture
+  arrays (A = paint multiplier ÷ 2 + height, B = tangent normal + roughness + cavity; no image file ships). They sit at the g-buffer object group's bindings
+  11 to 14 with a repeating, anisotropic sampler and a 64-byte uniform block, ALL FOUR ONLY ON THAT PAGE: without the word the g-buffer modules get a two-line
+  stub and the bind group is the page's as it was. What stays on every page: the prelude's `LOOK` / `LOOK_BOUNCE` consts, `lookGeoN` in `common.wgsl`, and one
+  flat `u32` varying on the box vertex output (zero). FOUR LAYERS, each a slider on the panel (`gbuffer.ts lookAmounts`, 0 = that layer off, all 0 = the boxes
+  as the game draws them, by an early return: none of the reads run): the maps (paint, relief, finish, cavity); the repeat broken for the four materials without courses (a second read, turned and
+  shifted, cross-faded by a slow noise and by height); weather that follows the BUILDING (a wall's foot damp to a ragged line with its tide mark, its head
+  bleached with runs under it, slow blotches, and on the ground the level's traffic map: walked earth pale and flat, stones against the walls); and small
+  boxes' edges rounded in the normal and rubbed pale. THE NORMAL: `fsBox` stores the tilted normal with the normal target's alpha 0 (a code no other writer
+  uses for a surface; a snow level keeps the normal and its alpha for the snow and takes the paint and the finish only). `gdown` hands the working-size targets the box's own
+  FACE (`lookGeoN`: the box axis the normal leans on most, exact while the tilt is under `LOOK_MAX_TILT` 0.48; a mark laid over the relief, `decals.wgsl`, is laid on the face and the two are held under the cap together; a tilt under 0.02 is stored as the face, unmarked), so the reservoirs, the filters, the gather,
+  the reflections and `bounceLeftNoWall` read the flat wall they always read. Three readers see the relief: `sharp_direct.wgsl` scores each light that reaches the cell a second
+  time on the tilted normal and re-weighs each class's result by that ratio over the live lights' sum (capped at 4; a light the face itself turns from gives
+  nothing), `composite.wgsl` leans the bounced light by how far the facet looks up (`LOOK_BOUNCE` 0.7), and the fog of war's picture (`fogofwar.wgsl`, which
+  has no id to find the face by) shades what it remembers with it (the cap keeps a wall's facet under its `N.y > 0.5` test for a top). IT NEEDS SHARP DIRECT (every preset has it): with `?nosharp`
+  the working-size passes read the tilted normals themselves. Rays, the light cache, reflection hits and the LIGHT METER read the flat paint as ever, so
+  nothing a man senses moves. KNOWN WRONG, left so because it is a prototype: the class is still a guess from the colour (the try's list above); the maps are
+  laid in world space for six of eight classes, so a pushed prop slides under them; relief past the tilt cap is clipped; the bounce's lean assumes its light
+  comes from above, and on the ground a facet can only lose bounce, never gain it; a facet lit by a light that only grazes the face gets at most four times
+  that light, and a light that reaches the cell but is shadowed at the pixel still has its say in which way the relief reads; the edges rule is by size (a box
+  under 1.3 m on its long side and 1.6 m tall), so two small boxes laid edge to edge show a groove; the maps cost about 3.5 s of the boot and 22 MB of texture. No check holds any of this.
+  SEEN: on the software adapter only (the compound at midday, squad of four, very low, one seed, 118 of 118 pipelines, no GPU or console error). Never seen on
+  a GPU: the look at the play resolution, motion, shimmer, and the cost (anisotropic array reads are raster work, which no trusted timer covers; read the
+  page's fps with the panel's "stay plain" box on and off: that measures everything but the class test a corner and the wider bind group).

@@ -18,6 +18,7 @@ const server = Bun.serve({
   development: { hmr: false, console: true },
   routes: {
     "/": index, "/viewer": viewer, "/editor": editor, "/workbench": workbench, "/replay": replay, "/sounds": sounds, "/music": music,
+    "/look": req => { const u = new URL(req.url); return Response.redirect("/?look&" + (u.search.length > 1 ? u.search.slice(1) : "roomclear&squad4&levelFile=compound.json&hour=midday&hud"), 302); },   // THE LOOK PROTOTYPE (src/render/shaders/look.wgsl): the game's page with ?look, on the compound at midday unless the link names its own mission
     "/gait": req => Response.redirect("/workbench" + new URL(req.url).search + "#mode=chars&scene=sam/walk", 302),   // the gait lab is the workbench's Characters ▸ Sam ▸ walk / jog / … now; old links land there
   },
   async fetch(req) {

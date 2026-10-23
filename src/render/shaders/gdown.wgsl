@@ -40,6 +40,7 @@ fn outTexelOf(pin: vec2f) -> vec2i {
   r.albedo = textureLoad(oAlbedo, o, 0);
   r.normal = textureLoad(oNormal, o, 0);
   r.id = textureLoad(oId, o, 0).x;
+  if (LOOK && r.normal.a < 0.17 && textureLoad(oDepth, o, 0) < 1.0) { r.normal = vec4f(lookGeoN(normalize(r.normal.xyz * 2.0 - 1.0), r.id) * 0.5 + 0.5, 1.0); }   // THE LOOK PROTOTYPE (look.wgsl): a normal the look tilted goes down as the box's own face — every working-size pass sees the wall it always saw
   r.vel = textureLoad(oVel, o, 0).xy;
   r.mat = textureLoad(oMat, o, 0).xy;
   r.depth = textureLoad(oDepth, o, 0);

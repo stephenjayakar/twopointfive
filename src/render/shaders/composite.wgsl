@@ -43,6 +43,12 @@ struct VOut { @builtin(position) pos: vec4f, @location(0) uv: vec2f };
 
 fn linearDepth(d: f32, pix: vec2f) -> f32 { return distance(worldFromDepth(pix, d), frame.camPos); }
 
+/// a guide's normal: the g-buffer's — on the look page (look.wgsl) the box's own FACE where the look tilted it, so every weight below is the one it always was
+fn geoN(p: vec2i) -> vec3f {
+  let t = textureLoad(gNormal, p, 0); let n = t.xyz * 2.0 - 1.0;
+  if (LOOK && t.a < 0.17) { return lookGeoN(normalize(n), textureLoad(gId, p, 0).x); }
+  return n;
+}
 fn upsampleIndirect(pix: vec2i, pin: vec2f, z: f32, N: vec3f) -> vec3f {   // pin = the pixel's position on the INTERNAL raster (= pixf; under SHARP pixf × in∕out)
   let hdims = vec2i(textureDimensions(indirectTex));
   var ip = pix; if (SHARP) { ip = vec2i(floor(pin)); }           // the internal pixel this pixel falls in
@@ -59,7 +65,7 @@ fn upsampleIndirect(pix: vec2i, pin: vec2f, z: f32, N: vec3f) -> vec3f {   // pi
         let d = textureLoad(gDepth, gpx(src), 0);
         if (d >= 1.0) { continue; }
         let zs = linearDepth(d, ipos(vec2f(src) + 0.5));
-        let ns = textureLoad(gNormal, gpx(src), 0).xyz * 2.0 - 1.0;
+        let ns = geoN(gpx(src));
         var w = select(1.0 - t.x, t.x, dx == 1) * select(1.0 - t.y, t.y, dy == 1) + 1e-4;
         w *= exp(-abs(zs - z) / max(z * 0.02, 0.02));
         w *= pow(max(dot(ns, N), 0.0), 8.0) + 0.001;
@@ -79,7 +85,7 @@ fn upsampleIndirect(pix: vec2i, pin: vec2f, z: f32, N: vec3f) -> vec3f {   // pi
       let d = textureLoad(gDepth, gpx(src), 0);
       if (d >= 1.0) { continue; }
       let zs = linearDepth(d, ipos(vec2f(src) + 0.5));
-      let ns = textureLoad(gNormal, gpx(src), 0).xyz * 2.0 - 1.0;
+      let ns = geoN(gpx(src));
       var sp = vec2f(src - pix); if (SHARP) { sp = vec2f(src) + 0.5 - pin; }
       var w = exp(-dot(sp, sp) * (0.18 * (4.0 / f32(gdiv * gdiv))));   // spatial falloff in units of the texel spacing (0.18 /px² at gdiv 2)
       w *= exp(-abs(zs - z) / max(z * 0.02, 0.02) );
@@ -112,7 +118,7 @@ fn upsampleSpecular(pix: vec2i, pin: vec2f, z: f32, N: vec3f) -> vec3f {
       if (((tid >> 28u) & 1u) != 0u || tIdx == 0xFFFFFu) { continue; }
       if ((boxGeo[tIdx].flags & BOX_GLOSS) == 0u) { continue; }
       let zs = linearDepth(d, ipos(vec2f(src) + 0.5));
-      let ns = textureLoad(gNormal, gpx(src), 0).xyz * 2.0 - 1.0;
+      let ns = geoN(gpx(src));
       var sp = vec2f(src - pix); if (SHARP) { sp = vec2f(src) + 0.5 - pin; }
       var w = exp(-dot(sp, sp) * (0.18 * (4.0 / f32(gdiv * gdiv))));
       w *= exp(-abs(zs - z) / max(z * 0.02, 0.02) );
@@ -140,7 +146,7 @@ fn upsampleSpecAny(pix: vec2i, pin: vec2f, z: f32, N: vec3f) -> vec3f {
       let d = textureLoad(gDepth, gpx(src), 0);
       if (d >= 1.0) { continue; }
       let zs = linearDepth(d, ipos(vec2f(src) + 0.5));
-      let ns = textureLoad(gNormal, gpx(src), 0).xyz * 2.0 - 1.0;
+      let ns = geoN(gpx(src));
       var sp = vec2f(src - pix); if (SHARP) { sp = vec2f(src) + 0.5 - pin; }
       var w = exp(-dot(sp, sp) * (0.18 * (4.0 / f32(gdiv * gdiv))));
       w *= exp(-abs(zs - z) / max(z * 0.02, 0.02) );
@@ -697,7 +703,7 @@ fn compositePixel(pixf: vec2f) -> vec3f {
             let gp = glassRefractPath(frame.camPos + V * gh.t, V, u32(gh.idx), gh.n, ior);
             glassT = pow(max(gh.trans, vec3f(1e-3)), vec3f(frame.glassCfg.y * gp.len / max(gp.unit, 1e-4))) * (1.0 - F);
             if (gp.ok) {
-              N0 = normalize(textureLoad(gNormal, pix, 0).xyz * 2.0 - 1.0);
+              N0 = normalize(geoN(pix));
               let rr = refractedRead(pixf, P0, N0, gp);
               if (rr.ok) { sPix = rr.pix; sPixf = vec2f(rr.pix) + 0.5; sDepth = rr.depth; moved = true; if (SHARP) { sPin = sPixf * inOverOut() + frame.sharpCfgC.xy; } else { sPin = sPixf; } }
             }
@@ -722,14 +728,16 @@ fn compositePixel(pixf: vec2f) -> vec3f {
     }
     let albedo4 = textureLoad(gAlbedo, sPix, 0);
     let albedo = albedo4.rgb;                   // (.a = the decals' gloss-keep: exactly 1 unless a mark's soot lies on this pixel — gbuffer.wgsl fsBox)
-    let N = normalize(textureLoad(gNormal, sPix, 0).xyz * 2.0 - 1.0);
     let id = textureLoad(gId, sPix, 0).x;
+    let nT = textureLoad(gNormal, sPix, 0); let Nl = normalize(nT.xyz * 2.0 - 1.0);   // (Nl: the stored normal. THE LOOK PROTOTYPE, look.wgsl: where the look tilted it, N below is the box's own face — the guides' and the cache's normal, as ever — and Nl only leans the bounce)
+    var N = Nl; if (LOOK && nT.a < 0.17) { N = lookGeoN(Nl, id); }
     let boxIdx = id & 0xFFFFFu;
     let P = worldFromDepth(sPixf, sDepth);
     let z = distance(P, frame.camPos);
     let EdS = textureLoad(directTex, sPix, 0).rgb; let EdB = textureLoad(softTex, sPix, 0).rgb;   // the shadowed direct per emitter class (sharp, broad)
     let Ed = EdS + EdB;
-    let Ei = upsampleIndirect(sPix, sPin, z, N);
+    var Ei = upsampleIndirect(sPix, sPin, z, N);
+    if (LOOK) { Ei *= clamp(1.0 + LOOK_BOUNCE * (Nl.y - N.y), 0.45, 1.6); }   // the relief in bounced light: most of it comes from above (the sky, a ceiling's wash), so a facet leaning up takes more of it
     var emissive = vec3f(0.0);
     var glossPix = false;                       // this pixel is the polished top of a BOX_GLOSS floor box (world geometry, never a character)
     if (((id >> 28u) & 1u) == 0u && boxIdx != 0xFFFFFu) {
@@ -802,7 +810,7 @@ fn compositePixel(pixf: vec2f) -> vec3f {
     if (SNOW_SPARKLE) { spec += sparkle; color += sparkle * glassT; }   // SNOW SPARKLE: light, not paint — added as it is
     if (((id >> 29u) & 1u) == 1u) { color = mix(frame.capColor.rgb, albedo * frame.capColor.rgb * 4.0, frame.capColor.a); }
     if (dbg == 1u) { color = select(albedo, albedo * glassT + vec3f(0.0, 0.08, 0.06), glassPix); }   // (albedo view: pixels behind glass carry the tint and a faint teal wash, so the panes can be found)
-    else if (dbg == 2u) { color = N * 0.5 + 0.5; }
+    else if (dbg == 2u) { color = Nl * 0.5 + 0.5; }
     else if (dbg == 3u) { color = Ed * (1.0 / PI); }
     else if (dbg == 4u) { color = Ei * (1.0 / PI); }
     else if (dbg == 6u) { color = vec3f(1.0 - exp(-z * 0.06)); }   // view distance, monotonic (white = far)
