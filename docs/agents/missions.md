@@ -57,7 +57,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (3) EVERY STEP DONE ASKS FOR A CHECKPOINT (`lesson.ts advance` -> `g.saves.request(g, 'lesson', 'training N/M')`; the autosave's gates still decide), so
   a down costs a step or two, never the lesson: the floor's own triggers can stay silent for minutes on a one-yard level. (3b) NO LINE BEFORE IT IS TRUE: 'he
   has given up' waits on its own step, done by the lesson test `{ is: 'calm', route? }` (every hostile man on his feet, or the one of that route, in 'patrol'). (4) a lesson level's new door
-  keeps lived things 1.1 m off its line (`lived-check` holds it), and a level changed on purpose adds its commit to `lived-check.ts BASE_REVS`.
+  keeps lived things 1.1 m off its line (`lived-check` holds it), and a level changed on purpose moves its own row in `lived-check.ts LEVEL_BASE` (`levels.md`, *The furniture check holds each level to its own base*).
   (5) THE TWO SQUAD LESSONS (train-orders, train-pairs) set `scenarios.roomClear.digIn: false` (roomfight.ts tickDef): read at six seconds a line, their men
   always had the minute to set on the door. And at a door the lesson HOLDS (threshold hold, then the word), the garrison's marks stand in the middle of the
   back wall, in the band neither jamb man's diagonal reaches (the two stand a metre out and half a metre wide of the jambs): a defender on either diagonal,
@@ -1282,6 +1282,62 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   lamps on, the lit hall being the point). A SKETCH: the script's few words, the store (four strides of dark), a composed menu picture
   (`tools/menu-art.ts` PIN). KNOWN: a man put out through the list before he is asked leaves no way to learn the code (the pad then says so). Never seen on
   a GPU, never played by a hand: the timings are a script's, and whether the dark lane reads on a real screen with the outline off is the maintainer's call.
+- **The ledger's whistled man looks from the gap, then turns away to smoke** (2026-10-22; `levels/tut-quiet.script.ts` beat `night`, the marks `TQ.look` /
+  `TQ.smoke` and the volumes `tq_walk` / `tq_beam` / `tq_past` in `tools/levels/tut-quiet.ts`; level data and a level script, no switch of its own). The
+  maintainer, playing the ledger on a GPU, of the man who had walked to the whistle's own mark: "guard seems kinda dumb that he doesn't notice the
+  footprints. maybe we should make him stop a bit further away and then turn around for a cigarette break. may need to rework the map for that", and "he
+  can stop further off so long as he's covered the spot with his flashlight, but maybe isn't close enough to notice the footprints". (Guards do NOT read
+  prints: the snow's tracks are the picture's alone, and nothing here changes that.) WHAT HE DOES: the game's own whistle rule starts him (the nearest
+  calm man who hears it goes suspicious); 0.9 s later the script takes him. He comes round the long wall's far end as before, stops in the back strip a
+  stride short of the gap in the cross wall (26.4, 17.75), puts his torch through the gap and over where the whistle was (5.2 m off in the scripted run,
+  his beam within 6 degrees of the mark) for 3.6 s, says "nothing. wind", walks back up the strip past the back door to his chair at its far end
+  (30.3, 17.7), brings the torch down to his side (the smoke order is `upper: 'none'`: a whistled man keeps his torch in the hand, `guards.ts handCarry`, and with no upper layer it hangs as a calm man carries it), and smokes there for 50 s with his back to the gap; then the script lets him go and he walks back to his fire, the game's own man. The
+  player comes round the long wall's near end, up the walk, through the gap and along the strip to his back: seven metres with the man's back to him.
+  A MAN A SCRIPT WALKS IS BLIND AND DEAF (`squad.ts runGuardScript`), so the script is his eyes and ears while it has him, and each of these hands him
+  back to the game `alert`: the player on the walk or in the strip while he comes down it; the player there or in the lane (`tq_beam`: all of it but the
+  pocket behind the long wall) while his light is through the gap; the player past him the way he faces; a step behind him that is not a crouched one
+  (a run inside 6 m, an upright walk inside 2.4 m: an event's `level` is the gait's times the floor's). A second whistle while he smokes sends him to
+  look again, at where that one was. A grab, or the man down, ends it (the `ask` step's cue `held`). THE STEP AFTER: he is taken 2.5 m past the back
+  door's lock on purpose. A body within 1.3 m of a hand has the row before a door's (`player.ts INTERACT_PRIORITY`), so a man put down nearer made
+  Space at the lock DRAG him; the `door` step's reach is 0.8 m so it does not pass from where he was taken. WORDS: the grab line is "When he lights a
+  smoke, sneak up behind him and press [Space] to grab him"; the card keeps the maintainer's sentence ("He'll check out the sound and then stop for a
+  smoke, with his back to you."). CHECKS: `lesson-run tut-quiet` on both stands (`TPS_RAILS=1` in front on the frozen one; `--pace 6` on the shipped)
+  finishes 19 of 19 and prints where he looked from and how far his light was off the mark (it fails under 4 m or past 16 degrees), and that his torch is still in his hand, lit, and under his shoulder at his smoke (0.48 m under; it fails above 0.2); its BREAK PATHS,
+  each of which must fail the run: `TQSMOKE_BREAK=front` (the player stands on the walk), `=beam` (he stays on the whistle's mark), `=upright` (he
+  walks up behind the smoking man on his feet). All three fail on the frozen stand, seed 1. `lesson-gate`, `level-needs --run` on both stands,
+  `rails-check` on both, `second-way-check`, `ownroofs-check`, `rowset-check`: green. `quiet-light`: its three red lines by design, no fourth.
+  THE LEVEL'S FINGERPRINT MOVED (three volumes, a chair and a gas bottle moved, a tin added): checkpoints and recordings of this level from before are
+  refused. `lived-check` wants a base that carries this change; none is added here (the per-level base is the tutorial goal's). ON THE REAL PAGE (headless Chromium, the software adapter, real keys; with the torch still held up, before it was lowered): he came, looked from
+  (26.7, 17.8) 10.4 s after the whistle, was at his smoke at 17.7 s, and the grab took with a tap of Space at 30.4 s; no page error from the game.
+  The pictures are too small and dark to judge him by. The lowered torch: headless and on the pose sheet only. NEVER SEEN ON A GPU, never played by a hand: how long 50 s feels, whether a man in a
+  dark strip reads from the gap, and whether the look through the gap is long enough to be noticed are the maintainer's.
+  A SMALL FLAW IT TURNED UP, not this change's and not mended: creeping up behind the hall's man the scripted player's footfall was filed on seven
+  frames running (0.1 s) at 1.1 m, and seven crouched steps on stone at that range take a calm man to suspicious; the same approach six seconds
+  earlier in the same run files one. It looks like the walk cycle's phase crossing its half back and forth (`player.ts`, the footstep's edge test).
+- **A man told to have a smoke lights one** (2026-10-22; `src/game/smokebreak.ts SMOKEBREAK` / `updateSmokeBreak`, called from `game.ts` beside the
+  breath in the cold; the order is `director.ts OrderPatch.smoke` → `GuardScript.smoke`; the arm is `character.ts smokeLayer`, its numbers `SMOKEARM`
+  in that file). The maintainer: "cigarette break animation (with real smoke!) would be sick". THE SWITCH: `SMOKEBREAK.on`, ON in the page
+  (`?smokebreak=0` puts it off), OFF in the module and on the frozen stand (`FROZEN_HOLDS`; `TPS_SMOKEBREAK=1` raises it there); registered in
+  `knobs.ts`, and a recording from before the key replays with it off (`journal.ts applyKnobs`). Off, a man told to smoke stands where he was sent with
+  his hands as they were: the same game digest as a man never told (the check's `off` line). WHO: a living man on his feet whose script says `smoke`,
+  once he stands where it sent him; not a man in an arm; the frame his script ends the hand is given back. One man in the game today: the ledger's.
+  WHAT: his LEFT hand goes up to his mouth to light it (0.5 to 2.6 s; the torch and the gun are the right hand's) and again for 2.1 s of every 7.5 s;
+  a lighter's flame at his mouth (one `LightSet.flash`, 0.9 s, range 3.2 m) and the lit end (a flash re-filed every 0.4 s at the left hand, intensity
+  0.1 and 0.7 at a draw, range 1.3 m): the engine's own short lights, so the light meter has them as the picture does. THE SMOKE IS THE SOLVER'S: a
+  thread off the end that rides his hand (one long source) and what he breathes out 0.7 s after each draw, off his mouth for 1.3 s, both `look`
+  sources on the fine lattice with a blue grey `tint` (`smoke/types.ts`: the game's own smoke, the one sight lines are cut by, is never told). With no
+  solver drawing, what he breathes out is the particle system's dust puffs with a steam share, as a breath in the cold is, and the thread is not shown.
+  Nothing live shows in the fog of war: a hidden man's smoke is not filed (his lights are the meter's and stay). THE IMPORT TRAP: `character.ts` must
+  not import `smokebreak.ts` (it did at first, for the arm's numbers: in the page's bundle that module, and through it `particleFx.ts`, was evaluated
+  in the middle of `character.ts`, and `wounds.ts` then ran its top level before `FOLD_WITH` existed: the page died at boot with every headless check
+  green). CHECK: `bun run tools/qa/smokebreak-check.ts` (probe `smokebreak`, also under `missions`): lights, hand (the left wrist from 0.57 / 0.73 m
+  off the head joint on the frozen / shipped stand to 0.21 m, the right moving under 0.1 m), smoke (one thread, a breath a draw, every source
+  look-only, fine, confined; the thread dropped the frame he is let go), puffs, who, off, old: 8 of 8 on both stands; `SMOKEBREAK_BREAK=1` fails six.
+  NOT DONE: no cigarette is drawn in the hand (at the game's zoom it is two pixels: the light is what shows), no sound of the lighter, no ash, and the
+  arm's numbers are first-pass. Its lights add to the frame's 64 while he smokes (one, two for the 0.9 s of the flame). THE POSE WITH NO GPU: `bun run tools/qa/pose-mesh.ts defender_1 smoke-up --inhand --gunhand` (and `smoke-rest`), then
+  `python3 -I tools/qa/pose-mesh-raster.py <the PLYs> --out sheet.png`: the hand is at his mouth with the elbow down, the torch low in the other.
+  ON THE REAL PAGE (the software adapter, the ledger played with real keys): he lit up and took a draw before he was grabbed, with no page error from the game; at
+  640 by 360 the orange light on him at a draw is what shows, and neither the arm nor the smoke can be judged from those pictures. NEVER SEEN ON A GPU.
 - **A mission row can name its own hour and weather** (2026-10-22; `src/game/rowset.ts`, `ROWSET.on` — ON in the page, `?rowset=0` = the link's hour and
   weather as ever; OFF in the module and on the frozen stand, `TPS_ROWSET=1`; a `FROZEN_HOLDS` row, in the knob registry and a journal's tables. NO ROW
   NAMES ONE YET, so on or off is the build as it was). A tutorial mission's level is built for one hour and one sky, and its row used to open at the
@@ -1357,7 +1413,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `sneak.ts`). `tools/levels/tut-pair.ts` writes `levels/tut-pair.json` on ITS OWN GROUND (it shares the kit's pieces with other levels and nothing else: a
   tutorial mission is not built on the training yard or on another mission's floor): a haulier's yard at night, 33 by 23 m, which is what the 40 by 28 m
   world leaves with a road either side; a truck gate chained shut, a fallen stretch of wall the two come in by from the road where their own pickup stands,
-  two shipping containers end to end across the yard with a gap between them, the watch's camp round a lantern, an office court with a fuel point. Four
+  two shipping containers end to end across the yard with a gap between them and a third stood across the gap's mouth, the watch's camp round a lantern
+  with a wall along its south side, an office court with a fuel point. Four
   men on posts, a lesson of 18 steps (`tools/qa/lessons/tut-pair.ts` plays it by input alone; the generator's header has the map and why each piece stands
   where it does); `levels/tut-pair.script.ts` is a few words between the men on the cues `gate`, `park` and `yard` (nobody is held, moved or spawned). THE
   BEATS: get low and lead the partner round the end of a low wall; the squad's key on the man at the pickup, the partner creeps to his back and says "set",
@@ -1384,27 +1441,48 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   mark the player is led to is in a moon shadow (the low wall's, the containers', the south wall's). (5) ON THE PAGE THE PARTNER ALSO READS THE LIGHT ON
   HIMSELF (`SNEAK.stalkAmbient`, on in the page): sent to a man's back from a place in the moon he takes the whole way for lit, says who is looking across
   it, and gives up. The headless partner has no moon on him, so only the page showed it: the first page run stopped at the double with every headless seed
-  green. The moon is low in the south-west so that shadows fall across the yard, and his way round to the far man is dark from end to end (east of the
-  south container, along the south wall, up the far side of the old wall); a pickup shuts the open ground he would otherwise cut across. With it the page
-  plays the double: he waits for the near man's look to pass and is set about half a minute after the order. (6) The way to a man's back must have room
+  green. The moon is low in the south-west so that shadows fall across the yard, and every mark the player is led to is in one. With it the page (software
+  adapter) played the double. That was not enough on a GPU: see (8). (6) The way to a man's back must have room
   to pass the men who are not his, and a vehicle moved to throw a shadow can close the nav between two parts of the yard (the scripted player then walked
   round outside the wall): look at the path after moving one. (7) A look-at point inside a parked truck is a lint warning; a mark for the pad is 0.75 m
-  off the door, not a metre. THE PAGE PLAY, `tools/qa/tut-pair-page.cjs` (Playwright on the software adapter against a dev server; `PORT`, `OUT`, `PICS`,
+  off the door, not a metre. (8) NO SHADOW IN AN OPEN YARD IS DARK ON A REAL GPU, AND THE PARTNER'S RULE IS LIT + A LINE. The maintainer's first play
+  (10-22, Chrome on his GPU, hard): "not following me here" at the gap, the partner 'with you · waiting on the light' by the van; his light meter read
+  14 in the gap and 27 behind the low wall, where the software adapter had read 0 to 3 (the moon's bounce: neither the CPU's estimate nor the software
+  page has it). To the partner 10 is lit; both lantern men looked straight down the gap, so their LINE ran the length of the gate yard, and he will not
+  walk a lit stretch a man has a line to nor stand in one: he was never going to come, and the step waited on him (`mate`). Reproduced headless with
+  `lesson-run tut-pair --floor 0.2` once the floor reached the partner's own meter (below); with it the NEXT step failed as well (his way to the far man
+  went through the gap and down the container's side, a stride behind the near man, whose head swings: 'waiting · Novak is looking across the way',
+  then he gave up). THE MEND IS GEOMETRY, NOT DARK: a third container across the gap's mouth (nothing west of it is in either lantern man's line; the two
+  come round its end and he stops in the alley three metres short of the player); the strip round the south container's end opened (that container
+  ends 0.8 m short) and a wall along the south of the camp from that container to the stub (his way to the far man is down the alley, round the
+  container's end, along the yard wall and up the far side of the stub: no line from the near man to any step of it). And NO 'LEAD HIM' STEP BUT THE
+  FIRST WAITS ON WHERE THE PARTNER IS (`gap` and `past` are done by the player's feet): a step that waits on the partner's own judgement of the light is
+  a dead end the day he judges it lit; the scripted player still fails a run where he does not come. THE SCRIPTED RUN PLAYS AT THAT LIGHT
+  (`tools/qa/lessons/tut-pair.ts` `mode.floor` 0.2; `--floor 0` = the dark it was built in). `lesson-run --floor N` now floors EVERY UNIT'S meter, not
+  only the player's (it stands in for the probe's answer under the `unit` keys: the CPU's estimate where he was asked about, the moon, never under N),
+  and a script can ask for it (`mode.floor`): use it on any quiet level that will be played on a GPU, with what a GPU showed. Measured at floors 0,
+  0.15, 0.3 and 0.45 on seeds 1 to 4 (16 of 16), at 0.2 and 0.3 on hard, and at 0.2 with every line read for 6 s: all 18 steps; "set" behind the far man
+  comes 25 to 32 s after the order with a floor (17 to 23 s in the dark), which is a long watch. ALSO FROM THAT PLAY, "what is F here": the key by the
+  partner was the floor plan's mark for a man who waits on the word; see `squad.md`, the key's cap. `rails.rows` gained `pull` (a door he opens can be
+  shut: the tutorial frame's note from the stealth mission). THE PAGE PLAY, `tools/qa/tut-pair-page.cjs` (Playwright on the software adapter against a dev server; `PORT`, `OUT`, `PICS`,
   `STEPS`, `SETTLE`): it boots the row, checks the frame is up and the untaught keys do nothing, then does every step with real keys and the mouse, a
   picture where asked. Two things it had to learn: a hand walks by the game's own path finder, not in straight lines (a real-size door leaves a hand's
   width either side of a man); and stepped frames are never drawn there, so THE PAGE'S LIGHT METER DOES NOT MOVE unless a frame is drawn: it draws a few
   before each order (`settle`), or the partner reads the light of wherever the last picture was taken. CHECKS: `lesson-gate tut-pair` (the file is its
   generator's, `level-lint`, `lesson-check`, the scripted player on the frozen stand with the frame raised, and on the shipped stand on four dice, two of
   them reading every line for 6 s), `quiet-check`, `carlamps-check` (its row), `level-needs tut-pair --run`, `rails-check` (the frame's own), both
-  typechecks, the page play. MEASURED, headless: the scripted player finishes all 18 steps on the shipped stand on seeds 1 to 4; "set" comes 5 to 9 s
-  after the first order and 17 to 21 s after the second, the mains go 3 to 7 s after the order on the box. THE DOUBLE'S ORDER NAMES ITS MAN (`did` `order:pairMark@foe:<callsign>`): the squad's key on the near man of the two leaves the ask up
+  typechecks, the page play. MEASURED, headless: the scripted player finishes all 18 steps on the shipped stand on seeds 1 to 4; "set" comes 5 to 12 s
+  after the first order (the second: see (8)), the mains go 3 to 7 s after the order on the box. THE DOUBLE'S ORDER NAMES ITS MAN (`did` `order:pairMark@foe:<callsign>`): the squad's key on the near man of the two leaves the ask up
   (`TUTPAIR_NEAR=1` in front of `lesson-run tut-pair` gives the near man first and fails if the step passes). KNOWN: the last man is 14 m
   from the office door, so the dark is walked, not stood in; the two at the start
   are dark figures on a dark road. A SKETCH: the script's few words, the office (one room), no lived-in rooms, a composed menu picture
-  (`tools/menu-art.ts` PIN). Never seen on a GPU, never played by a person: the moon shadows, the red of the beacons over the whole yard and whether the
-  lamps going out reads as the moment it is meant to be are the maintainer's to judge.
+  (`tools/menu-art.ts` PIN). Played once by the maintainer on a GPU as far as the gap (10-22), which is where (8) comes from. THE LEVEL AS MENDED IN (8)
+  HAS NEVER BEEN SEEN ON A GPU and not on the page at all (headless runs only): the third container, the camp's wall, how the alley reads, whether a
+  floor of 0.2 is what his GPU shows past the gap, the red of the beacons over the whole yard and whether the lamps going out reads as the moment it is
+  meant to be are his to judge.
 - **The frame's eyes are the player's view, not the squad's knowledge** (2026-10-22; `RAILS.eyeView`, a knob of the frame's table: on with the frame, off for
-  a recording from before the key, `journal.ts applyKnobs`; no word of its own, `RAILS_BREAK=1` is its break path). A MEND OF THE STEP BEFORE IT (`eyeFirst`):
+  a recording from before the key, `journal.ts applyKnobs`; `?eyeview=0` puts it off in the page, as `?eyefirst=0` and `?lineclear=0` do the frame's two
+  other late rules; on the frozen stand the frame itself is off and `TPS_RAILS=1` raises all of it; `RAILS_BREAK=1` is its break path). A MEND OF THE STEP BEFORE IT (`eyeFirst`):
   the seat's lookout (`rails.sky.eye`) and a step's `eye` were one more of the TEAM's eyes, so a man in one was in the fog's `seen()`, which the squad's own
   choices read. On the plan mission a step's lookout stood inside the hall; once `eyeFirst` gave it a place with the list full, the hall's gunner was "the
   team's contact", and the stack at the front door (`autopilot.ts contactBehind`) threw its last can and re-formed three seconds while the pair at the back
@@ -1419,7 +1497,36 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   by the rig, a man of the other side stood 1.5 m down the step's eye in room 3 is on lit floor, drawn, not hidden, not seen, with no sighting, and the entry
   on his room's door with one can left is open and clear; with the knob off he is seen and the entry is bang and clear, "contact": the regression as it was);
   `RAILS_BREAK=1` 16 red on both. NOT CHECKED: a teammate's eye displaced from the picture by a step's eye still answering `seen()` (mission 1 in the sky
-  seat has four eyes and room for the step's); smoke between a frame's eye and a man; anything on a GPU.
+  seat has four eyes and room for the step's); smoke between a frame's eye and a man (he is drawn through it: a guard that borrowed the team's own smoke verdict was tried and taken out — it went
+  stale when the team lost its line and let one teammate's smoked line hide a man the lookout saw clear, and nothing headless can reach smoke; the mend is
+  the probe asked along the frame eye's own line, with a switch); anything on a GPU. THE THREE LATE RULES ARE KNOBS OF THE FRAME'S TABLE, not switches of
+  their own: on in the module, inert with the frame off (the frozen stand), carried by the journal, each with a page word; no `FROZEN_HOLDS` row.
+  OTHER OWNERS' READERS that still ask `seen()` for a thing of the picture's, and so treat a man only the lookout has as unseen: a laser's dot on him
+  (`combat.ts`), the floor plan's sight line to him (`floorplan.ts`), the calls about him (`tellCalls`). Theirs to move to `drawn()` if it shows.
+- **A key is named on the floor only once its lesson has opened it** (2026-10-22; `floorplan.ts waitsOnKey`, `rails.ts hushes`; on rails only: `?rails=0`
+  is the build as it was). The floor plan put the squad's key on every door that waits on it, dark until the men stand there. On mission 1 the stack's
+  step comes before the word is taught, and on the pair's mission the player asked what the key over his partner was. While the step that is up holds the
+  word shut the press does nothing (`rails.ts gate`: the squad's key goes by under `word` and nothing else, a set charge's blow included), so no door
+  carries the cap: the bar across the doorway stays (the men are waiting), the key goes. `Rails.hushes(action)` is the one question a reader that draws a
+  key asks. The quiet pair's own mark is the pair mission's rule in the same file. NOT MOVED TO IT: a laid plan's cap and the squad panel's "F go" note
+  (they are shut by `menu`, and no level has a step with the menu open and the word shut). CHECKED, both stands: `rails-check` (at the stack's step the
+  door reads `stack` with no key; at the first later step that opens the word, the key; `RAILS_BREAK=1` red on that line on both). Never seen on a GPU.
+- **The scripted players play in the page's own direct light, and the plain lesson check walks the tutorial too** (2026-10-22; tools only: `lesson-run.ts`,
+  `lesson-gate.ts`, `lesson-check.ts`; A CHANGED BAR for all six tutorial missions). THREE GAPS between a scripted run and the page. (1) The CPU's light
+  estimate has an authored hour's sun and sky (`hours.ts hourLight`) and nothing of the NIGHT's moon (`guards.ts lightEstimateAt` skips directional
+  lights), and the page's meter has both: `--moon` put it on the player's own meter alone, and only where a script asked. So by night the squad mission's
+  men "never saw what the page's shot", and the pair's partner followed down a lane in runs that the page's meter called lit. NOW `lesson-run --sky` is ON
+  BY DEFAULT FOR A TUTORIAL MISSION (`--nosky`, or the script's `mode.sky: false` with why, puts it off; a Training row asks for it): `--moon` for the
+  player, and ONE hook on `g.lightQuery` / `g.lightAt` / `g.lightForget` that answers every other man's meter (a unit's own, a body's, a held man's, a
+  civilian's) by the SAME SUM as the player's: the estimate where he is, plus the moon where nothing solid is up its direction (an hour's own sun is
+  never added again: at midday that lit a man twice). `--floor N` (the pair mission's, `mode.floor`) is the same hook's lower bound: the bounce neither
+  has; with `--nosky` it is the floor alone. Two models of one floor would let a man be lit to the squad and dark to himself. This is also what every
+  caller of `runLesson` gets (`tut-solo-check`'s arms). STILL NOT THE PAGE'S: no bounce but that floor,
+  no bodies' shadows, no smoke between a light and a man, no flicker. (2) `lesson-gate`'s frozen arm of a tutorial mission was given the frame's word and
+  not the row's own hour and weather (`TPS_ROWSET=1`): a mission laid by day was played there at night. It is given both now. (3) `lesson-check` with no
+  name walked Training's seven levels: every "ALL PASS (73)" had covered no tutorial level, and a rows note (`rowsWithheld`) never printed. It walks
+  `LESSON_MISSIONS` now: 13 levels, 129 checks, green on both stands. `lesson-gate` with no name is still Training's (a tutorial mission is gated by name). Also: a
+  `PT_DESTR=1` set by hand in front of `lesson-run` is honoured as the script's own `raises` is (it was read only when the script had raised it).
 
 <!-- added 2026-10-22 -->
 - **The tutorial's words were rewritten on 2026-10-22** (the writing guide: `docs/agents/writing.md`). A line, a card or a list row quoted in a bullet above

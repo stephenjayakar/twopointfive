@@ -28,7 +28,8 @@ const scripted = (name: string) => existsSync(resolve(ROOT, 'levels', `${name}.s
 // (…and a mission whose steps allow `plan` is played in plan mode, which the frozen stand holds off too: its frozen runs are given the mode's own words)
 const PLAN_WORDS = { TPS_QRING: '1', TPS_QPLAN: '1', TPS_PLANLOOK: '1', TPS_PLANWAITS: '1', TPS_PLANKNEE: '1' };
 const plans = (name: string): boolean => { try { return (JSON.parse(readFileSync(resolve(ROOT, 'levels', `${name}.json`), 'utf8')).scenarios?.lesson?.steps ?? []).some((t: { allow?: string[] }) => t.allow?.includes('plan')); } catch { return false; } };
-const frame = (name: string): Record<string, string> | undefined => scripted(name) ? { TPS_RAILS: '1', ...(plans(name) ? PLAN_WORDS : null) } : undefined;
+// (…and its row's own hour and weather — game/rowset.ts, held off there as well: without the word the frozen run of a mission laid by day was played at night)
+const frame = (name: string): Record<string, string> | undefined => scripted(name) ? { TPS_RAILS: '1', TPS_ROWSET: '1', ...(plans(name) ? PLAN_WORDS : null) } : undefined;
 async function one(name: string) {
   const [fresh, lint] = await Promise.all([run(['tools/levels/export.ts', name, '--check']), run(['tools/qa/level-lint.ts', `levels/${name}.json`])]);
   verdict(fresh.code === 0, `${name}: the level file is its generator's`, fresh.code === 0 ? '' : last(fresh.out, /\S/).trim());

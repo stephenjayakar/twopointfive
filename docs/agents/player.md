@@ -939,6 +939,30 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   mission the frame's gate (`rails.ts`) drops a row's digit whose slot is still locked, and a click or R it has locked does not shut the setup:
   the solo mission's thread is letting `slotSetupTakes` keys through the gate. (3) The words on the box clip without a mark if a wide fallback
   font is all the machine has; LIGHT is the last of them.
+  A DOUBLE TAP OFF ANOTHER SLOT IS THE DRAW AND THE SETUP (`SLOTSETUP.draw`, 10-22, the maintainer playing step 872: "when on pistol, double
+  tapping 2 quickly switches but doesn't open the menu"). The first build dropped a gun's digit pressed again inside the gun's first `settle`
+  seconds in his hands or while his hands were held (`equipT`), on purpose — "a double-tapped digit draws the gun and no more" — and that was
+  the press he lost; the tutorial's frame was not in it (`rails.ts` lets the rifle's own digit through). With `draw` on the second press opens
+  the setup at once, mid-draw, and a row's digit after it is the row: 2 2 1 from the pistol is the rifle on the selector's other position.
+  Nothing is set by the open itself. ONLY HIS OWN DRAW: the hook notes a gun's digit pressed while that gun is not in his hands
+  (`Player.setupKey`), and a gun that came to his hands on that press carries the time that draw is over (`setupHand.own`: the swap that press
+  started, or `settle`, and no longer); every other time
+  `equipT` holds his hands (the wand stowed, the big tool's tail, a throw's swing, a gun the game handed him as the last can left) the press
+  is dropped as before. A ROUND THAT GOES SHUTS THE SETUP, with `draw` on (`lastFireT` against the opening's stamp): the kit swap keeps a
+  click for its end (`KITANIM.clickKeep`) and that round would leave the panel standing; a trigger held when it opens shuts it at the next
+  round, and the gun's own digit on the frame it shuts is nothing (not the load's old key in player.ts). With `draw` off a round shuts
+  nothing, as before: only the click's edge does. ON in the page (`?setupdraw=0` = the draw and no more), OFF in the
+  module and on the frozen stand, raised there by a word of its own, `TPS_SETUPDRAW=1` (`FROZEN_HOLDS['SLOTSETUP.draw']`, pinned in
+  `host/standup.ts`; it acts only with the rule up, `TPS_SLOTSETUP=1`); in the table a recording carries, one from before the key replaying
+  with it off; the debugger's 'setup ▸ a double tap off another slot opens it'. CHECKS: `slotsetup-check.ts`, fifteen lines, all pass on both
+  stands and with both words raised on the frozen one — its double tap line (2 2 from the sling mid-draw: up, the load not moved, then 1 is the
+  selector; `draw` off: the draw and no more), its pistol line (1 1 off a can), a line for his own case (2 2 off the pistol; 2, a kept click, 2:
+  the round goes and the setup is shut — asked in full only where the swap keeps a click, the shipped stand; the trigger held on auto, then
+  2: shut at the next round on either stand, 2 again on that frame leaves the load alone, and with `draw` off it stays up; the last smoke
+  thrown, or a later lock on his hands inside his own draw, and ONE press of 1: no setup) and a line for the page's words ('' / `?setupdraw=0` / `?setuppop=0` / `?slotsetup=0`, each its own row and no other);
+  `SLOTSETUP_BREAK=1` fails 12 of the 15 on each stand. `slotsetup-page.cjs` has a seventh line, his own case by real key presses (the pistol up, 2 2 two
+  frames apart, then 1). KNOWN: a key mashed twice by a hand that only wanted the gun now leaves the panel standing, and the next 1, 2 or 3 is
+  its row. NOBODY HAS PLAYED IT; the swap's picture under an open panel has never been seen on a GPU.
   SEEN ON A GPU: the FIRST build's box, in the maintainer's own shots from the solo tutorial mission (what the notes above answer). NEVER SEEN ON
   A GPU: the one-line box and the panel — looked at as stills of the real page's own markup and styles, and used by real key presses on the
   software adapter with the picture not drawn; nobody has played them.
@@ -1143,6 +1167,33 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   rest, writes `--railshift` on it: down past the ring if the window has the room, else up over it (index.html: the line's transform, eased). The
   line stays readable: it is often what says which wedge to press. The older `ringover` (the status column faint under the squad's ring) is as it
   was. Page-only: no headless check sees it; read on the software adapter by the boxes' places, never seen on a GPU, no picture taken.
+- **A tap that finds no row beside a thing names the thing and why** (`HANDRING.near`, handring.ts; interact.ts `emptyThing` / `emptyWord`; on and off
+  with `on`, as `empty` is: `?handring=0`, `TPS_HANDRING=1`, a `FROZEN_HOLDS` row, a recording from before the key replays with it off). The
+  maintainer, 10-22, on the stealth tutorial with the back door open at his elbow: "nothing in reach to close the door?". THE CAUSE was not reach:
+  tut-quiet's frame names the rows it offers (`rails.rows`: push and pick on a door, never `pull`, the row that shuts an open leaf), player.ts drops
+  every row the frame does not offer, and the bare tap then filed 'nothing in reach' 0.55 m from the leaf (measured headless on the page's stand;
+  with `pull` let through the row is there). THE CAUSE IS MENDED by the tutorial itself (its list now has `pull` and `ease`: `missions.md`); this
+  bullet is the word, for every thing a frame still keeps back and for a door out of reach anywhere. THE WORD names only what the
+  game knows exactly (`emptyThing`, in this order, the nearest of each): a thing worked by hand (player.ts `PRESS_THINGS`) in reach whose every
+  row the frame kept back (buildInteractables marks its marker `framed`) says 'not in this mission'; a door in his hand's reach with no row while
+  his hands are not his (a leaf already in his hand) 'not now'; a door his sprint alone keeps from him 'stop sprinting' (never one locked against
+  him: its own line there is the boot's); a door a step off, within `EMPTY_NEAR_M` (2.2 m, as its reach is measured: `thingDist`) and in sight (a
+  level line from his eye to `EMPTY_SHY_M` short of the leaf or the doorway: the door markers are the whole level's) 'step closer'. A door's reach
+  is read as its distance and his feet (`Doors.USE_REACH`; the marker's `inReach` is also true from a stack's distance when the big slot's tool
+  has a row). A door of the last two that the frame offers NO door row for (`SHUT_ROWS` / `OPEN_ROWS`, interact.ts: tut-quiet's open back door
+  as it was) says 'not in this mission' from the step off as well. KNOWN GAP: a frame that offers some door row but none for this door (a steel
+  door, a lock it names no pick for) says 'step closer' and then, in reach, 'not in this mission'. After the thing's name (the head of its marker's
+  `line1`). NOTHING, so 'nothing in reach' as it was: open floor, a body or a switch out of reach (their reach is not a plain distance; and where
+  one is nearer than the door the door is not named either), a takedown under way, and wherever a living man in sight is nearer than the thing
+  (that tap was for him). THE CORNER reads the word off the selector (`Player.sel.word` / `wordT`, set by every such tap and cleared by the next
+  press, so a second tap always answers and a later log line never hides it) for 1.6 s, only while it is still what a tap would say (a step into
+  reach, or away, takes it down), and beside 'step closer' it shows how far the door is. With `near` off the corner and the log are as they were.
+  THE LOG takes one line in 3 s whatever the word (it changes as he walks). Check: `handring`'s last line, on both stands (1.8 m from a door,
+  twice, one log line; sprinting 0.7 m from it; a door 1.9 m off behind a wall; a man 1.25 m off; the quiet mission with `pull` and `ease` taken off its rows, inside its
+  open back door and 1.8 m short of it; the same tap with its rows as built shuts the leaf; a second tap with the leaf in his hand, only where the stand has hands, so
+  'not now' is asserted on the page's stand alone; a recording from before; `HANDRING_BREAK=1` fails it). Nothing in it turns on a die: one
+  stand-up of each level, the rig's seed and seed 1. NOT CHECKED: a body or a switch nearer than the door (a ragdoll does not land where it is
+  put), the corner's row (read on the page by the DOM, on the software adapter). Never seen on a GPU; nobody has played it.
 - **The throw preview's ring is where the can comes to rest** (`THROWBACK.restMark`, throwback.ts; player.ts `throwRest`, frag.ts `restOfThrow`; the
   maintainer, 10-22: "hard to toss the smoke to precisely hit the gap … maybe we just need to update the UI to show roughly where it'll end up").
   WHAT IT WAS: the arc and its ring ended at the can's FIRST TOUCH (throwables.ts `solve`), which is where the cursor is; the can then bounces and

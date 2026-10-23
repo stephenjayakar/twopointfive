@@ -15,10 +15,11 @@ import { playerAim } from '../game/aim';
 import { AIMCOST } from '../game/aimcost';
 import { aimGunPoint, aimGunOn } from '../game/aimweight';
 import { previewTooClose } from '../game/he40';
-import { gunShut, throwRest } from '../game/player';
+import { gunShut, throwRest, thingDist } from '../game/player';
 import { GEAR, gearText, ringTag, shellTag } from '../game/gear';
 import { HANDSLOT } from '../game/handslot';
-import { HANDRING, EMPTY_WORD, EMPTY_SHOW_SECS } from '../game/handring';
+import { HANDRING, EMPTY_WORD, EMPTY_WHY, EMPTY_SHOW_SECS } from '../game/handring';
+import { emptyThing, emptyWord } from '../game/interact';
 /** the reticle's ONE word: the 40 mm's arc is too short to arm (the plain 'RMB  OCP' / 'RMB  RING' / 'RMB  40 MM' words went on the 10-11 play note: "we can remove
  *  the RMB overlay on the cursor" — what the right button holds is read on the kit column's rows) */
 const HE40_SHORT = '40 MM · TOO CLOSE TO ARM';
@@ -148,7 +149,7 @@ export class Overlay implements HudLike {
   private recEl = document.getElementById('journal'); private recKey = '';            // the session journal's REC tag (game.journal.hudText(): 'REC f=1234 · 38 KB' / why it waits) — journal.ts, F10 in main.ts; absent on a page without the element
   private orderMark: HTMLElement;                                                  // the ring on what the squad's order menu is frozen on (orders.ts mark())
   private skyWas = false;
-  private railEl: HTMLElement; private railKey = '\0'; private railNote = ''; private objTurn = ''; private railsWas = false; private railRest: Box | null = null; private railRestOf: [string, string, number, number] = ['\0', '', 0, 0]; private railMan = 0; private railBoxes: Box[] = [];                           // a tutorial mission's one big line, low in the middle (game/rails.ts prompt)
+  private railEl: HTMLElement; private railKey = '\0'; private railNote = ''; private objTurn = ''; private railsWas = false; private railRest: Box | null = null; private railRestOf: [string, string, number, number] = ['\0', '', 0, 0]; private railMan = 0; private railLog = ''; private railBoxes: Box[] = [];                           // a tutorial mission's one big line, low in the middle (game/rails.ts prompt)
   private card: RailCard;                                                          // a tutorial step's card, up in the middle with the world held (ui/railcard.ts)
   /** a tutorial mission's card is up (main.ts holds the world still under it) */
   get cardUp(): boolean { return this.card.up; }
@@ -379,8 +380,11 @@ export class Overlay implements HudLike {
             const hw = Math.max(18, 0.32 * Math.hypot(fx - hx, fy - hy)), q = B[n] ?? (B[n] = { l: 0, r: 0, t: 0, b: 0 }); n++; q.l = Math.min(fx, hx) - hw; q.r = Math.max(fx, hx) + hw; q.t = Math.min(fy, hy); q.b = Math.max(fy, hy) + 8; }
           B.length = n; s = railClear(this.railRest, B, h, this.railMan > 0); } }
       else if (!rail) O[0] = '\0';
-      if (s !== this.railMan) { this.railMan = s; E.style.setProperty?.('--railman', `${s.toFixed(0)}px`); const st = document.body.style;
-        if (s > 0 && this.railRest) st?.setProperty?.('--raillog', `${(h - this.railRest.t - s + 6).toFixed(0)}px`); else st?.removeProperty?.('--raillog'); } }
+      if (s !== this.railMan) { this.railMan = s; E.style.setProperty?.('--railman', `${s.toFixed(0)}px`); }
+      // (the rows' place is the line's own top at the bottom edge: written when IT changes — the line is hung from its bottom, so a taller line keeps the same
+      //  step down and has a higher top, and the rows stood in its first row of words)
+      { const log = s > 0 && this.railRest ? `${(h - this.railRest.t - s + 6).toFixed(0)}px` : '';
+        if (log !== this.railLog) { this.railLog = log; const st = document.body.style; if (log) st?.setProperty?.('--raillog', log); else st?.removeProperty?.('--raillog'); } } }
     const ot = rail ? '' : keyText(game.objectiveText());
     if (ot !== this.objKey) { this.objKey = ot; const W = 'objective ▸', cut = ot.indexOf(W);   // the line's own word is set apart as its label (a par clock in front of it is not part of it); the text read back is unchanged
       if (cut < 0) this.objEl.textContent = ot; else this.objEl.innerHTML = `${esc(ot.slice(0, cut))}<b>${W}</b>${esc(ot.slice(cut + W.length))}`;
@@ -484,7 +488,7 @@ export class Overlay implements HudLike {
   private deriveInteractions(game: Game): { rows: InteractRow[]; primary: number; more: number; open: boolean; hint?: string; cancel?: string } {
     const sq = game.orders.hud(); if (sq.menu) return sq.menu;   // the squad's command menu, while it is open, IS the panel (orders.ts)
     const hv = game.hover, p = game.player.char.pos;
-    const dist = (it: Interactable) => { let d = v3.distXZ(it.pos, p); if (it.door) d = Math.min(d, v3.distXZ(it.door.frameCentre, p)); return d; };   // doors: leaf or doorway centre, as the reach test measures it
+    const dist = (it: Interactable) => thingDist(it, p);   // doors: leaf or doorway centre, as the reach test measures it
     // (handring.ts: the corner shows ONE line, what the key would do now — the highlighted row, or a running verb's own; none while the ring's lit wedge
     // is the whistle — and nothing where it does nothing; the rest of what is on offer is the ring's. A line no key gives stays under it)
     const hint = (): Interactable[] => game.nearby.filter(r => !r.verb && r !== hv).slice(0, 1);   // (a line no key gives: the status of a committed move, or what the two clicks do to the man in reach — close.ts)
@@ -492,7 +496,13 @@ export class Overlay implements HudLike {
     const thing = (it: Interactable) => `${it.kind}:${it.door?.def.name ?? it.guard?.callsign ?? ''}`;
     const cap = MAX_ROWS + (list.some(it => it.kind === 'cam') ? 1 : 0);   // (stickycam.ts: a stuck camera's 'take it back' is one row past every row the list had before it — it is always drawn)
     const rows = list.slice(0, cap).map((it, i): InteractRow => { const d = dist(it); return { kind: it.kind, label: it.line1, opts: it.kind === 'cancel' ? [] : parseOpts(it.line2), inReach: it.inReach, off: it.off, dist: it.inReach || it.kind === 'light' || it.kind === 'cancel' ? undefined : d, progress: it.progress, cont: i > 0 && it.kind !== 'cancel' && thing(list[i - 1]) === thing(it) }; });
-    if (HANDRING.empty && !list.length && !game.puppet) { const m = game.messages[game.messages.length - 1]; if (m?.text === EMPTY_WORD && game.time >= m.t && game.time - m.t < EMPTY_SHOW_SECS) rows.push({ kind: 'wall', label: EMPTY_WORD, opts: [], inReach: false, off: false }); }   // (handring.ts `empty`: the key tapped with nothing in reach — said here for a moment, where his rows come up)
+    // (handring.ts `empty`: the key tapped with no row to give — said here for a moment, where his rows come up. `near`: beside a thing the word names
+    // it, with how far off a door a step short is; every such tap answers, and the word is up only while it is still what a tap would say — a step into
+    // reach, or away, takes it down. With `near` off, as it was: the log's newest line, while that is the word)
+    if (HANDRING.empty && !list.length && !game.puppet && !game.player.down) { const S = game.player.sel, young = (t: number) => game.time >= t && game.time - t < EMPTY_SHOW_SECS;
+      if (!HANDRING.near) { const m = game.messages[game.messages.length - 1]; if (m?.text === EMPTY_WORD && young(m.t)) rows.push({ kind: 'wall', label: EMPTY_WORD, opts: [], inReach: false, off: false }); }
+      else if (S.word && young(S.wordT)) { const T = emptyThing(game);
+        if (emptyWord(game, T) === S.word) rows.push({ kind: T ? T.it.kind : 'wall', label: S.word, opts: [], inReach: false, off: false, dist: T && T.why === EMPTY_WHY.far ? T.d : undefined }); } }
     rows.push(...sq.status);   // … and otherwise the squad's block under the Space rows: who the orders go to, what each man is doing (nothing without a squad)
     const primary = hv ? list.indexOf(hv) : -1;
     return { rows, primary: primary >= 0 && primary < cap ? primary : -1, more: Math.max(0, list.length - cap), open: game.player.listOpen };   // (up as a ring — cmdring.ts CMDRING.hands — the panel's list is the list at rest)

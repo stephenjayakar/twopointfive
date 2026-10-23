@@ -36,6 +36,17 @@ export const HANDRING = {
   /** a tap of the key with nothing in reach says so in the corner for a moment (interact.ts files `EMPTY_WORD`, ui/overlay.ts shows it): on open floor
    *  the key looked dead. On and off with `on`, as `early` is (the same address word and stand word; a recording from before the key replays with it off) */
   empty: false,
+  /** …and beside a thing that gave him no row the word names the thing and why, never 'nothing in reach' (interact.ts `emptyWord`; the maintainer on the
+   *  stealth mission, an open door at his elbow: "nothing in reach to close the door?"): a door a tutorial mission has no row for, a door a stride out
+   *  of reach. On and off with `on`, as `empty` is (the same address word and stand word; a recording from before the key replays with it off) */
+  near: false,
 };
 /** the word an empty tap files, how long before it is filed again (s), and how long the corner shows it (s) */
 export const EMPTY_WORD = 'nothing in reach', EMPTY_AGAIN_SECS = 3, EMPTY_SHOW_SECS = 1.6;
+/** how far off (m) a door still answers an empty tap (its reach is 1.35), and what a thing answers after its name (interact.ts emptyThing): a door
+ *  a step off `far`, a door his sprint keeps from him `run`, a thing in reach whose rows the mission's frame kept back (rails.ts `rows`) `held`, a
+ *  door in reach while his hands are not his `no` */
+export const EMPTY_NEAR_M = 2.2;
+/** the sight line to a thing stops this far short of it (m): the thing itself is no wall between him and it */
+export const EMPTY_SHY_M = 0.2;
+export const EMPTY_WHY = { far: 'step closer', run: 'stop sprinting', held: 'not in this mission', no: 'not now' } as const;

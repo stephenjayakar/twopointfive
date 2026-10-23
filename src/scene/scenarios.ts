@@ -262,7 +262,8 @@ export interface LessonStep {
   fog?: boolean;
   /** the step teaches the command key HELD: a tap of it gives no order while the step is up, and these words come up under the line ('Keep [B] held') */
   noTap?: string;
-  /** a lookout for the fog of war while this step is up (as `rails.sky.eye`): a place the squad knows without a man's eyes on it, its own charge on a wall */
+  /** a lookout for the fog of war while this step is up (as `rails.sky.eye`): a place the PLAYER is shown without a man's eyes on it, its own charge on a wall.
+   *  The picture's alone: the squad knows nothing through it (rails.ts RAILS.eyeView) */
   eye?: { at: Vec3; yaw: number; fov?: number };
   /** A CARD that pauses the page when the step comes up (ui/railcard.ts): a heading and a few sentences on a rule of the game no key press shows — a new
    *  line in `text` is a new paragraph, a key in brackets is drawn as a key. Closed with Enter or a click; then the step's line is what to try. Once a run */
@@ -286,7 +287,8 @@ export interface RailsData {
   fog?: boolean;
   /** nobody on the floor is the player: he is parked at `park`, out of the picture and every sense, and the view rides the squad (`reach`: metres the
    *  walk keys may shift it off them). `eye`: a lookout the mission stands for the fog of war (the man left with the trucks): a place and the way it looks
-   *  (`yaw`, radians, a man's own: 0 = +Z; `fov` degrees, 120 unless said), one more of the team's eyes for as long as the seat is the sky's */
+   *  (`yaw`, radians, a man's own: 0 = +Z; `fov` degrees, 120 unless said), one more eye of the PICTURE's for as long as the seat is the sky's (drawn, not seen: the squad
+   *  knows nothing through it — rails.ts RAILS.eyeView) */
   sky?: { park: Vec3; reach?: number; eye?: { at: Vec3; yaw: number; fov?: number };
     /** the squad holds ON A KNEE where the mission stood it until its first order (men behind their trucks under fire), not at the low ready on its feet */
     low?: boolean };

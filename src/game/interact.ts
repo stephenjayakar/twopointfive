@@ -10,16 +10,55 @@ import type { Game, Interactable } from './game';
 import { Input } from './input';
 import { INTERACT_KEY } from './consts';
 import { backHit } from './backkey';
-import { wheelPace, pickHover, cancelRow, easeOffHold, holdKilling, stopPicking, stopWand } from './player';
+import { Doors } from './doors';
+import { wheelPace, pickHover, cancelRow, easeOffHold, holdKilling, stopPicking, stopWand, thingDist, PRESS_THINGS } from './player';
 import { cancelDrive } from './mission';
 import { stopCoding } from './devices';
 import { ownBlowHeld } from './ownblow';
 import { samStaggered } from './samstun';
 import { CMDRING, ringOpen, ringWant, type RingView } from './cmdring';
-import { HANDRING, EMPTY_WORD, EMPTY_AGAIN_SECS } from './handring';
+import { HANDRING, EMPTY_WORD, EMPTY_AGAIN_SECS, EMPTY_NEAR_M, EMPTY_SHY_M, EMPTY_WHY } from './handring';
+import type { Vec3 } from '../math/vec';
 import { tryWhistle, whistleReadyIn } from './whistle';
 import { CLOSE } from './close';
 import type { View } from '../host/hud';
+
+/** every row a door can have (player.ts buildInteractables, the tools' rows with it), and those of them an OPEN leaf can: a mission's frame that
+ *  offers none of them has no row for that door at any distance. (One that offers some may still have none for this door — a steel one, a lock it
+ *  names no pick for: that is known only in reach, where the door's own rows are built) */
+const OPEN_ROWS = ['pull', 'ease', 'charge', 'breach', 'hammer', 'wand'], SHUT_ROWS = [...OPEN_ROWS, 'push', 'pick', 'kick', 'rattle', 'unlock', 'code', 'nocode'];
+/** THE THING AN EMPTY TAP IS BESIDE (handring.ts `near`), and why the key did nothing on it — only what the game knows exactly:
+ *    - a thing worked by hand (player.ts PRESS_THINGS) in reach whose every row the mission's frame kept back (the marker's `framed`);
+ *    - a door in his hand's reach with no row while his hands are not his (a leaf already in his hand);
+ *    - a door his sprint alone keeps from him;
+ *    - a door a step out of reach, within EMPTY_NEAR_M and in sight (the door markers are the whole level's: never one with a wall between).
+ *  In that order, the nearest of each. A door of the last two that the frame has no row at all for (SHUT_ROWS / OPEN_ROWS) says that at once, not
+ *  'step closer'; a door locked against him answers nothing while he sprints at it (its own line there is the boot's). Nothing where a living man
+ *  in sight is nearer (that tap was for him, and his own line says why not); no door out of reach where another thing out of reach is nearer (a
+ *  body, a switch: their reach is not a plain distance, and the tap may have been for them); nothing during a takedown. Null: open floor, or the
+ *  rule off */
+export function emptyThing(g: Game): { it: Interactable; d: number; why: string } | null {
+  const pl = g.player; if (!HANDRING.near || pl.takedown) return null;
+  const p = pl.char.pos, eye: Vec3 = [p[0], pl.crouch ? 0.9 : 1.3, p[2]];
+  // (a level line from his eye to a hand's breadth short of the thing: a shut leaf is no wall of its own)
+  const walled = (to: Vec3) => { const dx = to[0] - eye[0], dz = to[2] - eye[2], k = Math.max(0, 1 - EMPTY_SHY_M / Math.max(1e-6, Math.hypot(dx, dz))); return g.col.solidBlocked(eye, [eye[0] + dx * k, eye[1], eye[2] + dz * k]); };
+  let best: { it: Interactable; d: number; why: string } | null = null, rank = 3, man = Infinity, other = Infinity;
+  for (const it of g.interactables) {
+    const d = thingDist(it, p); if (d > EMPTY_NEAR_M) continue;
+    if (it.kind === 'guard') { if (d < man && !walled(it.pos)) man = d; continue; }
+    if (!PRESS_THINGS.has(it.kind)) continue;
+    const D = it.door, r = D ? (d >= Doors.USE_REACH ? 2 : pl.sprinting ? 1 : 0) : it.inReach ? 0 : 3;   // (a door's reach is its distance and his feet: its `inReach` is also the big tool's, from where a stack stands)
+    if (r === 3) { other = Math.min(other, d); continue; }
+    const why = r === 0 ? (it.framed ? EMPTY_WHY.held : D ? EMPTY_WHY.no : '') : !(D!.isClosed() ? SHUT_ROWS : OPEN_ROWS).some(v => g.rails.offers(v)) ? EMPTY_WHY.held : r === 1 ? EMPTY_WHY.run : EMPTY_WHY.far;
+    if (!why) { other = Math.min(other, d); continue; }   // (in reach with no row and no frame to blame — a wounded man)
+    if (r > rank || (r === rank && best && d >= best.d)) continue;
+    if (r === 2 ? walled(it.pos) && walled(D!.frameCentre) : r === 1 && g.doors.lockedOut(D!, p, pl.keys)) continue;
+    best = { it, d, why }; rank = r;
+  }
+  return best && best.d <= man && (rank === 0 || best.d <= other) ? best : null;
+}
+/** what a tap that found no row says: 'nothing in reach', or beside a thing its name (the head of its marker's first line) and why */
+export function emptyWord(g: Game, T = emptyThing(g)): string { return T ? `${T.it.line1.split(' · ')[0] || T.it.kind} · ${T.why}` : EMPTY_WORD; }
 
 /** a press up again inside this (without having scrolled the list) is a tap; held past it the list opens */
 export const TAP_SECS = 0.25;
@@ -152,7 +191,7 @@ export function updateInteract(g: Game, dt: number, input: Input, view?: View) {
   if (pl.down) { closeSelector(g, false); if (input.wheel && !down) wheelPace(g, input.wheel); return; }
   // ---- the press edge: armed unless this press is already spent
   const stays = ringStays(g), free = S.open && !!S.ring?.free;   // (handring.ts: a ring standing with no key held — the key again is its own, below)
-  if (hit && !pl.fHeld && !free) { S.downT = 0; S.open = false; S.moved = false; S.ring = null; }
+  if (hit && !pl.fHeld && !free) { S.downT = 0; S.open = false; S.moved = false; S.ring = null; S.word = ''; }   // (…and a fresh press takes down what the last empty tap said)
   const armed = S.downT >= 0;
   const live = choosable(g.nearby) || (stays && whistleWedge(g));   // anything to choose at all (an open list whose rows have gone — the man walked out of reach — shuts, and opens again if they come back under the same held key)
   if (S.open && !live) shutList(g);
@@ -208,7 +247,11 @@ export function updateInteract(g: Game, dt: number, input: Input, view?: View) {
   // ---- released this frame (or begun and ended inside it): the highlighted row is what Space does
   const rowNow = g.hover, listed = S.open, quick = !S.moved && S.downT < (stays ? HANDRING.holdSecs : TAP_SECS);   // (a tap, whatever was up for it: the ring that does not stay is up from the press's edge)
   closeSelector(g, false);
-  if (!listed && !rowNow && HANDRING.empty && !g.puppet && !samStaggered(g)) { const m = g.messages[g.messages.length - 1]; if (m?.text !== EMPTY_WORD || g.time - m.t > EMPTY_AGAIN_SECS) g.msg(EMPTY_WORD); return; }   // (handring.ts `empty`: a tap with nothing in reach was silence — the key looked dead; the corner shows the word for a moment, ui/overlay.ts)
+  // (handring.ts `empty`: a tap with no row to give was silence — the key looked dead. The corner shows the word for a moment, every time (ui/overlay.ts
+  // reads it off the selector); the log takes a line of it once in EMPTY_AGAIN_SECS — with `near`, whatever the word, since it now changes as he walks)
+  if (!listed && !rowNow && HANDRING.empty && !g.puppet && !samStaggered(g)) { const w = emptyWord(g), m = g.messages[g.messages.length - 1]; S.word = w; S.wordT = g.time;
+    if (HANDRING.near ? g.time < S.fileT || g.time - S.fileT > EMPTY_AGAIN_SECS : m?.text !== w || g.time - m.t > EMPTY_AGAIN_SECS) { S.fileT = g.time; g.msg(w); }
+    return; }
   if (quick && ownBlowHeld(g, rowNow)) return;   // (ownblow.ts: a bare tap never sets off his own charge with him in its blast — the ring's wedge, or the list's row, does)
   give(g, rowNow);
 }
