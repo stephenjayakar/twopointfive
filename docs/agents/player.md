@@ -1208,6 +1208,28 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   IS STILL THE FIRST TOUCH: the ring now sits metres past it, and aiming the throw so the can RESTS under the cursor would be a rule of the game
   (every throw, the scripted ones too) — asked of the maintainer, not built. `tools/qa/hudmarks-page.cjs` reads the ring, the tick and the roll on
   the real page (software adapter). NEVER SEEN ON A GPU: the tick, the dots, the ring's place on the screen.
+- **The throw preview shows what the thing will reach** (`THROWBACK.reach`, throwback.ts; `src/game/throwreach.ts throwReach`, `ui/overlay.ts
+  drawReach`, 10-23; the maintainer off a GPU shot of a grenade's arc: "we should also have kill radius / stun radius when throwing grenades"). While a
+  throw is aimed the overlay draws, flat on the floor round the point the can comes to REST (`frag.ts restOfThrow`: where its fuse finds it, whatever
+  the rest mark's own switch says): for a FRAG a solid red-orange KILL ring at `FRAG.lethalM` (4 m) and a dotted, fainter ring at `FRAG.woundM` (8 m,
+  the band it hurts in and kills by a falling chance); for a STUN canister a dashed bright ring at the canister's own dazzle radius (`effects.ts
+  bang.dazzleRadius`, 8 m: the edge every part of `combat.ts FLASH` falls off to); for the LAUNCHER'S GRENADE the frag's two rings on the floor under
+  where the arc ends (it bursts through `frag.ts blast`), none while the arc is too short to arm (a dud). Smoke, a sponge round and a sticky camera
+  draw none. The radii are read from the tables the burst is judged by, never copied. No word and no number is drawn. THEY ARE RADII, NOT SHADOWS: a
+  wall, a shut door or a desk between is not drawn, though the burst asks what of a man is exposed; a ring that crosses a wall overstates the reach
+  past it. THEY ARE BIG: at the page's own zoom the kill ring is about half the view's width and the 8 m rings run off its edges. A point behind the
+  camera breaks the ring there and the rest stays (as `ui/squadthrowviz.ts` draws the squad's); a cut ring has no fill. The overlay asks when the arc
+  has changed, not every frame, and writes a ring only when it has moved.
+  SWITCH: `THROWBACK.reach`, the overlay's (nothing in the game reads it), OFF in the module and on the frozen stand (`standGame` pins it off;
+  `FROZEN_HOLDS` row with no word, like the rest mark's), ON in the page (`?noreach`); a recording from before the key replays with it off (`journal.ts
+  applyKnobs`). CHECK: `probes.ts throwreach` (`tools/qa/throwreach-check.ts`, families `throw`, `player`; `THROWREACH_BREAK=1` must fail) on BOTH
+  stands: what the overlay is handed for a frag, a stun canister and a smoke, with the rest mark off, that asking changes nothing, one frag thrown by
+  the click with three men stood by the rings (inside the kill ring down, in the band hurt, past the outer ring untouched: one throw, no seeds), the
+  40 mm on an armed arc, a dud arc and the sponge round, and the journal. THE PAGE: `tools/qa/throwreach-page.cjs` reads the paths on the software
+  adapter (the small ring inside each, the hurt ring about twice the kill ring's width, none for smoke, none with the switch off). NOT DONE: the
+  squad's own throw rings (`ui/squadthrowviz.ts`: a frag's two, none for a stun) and the floor plan's (the kill radius alone) are other drawings of
+  the same numbers and were left as they are. NOBODY HAS seen it on a GPU or thrown by it in play; the colours and line weights are a first guess
+  against the snow level's shot.
 - **One footfall a step** (`FOOTFALL.once`, src/game/player.ts; 2026-10-22, from the quiet lesson's scripted run). THE FLAW: a footfall is filed when the
   walk cycle's phase crosses a half or wraps. Backpedal runs the cycle backwards, so when backpedal flips frame by frame the phase rocks over ONE edge
   and every frame files a footfall: 20 in 20 frames staged, and a calm man 0.76 m in front goes alert on eight of them. What flips it: forwards and
