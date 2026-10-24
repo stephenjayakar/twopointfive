@@ -667,6 +667,36 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     up; the side door's ring is on the screen in the mode (about 50 px from the top edge in the one still); the right button sends four; the card; [Tab] puts the mode
     away and the line reads "Go around with them". NOT RUN: `all-quick`, a tour, a soak. NOBODY HAS PLAYED IT, and it has never been seen on a GPU: whether the pair
     reads as natural here, whether the ring so near the top edge is found, and how the card lands a beat after the right click are his to judge.
+  - **The hall's two wait out of the window's line until the window's line is up** (2026-10-23; the level's script, one cue on a step, and the scripted player. No
+    switch, no rule of the game's, no box moved). WHAT WENT WRONG: a frag that leaves a man of the nest alive sends the player round the nest by the strip in
+    front of the hall's window, his four behind him, while the line still says 'Take the gun nest'. The hall's two stood in their places from the first tick, in
+    that window's line: a teammate shot the near one through the glass from the strip, the other was then the last of his room and in a room fight's list, so
+    `runner.ts` had him drop it and run, the hall counted as taken, and 'window', 'door' and 'lock' all went by with nobody having read them. Found on the default
+    die of the shipped stand once the card beat (`RAILS.cardBeat`) put the frag a second and a half later (`TPS_CARDBEAT=0`: the same die in order); two dice of
+    sixteen before it. THE MEND: step 'window' sends a cue (`cue: 'window'`, with its card), and beat 'hall' of `levels/tut-squad.script.ts` keeps the two on
+    `HALL_BACK` until it, against the street wall west of the glass (measured with the game's own collision: of 8178 free cells outside the hall none has a line
+    to a man standing on either mark; their places are seen from 2.2 and 1.4 m2, the strip at the glass), rifles on their door. On the cue they walk to their
+    places (`HALL_POST`, the level's own marks for them: about two seconds for the near one, four for the far one). FIRST TRY, kept as a warning: sent to their
+    places as the nest FELL they were there before a slow reader's line was, and a teammate at the glass had both three seconds early. The program starts over
+    when the window's own checkpoint is put back, its cue sent again: they go on to their places from wherever they are. One hit, the other turns his rifle to
+    the window ON HIS OWN PLACE (told to stand where he stood, a man still crossing the room stopped out of the window's line and the line had nobody left to
+    shoot); a man `runner.ts` has is given no order. WHAT IT DOES NOT MEND: on the missed-frag path the squad is already at the glass, and it can take the two
+    as they walk into view, before the player has fired: the line is up and read, the glass breaks in front of him, the door and the lock follow in order, and
+    the shots are not his. THE SCRIPTED PLAYER: `hallEarly` fails at 'window' and again at 'hall' when a man of the hall went down before the window's step came
+    up (`diedAt` against the lesson's own log; `TUT_SQUAD_HALL=any`: not held); he stands square on to the glass (a pace along the wall his rifle's line is the
+    jamb, and a gun at a wall is not fired: one run stood forty seconds there) and shoots only a man he has a line to; `TUT_SQUAD_FRAG=wide` throws the frag on
+    to the road past the nest so both of its men outlive it (run in god mode: unprotected, a nest with both men up puts the scripted player down, which is the
+    mission's own price for a missed throw and nothing this bullet changes; its aim point is a pace and a half from a picket's camp mark, who was unharmed on
+    the six dice run). `lived-check`'s row for the level moves to this commit (a step's `cue` is a held key).
+    MEASURED: `lesson-gate tut-squad` ALL PASS; `lesson-check` and `rails-check` ALL PASS on both stands; both typechecks; `probes.ts kitpack`. The 16
+    unprotected runs on the shipped stand (six dice, three at a reader's pace, three on hard, three on hard with the frag held back, one on hard at a reader's
+    pace): 24 of 24 steps on all 16, the window's, the door's and the lock's steps each done on all 16 (none goes by), no man of the hall down before the
+    window's step; both to the player on 15, both to a teammate at the glass after the line was up on one (die 6). The die that broke (default, shipped): both
+    to the player; with the script as it was, the scripted player's new check fails it ("Tango 7 (at 103.1 s) of the hall went down before the window's step
+    came up (113.8 s)"). `TUT_SQUAD_FRAG=wide`, six dice in god mode (two at a reader's pace, two on hard): every step done on all six; both to the player on
+    four; on the two slow ones a teammate at the glass took one or both after the line was up. NOT RUN: `all-quick`, a tour, a soak. The page check
+    (`tools/qa/tut-squad-page.cjs`) boots the level and its script but does not play the hall. NOBODY HAS PLAYED IT, and it has never been seen on a GPU: how
+    the two walking into the window's view reads (about two and four seconds after the card is closed) is the maintainer's to judge.
   - **The harsh places, re-staged** (2026-10-22: the script, one Director verb, two Director reads, and one line in the defenders' squads; no hit point, no number of the fight's, one hit
     still downs the player). A player who does what a line says is not put down for it; a wrong move still costs the checkpoint. THE DEVICE, three times: a man the script holds does
     not fight, so he is kept in its hand until the player has done what the line asks, and brought where the squad's rifles or the player's have him first.
@@ -2197,3 +2227,22 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   low quality, 119 of 119 programs, no page error), two stills of the drum from above and close: no square at the drum's foot, a soft round dark patch
   about it (most of that dark is the drum's own shadow under the fire's lamp; the earth's brown was not told apart in it). No before still was taken.
   NEVER SEEN ON A GPU, and the maintainer's shot was a GPU's: whether the patch reads as melt or as a stain there is his to say.
+- **A tutorial mission may take the flat ring (2026-10-23, the maintainer on the first mission's wall charge, the ring then [5] then a second ring of
+  one row under a line asking for [3]: "weird after hitting 5")**. A level's `lesson.rails.flatRing: true` gives that mission the ring the rest of the
+  game has (`cmdring.ts CMDRING.flat`; `orders.ts flatRing` asks `Rails.flatRing`), with the level's `rails.orders` its only rows, and a step's line
+  while that ring is up is its `flatLine` (absent: `menuLine`). `tut-sky` takes it: on the wall the ring is "1 move there · 2 breach with a wall
+  charge" and the line is "Press [2] for a charge" (was "Press [5], then [3] for a charge", then "Press [3] for a charge"). Its `menuLine` and
+  `pageLine` are kept for the pages. The other missions have the pages still: each is its part's to move, one line of level data and its lines.
+  SWITCH `RAILS.flatRing`: ON in the page (`?railflat=0`; `?ringflat=0` puts the whole flat tree off, here too), OFF in the module and on the frozen
+  stand (`TPS_RAILFLAT=1`, which acts only with `TPS_RAILS=1 TPS_QRING=1 TPS_QONLY=1 TPS_RINGFLAT=1`), off for a recording from before the key.
+  CHECK `tools/qa/rails-check.ts`, the first play's notes line, both stands (the frozen one raises the tree itself): the ring is flat, nothing is
+  behind a 'more', the digit `flatLine` names is the wedge 'wallCharge' is on, that digit gives the charge, and with the switch off the pages and
+  their two lines are back. `RAILS_BREAK=1` fails it on both. The scripted player presses the digit the step's `flatLine` names.
+  WITH THE ORDER OUT the line over a flat ring is what the men are doing, never the digit again: the wedge that set the charge is the one that
+  blows it. After `afterSecs` with nothing done the ask is back, as on the pages. `railsFaults` asks that a flat mission's `menuLine` has a
+  `flatLine` beside it and that no other mission carries one; `ringflat-check`'s control has the third case (a level that takes the ring).
+  MEASURED on the page's stand: the scripted mission ends on seeds 1, 2 and 3 with the one ring and on seed 1 with `TPS_RAILFLAT=0` (the pages);
+  `rails-check` 29 of 29 on shipped, on frozen, and on frozen raised by its own words (no destruction there, so no charge row: the ring and its
+  line are what is asked); `ringflat-check` 14 on both; mission 1 played to the breaker step on the real page with real keys on the software
+  adapter: one ring, one key cap in the line, [2] gives the charge and no second ring comes up.
+  NOT DONE: the digit in a `flatLine` is hand-written, and only tut-sky's is held by a check. Never seen on a GPU; nobody has played it.

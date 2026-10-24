@@ -57,10 +57,10 @@ function naturalSpeed(clipName: string): { speed: number; period: number; plante
 }
 
 // ---------------------------------------------------------------- a driven run: state × ground speed
-interface Run { name: string; speed: number; crouch: number; upper?: string; deliberate?: number }
+interface Run { name: string; speed: number; crouch: number; upper?: string; deliberate?: number; dash?: number }
 function measure(r: Run) {
   const c = new CH.Character(ch, { id: 1, tint: [0, 0, 0], tint2: [0, 0, 0], pos: [0, 0, 0], yaw: 0 });
-  const an: any = c.anim; an.phase = 0; an.speed = r.speed; an.crouchTarget = r.crouch; an.upper = r.upper ?? 'relaxed'; if ('deliberate' in an) an.deliberate = r.deliberate ?? 0;
+  const an: any = c.anim; an.phase = 0; an.speed = r.speed; an.crouchTarget = r.crouch; an.upper = r.upper ?? 'relaxed'; if ('deliberate' in an) an.deliberate = r.deliberate ?? 0; if ('dash' in an) an.dash = r.dash ?? 0;
   const adv = () => { c.pos = [0, 0, c.pos[2] + r.speed * DT]; c.update(DT); };
   for (let i = 0; i < Math.round(2.5 / DT); i++) adv();
   const rows: any[] = []; let prev = an.phase, wraps = 0; const wrapT: number[] = []; const maxT = r.speed > 0.05 ? 30 : 4;
@@ -110,7 +110,7 @@ if (want === 'all' || want === 'states') {
     { name: 'walk 0.8', speed: 0.8, crouch: 0 }, { name: 'walk 1.2', speed: 1.2, crouch: 0 }, { name: 'walk 1.55 (playerWalk)', speed: 1.55, crouch: 0 },
     { name: 'jog 2.4', speed: 2.4, crouch: 0 }, { name: 'jog 3.3', speed: 3.3, crouch: 0 }, { name: 'sprint 4.7', speed: 4.7, crouch: 0 },
     { name: 'crouch 0.6', speed: 0.6, crouch: 1 }, { name: 'crouch 1.0', speed: 1.0, crouch: 1 }, { name: 'crouch 1.3 (playerCrouch)', speed: 1.3, crouch: 1 },
-    { name: 'crouch 1.0 deliberate', speed: 1.0, crouch: 1, deliberate: 1 },
+    { name: 'crouch 1.0 deliberate', speed: 1.0, crouch: 1, deliberate: 1 }, { name: 'crouch 1.45 (the sneak)', speed: 1.45, crouch: 1 }, { name: 'crouch 2.5 (Shift, crouched)', speed: 2.5, crouch: 1, dash: 1 },
     { name: 'guard walk 1.15', speed: 1.15, crouch: 0, upper: 'none' }, { name: 'guard investigate 1.75', speed: 1.75, crouch: 0, upper: 'none' }, { name: 'guard chase 2.7', speed: 2.7, crouch: 0, upper: 'aim' },
     { name: 'idle', speed: 0, crouch: 0 }, { name: 'crouch idle', speed: 0, crouch: 1 },
   ];
