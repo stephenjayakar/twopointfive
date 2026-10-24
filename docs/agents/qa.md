@@ -154,7 +154,7 @@ but synthetic writes still work.
   turn, the rest of the guards' slice is the same, and a file that has one loads frame for frame as the same file with the key taken out (the load's
   own reading of the switch). `CHECKPOINT_TURN_BREAK=1` (the key taken out of the file before the load) fails the first two on both
   stands, from frame 1. `savetimeline-check.ts` no longer puts TURN off for its file comparison (it did on the grounds that no file held a turn). One
-  seed, the office; in play the gap it closes was small (a turn restarted). Nobody has watched a load land on a turning man.
+  seed, the office; in play the gap it closes was small (a turn restarted). The page, headless on the software adapter (the office, a man handed a turn of 1.6 rad and saved three frames in, 1.9 rad/s in his feet): the turn straight after the load is the saved one and four frames on load and continue agree to the bit, 0 console errors. Never seen on a GPU, and nobody has watched a load land on a turning man.
   `Game.saves: Checkpoints` (ticked LAST in update): AUTOSAVE requests on the stage advancing, first entry into a room region (chronicle.ts `roomOf`), a hauled body
   let go of ≥ `CKPT.bodyHideM`, every `CKPT.quietSecs` 90 of quiet play; written once the gates pass (missionLive, AI on, nobody alert / searching / awareness >
   `awareMax` 0.4, no civilian startled / frightened / running / telling / hiding from him untold and no word of theirs pending — `civilianCompromise`, `playerBusy`
