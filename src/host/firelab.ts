@@ -15,8 +15,8 @@ type Table = Record<string, unknown>;
 interface Num { t: () => Table; key: string; label: string; min: number; max: number; step: number; tip: string }
 const LOOK = () => FIRE.look as unknown as Table, TOP = () => FIRE as unknown as Table, SMOKE = () => FIRE.smoke as unknown as Table, GASES = () => FIRE.gas as unknown as Table;
 const FLAME: Num[] = [
-  { t: LOOK, key: 'gain', label: 'how bright the whole flame is', min: 0, max: 3, step: 0.05, tip: 'times all of its light: up for a hotter, paler fire, down for a dim red one' },
-  { t: LOOK, key: 'core', label: 'how white-hot its heart is', min: 0, max: 4, step: 0.05, tip: 'times the light of the hottest part only: this is what the bloom spreads into a glow' },
+  { t: LOOK, key: 'gain', label: 'how bright the whole flame is', min: 0, max: 8, step: 0.05, tip: 'times all of its light: up for a hotter, paler fire, down for a dim red one' },
+  { t: LOOK, key: 'core', label: 'how white-hot its heart is', min: 0, max: 10, step: 0.05, tip: 'times the light of the hottest part only: this is what the bloom spreads into a glow' },
   { t: LOOK, key: 'sigma', label: 'how solid it is', min: 2, max: 30, step: 0.5, tip: 'low = a thin veil you see the wall through, high = a solid body of flame with hard tongues' },
   { t: LOOK, key: 'speed', label: 'how fast it climbs', min: 0.2, max: 3, step: 0.05, tip: 'times the speed its shapes rise and flutter at' },
   { t: LOOK, key: 'tall', label: 'how tall it is', min: 0.5, max: 2.5, step: 0.05, tip: 'times the height of its tongues' },

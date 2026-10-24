@@ -17,6 +17,7 @@ import { AIMCOST } from '../game/aimcost';
 import { aimGunPoint, aimGunOn } from '../game/aimweight';
 import { previewTooClose } from '../game/he40';
 import { gunShut, throwRest, thingDist } from '../game/player';
+import { throwReach, type ThrowReach } from '../game/throwreach';
 import { GEAR, gearText, ringTag, shellTag } from '../game/gear';
 import { HANDSLOT } from '../game/handslot';
 import { HANDRING, EMPTY_WORD, EMPTY_WHY, EMPTY_SHOW_SECS } from '../game/handring';
@@ -99,6 +100,7 @@ export class Overlay implements HudLike {
   private equip = document.getElementById('equip')!;
   private traj = document.getElementById('traj') as unknown as SVGSVGElement;
   private trajPath: SVGPolylineElement; private trajLand: SVGCircleElement; private trajShort = false;
+  private reachEls!: Record<'kill' | 'hurt' | 'stun', { el: SVGPathElement; d: string }>; private reach: ThrowReach | null = null;   // throwreach.ts: what the thing he is aiming will reach, flat on the floor round where it ends
   private trajRoll: SVGPolylineElement; private trajTick: SVGCircleElement; private restKey = ''; private restN = 0; private rest: { at: Vec3; path: Vec3[] } | null = null;   // player.ts throwRest: the ring goes where the can comes to REST, a tick stays on its first touch, the floor between is dotted
   private squadThrow!: SquadThrowViz;
   private attention!: AttentionViz;
@@ -188,6 +190,8 @@ export class Overlay implements HudLike {
     this.trajTick = document.createElementNS(NS, 'circle') as SVGCircleElement;
     this.trajTick.setAttribute('r', '3'); this.trajTick.setAttribute('class', 'trajland trajtick'); this.trajTick.setAttribute('stroke-width', '1.5');
     this.trajRoll.style.display = 'none'; this.trajTick.style.display = 'none';
+    { const mk = (cls: string) => { const el = document.createElementNS(NS, 'path') as SVGPathElement; el.setAttribute('class', `reach ${cls}`); this.traj.appendChild(el); return { el, d: '' }; };   // (under the arc and its ring: the widest first)
+      this.reachEls = { hurt: mk('hurt'), kill: mk('kill'), stun: mk('stun') }; }
     this.traj.appendChild(this.trajPath); this.traj.appendChild(this.trajRoll); this.traj.appendChild(this.trajTick); this.traj.appendChild(this.trajLand);
     this.squadThrow = new SquadThrowViz(this.traj, this.trajPath);   // (a squad throw's ring, walk and arc: over the floor's marks, under his own throw arc)
     this.attention = new AttentionViz(this.traj, this.traj.firstChild as Element | null);   // (where a guard's attention is — game/attention.ts: a thread and a ring on the floor, under everything else drawn there)
@@ -454,8 +458,9 @@ export class Overlay implements HudLike {
       this.trajPath.setAttribute('points', pts.join(' ')); this.trajPath.style.display = 'block';
       { const short = previewTooClose(game); if (short !== this.trajShort) { this.trajShort = short; this.trajPath.style.stroke = this.trajLand.style.stroke = short ? HE40_SHORT_STROKE : ''; this.trajPath.style.strokeDasharray = short ? '3 7' : ''; } }   // (a 40 mm arc too short to arm: amber, broken — whatever the reticle is busy saying)
       // WHERE IT COMES TO REST (player.ts throwRest; null = the mark off, or the launcher's arc): reckoned again when the arc has changed, and four times a second under one held still (a door swung, a chair shoved)
-      { const p0 = pv.points[0], k = `${p0[0].toFixed(2)},${p0[1].toFixed(2)},${p0[2].toFixed(2)},${pv.v0[0].toFixed(2)},${pv.v0[1].toFixed(2)},${pv.v0[2].toFixed(2)},${game.player.heldKind},${Math.floor(game.time * 4)}`; if (k !== this.restKey && (!this.restKey || (this.restN++ & 1) === 0)) { this.restKey = k; this.rest = throwRest(game); } }   // (every other frame under a moving cursor: the replay is some tenths of a millisecond, the ring trails the arc by a frame)
+      { const p0 = pv.points[0], k = `${p0[0].toFixed(2)},${p0[1].toFixed(2)},${p0[2].toFixed(2)},${pv.v0[0].toFixed(2)},${pv.v0[1].toFixed(2)},${pv.v0[2].toFixed(2)},${game.player.heldKind},${Math.floor(game.time * 4)}`; if (k !== this.restKey && (!this.restKey || (this.restN++ & 1) === 0)) { this.restKey = k; this.rest = throwRest(game); this.reach = throwReach(game, this.rest); } }   // (every other frame under a moving cursor: the replay is some tenths of a millisecond, the ring trails the arc by a frame)
       const rest = this.rest, ring = rest ? rest.at : pv.land;
+      this.drawReach(this.reach, cam, w, h);
       const [lx, ly, lv] = cam.project(ring, w, h, EDGE); this.trajLand.style.display = lv ? 'block' : 'none'; this.trajLand.setAttribute('cx', lx.toFixed(1)); this.trajLand.setAttribute('cy', ly.toFixed(1));
       if (rest) {
         const [tx, ty, tv] = cam.project(pv.land, w, h, EDGE), far = Math.hypot(rest.at[0] - pv.land[0], rest.at[2] - pv.land[2]) > 0.3;   // (a can that stays where it lands needs no tick under its ring)
@@ -463,7 +468,7 @@ export class Overlay implements HudLike {
         const rp: string[] = []; if (far) for (const p of [pv.land, ...rest.path, rest.at]) { const [x, y, vis] = cam.project(p, w, h, EDGE); if (vis) rp.push(`${x.toFixed(1)},${y.toFixed(1)}`); }
         this.trajRoll.setAttribute('points', rp.join(' ')); this.trajRoll.style.display = rp.length > 1 ? 'block' : 'none';
       } else { this.trajTick.style.display = 'none'; this.trajRoll.style.display = 'none'; }
-    } else { this.trajPath.style.display = 'none'; this.trajLand.style.display = 'none'; this.trajTick.style.display = 'none'; this.trajRoll.style.display = 'none'; this.restKey = ''; this.rest = null; }
+    } else { this.trajPath.style.display = 'none'; this.trajLand.style.display = 'none'; this.trajTick.style.display = 'none'; this.trajRoll.style.display = 'none'; this.restKey = ''; this.rest = null; this.reach = null; this.drawReach(null, cam, w, h); }
     this.drawClose(game, cam, w, h);
     this.plan.update(game, cam, w, h);
     this.findme.update(game, cam, w, h, this.plan.youOn);
@@ -471,6 +476,23 @@ export class Overlay implements HudLike {
     this.updateEquip(game);
     // the wind field's debug view (nothing drawn, nothing sampled unless a switch of it is on)
     this.windViz.update(game, cam, w, h);
+  }
+
+  /** WHAT THE THING HE IS AIMING WILL REACH (throwreach.ts; null = nothing to draw): each radius a ring flat on the floor under the point, so the camera's
+   *  tilt squashes it as it squashes the floor. A point behind the camera BREAKS the ring there and the rest of it stays (squadthrowviz.ts draws the
+   *  squad's the same way); only a whole ring is filled. A ring that has not changed writes nothing. */
+  private drawReach(R: ThrowReach | null, cam: FollowCamera, w: number, h: number) {
+    const ring = (E: { el: SVGPathElement; d: string }, r: number) => {
+      let d = '', run = 0, whole = true;
+      if (R && r > 0) for (let i = 0, N = 64; i <= N; i++) {
+        const a = (i / N) * Math.PI * 2, [x, y, vis] = cam.project([R.at[0] + Math.cos(a) * r, 0.03, R.at[2] + Math.sin(a) * r], w, h);
+        if (!vis) { run = 0; whole = false; continue; }
+        d += `${run++ ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`;
+      }
+      if (d && whole) d += 'Z';
+      if (d !== E.d) { E.d = d; E.el.setAttribute('d', d); E.el.classList.toggle('cut', !whole); }   // (a cut ring has no fill: index.html .reach.cut)
+    };
+    const E = this.reachEls; ring(E.kill, R?.kill ?? 0); ring(E.hurt, R?.hurt ?? 0); ring(E.stun, R?.stun ?? 0);
   }
 
   /** Interaction panel: `rows` top to bottom, `primary` = index of the highlighted row (what a Space tap does / letting go performs; -1: none), `more` = how

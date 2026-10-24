@@ -1757,7 +1757,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   takes the layout under 1200 × 675 of its own pixels (the smallest window the screens hold whole at, measured with the page check on the build before):
   where the largest step asks for more room than there is, the larger steps share what there is (1366 × 768: 1.04, 1.08, 1.14; 1280 × 720: up to
   1.07), and on a window of 1200 × 675 or less they do nothing. THE KEYS: Ctrl or ⌘ with + and − step it from anywhere, with 0 it is the window's
-  again; those chords, Ctrl + wheel and a pinch are taken from the browser (Ctrl + wheel over the picture is still the camera's).
+  again; those chords, Ctrl + wheel and a pinch are taken from the browser (over the picture a wheel that says Ctrl is still `game/input.ts`'s: a pinch zooms the camera, the wheel under a held Ctrl key is nothing, `player.md` CTRL AND THE WHEEL).
   FOUR THINGS A ZOOMED LAYER DOES NOT DO BY ITSELF, and a new screen has to: a viewport unit in a layer is written `calc(25vw / var(--tz, 1))` (the
   check is red on a bare one in `index.html` or `src/ui`); an `@media` width or height is rewritten by the module to ask for px × factor (also when a
   style sheet joins later, one microtask after it joins), and a script asks `uiMatch('(max-width: 720px)')` in place of `matchMedia`; a rectangle a

@@ -24,6 +24,7 @@ import { HANDRING } from '../game/handring';
 import { SLOTSETUP } from '../game/slotsetup';   // (read when the Controls list is drawn: the gun's setup took the selector's key and the light's)
 import { SAVETIMELINE } from '../game/savestate';   // (read when the screen is drawn)
 import { findMeRows } from './findme';
+import { planRings, setPlanRings, resetPlanRings } from './planlook';
 import { TEXTSIZE, TEXT_EVENT, textStep, setTextStep } from './textsize';
 import { KEYMAP, cmdOnQ, keyText, keysOf, resetKeys, slotNow, camCap, capNow } from '../host/keymap';   // (the player's own keys: the Controls tab rebinds them)
 import { AUTOCAM } from '../host/autocam';
@@ -314,6 +315,7 @@ function render(S: Screen) {
     flip(body, 'Interaction hints', () => overlay.showLightDots, v => { overlay.showLightDots = v; keep(); }, `Show faint dots on what ${capNow('Space')} and right-click can act on, like lights, doors and bodies.`);
     if (WALLSNAP.on) flip(body, 'Walk into a wall to take it', () => WALLSNAP.press, v => { WALLSNAP.press = v; pressKept = v; pressUrl = false; keep(); }, wallWay() === 'key' ? keyText('Keep holding a move key into a wall to put your back to it. Q does the same either way.') : cmdOnQ() ? 'Keep holding a move key into a wall to put your back to it. When this is off, the wall hold needs a key from Controls.' : 'Keep holding a move key into a wall to put your back to it. When this is off, press Q instead.');   // (Q the squad's command key — host/keymap.ts qCmd: the wall hold never falls back to it)
     if (!CMDRING.bareHint) flip(body, 'Order mark at the cursor', () => CMDRING.hint, v => { CMDRING.hint = v; hintKept = v; hintUrl = false; keep(); }, keyText(CMDRING.plainHint ? 'Show an outline on the floor for what B would order there.' : 'Show a small mark beside the cursor and an outline on the floor for what B would order there.'));
+    if (CMDRING.plan) range(body, 'Plan mode circles', 0, 100, 5, () => Math.round(planRings() * 100), v => setPlanRings(v / 100), v => `${v.toFixed(0)} %`, 'Set how bright the circles at your squad\'s feet are while plan mode is up.');   // (ui/planlook.ts: a picture only, kept on this machine)
     const tabOpts = tabChoices(BACKKEY.tab);   // (while Tab is the back key the first choice reads 'Nothing more' and every line says so: ui/tabkey.ts)
     seg(body, 'Tab key', tabOpts, () => TABKEY.does, v => { setTabKey(v); TABKEY.kept = v; TABKEY.picked = true; TABKEY.url = false; keep(); }, () => tabOpts.find(c => c.v === TABKEY.does)?.line ?? '');
     const findReset = findMeRows({ sec, flip, seg, range }, body);   // (ui/findme.ts: finding your own man on the screen and how the camera answers the hand — twelve rows on trial, kept by host/findme.ts)
@@ -321,7 +323,7 @@ function render(S: Screen) {
     flip(body, 'God mode', () => game.godMode, v => { game.godMode = v; saveSandbox(game, 'god'); }, 'Enemies still see you and shoot you, but hits don\'t hurt. This is saved on this machine.', ['On', 'Off']);
     flip(body, 'Enemies don\'t think', () => !game.aiEnabled, v => { game.aiEnabled = !v; saveSandbox(game, 'noAi'); }, 'Everybody stays where they are, and nobody patrols, hears or sees. This is saved on this machine.', ['On', 'Off']);
     flip(body, 'Unlimited ammunition', () => game.infiniteAmmo, v => { game.infiniteAmmo = v; saveSandbox(game, 'ammo'); }, gearText('Bottomless magazines, canisters, ring airfoils and wall charges. This is saved on this machine.'), ['On', 'Off']);
-    reset = () => { game.saves.setEnabled(true); overlay.showLightDots = true; WALLSNAP.press = true; pressKept = null; pressUrl = false; CMDRING.hint = false; hintKept = null; hintUrl = false; TABKEY.kept = 'off'; TABKEY.picked = false; TABKEY.url = false; tabSettle(); keep(); findReset();
+    reset = () => { game.saves.setEnabled(true); overlay.showLightDots = true; WALLSNAP.press = true; pressKept = null; pressUrl = false; CMDRING.hint = false; hintKept = null; hintUrl = false; TABKEY.kept = 'off'; TABKEY.picked = false; TABKEY.url = false; tabSettle(); keep(); findReset(); resetPlanRings();
       if (game.godMode) { game.godMode = false; saveSandbox(game, 'god'); } if (!game.aiEnabled) { game.aiEnabled = true; saveSandbox(game, 'noAi'); } if (game.infiniteAmmo) { game.infiniteAmmo = false; saveSandbox(game, 'ammo'); } };
   }
   if (reset) { const run = reset, b = el('button', 'op-btn', 'Reset to defaults') as HTMLButtonElement; b.dataset.act = 'reset'; b.onclick = () => { run(); S.paint(); }; foot.appendChild(b); }

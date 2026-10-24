@@ -603,12 +603,13 @@
     .planmode { color: #f2cf6b; } .planmode .t-red { color: #ff9a8a; } .planmode .t-blue { color: #9cc8ff; }
     .planmode .pf { fill: none; stroke: currentColor; stroke-width: 2; opacity: 0.55; }
     .planmode .pt { font: 700 12px/1 var(--h-mono); letter-spacing: 0.32em; text-anchor: middle; fill: currentColor; paint-order: stroke; stroke: rgba(var(--h-plate),0.85); stroke-width: 4px; stroke-linejoin: round; }
-    .planmode .pm { fill: none; stroke: currentColor; stroke-width: 1.3; opacity: 0.6; stroke-dasharray: 3 3; } .planmode .pm.picked { stroke-width: 2.4; opacity: 0.95; stroke-dasharray: none; }
+    .planmode .pm { fill: none; stroke: currentColor; stroke-width: 1.3; opacity: calc(0.6 * var(--pm-k, 1)); stroke-dasharray: 3 3; } .planmode .pm.picked { stroke-width: 2.4; opacity: calc(0.95 * var(--pm-k, 1)); stroke-dasharray: none; }
+    .planmode .pn { font: 700 11px/1 var(--h-mono); text-anchor: middle; fill: currentColor; paint-order: stroke; stroke: rgba(var(--h-plate),0.85); stroke-width: 3px; stroke-linejoin: round; opacity: calc(0.45 + 0.5 * var(--pm-k, 1)); }
     .planmode .pl { fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linejoin: round; stroke-linecap: round; stroke-dasharray: 7 5; opacity: 0.85; }
     .planmode .ps { fill: rgba(var(--h-plate),0.82); stroke: currentColor; stroke-width: 1.6; }
     .planmode .pk rect { fill: rgba(var(--h-plate),0.9); stroke: currentColor; stroke-width: 1.2; } .planmode .pk text { font: 700 10px/1 var(--h-mono); text-anchor: middle; fill: currentColor; }
     .planmode .pk.now rect { fill: currentColor; } .planmode .pk.now text { fill: var(--h-base); }
-    .planmode .pself { fill: none; stroke: currentColor; stroke-width: 2.4; opacity: 0.95; } .planmode .pe { fill: currentColor; stroke: rgba(var(--h-plate),0.85); stroke-width: 1.5; stroke-linejoin: round; paint-order: stroke; }
+    .planmode .pself { fill: none; stroke: currentColor; stroke-width: 2.4; opacity: calc(0.95 * var(--pm-k, 1)); } .planmode .pe { fill: currentColor; stroke: rgba(var(--h-plate),0.85); stroke-width: 1.5; stroke-linejoin: round; paint-order: stroke; }
     .planmode .pb { fill: currentColor; fill-opacity: 0.08; stroke: currentColor; stroke-width: 1; stroke-dasharray: 4 3; }
     .planmode .pa { fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; } .planmode .pa.drag { stroke-dasharray: 2 5; opacity: 0.9; }
     body.ringover #interact { opacity: 0.28; }   /* the status column under the ring's words (ui/cmdring.ts clear) */
@@ -642,6 +643,8 @@
     body.attract .plan, body.blinded .plan { display: none; }
     /* closer than ever (game/close.ts → ui/overlay.ts drawClose): the windows round a man near Sam, on the floor — open = a thin outline, the one he stands in
        filled and bright, a shut one amber and broken; each with what it gives in a few words just outside its arc */
+    /* game/throwreach.ts: what the thing he is aiming will reach, flat on the floor — a frag's kill ring (solid, alarm red-orange) and the ring it hurts to (dotted), a stun canister's ring (the HUD's own bright, dashed) */
+    .reach { fill: none; stroke-linejoin: round; stroke-linecap: round; } .reach.cut { fill: none !important; } .reach.kill { stroke: rgba(255,112,72,0.95); stroke-width: 2; fill: rgba(255,96,56,0.10); } .reach.hurt { stroke: rgba(255,112,72,0.6); stroke-width: 1.5; stroke-dasharray: 1 7; } .reach.stun { stroke: rgba(var(--h-hi-rgb),0.85); stroke-width: 1.5; stroke-dasharray: 8 6; fill: rgba(var(--h-hi-rgb),0.06); }
     .trajpath { stroke: rgba(var(--h-hi-rgb),0.85); } .trajland { fill: rgba(var(--h-hi-rgb),0.12); stroke: rgba(var(--h-hi-rgb),0.9); } .trajroll { stroke: rgba(var(--h-hi-rgb),0.6); } .trajtick { fill: none; stroke: rgba(var(--h-hi-rgb),0.7); }   /* player.ts throwRest: the ring is where the can comes to rest; the tick is its first touch, the dots the floor it rolls over */
     .closewin path { fill: rgba(var(--h-edge),0.06); stroke: rgba(var(--h-edge),0.55); stroke-width: 1.2; stroke-linejoin: round; }
     .closewin path.cw-in { fill: rgba(var(--h-edge),0.2); stroke: rgba(var(--h-hi-rgb),0.98); stroke-width: 2; }

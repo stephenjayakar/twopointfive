@@ -77,7 +77,7 @@ export interface PlanView {
   frame: boolean;
   /** the mode up and the view the hand's: where Sam stands (the view may have left him) */
   sam: Vec3 | null;
-  men: { at: Vec3; tone: string | undefined; picked: boolean }[];
+  men: { at: Vec3; tone: string | undefined; picked: boolean; /** the digit that picks him, drawn by his circle (0: none — CMDRING.planDigits off, or the mode down) */ n: number }[];
   chains: { tone: string | undefined; from: Vec3; stops: { at: Vec3; door: boolean; keys: number; now: boolean; /** the far end of its way to look (null: none) */ look: Vec3 | null }[] }[];
   key: string;
   /** a right press being dragged: from the place it went down on to the point under the cursor */
@@ -105,6 +105,20 @@ function choose(S: SquadOrders, men: Guard[]): void {
   if (id && L.length === S.men(id).length && L.every(m => S.pairOf(m) === id)) { S.who = id; return; }
   P.pick = L.map(m => m.callsign);
 }
+/** THE DIGITS PICK THE MEN (CMDRING.planDigits): 1 to 4 is that man of the squad alone — the squad's own order, so a man keeps his digit when another is
+ *  down — Shift + the digit puts him in the picked set or takes him out, as a Shift click does; 5 is everyone. A digit with no living man does nothing */
+function pickDigit(S: SquadOrders, d: number, shift: boolean): void {
+  if (d === PLAN_ALL) { PLAN_STATS.picked++; choose(S, []); return; }
+  const man = S.squad()[d - 1], now = S.recipients(); if (!man || !S.men('all').includes(man)) return;
+  PLAN_STATS.picked++; choose(S, !shift ? [man] : now.includes(man) ? now.filter(m => m !== man) : [...now, man]);
+}
+/** the digit that picks everyone (the men's own are below it) */
+const PLAN_ALL = 5;
+/** a left click on bare ground picks everyone, as the mode was built — not once the digits pick the men, except on a tutorial mission, whose lines still
+ *  name that click (rails live: the tutorial's own to move) */
+export const planGroundAll = (S: SquadOrders): boolean => !CMDRING.planDigits || !!S.g.rails?.live;
+/** the digit drawn by a man's circle (0: none — the digits are not the mode's, or he has none) */
+function digitOf(S: SquadOrders, m: Guard): number { if (!CMDRING.planDigits) return 0; const k = S.squad().indexOf(m) + 1; return k >= 1 && k < PLAN_ALL ? k : 0; }
 
 /** a place for a chain, off the target the cursor was on (null: a man of the other side — an order on him is given at once and never chained) */
 function stepOf(S: SquadOrders, t: OrderTarget): PlanStep | null {
@@ -405,6 +419,8 @@ export function planInput(S: SquadOrders, input: Input, cam: FollowCamera, canva
   if (input.pressed.has('Blur')) { P.drag = null; P.rmbT = -1; P.rdown = null; }
   if (S.menu || S.cmdRing) { P.drag = null; P.rmbT = -1; P.rdown = null; return; }   // (a menu or the ring is up: the buttons are its own this frame — planAfter takes what is left of them from Sam)
   if (K.planRts) pan(S, input, cam, dt);
+  // (the digits pick the men — never with the ring's key down: a digit inside that press is the ring's own wedge, CMDRING.stayDigit)
+  if (K.planDigits && !input.down(K.key)) for (let d = 1; d <= PLAN_ALL; d++) if (input.pressed.delete(`Digit${d}`)) pickDigit(S, d, shift);
   const held = (input.buttons & 1) !== 0, lmb = (input.clicked & 1) !== 0, rmb = (input.clicked & 4) !== 0, mx = input.mouseX, my = input.mouseY;
   const w = canvas.clientWidth, h = canvas.clientHeight, now = S.recipients();
   if (lmb) P.drag = { x0: mx, y0: my, x1: mx, y1: my };   // (a press is a box begun, wherever it lands: let go where it went down, it was a click)
@@ -418,7 +434,7 @@ export function planInput(S: SquadOrders, input: Input, cam: FollowCamera, canva
         const k = stop ? -1 : S.manAt(input, cam, canvas), man = k >= 0 ? S.squad()[k] : null;
         if (stop) { if (!wordLocked(S)) cycle(S, stop.C, stop.i); }   // (a stop of a chain: its waits, not a choice of men)
         else if (man) { PLAN_STATS.picked++; choose(S, !shift ? [man] : now.includes(man) ? now.filter(m => m !== man) : [...now, man]); }
-        else if (!shift) choose(S, []);   // (a click on nothing: everyone)
+        else if (!shift && planGroundAll(S)) choose(S, []);   // (a click on nothing: everyone — or, the digits picking the men, nothing: who was picked stays picked)
       } else {
         const x0 = Math.min(D.x0, D.x1), x1 = Math.max(D.x0, D.x1), y0 = Math.min(D.y0, D.y1), y1 = Math.max(D.y0, D.y1);
         const inside = S.men('all').filter(m => { const [sx, sy, front] = cam.project(m.char.pos, w, h); return front && sx >= x0 && sx <= x1 && sy >= y0 && sy <= y1; });
@@ -495,6 +511,6 @@ export function planView(S: SquadOrders): PlanView | null {
     });
     chains.push({ tone: S.toneOf(men), from, stops });
   }
-  return { up: P.up, frame: P.up || sky, drag: P.up ? P.drag : null, sam: P.up && P.look && !seat(S) ? [g.player.char.pos[0], 0, g.player.char.pos[2]] : null, men: P.up || sky ? S.men('all').map(m => ({ at: at(m), tone: S.pairOf(m) ?? undefined, picked: now.includes(m) })) : [], chains, key: DOORTOOLS.blowKey.replace(/^Key/, ''),
+  return { up: P.up, frame: P.up || sky, drag: P.up ? P.drag : null, sam: P.up && P.look && !seat(S) ? [g.player.char.pos[0], 0, g.player.char.pos[2]] : null, men: P.up || sky ? S.men('all').map(m => ({ at: at(m), tone: S.pairOf(m) ?? undefined, picked: now.includes(m), n: P.up ? digitOf(S, m) : 0 })) : [], chains, key: DOORTOOLS.blowKey.replace(/^Key/, ''),
     aim: P.up && P.rdown?.drag ? { from: [P.rdown.t.at[0], 0, P.rdown.t.at[2]], to: [P.rdown.to[0], 0, P.rdown.to[2]] } : null };
 }
