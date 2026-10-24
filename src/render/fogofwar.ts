@@ -55,13 +55,16 @@ export interface FogFrame {
    *  `fullFlat` is then a fill ADDED to the dimmed frame (0 = none), shaped by `litAo` / `litAoM`; `lit`'s lamps are not read. false = `flat` / `lit` as they
    *  were — which the game fills all the same, and which the pass draws for as long as `sight` is false */
   full: boolean; fullFlat: number;
+  /** THE AIR IS THE PLACE (game/fogofwar.ts FOG.air; under the full picture alone — it rides the sight table's head): true = the picture's march draws smoke and
+   *  dust over floor the team does not see too (the fog pass then dims it with the ground under it); false = no plume there, as it was */
+  air: boolean;
   /** the renderer's own (the engine writes it each frame, the game never): this frame's sight table is written — FogSight.live. While it is not (its program
    *  still compiling, or failed), no class cuts anything, so the full picture is NOT drawn: the fog is `flat` / `lit`'s, which shows nothing live */
   sight: boolean;
   /** the renderer's own switch (the game never writes it): which program draws the pass — the picture is the same either way (FogPassMode) */
   pass: FogPassMode;
 }
-export function makeFogFrame(): FogFrame { const lights = new Float32Array(FOG_LIGHTS * 16); return { on: false, count: 0, eyes: new Float32Array(FOG_EYES * 4), looks: new Float32Array(FOG_EYES * 4), dim: 0.4, desat: 0.75, topPad: 0.3, edge: 0, softIn: 0, softOut: 0, nearSoft: 0, full: false, fullFlat: 0, sight: false, flat: 0, lit: 0, litFill: 0, litCut: 0, litAo: 0, litAoM: 0, lightCount: 0, lights, lightsU: new Uint32Array(lights.buffer), pass: fogPassFlag() }; }
+export function makeFogFrame(): FogFrame { const lights = new Float32Array(FOG_LIGHTS * 16); return { on: false, count: 0, eyes: new Float32Array(FOG_EYES * 4), looks: new Float32Array(FOG_EYES * 4), dim: 0.4, desat: 0.75, topPad: 0.3, edge: 0, softIn: 0, softOut: 0, nearSoft: 0, full: false, fullFlat: 0, air: false, sight: false, flat: 0, lit: 0, litFill: 0, litCut: 0, litAo: 0, litAoM: 0, lightCount: 0, lights, lightsU: new Uint32Array(lights.buffer), pass: fogPassFlag() }; }
 
 const U_BYTES = FOG_EYES * 16 * 2 + 64;
 
@@ -288,7 +291,7 @@ export class FogSight implements CutSwappable {
     }
     const U = this.udata, count = Math.min(F!.count, FOG_EYES); U.set(F!.eyes, 0); U.set(F!.looks, FOG_EYES * 4);
     for (let k = count; k < FOG_EYES; k++) U[k * 4 + 3] = 0;   // (a row past the count is no eye)
-    const o = FOG_EYES * 8; U[o] = count; U[o + 1] = 1; U[o + 2] = F!.topPad; U[o + 3] = Math.max(0, F!.edge); U[o + 4] = F!.softIn; U[o + 5] = F!.softOut; U[o + 6] = F!.nearSoft; U[o + 7] = 0;
+    const o = FOG_EYES * 8; U[o] = count; U[o + 1] = 1; U[o + 2] = F!.topPad; U[o + 3] = Math.max(0, F!.edge); U[o + 4] = F!.softIn; U[o + 5] = F!.softOut; U[o + 6] = F!.nearSoft; U[o + 7] = F!.air ? 1 : 0;
     this.device.queue.writeBuffer(this.ubuf, 0, U); this.device.queue.writeBuffer(this.buf, SIGHT_HEAD, U);
     const p = enc.beginComputePass({ label: 'fogSight' });
     p.setPipeline(this.pipe); p.setBindGroup(0, sceneBGPlain); p.setBindGroup(1, this.bg); p.dispatchWorkgroups(FOG_BINS / 64, FOG_EYES); p.end();

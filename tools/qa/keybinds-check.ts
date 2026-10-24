@@ -209,7 +209,7 @@ export async function keybindsCheck(): Promise<boolean> {
           ok &&= good; got.push(`${gears ? 'two gears' : 'the wheel'}, the fast crouch walk ${run ? 'on' : 'off'}: Options "${small ?? 'no line'}", the list "${row}"${good ? '' : ' WRONG'}`); }
       } finally { CROUCHRUN.on = was.c; TWOGEARS.on = was.t; }
       verdict(ok, 'the words for Shift: with the fast crouch walk on, Options and the start page\'s list say what Shift does crouched; off, both read as they did', got.join(' · ')); }
-  } finally { K.setKeys({}); K.KEYMAP.on = false; K.KEYMAP.qFree = false; K.KEYMAP.qCmd = false; K.KEYMAP.setFree = false; K.KEYMAP.qOnly = false; K.KEYMAP.freeWhen = null; for (const n of stubs) delete G[n]; for (const k of ['localStorage', 'window', 'document'] as const) { if (had[k] === undefined) delete G[k]; else G[k] = had[k]; } }
+  } finally { K.setKeys({}); K.KEYMAP.on = false; K.KEYMAP.qFree = false; K.KEYMAP.qCmd = false; K.KEYMAP.setFree = false; K.KEYMAP.qOnly = false; K.KEYMAP.camSpace = false; K.KEYMAP.pinchOnly = false; K.KEYMAP.freeWhen = null; for (const n of stubs) delete G[n]; for (const k of ['localStorage', 'window', 'document'] as const) { if (had[k] === undefined) delete G[k]; else G[k] = had[k]; } }
   console.log(`=== keybinds: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
 }

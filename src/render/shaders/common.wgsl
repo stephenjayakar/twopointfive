@@ -125,7 +125,7 @@ struct FogSightT {            // THE FOG OF WAR'S SIGHT TABLE (render/fogofwar.t
   eyes: array<vec4f, 5>,      // FowU's head (shaders/fogofwar.wgsl), field for field: the eye and its man, …
   looks: array<vec4f, 5>,     // … where he looks, his cone and near field
   cfg: vec4f,                 // x = eyes, y = 1 while this frame's table is written (0: no table — every spot answers 'seen'), z = topPad (m), w = the fog's soft edge: its band (m; 0 = the hard line — shaders/fogofwar.wgsl fowEdge, the fog pass alone reads it)
-  soft: vec4f,                // the cone's soft edges, as FowU.soft
+  soft: vec4f,                // xyz = the cone's soft edges, as FowU.soft · w = 1 while smoke and dust are drawn under the fog too (fogSmoke below; 0 = cut there, as it was)
 };
 @group(0) @binding(11) var<uniform> fogSight: FogSightT;   // (a UNIFORM, 41 KB: the fragment stage's sampled textures are all spoken for — passes.ts lComp)
 // binding 12 — the per-light reach rows (render/reach.ts, lights.ts reachBuf) — is declared by the scene prelude (frame.ts scenePrelude) as either a read-only
@@ -1077,9 +1077,11 @@ fn fogSeenBins(P: vec3f) -> f32 {
   return best;
 }
 /// what is left of light `li` at the spot P under the fog's light classes: 1 for a light with no fog bit (every light while the rule is off)
-// (the picture's own march of the smoke — volumetrics.wgsl — takes a plume's density through this: smoke over floor nobody on the team sees is not in the
-// picture. Shadow rays and the game's readings take the smoke as it is.)
-fn fogSmoke(dens: f32, X: vec3f) -> f32 { if (dens <= 0.002) { return dens; } return dens * fogSeenAt(X, vec3f(0.0)); }
+// (the picture's own march of the smoke — volumetrics.wgsl — takes a plume's density through this. soft.w = 1, as the page has it: the air is the place
+// — game/fogofwar.ts FOG.air — and a plume is drawn wherever it stands; the fog pass then dims each pixel by the SURFACE behind it, so a plume over unseen
+// floor is dimmed where the ground behind it on the screen is unseen and not where that ground is seen. soft.w = 0: smoke over floor nobody on the team
+// sees is not in the picture, as it was. Shadow rays and the game's readings take the smoke as it is either way.)
+fn fogSmoke(dens: f32, X: vec3f) -> f32 { if (dens <= 0.002 || fogSight.soft.w > 0.5) { return dens; } return dens * fogSeenAt(X, vec3f(0.0)); }
 fn lightFogK(li: Light, P: vec3f, N: vec3f) -> f32 {
   let fc = li.kind & (LIGHT_FOG_SEEN | LIGHT_FOG_UNSEEN);
   if (fc == 0u) { return 1.0; }

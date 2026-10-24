@@ -28,6 +28,7 @@ const PB_KIND: u32 = 15u;         // low 4 bits: kind
 const PB_ASLEEP: u32 = 16u;       // resting on an up-facing surface: no integration, support re-tested now and then
 const PB_NEW: u32 = 32u;          // born this frame (the emit kernel pre-integrated it a random fraction of dt): the update kernel skips its step once
 const PB_BOUNCED: u32 = 64u;      // has met geometry at least once
+const PB_OURS: u32 = 128u;        // the team's own doing (the record's bit 18 — particles.ts Particles.ours): drawn over floor the fog of war hides too, until it has lain and is woken (the kernel takes the bit off)
 // bits 8..15: owner — the character id whose capsules / boxes this particle's rays ignore (a casing leaves the port INSIDE the shooter's arm capsules)
 
 struct Particle {
@@ -147,7 +148,7 @@ struct EmitRec {
   vadd: vec3f, shape: u32,        // velocity inherited from the emitter (the shooter's stride); 0 cone about dir · 1 ground burst (spread / lift) · 2 ring in XZ · 3 puff (sphere)
   p: vec4f,                       // x spread (cone half-angle rad | burst spread), y life s, z size m, w speed jitter 0..1 (speed × (1 − w·r))
   q: vec4f,                       // x life jitter (life × (1 − x + 2x·r)), y lift (burst / ring: vertical share), z size jitter, w position jitter radius m
-  k: vec4u,                       // x kind | owner << 8 | ring << 16, y seed, z slot offset within the ring of particle 0, w colour rgba8
+  k: vec4u,                       // x kind | owner << 8 | ring << 16 | the team's own doing << 18 (PB_OURS), y seed, z slot offset within the ring of particle 0, w colour rgba8
 };
 const MAX_EMITS: u32 = 128u;
 // IMPULSES (render/particles.ts Particles.impulse; game/destruction.ts is where they come from — a stun charge, a round landing beside settled litter, a body /

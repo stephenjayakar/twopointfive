@@ -29,6 +29,7 @@ const REACT = Number((globalThis as any).process?.env?.TPS_REACT ?? 0.6);
  *  TQSMOKE_BREAK=front    after the whistle he stands on the walk, in front of the gap the man comes to
  *  TQSMOKE_BREAK=beam     he stays on the whistle's own mark, where the man's light is put
  *  TQSMOKE_BREAK=upright  he hides, then walks up behind the smoking man on his feet instead of crouched
+ *  TQSMOKE_BREAK=wait     he hides and never comes: the man finishes his smoke and walks back to his fire, his light on again (the failure says which)
  *  TQSMOKE_BREAK=hands    in the store he goes for the hall's man by hand after all: the chest beam at the man's back is broken */
 const WRONG = String((globalThis as any).process?.env?.TQSMOKE_BREAK ?? '');
 const flat = (a: ArrayLike<number>, b: ArrayLike<number>) => Math.hypot(a[0] - b[0], a[2] - b[2]);
@@ -118,10 +119,12 @@ export const steps: Record<string, (B: Bot) => void> = {
     B.wait(REACT);
     B.go([22.75, 0, 19.0], 8, { near: 0.25 }); B.go([23.6, 0, 17.8], 8, { near: 0.25 });
     B.say(`  on the walk: ${A.callsign} at ${at(A.char.pos)}, facing ${A.char.bodyYaw.toFixed(2)}, ${A.state}, ${flat(B.pos(), A.char.pos).toFixed(1)} m off; lit ${lit(B)}`);
-    // his torch has come down for the smoke: still the hand's, still lit, and under his shoulder (the look through the gap carries it up at his head)
+    // his torch has come down for the smoke and he has clicked it off: still the hand's, under his shoulder, and dark (the look through the gap carries
+    // it up at his head, burning: `watch` above counts only a light that is on)
     const low = A.char.bones.upperArmR ? A.char.bones.upperArmR[1] - A.flashlight.pos[1] : -1;
     B.say(`  his torch: ${handCarry(A)} in the hand, ${A.flashlight.enabled ? 'lit' : 'out'}, ${low.toFixed(2)} m under his shoulder`);
-    if (A.script && (handCarry(A) !== 'torch' || !A.flashlight.enabled || low < 0.2)) B.fail(`${A.callsign} does not smoke with his torch lit and low (${handCarry(A)}, ${A.flashlight.enabled ? 'lit' : 'out'}, ${low.toFixed(2)} m under the shoulder)`);
+    if (A.script && (handCarry(A) !== 'torch' || A.flashlight.enabled || low < 0.2)) B.fail(`${A.callsign} does not smoke with his torch low and switched off (${handCarry(A)}, ${A.flashlight.enabled ? 'lit' : 'out'}, ${low.toFixed(2)} m under the shoulder)`);
+    if (WRONG === 'wait') { B.until(() => !A.script, 70); B.wait(1.5); B.fail(`${A.callsign} finished his smoke and went back to his fire before the player came (${A.state}, at ${at(A.char.pos)}), his light ${A.flashlight.enabled ? 'on again' : 'STILL OUT'}`); }
     if (WRONG === 'upright') { B.crouch(false); B.go(behind(A, 1.2), 20, { near: 0.25, stop: () => A.state === 'alert' || !A.script }); B.say(`  upright behind him: ${A.callsign} ${A.state}${A.script ? ', still at his smoke' : ', his own man'}, ${flat(B.pos(), A.char.pos).toFixed(1)} m off`); B.crouch(true); }
     if (!closeIn(B, A, [25.5, 0, 17.75])) B.fail(`could not get behind the first man (${flat(B.pos(), A.char.pos).toFixed(2)} m off, he stands at ${at(A.char.pos)}, ${A.state})`);
     unseen(B, n0, A, 'coming up behind him');

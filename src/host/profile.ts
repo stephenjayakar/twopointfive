@@ -102,7 +102,7 @@ import { STARTLE } from '../game/startle';
 import { ROWSET } from '../game/rowset';
 import { SMOKEBREAK } from '../game/smokebreak';
 import { SHOWWHY } from '../game/showwhy';
-import { FIRE, FIRE_SIZE, FIRE_SHIMMER, FIRE_PLUME, FIRE_EMBERS } from '../game/fire';
+import { FIRE, FIRE_SIZE, FIRE_SHIMMER, FIRE_PLUME, FIRE_EMBERS, FIRE_BRIGHT, FIRE_REACH, FIRE_LIFT, FIRE_LIFT_WAS, FIRE_WARM, FIRE_WANDER, FIRE_WANDER_UP, FIRE_WANDER_WAS, FIRE_WANDER_UP_WAS, FIRE_REACT, FIRE_LEAN, FIRE_LEAN_WAS } from '../game/fire';
 import { FLINCH } from '../game/flinch';
 import { VERDICT } from '../game/verdict';
 import { DARKDOOR } from '../game/darkdoor';
@@ -283,6 +283,7 @@ export function pageSwitches(q: URLSearchParams): void {
   HANDRING.onThing = HANDRING.near && q.get('ringonthing') !== '0'; HANDRING.bare = HANDRING.near && q.get('ringbare') !== '0'; HANDRING.turn = HANDRING.near && q.get('ringturn') !== '0'; HANDRING.corner = HANDRING.near && q.get('corner') !== '0';   // his ring stands on the thing its first row is about (or on him), and has no line of words under it
   HANDRING.on = q.get('handring') !== '0';   // his own actions are a ring that stays (game/handring.ts): a tap of the interaction key does the default action, the key kept down a moment puts his rows up as a ring at the cursor that stays with no key held (a digit, a click or the key again does a wedge; a right click or Tab puts it away), the whistle is its last wedge and has no key, the corner shows the default action alone; on the page's board the key is E while empty hands are a slot (host/keymap.ts HAND) — ON in the page; ?handring=0 = the list on a held Space, the corner list and V for the whistle, as it was
   THROWBACK.restMark = !q.has('norestmark');   // the throw preview's ring is where the can comes to REST (game/throwback.ts `restMark`, player.ts throwRest; the overlay's): ?norestmark = the ring on its first touch, as it was
+  THROWBACK.reach = !q.has('noreach');   // the throw preview shows what the thing will reach (game/throwreach.ts; the overlay's): a frag's kill ring and the ring it hurts to, a stun canister's stun ring; ?noreach = the arc and its small ring alone
   THROWBACK.on = q.get('throwback') !== '0';   // a can in the wind-up goes back on the belt when a kick, a pick, the wand, hands at work, the keypad or a takedown begins (game/throwback.ts); `?throwback=0` = it freezes in his fist and leaves when the beat ends, as it did
   AUTOCAM.on = q.get('autocam') !== '0'; AUTOCAM.turn = q.get('autoturn') !== '0'; AUTOCAM.zoom = q.get('autozoom') !== '0'; AUTOCAM.sway = q.get('autosway') !== '0'; AUTOCAM.lock = q.get('autolock') !== '0'; AUTOCAM.tune = q.get('autotune') !== '0'; autoTuneApply();   // the camera's key tapped twice and the camera frames things itself (host/autocam.ts: the door ahead, the squad's orders, the men he could shoot; the key held with the mouse moved, or with a walk key, takes it back): ON in the page; `?autocam=0` = the double tap is the Options row's, as it was (`?autoturn=0` = it never turns the view, `?autozoom=0` = it never zooms)
   OWNBLOW.on = q.get('ownblow') !== '0';   // a charge his own hands set goes off from his own actions — a row of his list, a wedge of his ring — and the squad's key no longer blows it (game/ownblow.ts); `?ownblow=0` = the squad's key blows any set charge, as it did
@@ -352,6 +353,11 @@ export function pageSwitches(q: URLSearchParams): void {
   FIRE.size = q.get('firesize') === '0' ? 0 : FIRE_SIZE;   // … its lamp the pinpoint the level made it, not the flame's size: the drum's shadow on the ground with a drawn edge, as it was (to compare on a GPU)
   FIRE.look.shimmer = q.get('fireheat') === '0' ? 0 : FIRE_SHIMMER; FIRE.look.plume = q.get('fireplume') === '0' ? 0 : FIRE_PLUME;   // … the shimmer of the hot air over it, and the smoke drawn off its tips (both the picture only): ?fireheat=0, ?fireplume=0 = without
   FIRE.embers = q.get('fireembers') === '0' ? 0 : FIRE_EMBERS;   // … and its embers, which are GPU particles: ?fireembers=0 = none
+  { const plain = q.get('firebright') === '0'; FIRE.bright = plain ? 1 : FIRE_BRIGHT; FIRE.reach = plain ? 1 : FIRE_REACH; FIRE.lift = plain ? FIRE_LIFT_WAS : FIRE_LIFT; FIRE.warm = plain ? [1, 1, 1] : [...FIRE_WARM]; }   // … its lamp a fire's: a quarter stronger than the level's, reaching further, a deeper orange, in the body of the flame (the light meter reads it): ?firebright=0 = the lamp as the level hung it
+  { const still = q.get('firesway') === '0'; FIRE.wander = still ? FIRE_WANDER_WAS : FIRE_WANDER; FIRE.wanderUp = still ? FIRE_WANDER_UP_WAS : FIRE_WANDER_UP; }   // … its place shifting with the flames far enough to move a shadow's edge: ?firesway=0 = the few centimetres it was
+  FIRE.hardy = q.get('firehardy') !== '0';   // … and a round or a blast stirs it and does not put it out: ?firehardy=0 = out like a bulb, as it was
+  FIRE.look.react = q.get('firereact') === '0' ? 0 : FIRE_REACT; FIRE.look.lean = q.get('firelean') === '0' ? FIRE_LEAN_WAS : FIRE_LEAN;   // … its pixels taken from this frame by the temporal resolve (?firereact=0 = averaged over the picture's memory, as it was), and the wind leaning the flame (?firelean=0 = hardly, as it was)
+  FIRE.gas.on = q.get('firegas') === '1';   // … its flame as gas in the smoke solver's fine cells (the picture, and the page's smoke): OFF in the page until it has been seen; ?firegas=1 = on (and a row in the fire lab)
   FIRE.smoke.on = q.get('firesmoke') !== '0';   // … and its smoke, which keeps the smoke solver awake near a fire (picture only): ?firesmoke=0 = the fire with no smoke, to weigh what the smoke costs
   ROWSET.on = q.get('rowset') !== '0';   // a mission row's own hour and weather (game/rowset.ts): a row that names one is always started in it, over the link's — ON in the page; ?rowset=0 = the link's hour and weather as ever (no row names one: nothing to see either way)
   STARTLE.on = q.get('startle') !== '0';   // enemies startle when they first see you (game/startle.ts): a calm man whose own eyes have just told him it is a man jolts, his gun down for a beat, and only then draws — or, green and alone with you close, runs for it: ON in the page; ?startle=0 = he goes for his gun at once, as he did
@@ -443,6 +449,7 @@ export function pageSwitches(q: URLSearchParams): void {
   CMDRING.planKnee = CMDRING.plan && CMDRING.planRts && q.get('planknee') !== '0';   // …he takes a knee at the radio while the mode is up, and the view eases back to him when it comes down (`?planknee=0` = he stands, the view's point jumps)
   CMDRING.planOne = CMDRING.plan && q.get('planone') !== '0';   // …one word that frees two or more doors of a plan puts their entries on one signal: the doors open together and two cans wait each other's burst (`?planone=0` = each chain's entry on its own clock, as it was)
   CMDRING.planNear = CMDRING.plan && CMDRING.planRts && q.get('plannear') !== '0';   // …the view of plan mode stays within a few metres of Sam, a room's worth and not the level's (`?plannear=0` = the reach as it was: 25 m past him and every teammate)
+  CMDRING.planDigits = CMDRING.plan && q.get('plandigits') !== '0';   // …and with plan mode up the digits pick the men: 1 to 4 a man, 5 everyone, and a click on bare ground picks nobody new (`?plandigits=0` = no digit is the mode's and a click on nothing is everyone, as it was)
   CMDRING.only = CMDRING.on && q.get('qonly') !== '0';   // the squad's only keys are the command key and the word's: the ring carries every order (a row off a letter on a spare wedge, 'more' where a page has more rows than wedges), the letters are nobody's while it is up, the middle button opens nothing (`?qonly=0` = the wedges and the letters as they were; host/keymap.ts takes the orders key and the who key off the board with it)
   CMDRING.flat = CMDRING.only && q.get('ringflat') !== '0';   // …and the ring is two rings deep at most: every order of the thing it was opened on, wedge 5 the one ring of the rest, the squad's posture row on it (`?ringflat=0` = the menu's pages as they were)
   CMDRING.plainHint = q.get('plainhint') !== '0';   // …no glyph beside the cursor or in the ring's middle: the mark of what the key orders on is the thing's own outline (a picture only; `?plainhint=0` = the glyph as it was)
@@ -538,6 +545,8 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'FOG.flat': 'TPS_FOGFLAT=1',
   'FOG.lit': 'TPS_FOGLIT=1',
   'FOG.full': 'TPS_FOGFULL=1',
+  'FOG.air': 'TPS_FOGAIR=1',
+  'FOG.ours': 'TPS_FOGOURS=1',
   'FOG.edge': 'TPS_FOGEDGE=1',
   'FOG.desat': 'TPS_FOGCOLOUR=1',
   'FOG.squadDoors': 'TPS_SQUADDOORS=1',
@@ -594,6 +603,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'AUTOCAM.swayRate': 'TPS_AUTOTUNE=1 (the gentle mode\'s own number, the lean slower: host/autocam.ts AUTO_MODES)',
   'OWNBLOW.on': 'TPS_OWNBLOW=1',
   'THROWBACK.restMark': 'none: the overlay reads it, nothing headless does',
+  'THROWBACK.reach': 'none: the overlay reads it, nothing headless does',
   'GUNWALL.on': 'TPS_GUNWALL=1',
   'GUNWALL.mark': 'none: the overlay reads it, nothing headless does',
   'REARWATCH.on': 'TPS_REARWATCH=1',
@@ -768,6 +778,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'CMDRING.planKnee': 'TPS_PLANKNEE=1 (needs TPS_QPLAN=1)',
   'CMDRING.planOne': 'TPS_PLANONE=1 (needs TPS_QPLAN=1)',
   'CMDRING.planNear': 'TPS_PLANNEAR=1 (needs TPS_QPLAN=1)',
+  'CMDRING.planDigits': 'TPS_PLANDIGITS=1 (needs TPS_QPLAN=1)',
   'CMDRING.flat': 'TPS_RINGFLAT=1 (needs TPS_QRING=1 TPS_QONLY=1)',
   'CMDRING.plainHint': 'TPS_PLAINHINT=1',
   'CMDRING.bareHint': 'TPS_BAREHINT=1',

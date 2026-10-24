@@ -23,6 +23,14 @@ fn spgFine(p: vec3f) -> f32 {
   if (s == 0u) { return 0.0; }
   return spgFetch(s, (q - fl) * 8.0);
 }
+/** the fine lattice at p: x = its density (spgFine), y = its HEAT as the solver has it (publish writes a fine brick's heat in the texel's last channel) */
+fn spgFineHot(p: vec3f) -> vec2f {
+  let q = p * (1.0 / SPG_B1); let fl = floor(q); let b = vec3i(fl);
+  if (any(b < vec3i(0)) || any(b >= SPG_N1)) { return vec2f(0.0); }
+  let s = textureLoad(smokePage, b, 0).x;
+  if (s == 0u) { return vec2f(0.0); }
+  return spgFetch4(s, (q - fl) * 8.0).xw;
+}
 var<private> spgHole: bool;   // the last smokeTexelAt met no page entry at all: only there is a run of clear air worth asking after (a hint for the marches' hop, never an answer)
 /** what is at p: .x = the density every reader takes, both lattices, the render-density rows in it; .yzw = the coarse lattice's × (1 − tint) of whatever is in the cell (smoke.wgsl publish) */
 fn smokeTexelAt(p: vec3f) -> vec4f {

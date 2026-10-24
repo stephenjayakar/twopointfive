@@ -8,7 +8,7 @@
 // THE MAN WHO COMES TO THE WHISTLE (`night`). The game's own rule sends the court's man to stand where the sound was. Here that is on the player's own
 // prints in the snow, his light on them and his back a stride from the wall the player hides behind. So this file takes him as he sets off: he comes
 // round the long wall as he would have, stops a stride short of the gap in the cross wall, puts his light through it and over the place, five metres off,
-// finds nothing, turns round, walks back up the strip to his chair at its far end and has a smoke there with his back to the gap. Then he goes back to
+// finds nothing, turns round, walks back up the strip to his chair at its far end, clicks his torch off and has a smoke there with his back to the gap. Then he goes back to
 // his fire, the game's own man again.
 // A man a script walks sees and hears nothing by himself (squad.ts runGuardScript), so what he would have seen and heard is written here: the player in
 // front of him or in his light, or past him the way he faces; boots on the snow behind him; a second whistle. Any of them hands him back to the game with
@@ -79,7 +79,11 @@ const script: LevelScriptFn = D => {
         c.order(u, { goal: SMOKE, face: Math.PI / 2, aimAt: null, upper: 'none', light: true, smoke: true });   // (the torch comes down to his side, as a calm man carries it; smokebreak.ts: his left hand, the lit end and the smoke are that file's, once he stands there)
         const heard = (e: { level: number; near(p: Vec3, within: number): boolean }) => { const p = c.query.pos(u);
           return (e.level >= RUN.level && e.near(p, RUN.within)) || (e.level >= WALK.level && e.near(p, WALK.within)); };
-        r = yield c.any(c.wait(SMOKE_SECS), c.until(q => q.inside(past, 'sam'), 'the player is past him'), gone(), c.on('step', heard), c.on('whistle'));
+        const turns = () => [c.until(q => q.inside(past, 'sam'), 'the player is past him'), gone(), c.on('step', heard), c.on('whistle')];
+        // at his chair he clicks the torch off: a man having a smoke does not stand there lighting the wall. It burns again the moment he moves off:
+        // a second whistle's order above asks for it, and let go he is the game's own man with the game's own light
+        r = yield c.any(c.until(q => q.arrived(u), 'he is at his chair'), ...turns(), c.wait(SMOKE_SECS));
+        if (r.index === 0) { c.order(u, { light: false }); r = yield c.any(c.wait(SMOKE_SECS), ...turns()); }
         if (r.index === 2) return;
         if (r.index === 1 || r.index === 3) { c.release(u, 'alert'); return; }
         if (r.index === 4 && r.event) { at = [r.event.pos[0], 0.1, r.event.pos[2]]; continue; }   // a second whistle: he looks again, and at where THIS one was
