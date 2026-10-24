@@ -27,7 +27,8 @@ const up = () => !BREAK, f2 = (x: number) => x.toFixed(2);
 /** the lobby's floor, the rifleman facing east with Sam `gap` m behind him, crouched with empty hands, the rest parked; the press made on the man's chest */
 async function world(drag: boolean, gap = 3) {
   const W: any = await quiet(() => standUp({ seed: 11 } as any)), g = W.game;
-  HOLD.dropGun = true; HOLD.disarm = true; CLOSE.on = true; CLOSE.noKnife = true; STALK.on = STALK.key = STALK.low = true; STALK.drag = drag; stalkPolish(true);   // (the frozen stand's pins write them at every stand-up)
+  HOLD.dropGun = true; HOLD.disarm = true; CLOSE.on = true; CLOSE.noKnife = true; STALK.on = STALK.key = STALK.low = true; STALK.drag = drag; STALK.orbit = false; stalkPolish(true);   // (STALK.orbit down: this card is of the stick's own way; stalkorbit-check takes the stick round him)
+    // (the frozen stand's pins write them at every stand-up)
   g.godMode = true; g.aiEnabled = false; g.playerInvisible = true; g.player.slot = 'pistol'; g.player.holstered = true;
   g.tune.carbineGuards = 'reyes'; for (let i = 0; i < 5; i++) W.step(DT);
   const A = g.guards.find((x: any) => x.callsign === 'Reyes'), rest = g.guards.filter((x: any) => x !== A);
@@ -35,7 +36,7 @@ async function world(drag: boolean, gap = 3) {
   A.char.pos = [...AT]; A.char.bodyYaw = A.char.aimYaw = EAST; A.char.vel = [0, 0, 0]; A.path = []; A.pathGoal = null; A.hold = true; A.pinned = true; A.awareness = 0; A.heardUpTo = 1e12;
   W.cam.yaw = 0; W.cam.rebuild?.(); g.teleportPlayer([AT[0] - gap, 0, AT[2]]); g.player.crouch = true;
   const c = g.player.char, chest = () => [A.char.pos[0], 1.2, A.char.pos[2]];
-  const step = (n = 1) => { for (let i = 0; i < n; i++) { STALK.drag = drag; A.char.vel = [0, 0, 0]; W.step(DT); g.player.visibility = 0.02; } };
+  const step = (n = 1) => { for (let i = 0; i < n; i++) { STALK.drag = drag; STALK.orbit = false; A.char.vel = [0, 0, 0]; W.step(DT); g.player.visibility = 0.02; } };
   step(40); W.cursorAt(chest()); W.input.buttons |= 1; W.input.clicked |= 1; step(1);
   const mid = [W.input.mouseX, W.input.mouseY];
   /** the screen's way from Sam to the man, a unit vector in px */

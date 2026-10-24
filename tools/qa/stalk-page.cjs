@@ -72,15 +72,16 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
       const orbitUp = await page.evaluate(() => !!window.__knobs.registry().STALK.orbit);
       const pose = () => page.evaluate(() => { const g = window.__game, c = g.player.char, A = g.guards[0].char; const dx = c.pos[0] - A.pos[0], dz = c.pos[2] - A.pos[2], to = Math.atan2(-dx, -dz), f = Math.atan2(Math.sin(c.aimYaw - to), Math.cos(c.aimYaw - to));
         return { gap: Math.hypot(dx, dz), round: Math.atan2(dx, dz), face: Math.abs(f) * 180 / Math.PI }; });
-      let best = null;
+      let best = null; const all = [];
       for (const code of ['KeyA', 'KeyD', 'KeyW', 'KeyS']) {
         await behind(1.6); const [x, y] = await chest(); await page.mouse.move(x, y); await frames(2); await page.mouse.down(); await frames(20); const p0 = await pose();
         await page.keyboard.down(code); let most = 0; for (let i = 0; i < 6; i++) { await frames(8); const q = await pose(); most = Math.max(most, Math.abs(q.gap - p0.gap)); }
         const p1 = await pose(); await page.keyboard.up(code); await page.mouse.up(); await frames(10);
         const turned = Math.abs(Math.atan2(Math.sin(p1.round - p0.round), Math.cos(p1.round - p0.round))) * 180 / Math.PI;
-        if (!best || turned > best.turned) best = { code, turned, most, face: p1.face, g0: p0.gap };
+        const r = { code, turned, most, face: p1.face, g0: p0.gap }; all.push(`${code} ${turned.toFixed(0)}° ±${most.toFixed(2)} m`);
+        if (!best || (turned > 20) > (best.turned > 20) || ((turned > 20) === (best.turned > 20) && most < best.most)) best = r;   // (of the keys that take him round, the one with the clearest floor: the lab's furniture is near the man)
       }
-      if (orbitUp) say(best.turned > 20 && best.most < 0.08 && best.face < 30, `a plain address has the keys go round him: the button held on him 1.6 m behind and ${best.code} down for 0.8 s takes Sam ${best.turned.toFixed(0)}° round him, the gap at most ${best.most.toFixed(2)} m off ${best.g0.toFixed(2)} m, facing him within ${best.face.toFixed(0)}°`);
+      if (orbitUp) say(best.turned > 20 && best.most < 0.08 && best.face < 30, `a plain address has the keys go round him: the button held on him 1.6 m behind and ${best.code} down for 0.8 s takes Sam ${best.turned.toFixed(0)}° round him, the gap at most ${best.most.toFixed(2)} m off ${best.g0.toFixed(2)} m, facing him within ${best.face.toFixed(0)}° (the four keys: ${all.join(' · ')})`);
       else say(false, `the keys going round him is down on this address (${orbitUp})`);
     }
     { const v = await page.evaluate(() => { const R = window.__knobs.registry(), S = R.STALK, H = R.HOLD; return { jolt: S.jolt, turnIn: S.turnIn, show: S.cornerShow, way: H.wayShape, dip: H.lunge.dip, apart: H.apart.side }; }), up = v.jolt > 0 && v.turnIn && v.show && v.way && v.dip > 0 && v.apart > 0, down = v.jolt === 0 && !v.turnIn && !v.show && !v.way && v.dip === 0 && v.apart === 0;
@@ -122,7 +123,7 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
     }
     { const sf = await page.evaluate(() => { const H = window.__knobs.registry().HOLD, b = /gun out before the arm/.test(document.getElementById('panel').textContent); return { on: !!H.stripFirst, dis: !!H.disarm, take: H.first?.take, row: b }; });   // (disarm.ts HOLD.stripFirst)
       say(sf.on && sf.dis && sf.take < 0.2 && sf.row, `a plain address: the disarm leads the grab (the key ${sf.on}, under the disarm ${sf.dis}, the gun out at ${sf.take} s) and the lab has its row (${sf.row})`); }
-    { const sw = await page.evaluate(() => { const T = window.__knobs.registry().STALK, b = /arms out/.test(document.getElementById('panel').textContent); return { on: !!T.wide, low: !!T.low, out: T.wideOut, lead: T.wideLead, row: b }; });   // (stalk.ts STALK.wide)
+    { const sw = await page.evaluate(() => { const T = window.__knobs.registry().STALK, b = [...document.querySelectorAll('#panel label')].some(l => l.textContent.trim() === 'arms out'); return { on: !!T.wide, low: !!T.low, out: T.wideOut, lead: T.wideLead, row: b }; });   // (stalk.ts STALK.wide)
       say(sw.on && sw.low === !NOKEY && sw.out > 0 && sw.out < 0.2 && sw.lead > 0 && sw.row, `${NOKEY ? '?stalklow=0' : 'a plain address'}: his arms are out as he creeps (the key ${sw.on}, under the low creep ${sw.low}, ${sw.out} m out, the left ${sw.lead} m ahead) and the lab has its row (${sw.row})`); }
     { // (player.ts CROUCHRUN, samlook.ts SAMLOOK: Shift in a crouch is a fast crouch walk; his head goes to the man; beside a man he gives him room)
       const K = await page.evaluate(() => { const R = window.__knobs.registry(); return { run: !!R.CROUCHRUN.on, look: !!R.SAMLOOK.on, slip: !!R.SAMLOOK.slip, pace: R.CROUCHRUN.pace }; });
