@@ -238,6 +238,13 @@ export const FOG = {
    *  (render/fogofwar.ts FOG_EYES; fogEyeCount below: under five is five, over seven is seven). Not the picture alone: an eye more is a man more the squad may have seen. 5 = as it was. 7 in the
    *  page since 10-24 (?fogeyes=5 puts it back; the frozen stand pins 5 — src/host/standup.ts, `TPS_FOGEYES=1`). Never seen on a GPU */
   eyes: 7,
+  /** WHAT OTHERS LEFT BEHIND STAYS AS THE TEAM LAST SAW IT (the third of the fog's principles; the picture alone, under `full`): (1) a lamp the team has in
+   *  another state than it is in keeps its FACE that way too — the fog already lit the room by a lamp put out unseen while its ceiling panel went dark at
+   *  once (Box.fogEmit, which the upload alone reads: the game's Box.emissive is the real lamp's); (2) a case, a chip or a leaf of paper at rest that the
+   *  team has seen lying there stays in the picture when they look away (render/fogofwar.ts FogFrame.kept → shaders/particles.wgsl), where it used to be
+   *  cut and come back. false = both as they were. ON in the page since 10-24 (?fogkept=0 puts it off; the frozen stand pins it off —
+   *  src/host/standup.ts, `TPS_FOGKEPT=1`). Never seen on a GPU */
+  kept: true,
   /** WHAT THE TEAM DOES IS ALWAYS SHOWN (the picture — and, with it, what the cursor's ray meets: the boxes handed to the renderer; under `full` alone; the maintainer, of the tutorial's wall charge: 'still can't see the wall shot detonate' — the
    *  fog was taken off that mission for it): the flash of a blast one of the team set or threw lights the fog's picture too (lights.ts RtLight.fogBy: its
    *  class is the doer's, as a carried light's is its carrier's), the streak of a teammate's round is drawn its whole length, the rubble the team throws is drawn
@@ -307,13 +314,13 @@ export function fogEyeCount(v: number): number { return Number.isNaN(v) ? FOG_EY
 /** ?fogown / ?fogown=0 · ?fogcalls=0 — the two options for a visit, over the kept rows (the Game's constructor, right after teamfeel.ts has read those back;
  *  no page — the harness — nothing) */
 export function fogFlags() { try { const q = new URLSearchParams(location.search); if (q.has('fogown')) FOG.own = q.get('fogown') !== '0'; if (q.has('fogcalls')) FOG.calls = q.get('fogcalls') !== '0';
-  if (q.has('fogflat')) { const v = parseFloat(q.get('fogflat') ?? ''); FOG.flat = Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : FOG_FLAT_ON; } if (q.has('foglit')) { const v = parseFloat(q.get('foglit') ?? ''); FOG.lit = Number.isFinite(v) ? Math.min(4, Math.max(0, v)) : FOG_LIT_ON; } if (q.has('fogfull')) FOG.full = q.get('fogfull') !== '0'; if (q.has('fogair')) FOG.air = q.get('fogair') !== '0'; if (q.has('fogours')) FOG.ours = q.get('fogours') !== '0'; if (q.has('fogthin')) FOG.thin = q.get('fogthin') !== '0'; if (q.has('fogeyes')) { const v = parseInt(q.get('fogeyes') ?? '', 10); FOG.eyes = v === 0 ? FOG_EYES_WAS : !Number.isFinite(v) || v === 1 ? FOG_EYES_ON : fogEyeCount(v); } if (q.has('fogdesat')) { const v = parseFloat(q.get('fogdesat') ?? ''); FOG.desat = Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : FOG_DESAT_WAS; } if (q.has('fogedge')) { const v = parseFloat(q.get('fogedge') ?? ''); FOG.edge = Number.isFinite(v) ? Math.min(1.5, Math.max(0, v)) : FOG_EDGE_ON; } if (q.has('fogthings')) FOG.things = q.get('fogthings') !== '0'; if (q.has('squaddoors')) FOG.squadDoors = q.get('squaddoors') !== '0'; if (q.has('squadfire')) FOG.squadFire = q.get('squadfire') !== '0'; if (q.has('fogdesat')) FOG_PAGE.desat = FOG.desat; if (q.has('fogedge')) FOG_PAGE.edge = FOG.edge; if (q.has('fogair')) FOG_PAGE.air = FOG.air; } catch { /* no page */ } }
+  if (q.has('fogflat')) { const v = parseFloat(q.get('fogflat') ?? ''); FOG.flat = Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : FOG_FLAT_ON; } if (q.has('foglit')) { const v = parseFloat(q.get('foglit') ?? ''); FOG.lit = Number.isFinite(v) ? Math.min(4, Math.max(0, v)) : FOG_LIT_ON; } if (q.has('fogfull')) FOG.full = q.get('fogfull') !== '0'; if (q.has('fogair')) FOG.air = q.get('fogair') !== '0'; if (q.has('fogours')) FOG.ours = q.get('fogours') !== '0'; if (q.has('fogthin')) FOG.thin = q.get('fogthin') !== '0'; if (q.has('fogkept')) FOG.kept = q.get('fogkept') !== '0'; if (q.has('fogeyes')) { const v = parseInt(q.get('fogeyes') ?? '', 10); FOG.eyes = v === 0 ? FOG_EYES_WAS : !Number.isFinite(v) || v === 1 ? FOG_EYES_ON : fogEyeCount(v); } if (q.has('fogdesat')) { const v = parseFloat(q.get('fogdesat') ?? ''); FOG.desat = Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : FOG_DESAT_WAS; } if (q.has('fogedge')) { const v = parseFloat(q.get('fogedge') ?? ''); FOG.edge = Number.isFinite(v) ? Math.min(1.5, Math.max(0, v)) : FOG_EDGE_ON; } if (q.has('fogthings')) FOG.things = q.get('fogthings') !== '0'; if (q.has('squaddoors')) FOG.squadDoors = q.get('squaddoors') !== '0'; if (q.has('squadfire')) FOG.squadFire = q.get('squadfire') !== '0'; if (q.has('fogdesat')) FOG_PAGE.desat = FOG.desat; if (q.has('fogedge')) FOG_PAGE.edge = FOG.edge; if (q.has('fogair')) FOG_PAGE.air = FOG.air; if (q.has('fogkept')) FOG_PAGE.kept = FOG.kept; } catch { /* no page */ } }
 /** THE FOG'S LOOK ON THIS PAGE (`desat`, `edge`, `air`: the picture alone — NOT `ours`: what it hands the renderer is what the cursor's ray meets, so a tape keeps its own), as the module ships it and the address words change it (fogFlags) — never what a tape's knob
  *  tables laid over FOG. THE ENGINE REPLAY SHOWS A TAPE UNDER THIS, not under the look the tape was recorded with (FogOfWar.pageLook, which it alone calls):
  *  the maintainer judged both on a replay, and a recording from before either would otherwise show the old fog for ever. The tape's own values still ride its
  *  knobs — the harness replays them as recorded (journal.ts applyKnobs: a file from before `edge` replays with the hard line). A tape from before the full
  *  picture (FOG.full off in its tables: no sight table) keeps its hard line and takes the colour only: `full` is not the picture alone, so it is the tape's. */
-const FOG_PAGE = { desat: FOG.desat, edge: FOG.edge, air: FOG.air };
+const FOG_PAGE = { desat: FOG.desat, edge: FOG.edge, air: FOG.air, kept: FOG.kept };
 /** a leaf this far (rad) from where the picture has it counts as moved */
 const DOOR_EPS = 0.01;
 /** THINGS (rule 4d). The low bits of a key that number the PARTS of one thing, per keyed system (scene/boxes.ts MKEY: a prop's parts are id × 16 + part, an
@@ -365,6 +372,10 @@ const SMOKE_ASKS = 6, SMOKE_EYES = 2;
 /** frames an un-asked pair's last answer still counts (the readback's latency is one or two), and a man's last smoke verdict while none of his pairs has an answer */
 const SMOKE_FRESH = 8, SMOKE_KEEP = 30;
 const DEG = Math.PI / 180;
+/** a lamp's face drawn dark (lampFace) */
+const DARK: Readonly<Vec3> = [0, 0, 0];
+/** how much of a kept face's glow is held from one update to the next while the lamp is dimmer (faceSeen: a peak that fades in about a second) */
+const FACE_HOLD = 0.98;
 /** doorSeen's points: along the leaf, and their heights */
 const DOOR_F = [0.95, 0.6, 0.25], DOOR_Y = [1.0, 1.8];
 /** update()'s scratch: a man's eyes nearest first, and their squared distances */
@@ -397,6 +408,8 @@ export class FogOfWar {
   doorsHeld = 0;
   /** rule 4f's memory: per fixture, whether the team has it lit (its own state — switched, shot out, knocked out by the OCP; never the mains) · this frame's
    *  tallies: fixtures that carry light, the lamps handed to the pass, and the fixtures the fog shows otherwise than they stand */
+  /** each lamp's face as it glowed while the team knew it lit, a row a box of the target's (FOG.kept, faceSeen): what lampFace draws once it is out unseen */
+  private faceRecs = new Map<LightTarget, Vec3[]>();
   private lampRecs = new Map<LightTarget, boolean>(); private lampPick: { l: RtLight; I: number; d: number }[] = []; private lampN = 0;
   litStats = { lamps: 0, lights: 0, held: 0 };
   /** rule 4d's memory: thing → how the picture has it; the list handed to the renderer; this frame's tallies (held = drawn as remembered, out = left out) */
@@ -429,7 +442,7 @@ export class FogOfWar {
    *  the team. A return on its first line while the switch is off. */
   update(_dt: number) {
     const F = this.frame;
-    if (!this.active) { if (F.on) { F.on = false; F.count = 0; this.eyes = []; this.hiddenChars.clear(); this.pending.length = 0; this.doorRecs.clear(); this.doorsHeld = 0; this.thingRecs.clear(); this.firedN = new SideMap(); this.firedAt = new SideMap(); this.fireClock = 0; this.lampRecs.clear(); F.lit = 0; F.lightCount = 0; F.full = false; this.fullClear(); } return; }
+    if (!this.active) { if (F.on) { F.on = false; F.count = 0; this.eyes = []; this.hiddenChars.clear(); this.pending.length = 0; this.doorRecs.clear(); this.doorsHeld = 0; this.thingRecs.clear(); this.firedN = new SideMap(); this.firedAt = new SideMap(); this.fireClock = 0; this.lampRecs.clear(); this.faceRecs.clear(); F.lit = 0; F.lightCount = 0; F.full = false; this.fullClear(); } return; }
     const g = this.g; const S = this.stats; S.frames++; const frame = ++this.frameNo;
     // ---- the eyes: Sam, then the living operatives in list order, as many as FOG.eyes (the renderer takes them all; the CPU answer uses the same ones — one model; a
     //      tutorial's frame adds eyes that are the picture's alone, below)
@@ -532,13 +545,13 @@ export class FogOfWar {
       if (Math.abs(d.angle - r.shown) <= DOOR_EPS || this.doorSeen(d, r.shown)) r.shown = d.angle; else this.doorsHeld++;
     } else if (this.doorRecs.size) this.doorRecs.clear();
     // ---- the renderer's block
-    if (this.lookFrames > 0) { this.lookFrames--; FOG.desat = FOG_PAGE.desat; FOG.edge = FOG_PAGE.edge; FOG.air = FOG_PAGE.air; }
+    if (this.lookFrames > 0) { this.lookFrames--; FOG.desat = FOG_PAGE.desat; FOG.edge = FOG_PAGE.edge; FOG.air = FOG_PAGE.air; FOG.kept = FOG_PAGE.kept; }
     F.on = true; F.count = pic.length; F.dim = FOG.dim; F.desat = FOG.desat; F.topPad = FOG.topPad; F.edge = Math.max(0, FOG.edge);
     const fov = fieldDeg(), near = fieldNear();
     const full = fov >= 360; const cosHalf = full ? -2 : Math.cos(Math.max(1, fov) * 0.5 * DEG);
     // (the picture's soft edges are the cone's alone: a plain fovDeg wedge keeps its hard line — the block's three rows 0 = the kernel's old answer, bit for bit)
     const soft = FOG.cone && !full ? Math.max(0, Math.min(FOG.coneSoftDeg, fov, 360 - fov)) : 0;
-    F.full = this.fullBlock(F); F.flat = Math.max(0, FOG.flat); this.litBlock(F); F.air = FOG.air; this.thinBlock(F);
+    F.full = this.fullBlock(F); F.flat = Math.max(0, FOG.flat); this.litBlock(F); F.air = FOG.air; F.kept = FOG.kept; this.thinBlock(F);
     F.softIn = soft > 0 ? Math.cos(Math.max(0, fov * 0.5 - soft * 0.5) * DEG) : 0; F.softOut = soft > 0 ? Math.cos(Math.min(180, fov * 0.5 + soft * 0.5) * DEG) : 0;
     F.nearSoft = FOG.cone && !full ? Math.max(0, FOG.coneNearSoftM) : 0;
     for (let k = 0; k < FOG_EYES; k++) {
@@ -618,7 +631,7 @@ export class FogOfWar {
     this.pending.length = 0;
   }
   /** A fresh encounter (Game.restartEncounter — a restart, a checkpoint load, the start of an F10 recording and of its replay): nobody has been seen, no pair asked. */
-  reset() { this.rawAt = -1; this.bared = false; this.lampRecs.clear(); this.doorRecs.clear(); this.doorsHeld = 0; this.thingRecs.clear(); this.ourLanded.clear(); this.thingSince = -1; this.recs = new SideMap(); this.asked.clear(); this.pending.length = 0; this.turn = 0; this.frameNo = 0; this.hiddenChars.clear(); this.firedN = new SideMap(); this.firedAt = new SideMap(); this.shown = new SideSet(); this.fireClock = 0;
+  reset() { this.rawAt = -1; this.bared = false; this.lampRecs.clear(); this.faceRecs.clear(); this.doorRecs.clear(); this.doorsHeld = 0; this.thingRecs.clear(); this.ourLanded.clear(); this.thingSince = -1; this.recs = new SideMap(); this.asked.clear(); this.pending.length = 0; this.turn = 0; this.frameNo = 0; this.hiddenChars.clear(); this.firedN = new SideMap(); this.firedAt = new SideMap(); this.shown = new SideSet(); this.fireClock = 0;
     this.callClock = 0; this.lastCall = -1e9; this.calledT = new SideMap(); this.knownT = new SideMap(); this.toldStep = new SideMap(); this.callN = 0; this.callLog = []; this.callStats = { contact: 0, heard: 0 }; }
 
   /** THE FOG'S OWN LINE: is anything solid between an eye and a point — the game's sight test (statics and leaves; glass passes), which under FOG.thin also
@@ -730,8 +743,35 @@ export class FogOfWar {
   /** take every class back off the lights (the rule went off, or the fog did) */
   private fullClear() {
     if (!this.fullOn) return; const L = this.g.engine.lights;
-    L.fogTeam.on = false; L.fogTeam.owners.clear(); L.fogTeam.lights.clear(); for (const l of L.lights) { l.fog = 0; l.fogGhost = 0; }
+    L.fogTeam.on = false; L.fogTeam.owners.clear(); L.fogTeam.lights.clear(); for (const l of L.lights) { l.fog = 0; l.fogGhost = 0; } this.facesLift(); this.faceRecs.clear();
     this.fullOn = false; this.fullStats.hidden = this.fullStats.ghosts = this.fullStats.held = 0;
+  }
+  /** THE PICTURE'S FACE OF A LAMP (FOG.kept): its boxes drawn lit — as they glowed while the team knew it lit (faceSeen; the level's own emission where
+   *  nothing was kept) — or dark, whatever the lamp does, through Box.fogEmit / fogMark, which the upload alone reads (scene/boxes.ts); `lit` undefined = as
+   *  it stands. The game's own Box.emissive is never touched. ONLY a box no ray reads the emission of (area-lit: its light is an analytic one; or met by no
+   *  ray at all): a face a bounce ray could pick up would put remembered light into the cascades, and so into the light meter the game reads */
+  private lampFace(t: Game['targets'][number], lit: boolean | undefined) {
+    const st = this.g.engine.world.statics as Box[] | undefined; if (!st) return; const rec = lit ? this.faceRecs.get(t) : undefined;
+    for (let i = 0; i < t.boxes.length; i++) { const b = st[t.boxes[i]]; if (!b) continue;
+      if (lit === undefined) { if (b.fogEmit) { b.fogEmit = undefined; b.fogMark = undefined; } continue; }
+      if (!(b.flags & (BoxFlag.AreaLit | BoxFlag.NoShadow))) continue;
+      const k = rec?.[i]; b.fogEmit = lit ? (k && k[0] + k[1] + k[2] > 0 ? k : t.baseEmissive) : DARK; b.fogMark = lit ? 1 : 0; }
+  }
+  /** a lamp the team knows lit: its face as it glows now is kept, the brightest of the last moments (a tube's dropout or the low of a fire's swing is not the
+   *  face remembered; a fire's coals glow at a share of the level's emission — fire.ts — which is why the level's own is not simply taken) */
+  private faceSeen(t: Game['targets'][number]) {
+    const st = this.g.engine.world.statics as Box[] | undefined; if (!st || !t.boxes.length) return;
+    let rec = this.faceRecs.get(t); if (!rec) { rec = t.boxes.map((): Vec3 => [0, 0, 0]); this.faceRecs.set(t, rec); }
+    for (let i = 0; i < t.boxes.length; i++) { const b = st[t.boxes[i]]; if (!b) continue; const e = b.emissive, k = rec[i];
+      k[0] = Math.max(k[0] * FACE_HOLD, e[0]); k[1] = Math.max(k[1] * FACE_HOLD, e[1]); k[2] = Math.max(k[2] * FACE_HOLD, e[2]); }
+  }
+  /** every kept face taken off (the fog's full picture went off — or one draw is the viewer's picture without the fog: Game.fogLift), and put back as the
+   *  memory has them, without asking who sees what (Game.fogBack: the step's own faces, for the draws until the next update) */
+  facesLift() { for (const t of this.g.targets) this.lampFace(t, undefined); }
+  facesBack() {
+    if (!this.fullOn || !FOG.kept) return; const down = this.g.blackout.active;
+    for (const t of this.g.targets) { if (!t.light && !t.areaLights) continue; const known = this.lampRecs.get(t), lit = this.lampLit(t);
+      if (known !== undefined && known !== lit && (lit || !(t.mains && down))) this.lampFace(t, !lit); }
   }
   /** is the fixture lit, as it stands */
   private lampLit(t: Game['targets'][number]): boolean { return t.on && !t.broken && !(t.disabledUntil > 0 && this.g.time < t.disabledUntil); }
@@ -758,9 +798,11 @@ export class FogOfWar {
     for (const t of g.targets) {
       if (!t.light && !t.areaLights) continue;
       if (t.light) { t.light.fog = 0; t.light.fogGhost = 0; } if (t.areaLights) for (const al of t.areaLights) { al.light.fog = 0; al.light.fogGhost = 0; }
-      const lit = this.lampLit(t);
-      if (this.lampKnown(t, lit) === lit) continue;
+      this.lampFace(t, undefined);
+      const lit = this.lampLit(t), known = this.lampKnown(t, lit);
+      if (known === lit) { if (lit && FOG.kept) this.faceSeen(t); continue; }
       S.held++;
+      if (FOG.kept && (lit || !(t.mains && down))) this.lampFace(t, !lit);   // (its face as the team last saw it: dark while it is lit unseen, lit while it is out unseen — a blackout is known to all, as below)
       if (lit) { if (t.light) t.light.fog = 1; if (t.areaLights) for (const al of t.areaLights) al.light.fog = 1; }
       else if (!(t.mains && down)) { S.ghosts++; if (t.light) t.light.fogGhost = t.light.steady?.intensity ?? t.baseIntensity; if (t.areaLights) for (const al of t.areaLights) al.light.fogGhost = al.base * es; }   // (a fire put out unseen is remembered at a fire's strength, as a burning one is below: game/fire.ts `held`)
     }

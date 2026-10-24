@@ -1886,7 +1886,7 @@ export class Game {
     this.fogHeld = { dyn: world.dynamics, on: fog.frame.on };
     if (bare) { hiddenProps(this, B);
       if (this.menStatured) drawnBoxes(this, this.menAll, B, n0);   // (their kit where their drawn hands are, as the step's own rigs were placed)
-      fog.frame.on = false; fog.bared = true; }
+      fog.frame.on = false; fog.bared = true; fog.facesLift(); }   // (and no lamp's face as the team last saw it: the picture without the fog is the lamps as they are)
     if (ir) { if (tube) irBeams(this, B); else B = B.filter(b => !irMade(b)); }   // (tube on: the lines the run's men have on and its picture did not show; tube off: the lines the step drew for its own tube left out)
     if (thin) B = thinFit(B, px) ?? B;
     world.dynamics = B;
@@ -1894,6 +1894,7 @@ export class Game {
   fogBack() {
     const H = this.fogHeld; if (!H) return; this.fogHeld = null;
     const fog = this.fogOfWar, world = this.engine.world;
+    if (fog.bared) fog.facesBack();
     fog.bared = false; fog.frame.on = H.on; world.dynamics = H.dyn;
     world.upload(true);   // (packed again as the step left it — `true`: the motion identities stay the drawn frame's, as between two ticks of one frame)
   }

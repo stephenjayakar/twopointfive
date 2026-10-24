@@ -925,6 +925,35 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   larger size); (b) the tutorial's sky seat now has room for the lookout AND a
   step's eye with four men up: nobody has looked at mission 1 with it; (c) three cameras all sending (`STICKY.live` 3) with a squad of four still
   leaves one blind. **Never seen on a GPU.**
+- **What others left behind stays as the team last saw it (`FOG.kept`, 10-24; the third of the fog's principles the maintainer agreed 10-23: "everyone
+  else is where your team last saw them").** Two gaps of the audit, the picture alone, under the full picture. (1) A LAMP'S FACE: the fog already lit a
+  room by a lamp put out unseen (the ghost light, `fullBlock`) while its ceiling panel went dark at once, because the panel's box follows the real lamp.
+  Now a lamp the team has in another state than it is in keeps its face that way too: `FogOfWar.lampFace` writes `Box.fogEmit` / `fogMark` (what the box
+  glowed with while the team knew it lit — `faceSeen`, the brightest of the last second, since a fire's coals glow at a quarter of the level's emission
+  and a tube drops out — and gain 1; or dark and 0), which the upload alone reads in place of `emissive` / `markGain` (`scene/boxes.ts`, the shadow
+  compare and the pack); the game's `Box.emissive` stays the real lamp's (destruction, marks, floormess and furnblast read it), so nothing in the game
+  moves. ONLY a box no ray reads the emission of gets a face (`AreaLit`, or `NoShadow`): a remembered glow a bounce ray could pick up would reach the
+  cascades and the light meter. A blackout is known to all, as the ghost is: no face is kept there. The viewer's picture without the fog
+  (`Game.fogLift`, the replay's Fog switch) shows the lamps as they are (`facesLift` / `facesBack`). Emissive things with no light of their own (a
+  sign, an LED row, a monitor) have no memory in the fog and are drawn as they are. (2) LITTER AT REST: a case, a chip or a leaf of paper at rest was cut the moment the team
+  looked away and came back when they looked again. Now the particles' kernel, in its resting branch (one particle in 16 a frame, with the support
+  test), marks a resting particle that lies on floor the team sees with a bit of its own (`PB_KEPT`, bit 16), which the draw passes under the fog only while
+  the row is on (the row put off mid-game cuts them again); the three places that wake a particle take it off, so a kicked case is cut again where
+  nobody sees. The row rides the sight table's head (`FogFrame.kept` → bit 4 of
+  the word `fogSmokeOn` / `fogThinOn` read; `common.wgsl fogKeptOn`). What a man nobody sees drops stays cut until the team has seen it lying.
+  NOT IN IT: the floor glint of a hidden torch, which the audit named, was already cut (`reflect.wgsl` asks `lightFogK`, since 10-16); a checkpoint
+  still forgets the fog's memory. SWITCH: on in the module and the page; `?fogkept=0` off; the debugger's fog page has the row; frozen stand off,
+  `TPS_FOGKEPT=1` (`FROZEN_HOLDS['FOG.kept']`); the journal carries it (a recording without the key replays with it off), and, being the picture alone, it is part of the replay page's
+  fog look (`FOG_PAGE`, with the air: the engine replay shows any tape under the page's own; `fogkept` is a visit word). CHECK: `probes.ts fog-kept`
+  (family `fog`; 6 lines; `FOGKEPT_BREAK=1` red on three) on both stands — a lit lamp with a face put out unseen (face lit for the picture as it glowed, a
+  dimmer record kept as it was, the game's emission dark, ghost light; the fog lifted for a draw: untouched, and back after; a blackout: none; seen:
+  as it stands; lit again unseen: face dark; a fresh encounter, the row off, not the full picture, a lamp in sight:
+  nothing written; the upload's two reads, no other game module reading them); the litter bit as written (the frame, the head, `fogKeptOn`, the kernel's
+  one line in the resting branch, the bit clear of the others, the three wakes, the draw asking the row); the address; the journal; the stands; the night breach fought with a lamp put out unseen,
+  two seeds, with the row and without: the same digest and dice, a face kept with the row alone. NOT HELD: (a) the litter half is held as text and by
+  the page's boot alone — no particle was watched coming to rest and staying, on any adapter; (b) the fog's "seen" for a lamp is one spot under it
+  (`lampSeen`), so a panel whose far corner the picture shows as seen can be drawn in its remembered state for the frames until that spot is seen;
+  (c) a panel broken unseen keeps its lit face on the broken box. **Never seen on a GPU.**
 - **A held man drops his gun** (`HOLD.dropGun`, the table in `src/game/character.ts`; the rule is `player.ts startGrab`; ON in the page, `?nogundrop` puts it
   off; OFF in the module and on the frozen stand, `TPS_HOLDDROP=1`; a `FROZEN_HOLDS` row; a recording from before the key replays with it off). The maintainer,
   10-15, of a rifleman in his arm with the rifle up in his fist: "held enemies should drop their gun". As the arm goes round, the weapon in his hand (rifle or
