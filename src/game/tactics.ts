@@ -56,6 +56,7 @@ import { lookSince } from './pressure';
 import { squadLookSince } from './enemysquads';
 import { toolSpot, toolStep, latchFirst } from './handleside';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
+import { railsDown } from './rails';   // (nobody is handed a colleague's man who is on his knee, spared)
 
 // ---------------------------------------------------------------- knobs (Game.tune carries them; these are the shipped values and the per-machine copy)
 type TacticsTune = { tactics: boolean; flankWait: number; loneWait: number; doorDanger: number; doorWait: number };
@@ -639,7 +640,7 @@ function loneCall(g: Game, gd: Guard, L: Lone) {
     o.awareness = Math.max(o.awareness, 0.92);
     if (wasCalm || !o.lastKnown) o.lastKnown = v3.copy(L.fix);
     if (wasCalm) o.reactT = Math.max(o.reactT, 0.25 + Math.min(1.2, flat(o.char.pos, gd.char.pos) / 25) + simRandom() * 0.4);
-    if (o.foe === null && gd.foe && gd.foe !== 'player') o.foe = gd.foe;   // (a unit with nobody yet takes his colleague's man)
+    if (o.foe === null && gd.foe && gd.foe !== 'player' && !railsDown(g, gd.foe)) o.foe = gd.foe;   // (a unit with nobody yet takes his colleague's man)
   }
 }
 function moveLone(g: Game, gd: Guard, L: Lone, dt: number): TacMove | null {
