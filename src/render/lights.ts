@@ -51,6 +51,9 @@ export interface RtLight {
   /** … a lamp that is OUT but that the team last saw lit: > 0 = uploaded at this intensity as a class-2 light (lit in the picture of the room nobody has looked
    *  into since), whatever `enabled` / `intensity` say. The game's own readers of the list never see it (they read enabled / intensity; probe.wgsl skips class 2) */
   fogGhost?: number;
+  /** WHOSE DOING THIS LIGHT IS, FOR THE FOG'S CLASS ALONE (game/fogofwar.ts FOG.ours, lightBy): the character who set or threw what made it — a blast's
+   *  flash, a round's ember. Not `owner`: the shadow rays still take every body, his too. Absent / 0 = the class goes by `owner` as ever */
+  fogBy?: number;
 }
 
 /** the kind word's fog-of-war class bits (common.wgsl LIGHT_FOG_SEEN / LIGHT_FOG_UNSEEN; RtLight.fog) */
@@ -181,7 +184,8 @@ export class LightSet {
   fogClass(l: RtLight): number {
     if (l.fog) return l.fog;
     const T = this.fogTeam;
-    return T.on && l.kind !== 2 && !T.lights.has(l) && (l.owner !== 0 ? !T.owners.has(l.owner) : l.ttl >= 0 || !!l.transient) ? 1 : 0;
+    const by = l.fogBy || l.owner;   // (a flash somebody made without carrying it is classed as his: RtLight.fogBy)
+    return T.on && l.kind !== 2 && !T.lights.has(l) && (by !== 0 ? !T.owners.has(by) : l.ttl >= 0 || !!l.transient) ? 1 : 0;
   }
   /** the lowest slot of the last upload holding a TRANSIENT light (ttl / flagged), = the slot count when none: transients are appended as they are born, so they sit at the tail and the
    *  gather's per-hit subtraction walk (gather_common directAtPoint / directOnScreen) can start here — it still tests every slot it visits, so a steady light after it costs nothing but a skip */

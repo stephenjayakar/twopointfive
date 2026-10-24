@@ -4,7 +4,7 @@
 // fails, the twin is not built, one console error says which — and dust is drawn as plain smoke again (the game is otherwise untouched).
 const SWAPS: [from: string, to: string, count: number][] = [
   // the two lit marches' density: the drawn one + whose it is
-  ['let dens = fogSmoke(smokeDensityIn(X, onMask), X);', 'let dl = dustDensity(X, onMask, true); let dens = fogSmoke(dl.d, X); let dTint = dustTintOf(dl);', 2],   // (fogSmoke — common.wgsl: the fog of war's full picture draws no plume over floor the team does not see)
+  ['let dens = fogSmoke(smokeDensityIn(X, onMask), X);', 'let dl = dustDensity(X, onMask, true); let dens = fogSmoke(dl.d, X); let dTint = dustTintOf(dl);', 2],   // (fogSmoke — common.wgsl: with FOG.air off the fog of war's full picture draws no plume over floor the team does not see)
   // (the K = 0 march, which no quality row ships: dust stays plain smoke there)
   ['let dens = fogSmoke(smokeDensityAt(X), X);', 'let dens = fogSmoke(smokeDensityAt(X), X); let dTint = vec3f(1.0);', 1],
   // the in-scatter takes the tint
