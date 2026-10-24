@@ -11,7 +11,7 @@ import { dumpNow, keptNow, keptWords } from '../replay/dumpui';
 import { saveSandbox } from '../game/sandbox';
 import { SAVETIMELINE, type SlotInfo } from '../game/savestate';
 import { HANDRING } from '../game/handring';
-import { TWOGEARS } from '../game/player';
+import { TWOGEARS, CROUCHRUN } from '../game/player';
 import { gearText } from '../game/gear';   // (the controls list names the kit: shown in the kit's words as issued)
 export { loadSandbox, saveSandbox, SANDBOX_LS } from '../game/sandbox';
 import { Engine } from '../engine';
@@ -60,6 +60,9 @@ const NV_ROW: [string, string] = ['N · V', 'night vision · whistle (the neares
 const MOVE_ROW: [string, string] = ['W A S D', 'move · Shift sprint · C crouch · wheel = walking pace (slower is quieter)'];
 /** …with two gears (game/player.ts TWOGEARS): the wheel is nobody's pace and the crouch is the sneak */
 const MOVE_GEARS: [string, string] = ['W A S D', 'move · Shift sprint · C crouch (slower and quiet)'];
+/** …and both while Shift in a crouch is a fast crouch walk (game/player.ts CROUCHRUN): what Shift does crouched, and that it's heard */
+const MOVE_ROW_RUN: [string, string] = ['W A S D', "move · Shift sprint · C crouch, and Shift while you're crouched to hurry (it's louder) · wheel = walking pace (slower is quieter)"];
+const MOVE_GEARS_RUN: [string, string] = ['W A S D', "move · Shift sprint · C crouch (slower and quiet), and Shift while you're crouched to hurry (it's louder)"];
 export const CONTROLS: [string, string][] = [   // (the options screen draws its own grouped copy, ui/options.ts KEYS: a key that changes is changed in both) ONE short line per key (playtest 08-09: 'the start page is WAY too wordy')
   MOVE_ROW,
   ['Mouse', 'aim, and the ring snaps to an enemy near the cursor or a light under it'],
@@ -80,8 +83,10 @@ export const CONTROLS: [string, string][] = [   // (the options screen draws its
 ];
 /** the list as the board is (ui/options.ts wallWay): the wall hold's row with no key is the row of walking into one; with no key and no walk-in, no row */
 const WALL_ROW: [string, string] = ['Wall', 'walk into one to put your back to it, then slide and peek around its end · step away or press Shift to let go'];
+/** the move row as the game is: with two gears, and while Shift in a crouch is a fast crouch walk (game/player.ts CROUCHRUN) saying so */
+export function moveRowNow(): [string, string] { return TWOGEARS.on ? CROUCHRUN.on ? MOVE_GEARS_RUN : MOVE_GEARS : CROUCHRUN.on ? MOVE_ROW_RUN : MOVE_ROW; }
 const controlRows = (): [string, string][] => CONTROLS.flatMap(r => {
-  if (TWOGEARS.on && r === MOVE_ROW) return [MOVE_GEARS];
+  if (r === MOVE_ROW) return [moveRowNow()];
   if (HANDRING.on && r === SPACE_ROW) return [RING_ROW]; if (r === CAM_ROW) return AUTOCAM.on ? [camKey() ? CAM_SPACE : r, CAM_AUTO(camKey() ? 'Space' : 'Ctrl')] : [camKey() ? CAM_SPACE : r];
   if (SLOTSETUP.on && r === KIT_ROW) return [KIT_SET]; if (SLOTSETUP.on && r === ZR_ROW && !keysOf('KeyZ').length) return [R_ROW];
   if (r === LNV_ROW) { const l = !(SLOTSETUP.on && !keysOf('KeyL').length), v = !(HANDRING.on && !keysOf('KeyV').length); return [l && v ? r : l ? LN_ROW : v ? NV_ROW : N_ROW]; }   // (the light is a row of the gun's setup, the whistle a wedge of his ring: a key given back to either keeps its place here)
