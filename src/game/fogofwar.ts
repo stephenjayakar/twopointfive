@@ -122,7 +122,7 @@ import type { Character } from './character';
 import { isHostile } from './teams';
 import { placeName } from './dialogue';
 import type { Door, Doors } from './doors';
-import { type Box, MKEY } from '../scene/boxes';
+import { type Box, BoxFlag, MKEY } from '../scene/boxes';
 import { type FogFrame, makeFogFrame, FOG_EYES, FOG_LIGHTS } from '../render/fogofwar';
 import { WAND, WAND_STATS, wandEye } from './wand';
 import { mateWandEye, mateWandEyes } from './wandorder';
@@ -222,6 +222,16 @@ export const FOG = {
    *  march takes no density over unseen floor, as it was (common.wgsl fogSmoke). ON in the page since 10-23 (?fogair=0 puts it off; the frozen stand pins it
    *  off — src/host/standup.ts, `TPS_FOGAIR=1`). Never seen on a GPU */
   air: true,
+  /** THIN THINGS THAT STAND FREE DO NOT CUT THE FOG'S SIGHT (the maintainer, 10-23, of a taken room on The Pass: 'weird vertical striations due to fog of
+   *  war + squad's vision'): every static stopped the fog's eye — the squad's own lines (segmentBlocked) and the picture's ray (occludedTBoxes) — so a
+   *  stovepipe, a window's bar or a lone post each threw a sliver of 'not seen' across the room behind it, and with men looking in through barred windows
+   *  the floor was fans of seen and unseen. With this the statics a level marks as thin and free (scene/thin.ts thinLevel: under 25 cm both ways in plan,
+   *  nothing beside them — never a door's jamb or stop, never a wall's end) are passed by BOTH: the fog's own lines here (`sightBlocked`: to a man, a body,
+   *  a spot, a door, a lamp) and, under `full`, the picture's fog eye (render/fogofwar.ts FogFrame.thinBits → common.wgsl fogThinBox), which then also
+   *  passes what another man carries — a box the squad's own lines never met. It is the FOG's sight alone: a guard's eye, a round, a sound and a shadow
+   *  meet those boxes as ever. Not the picture alone: who the squad has seen can differ behind a pipe, so a run's digest can. false = every static stops
+   *  it, as it was. ON in the page since 10-24 (?fogthin=0 puts it off; the frozen stand pins it off — src/host/standup.ts, `TPS_FOGTHIN=1`). Never seen on a GPU */
+  thin: true,
   /** WHAT THE TEAM DOES IS ALWAYS SHOWN (the picture — and, with it, what the cursor's ray meets: the boxes handed to the renderer; under `full` alone; the maintainer, of the tutorial's wall charge: 'still can't see the wall shot detonate' — the
    *  fog was taken off that mission for it): the flash of a blast one of the team set or threw lights the fog's picture too (lights.ts RtLight.fogBy: its
    *  class is the doer's, as a carried light's is its carrier's), the streak of a teammate's round is drawn its whole length, the rubble the team throws is drawn
@@ -286,7 +296,7 @@ export const FOG_EDGE_ON = 0.5;
 /** ?fogown / ?fogown=0 · ?fogcalls=0 — the two options for a visit, over the kept rows (the Game's constructor, right after teamfeel.ts has read those back;
  *  no page — the harness — nothing) */
 export function fogFlags() { try { const q = new URLSearchParams(location.search); if (q.has('fogown')) FOG.own = q.get('fogown') !== '0'; if (q.has('fogcalls')) FOG.calls = q.get('fogcalls') !== '0';
-  if (q.has('fogflat')) { const v = parseFloat(q.get('fogflat') ?? ''); FOG.flat = Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : FOG_FLAT_ON; } if (q.has('foglit')) { const v = parseFloat(q.get('foglit') ?? ''); FOG.lit = Number.isFinite(v) ? Math.min(4, Math.max(0, v)) : FOG_LIT_ON; } if (q.has('fogfull')) FOG.full = q.get('fogfull') !== '0'; if (q.has('fogair')) FOG.air = q.get('fogair') !== '0'; if (q.has('fogours')) FOG.ours = q.get('fogours') !== '0'; if (q.has('fogdesat')) { const v = parseFloat(q.get('fogdesat') ?? ''); FOG.desat = Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : FOG_DESAT_WAS; } if (q.has('fogedge')) { const v = parseFloat(q.get('fogedge') ?? ''); FOG.edge = Number.isFinite(v) ? Math.min(1.5, Math.max(0, v)) : FOG_EDGE_ON; } if (q.has('fogthings')) FOG.things = q.get('fogthings') !== '0'; if (q.has('squaddoors')) FOG.squadDoors = q.get('squaddoors') !== '0'; if (q.has('squadfire')) FOG.squadFire = q.get('squadfire') !== '0'; if (q.has('fogdesat')) FOG_PAGE.desat = FOG.desat; if (q.has('fogedge')) FOG_PAGE.edge = FOG.edge; if (q.has('fogair')) FOG_PAGE.air = FOG.air; } catch { /* no page */ } }
+  if (q.has('fogflat')) { const v = parseFloat(q.get('fogflat') ?? ''); FOG.flat = Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : FOG_FLAT_ON; } if (q.has('foglit')) { const v = parseFloat(q.get('foglit') ?? ''); FOG.lit = Number.isFinite(v) ? Math.min(4, Math.max(0, v)) : FOG_LIT_ON; } if (q.has('fogfull')) FOG.full = q.get('fogfull') !== '0'; if (q.has('fogair')) FOG.air = q.get('fogair') !== '0'; if (q.has('fogours')) FOG.ours = q.get('fogours') !== '0'; if (q.has('fogthin')) FOG.thin = q.get('fogthin') !== '0'; if (q.has('fogdesat')) { const v = parseFloat(q.get('fogdesat') ?? ''); FOG.desat = Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : FOG_DESAT_WAS; } if (q.has('fogedge')) { const v = parseFloat(q.get('fogedge') ?? ''); FOG.edge = Number.isFinite(v) ? Math.min(1.5, Math.max(0, v)) : FOG_EDGE_ON; } if (q.has('fogthings')) FOG.things = q.get('fogthings') !== '0'; if (q.has('squaddoors')) FOG.squadDoors = q.get('squaddoors') !== '0'; if (q.has('squadfire')) FOG.squadFire = q.get('squadfire') !== '0'; if (q.has('fogdesat')) FOG_PAGE.desat = FOG.desat; if (q.has('fogedge')) FOG_PAGE.edge = FOG.edge; if (q.has('fogair')) FOG_PAGE.air = FOG.air; } catch { /* no page */ } }
 /** THE FOG'S LOOK ON THIS PAGE (`desat`, `edge`, `air`: the picture alone — NOT `ours`: what it hands the renderer is what the cursor's ray meets, so a tape keeps its own), as the module ships it and the address words change it (fogFlags) — never what a tape's knob
  *  tables laid over FOG. THE ENGINE REPLAY SHOWS A TAPE UNDER THIS, not under the look the tape was recorded with (FogOfWar.pageLook, which it alone calls):
  *  the maintainer judged both on a replay, and a recording from before either would otherwise show the old fog for ever. The tape's own values still ride its
@@ -517,7 +527,7 @@ export class FogOfWar {
     const full = fov >= 360; const cosHalf = full ? -2 : Math.cos(Math.max(1, fov) * 0.5 * DEG);
     // (the picture's soft edges are the cone's alone: a plain fovDeg wedge keeps its hard line — the block's three rows 0 = the kernel's old answer, bit for bit)
     const soft = FOG.cone && !full ? Math.max(0, Math.min(FOG.coneSoftDeg, fov, 360 - fov)) : 0;
-    F.full = this.fullBlock(F); F.flat = Math.max(0, FOG.flat); this.litBlock(F); F.air = FOG.air;
+    F.full = this.fullBlock(F); F.flat = Math.max(0, FOG.flat); this.litBlock(F); F.air = FOG.air; this.thinBlock(F);
     F.softIn = soft > 0 ? Math.cos(Math.max(0, fov * 0.5 - soft * 0.5) * DEG) : 0; F.softOut = soft > 0 ? Math.cos(Math.min(180, fov * 0.5 + soft * 0.5) * DEG) : 0;
     F.nearSoft = FOG.cone && !full ? Math.max(0, FOG.coneNearSoftM) : 0;
     for (let k = 0; k < FOG_EYES; k++) {
@@ -600,8 +610,22 @@ export class FogOfWar {
   reset() { this.rawAt = -1; this.bared = false; this.lampRecs.clear(); this.doorRecs.clear(); this.doorsHeld = 0; this.thingRecs.clear(); this.ourLanded.clear(); this.thingSince = -1; this.recs = new SideMap(); this.asked.clear(); this.pending.length = 0; this.turn = 0; this.frameNo = 0; this.hiddenChars.clear(); this.firedN = new SideMap(); this.firedAt = new SideMap(); this.shown = new SideSet(); this.fireClock = 0;
     this.callClock = 0; this.lastCall = -1e9; this.calledT = new SideMap(); this.knownT = new SideMap(); this.toldStep = new SideMap(); this.callN = 0; this.callLog = []; this.callStats = { contact: 0, heard: 0 }; }
 
+  /** THE FOG'S OWN LINE: is anything solid between an eye and a point — the game's sight test (statics and leaves; glass passes), which under FOG.thin also
+   *  passes the statics the level marked thin and free (scene/thin.ts). With the row off this is segmentBlocked(a, b) as every caller here had it. */
+  private sightBlocked(a: Vec3, b: Vec3): boolean { return this.g.col.segmentBlocked(a, b, 0.02, FOG.thin ? BoxFlag.Glass | BoxFlag.Thin : BoxFlag.Glass); }
+  /** the picture's half of FOG.thin: the row, and WHICH statics are marked, as bits by box index (a static's index in the box world is its index on the GPU;
+   *  one past the list's reach — render/fogofwar.ts FOG_THIN_WORDS × 32 — has no bit: the lines here pass it, the picture does not). Filled every frame: a
+   *  breached wall's studs come and go (wallbreak.ts), and a scan of the statics' flags is nothing; the renderer uploads only when the bits differ. */
+  private thinBlock(F: FogFrame) {
+    F.thin = FOG.thin;
+    if (!F.thin) return;
+    const world = this.g.engine.world as { statics?: Box[]; geomSerial?: number }, st = world.statics, bits = F.thinBits; bits.fill(0); F.thinSerial = world.geomSerial ?? 0; F.thinCount = st?.length ?? 0;
+    if (st) for (let i = 0, n = Math.min(st.length, bits.length * 32); i < n; i++) if (st[i].flags & BoxFlag.Thin) bits[i >> 5] |= 1 << (i & 31);
+  }
   /** one eye on one living man, walls and leaves only: the game's own line-of-sight test (guards.ts eyeContact: statics and leaves against his chest AND his head,
-   *  glass passed), inside the eye's field. The smoke along a clear line is update()'s second step. */
+   *  glass passed), inside the eye's field. The smoke along a clear line is update()'s second step. UNDER FOG.thin THE TWO PART: these lines pass a static the
+   *  level marked thin and free, eyeContact's do not — a man behind a window's bar is in the picture, and a teammate may call him, a moment before that
+   *  teammate's own eye has him (docs/agents/stealth.md, the row's bullet: not held). */
   private lineToMan(e: FogEye, gd: Guard, chest: Vec3): boolean {
     const g = this.g, pc = gd.char;
     if (!this.inField(e, chest)) return false;
@@ -611,23 +635,23 @@ export class FogOfWar {
     // 1e6, 90°) — written out: such an eye always has him in its cone, so only 'he is alive, and the line to his chest or to his head is clear' is left to ask.
     // The two lines are eyeContact's (the same chest — update()'s — and head points, the chest asked first and the head only behind a blocked chest).
     if (!pc.alive) return false;
-    return !(g.col.segmentBlocked(e.pos, chest) && g.col.segmentBlocked(e.pos, pc.bones.head ?? v3.add(pc.pos, [0, 1.6, 0])));
+    return !(this.sightBlocked(e.pos, chest) && this.sightBlocked(e.pos, pc.bones.head ?? v3.add(pc.pos, [0, 1.6, 0])));
   }
   /** one eye on a body: a clear line to a hand's height over where it lies (the finders' own point — guards.ts), inside the eye's field */
   private eyeOnBody(e: FogEye, gd: Guard): boolean {
     const hp = gd.char.bones.hips ?? gd.char.pos; const at: Vec3 = [hp[0], Math.max(hp[1], 0) + 0.3, hp[2]];
-    return this.inField(e, at) && !this.g.col.segmentBlocked(e.pos, at);
+    return this.inField(e, at) && !this.sightBlocked(e.pos, at);
   }
 
   /** can any eye see this point: inside its field, nothing solid (a static, a leaf where it really stands; glass passes) on the line */
   private eyeOn(p: Vec3): boolean {
-    for (const e of this.eyes) if (this.inField(e, p) && !this.g.col.segmentBlocked(e.pos, p)) return true;
+    for (const e of this.eyes) if (this.inField(e, p) && !this.sightBlocked(e.pos, p)) return true;
     return false;
   }
   /** does anybody on the team see this door: a line to the leaf where it stands, or to where the picture has it (an eye on the place a leaf is drawn sees that
    *  it is not there). Points along the leaf at two heights, each taken a hand short of the leaf so the leaf itself is not what stops the line. */
   private doorSeen(d: Door, shown: number): boolean {
-    const [hx, hz] = d.def.hinge, W = d.def.width; const col = this.g.col, eyes = this.eyes;
+    const [hx, hz] = d.def.hinge, W = d.def.width; const eyes = this.eyes;
     for (let ai = 0; ai < 2; ai++) {
       const a = d.def.closedDir + (ai ? shown : d.off ? 0 : d.angle), ux = Math.cos(a), uz = Math.sin(a);   // (off its hinges: the frame it left is what there is to see)
       for (let fi = 0; fi < 3; fi++) for (let yi = 0; yi < 2; yi++) {
@@ -635,13 +659,13 @@ export class FogOfWar {
         for (const e of eyes) {
           if (!this.inField(e, p)) continue;
           const L = v3.dist(e.pos, p); if (L < 0.3) return true;
-          if (!col.segmentBlocked(e.pos, v3.lerp(e.pos, p, 1 - 0.12 / L))) return true;
+          if (!this.sightBlocked(e.pos, v3.lerp(e.pos, p, 1 - 0.12 / L))) return true;
         }
         // (a door the squad works: a teammate at it sees it move, whatever he is looking at — his head, not the fog's eye)
         for (const c of this.mates) {
           const dx = c.pos[0] - p[0], dz = c.pos[2] - p[2]; if (dx * dx + dz * dz > FOG.squadDoorsM * FOG.squadDoorsM) continue;
           const from = c.bones.head ?? v3.add(c.pos, [0, 1.6, 0]); const L = v3.dist(from, p); if (L < 0.3) return true;
-          if (!col.segmentBlocked(from, v3.lerp(from, p, 1 - 0.12 / L))) return true;
+          if (!this.sightBlocked(from, v3.lerp(from, p, 1 - 0.12 / L))) return true;
         }
       }
     }
@@ -682,7 +706,7 @@ export class FogOfWar {
     for (const e of this.eyes) {
       if (!this.inField(e, t.pos)) continue;
       const dx = x - e.at[0], dy = y - e.at[1], dz = z - e.at[2], d = Math.hypot(dx, dy, dz); if (d < 0.5) return true;
-      const k = 1 - 0.3 / d; if (!col.segmentBlocked(e.at, [e.at[0] + dx * k, e.at[1] + dy * k, e.at[2] + dz * k])) return true;
+      const k = 1 - 0.3 / d; if (!this.sightBlocked(e.at, [e.at[0] + dx * k, e.at[1] + dy * k, e.at[2] + dz * k])) return true;
     }
     const from: Vec3 = [x, Math.max(0.3, y - 0.3), z];
     for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, r = i & 1 ? 2 : 1, px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r; if (!col.segmentBlocked(from, [px, 0.3, pz]) && this.spotSeen(px, pz)) return true; }
@@ -771,7 +795,7 @@ export class FogOfWar {
     for (const e of this.eyes) {
       const dx = x - e.at[0], dz = z - e.at[2], d = Math.hypot(dx, dz); if (d < 0.4) return true;
       const y = e.at[1]; if (!this.inField(e, [x, y, z])) continue;
-      const k = 1 - 0.12 / d; if (!this.g.col.segmentBlocked(e.at, [e.at[0] + dx * k, y, e.at[2] + dz * k])) return true;
+      const k = 1 - 0.12 / d; if (!this.sightBlocked(e.at, [e.at[0] + dx * k, y, e.at[2] + dz * k])) return true;
     }
     return false;
   }
