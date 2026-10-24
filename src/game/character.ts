@@ -5954,7 +5954,7 @@ export class Character {
   /** … and put back from a file, which is read as untrusted as the rest of one: nine finite numbers or nothing, the speeds held to what a turn can carry
    *  (turnWeigh's top rates at the best handling there is — a real file's are inside them, so they come back to the bit) and the lead to the neck's own reach. */
   turnPut(s: readonly number[] | null | undefined) {
-    if (!Array.isArray(s) || s.length !== 9 || !s.every((v) => typeof v === 'number' && Number.isFinite(v)) || this.ragdoll) return;
+    if (TURN.on <= 0.5 || !Array.isArray(s) || s.length !== 9 || !s.every((v) => typeof v === 'number' && Number.isFinite(v)) || this.ragdoll) return;   // (the weight off at the load: nobody will carry the turn on — he is the file's yaws, as with no key)
     const wb = TURN.body * 1.5, wa = TURN.aim * 1.5;
     this.tn = { body: s[0], aim: s[1], wb: clamp(s[2], -wb, wb), wa: clamp(s[3], -wa, wa), ib: s[4], ia: s[5], x: s[6], z: s[7] }; this.anim.turnLead = clamp(s[8], -TURN.lead, TURN.lead);
     this.turn.on = true;   // (he was being weighed when it was filed, and a fresh man's `turn` is off until game.ts dealWeapons writes it on his next frame: the loader's bake below comes first, and would drop the turn of a man it reads as not weighed)
@@ -5965,6 +5965,7 @@ export class Character {
   bakeLoaded() {
     const T = this.tn; if (!T) { this.update(0); return; }
     const b = this.bodyYaw, a = this.aimYaw; this.bodyYaw = T.body; this.aimYaw = T.aim; this.update(0); this.bodyYaw = b; this.aimYaw = a;
+    if (!this.tn) this.update(0);   // (the bake read the turn as a staging — he stands further from where it was weighed than a turn is carried: no turn, and he is posed at the yaws he is left with)
   }
   /** TURN let go of (wounds.ts: a man going down wounded stays a posed figure): his yaws become the ones that were drawn, and no turn is carried on */
   turnDrop() { if (this.tn) { this.bodyYaw = this.tn.body; this.aimYaw = this.tn.aim; this.tn = null; } }

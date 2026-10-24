@@ -10,7 +10,7 @@
 //                            too) and goes on turning after a load: every man's place and yaws agree frame for frame over the first half second, A ≡ B ≡ C
 //                            over three seconds, and the file made from a fresh game after a load holds the same turn. Twice: as his own update left him,
 //                            and with a wish written AFTER his update on the frame of the save (two men turning to talk do that), which the loader's bake
-//                            must hand back. With the switch off no file says a turn. CHECKPOINT_TURN_BREAK=1 = the key taken out of the file before it is
+//                            must hand back. With the switch off no file says a turn and one that has it loads as the keyless file. CHECKPOINT_TURN_BREAK=1 = the key taken out of the file before it is
 //                            loaded, as a file from before the key: he starts from rest, and the futures must part (lines 1 and 2 fail);
 //   checkpoint-autosave  (b) every autosave trigger fires exactly once in a scripted run — a room entered, the stage advancing, a body hauled away, 90 s of
 //                            quiet — and NOTHING is written while compromised: a man alert / searching / over the awareness line, Sam mid-pick, a can on its
@@ -219,15 +219,21 @@ export async function checkpointTurn() {
     };
     await one('(a2.1) a man caught mid-turn is filed with his turn; every man\'s place and yaws agree frame for frame over the first half second and A ≡ B ≡ C over the 3 s after; the file made after a load holds the same turns', false);
     await one('(a2.2) … and with a wish written after his own update on the frame of the save: the loader poses him where his weight had got him and hands the wish back', true);
-    // the switch off: no file says a turn (the file as it was), and a file that has one is loaded without it
-    { const fails: string[] = [], notes: string[] = []; const { game } = W; const hit = steps(W, 90, () => mid(game).length > 0 && !canSave(game));
-      if (!hit) fails.push('no man was caught mid-turn inside 90 s'); else {
-        const on = saveState(game, { label: 'turn', kind: 'harness' }); SAVETIMELINE.turn = false; const off = saveState(game, { label: 'turn', kind: 'harness' });
-        const nOn = on.guards.filter((x: any) => 'turn' in x).length, nOff = off.guards.filter((x: any) => 'turn' in x).length; for (const x of on.guards) delete x.turn;
-        const same = JSON.stringify(on.guards) === JSON.stringify(off.guards); SAVETIMELINE.turn = true;
+    // the switch off: no file says a turn (the file as it was), and a file that has one is loaded as the same file without the key
+    { const fails: string[] = [], notes: string[] = []; const { game } = W; const hit = steps(W, 90, () => mid(game).length > 0 && !canSave(game) && !ambientState(game).run);
+      if (!hit) fails.push('no man was caught mid-turn on a frame that can be saved inside 90 s'); else {
+        const on = saveState(game, { label: 'turn', kind: 'harness' }), json = JSON.stringify(on); SAVETIMELINE.turn = false; const off = saveState(game, { label: 'turn', kind: 'harness' });
+        const nOn = on.guards.filter((x: any) => 'turn' in x).length, nOff = off.guards.filter((x: any) => 'turn' in x).length; const bare = JSON.parse(json); for (const x of bare.guards) delete x.turn;
+        const same = JSON.stringify(bare.guards) === JSON.stringify(off.guards);
         notes.push(`${nOn} men filed with a turn with the switch on, ${nOff} with it off; the guards' slice bar the key ${same ? 'the same' : 'DIFFERENT'}`);
-        if (!nOn || nOff || !same) fails.push('SAVETIMELINE.turn off does not write the file as it was'); }
-      lines.push({ ok: !fails.length, what: '(a2.3) with SAVETIMELINE.turn off no file says a turn, and the rest of the guards\' slice is what it was', notes, fails }); }
+        if (!nOn || nOff || !same) fails.push('SAVETIMELINE.turn off does not write the file as it was');
+        const load = (f: any) => { loadState(game, f); W.cam.target = v3.copy(game.player.char.pos); return run(W); };
+        const keyed = load(JSON.parse(json)), plain = load(JSON.parse(JSON.stringify(bare))); SAVETIMELINE.turn = true; const put = load(JSON.parse(json));
+        const kp = part(keyed.f, plain.f) || (keyed.d.hash !== plain.d.hash ? 'the digest after' : ''), pp = part(put.f, plain.f);
+        notes.push(`the switch off, the file with its turns against the same file with the key taken out: ${kp ? `part at ${kp}` : `the same over ${FRAMES} frames and the ${SECS} s after`}; the switch on again, the same two ${pp ? `part at ${pp}` : 'do not part'}`);
+        if (kp) fails.push(`with the switch off a file's turn is still put back (parts from the keyless file at ${kp})`);
+        if (!pp) fails.push('with the switch on the file\'s turn made no difference: this line proves nothing'); }
+      lines.push({ ok: !fails.length, what: '(a2.3) with SAVETIMELINE.turn off no file says a turn, the rest of the guards\' slice is what it was, and a file that has one loads as the same file without the key', notes, fails }); }
   } finally { for (const [k, v] of [['TPS_TURN', env.turn], ['TPS_SAVETURN', env.save]] as const) { if (v === undefined) delete process.env[k]; else process.env[k] = v; } TURN.on = was.turn; SAVETIMELINE.turn = was.save; }
   for (const L of lines) { if (!L.ok) familyFails++; verdictLine(L.ok, L.what, L.notes.join('\n    '), L.fails); }
 }

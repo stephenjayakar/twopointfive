@@ -144,14 +144,15 @@ but synthetic writes still work.
   the save lands while a man turns; `TPS_TURN=0` passed). The turn is filed now (`GuardSnap.turn`, nine numbers: where he has got to, the speeds his weight
   carries, where his AI wants him, where he stood, the neck's lead; `character.ts turnSnap` / `turnPut`, which reads the nine as untrusted — finite or
   nothing, the speeds held to a turn's top rates and the lead to the neck's reach — and marks him weighed for the loader's bake: game.ts `dealWeapons`
-  writes `turn.on` only on his next frame). The loader bakes a living man with `bakeLoaded`: posed where his weight had got him, his yaws then handed back
+  writes `turn.on` only on his next frame; with the weight off at the load, `?turn=0`, nothing is put back and he is the file's yaws). The loader bakes a living man with `bakeLoaded`: posed where his weight had got him, his yaws then handed back
   AS FILED, so a wish written after his own update on the frame of the save (two men turning to talk: `dialogue.ts updateAmbient`) is still what his next
   frame eases from. No key with the weight or the switch off (those files are byte for byte what they were), on a body, or on a scripted man; a file from
   before the key loads as it did. CHECK, both stands: `probes.ts checkpoint-turn` (in `checkpoints`; it raises `TPS_TURN=1 TPS_SAVETURN=1` itself), three
   lines: the patrols walk until a man has over 1 rad/s in his feet and over 0.3 rad to come round, saved there, every man's place and yaws the same frame
   for frame over the first 30 frames of A, B and C and one digest over the 3 s after, and a file made after a load holds the same turns and yaws; the same
   again with his body yaw written 0.4 rad on after his update (the loader with a plain `update(0)` fails this line); with the switch off no file says a
-  turn and the rest of the guards' slice is the same. `CHECKPOINT_TURN_BREAK=1` (the key taken out of the file before the load) fails the first two on both
+  turn, the rest of the guards' slice is the same, and a file that has one loads frame for frame as the same file with the key taken out (the load's
+  own reading of the switch). `CHECKPOINT_TURN_BREAK=1` (the key taken out of the file before the load) fails the first two on both
   stands, from frame 1. `savetimeline-check.ts` no longer puts TURN off for its file comparison (it did on the grounds that no file held a turn). One
   seed, the office; in play the gap it closes was small (a turn restarted). Nobody has watched a load land on a turning man.
   `Game.saves: Checkpoints` (ticked LAST in update): AUTOSAVE requests on the stage advancing, first entry into a room region (chronicle.ts `roomOf`), a hauled body
