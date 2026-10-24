@@ -43,7 +43,7 @@ import type { Prop } from './props';
 import type { Character } from './character';
 import { gpuFx, emitDust, paletteName, surfOf, fixtureShatterFx, lensShatterFx, type Surf } from './particleFx';
 import { lampGlass } from './carlamps';
-import { fireHolds, fireStir } from './fire';   // a blast does not put a fire out (FIRE.hardy)
+import { fireHolds, fireStir, fireStruck } from './fire';   // a blast does not put a fire out (FIRE.hardy)
 import { Debris, hash01, type ChunkKind } from './debris';
 import { PLAYER_ID, NOBODY_ID } from './consts';
 import { chronLightShot } from './chronicle';
@@ -850,7 +850,8 @@ export class Destruction {
    *  aim-assisted rule stands beside it untouched): a fixture whose box it stopped in, or that its flight passed within CHAOS.loud.fixtureHitM of, goes dark. */
   fixtureRound(muzzle: Vec3, dir: Vec3, tHit: number, index: number | undefined) {
     const g = this.g; if (!loudNow(g) || chaosOf(g) <= 0) return;
-    if (index !== undefined && index < 1e6) { const t = this.targetOfBox.get(index); if (t && fireHolds(t)) { fireStir(g, t); return; } if (t && this.fixtureLive(t)) { this.killFixture(t, muzzle, 'round'); return; } }
+    if (index !== undefined && index < 1e6) { const t = this.targetOfBox.get(index); if (t && fireHolds(t)) { fireStir(g, t); return; } if (t && this.fixtureLive(t)) { this.killFixture(t, muzzle, 'round'); return; }
+      const at = v3.mad(muzzle, dir, tHit), fire = g.targets.find(x => fireHolds(x) && fireStruck(g, x, at, index)); if (fire) { fireStir(g, fire); return; } }   // (… or in the drum it burns in, which is no box of the fire's)
     const R = CHAOS.loud.fixtureHitM;
     for (const t of g.targets) {
       if (!this.fixtureLive(t)) continue;
