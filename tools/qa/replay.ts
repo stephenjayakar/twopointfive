@@ -61,7 +61,7 @@ export async function replaySession(F: any, name: string, opts: ReplayOpts = {})
   const { game, input, cam, canvas } = W;
   const fp = levelFingerprint(game); if (fp.fp !== F.level?.fp) { R.bad = `another level (file ${F.level?.fp} ${F.level?.boxes} boxes, this build ${fp.fp} ${fp.boxes} boxes) — re-record`; return R; }
   const whyNot = canLoad(game, F.save); if (whyNot) { R.bad = `the checkpoint will not load: ${whyNot}`; return R; }
-  J.applyKnobs(game, F.knobs);            // (tune before the load too: loadState reads nothing of it, but a module that would is covered)
+  J.applyKnobs(game, F.knobs);            // (tune before the load too: loadState reads the tables — FOG.filed, whether the fog's memory in the file is handed back — so a tape from before a key loads with it off)
   loadState(game, F.save);
   J.applyKnobs(game, F.knobs); J.applyEnvGame(game, F.env);
   Math.random = simDie(F.seed >>> 0, (Math.random as any).sys ?? Math.random);
