@@ -87,6 +87,7 @@ import { BIGSLOT } from './kit';
 import type { BigKit } from './kit';
 import { KITLOAD, type KitWorn } from './kitload';
 import type { QuietSnap } from './quiet';
+import type { FogSnap } from './fogofwar';
 import { quietWords } from './quiet';   // (called inside functions only: src/game is one import cycle)
 import type { LessonSnap } from './lesson';
 import type { ParSnap } from './par';
@@ -233,6 +234,10 @@ export interface SaveState {
   escalation: 0 | 1 | 2; escalationT: number; alarm: { episode: boolean; pos: V3; placed: boolean; apartT: number; raisedAt: number }; clearedAt: [string, number][]; clearRooms: number;
   blackout: { active: boolean; until: number | null; since: number; permanent: boolean; restoredAt: number };
   flags: { aiEnabled: boolean; godMode: boolean; infiniteAmmo: boolean; playerInvisible: boolean };
+  /** what the fog of war holds another way than the world stands: doors, lamps, furniture as the team last saw them, the bodies it has seen (fogofwar.ts
+   *  FogSnap; FOG.filed). AN EMPTY SLICE IS NOT NO SLICE: `{}` says the fog was up and held nothing, and its load still makes the furniture's memory, so no
+   *  opening half second follows; absent (the row off, the fog off, a file from before the slice) the picture after the load has everything as it stands */
+  fog?: FogSnap;
   /** a quiet mission's deal (quiet.ts QuietSnap: which start, spot and patrol set the run was dealt) — absent on the plain night */
   quiet?: QuietSnap;
   /** a training lesson's place among its steps (lesson.ts LessonSnap) — absent off a lesson level or with the lesson switched off */
@@ -562,7 +567,7 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
     if (LOOK_DECALS.has(d)) D.look = 1;   // (a mark laid only for the picture — lookDecals.ts: it comes back tagged, so the digest's count is the same carrying on and loaded)
     decals.push(D);
   }
-  const bo = g.blackout, gw = gunWallSnapshot(g), wh = SAVETIMELINE.holds ? wallHoldSnapshot(g) : undefined, ct = calmTorchSnapshot(g), dz = dozeSnapshot(g), mo = moraleSnapshot(g), ru = runnerSnapshot(g), sl = startleSnapshot(g), fl = flinchSnapshot(g), dd = darkDoorSnapshot(g), nq = netQuietSnapshot(g), po = powerOutSnapshot(g), rk = rescueCheckSnapshot(g), at = attentionSnapshot(g), pi = pictureSnapshot(g);
+  const bo = g.blackout, fg = g.fogOfWar?.snapshot(), gw = gunWallSnapshot(g), wh = SAVETIMELINE.holds ? wallHoldSnapshot(g) : undefined, ct = calmTorchSnapshot(g), dz = dozeSnapshot(g), mo = moraleSnapshot(g), ru = runnerSnapshot(g), sl = startleSnapshot(g), fl = flinchSnapshot(g), dd = darkDoorSnapshot(g), nq = netQuietSnapshot(g), po = powerOutSnapshot(g), rk = rescueCheckSnapshot(g), at = attentionSnapshot(g), pi = pictureSnapshot(g);
   const air = g.airDust?.snapshot();
   const s: SaveState = {
     v: SAVE_VERSION, savedAt: Date.now(), label, kind, level: levelFingerprint(g),
@@ -593,6 +598,7 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
     ...(pi ? { picture: pi } : null),   // (each man's ideas of his enemies — picture.ts; no key with its switch off)
     ...(wh ? { wallHold: wh } : null),   // (his back on a wall, and the walk-in take's clock — player.ts; no key with SAVETIMELINE.holds off or nothing to say)
     ...(gw ? { gunWall: gw } : null),   // (whose gun a wall holds down — gunwall.ts; no key with its switch off or nobody at a wall)
+    ...(fg ? { fog: fg } : null),   // (what the fog holds another way than the world stands — fogofwar.ts; no key with FOG.filed off or the fog off; an empty slice with nothing held, which is not the same)
     ...(g.dice && diceInUse() === g.dice ? { dice: { s: g.dice.s, n: g.dice.n, seed: g.dice.seed } } : {}),
     ...(hourOf(g) !== 'night' ? { hour: { id: hourOf(g), sun: sunStrength(g), given: sunGiven(g) } } : {}),
     autosave: { runId: A?.runId || opts.runId || 'run', visited: [...(A?.visited ?? [])], quietT: A?.quietT ?? 0, lastSaveT: A?.lastSaveT ?? -1e9, bodyFrom: c3n(A?.bodyFrom ?? null) },
@@ -642,7 +648,7 @@ export function loadState(g: Game, s: SaveState, opts: { label?: string } = {}) 
   g.restartEncounter();
   g.destr?.walls?.restore(s.walls);   // the level first (holed walls, chewed cover: the statics re-cut, the nav grid re-baked) — everything below is placed in it
   g.destr?.furn?.restore(s.furn);     // …then the furniture a blast took: gone again, silently (its pieces are not filed — no debris is)
-  try { applyState(g, s, prevLoads, prevSaves, opts); g.lesson?.restore(s.lesson); g.defuse?.restore(s.defuse); g.snatch?.restore(s.snatch); g.par?.restore(s.par); if (PLANLAY.on) layRestore(g, s.lay); ringRestore(g); if (CMDRING.plan) planRestore(g.orders, s.plan); }   // (…and a training lesson's place among its steps, lesson.ts: after the mission slice — a file without it, made with the lesson off, leaves the lesson stood down for that run)
+  try { applyState(g, s, prevLoads, prevSaves, opts); g.lesson?.restore(s.lesson); g.defuse?.restore(s.defuse); g.snatch?.restore(s.snatch); g.par?.restore(s.par); if (PLANLAY.on) layRestore(g, s.lay); ringRestore(g); if (CMDRING.plan) planRestore(g.orders, s.plan); g.fogOfWar?.restore(s.fog); }   // (…and a training lesson's place among its steps, lesson.ts: after the mission slice — a file without it, made with the lesson off, leaves the lesson stood down for that run)
   catch (e) { g.restartEncounter(); g.messages.push({ text: `checkpoint failed to load (${(e as Error).message}) — encounter restarted`, t: g.time }); throw e; }   // (a file broken past the checks: never a half-poured encounter — the fresh one, and the reason)
 }
 function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number, opts: { label?: string }) {

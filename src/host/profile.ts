@@ -556,6 +556,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'FOG.thin': 'TPS_FOGTHIN=1',
   'FOG.eyes': 'TPS_FOGEYES=1',
   'FOG.kept': 'TPS_FOGKEPT=1',
+  'FOG.filed': 'TPS_FOGFILED=1',
   'FOG.edge': 'TPS_FOGEDGE=1',
   'FOG.desat': 'TPS_FOGCOLOUR=1',
   'FOG.squadDoors': 'TPS_SQUADDOORS=1',

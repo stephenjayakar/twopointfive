@@ -31,7 +31,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (or after the switch comes on) take the floor as it stands. IT REWRITES THE LIST IN PLACE (the headless harness re-points `world.dynamics` at `game.dynBoxes` every frame), so
   a reader of `g.dynBoxes` after drawCharacters sees the picture's list (`Game.dynRaw` = the game's own count before the rewrite, which edgeLook.ts budgets by), and so does
   `BoxWorld.raycast`: the cursor's ray lands on the thing as drawn (1 of 26 shipped Standard run digests moves — Sam's yaw for twelve seconds of block-squads:1 — off = the base
-  26 of 26), a decal on a remembered thing is hidden while it is remembered, and a tripwire's DRAWN beam ends on a remembered box — its SENSOR does not: while the fog runs the sensor's reach (devices.ts `LaserRt.sense`) is asked of the statics, the leaves where they stand and the props, not of this list (devices sense under the fog only on a quiet mission's rung or a solo `?fow`; never in a team scenario). Not in checkpoints (a load re-primes). `FOG.flat` (0 = off = ships;
+  26 of 26), a decal on a remembered thing is hidden while it is remembered, and a tripwire's DRAWN beam ends on a remembered box — its SENSOR does not: while the fog runs the sensor's reach (devices.ts `LaserRt.sense`) is asked of the statics, the leaves where they stand and the props, not of this list (devices sense under the fog only on a quiet mission's rung or a solo `?fow`; never in a team scenario). In a checkpoint since 10-24 for furniture (`FOG.filed`, its own bullet below: held and left-out pieces are filed and no opening half second follows a load; items and rubble still re-prime). `FOG.flat` (0 = off = ships;
   `?fogflat[=0.2]`, Tab ▸ 'fog of war ▸ own light') = the radiance half: fogofwar.wgsl takes the G-buffer albedo (group 1 binding 5) and an unseen pixel is that paint under one
   fixed light (`soft.w`, exposure divided out) instead of the live frame dimmed — no lamp, weapon light, flash, smoke or particle shows in fog; never seen on a GPU. NOT HELD:
   edits to the static level made unseen (decals, a wall or pane coming apart, a fixture's lamp with flat off). QA `probes.ts fog-things` (in family `fog`; its leak watch counts
@@ -668,7 +668,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the player (the office has 31). SWITCH: `FOG.lit` 1 in the module and the page — `?foglit=0` = the one fixed light as it was (`?foglit=gain` another; Tab
   'lit as last known' + three 'lit:' rows, short so that a slider's label shows them whole); `?fogflat=0` is still the live frame dimmed, whatever `lit` says. Frozen stand: 0, `TPS_FOGLIT=1`
   raises it and wants `TPS_FOGFLAT=1` with it (`FROZEN_HOLDS['FOG.lit']`, `STAND_ENV`); shipped: 1, `TPS_FOGLIT=0` holds it. Picture only: no digest moves,
-  nothing in a checkpoint or a tape (the memory is re-primed at `reset()`, as the things' is); a recording from before the key replays with 0
+  nothing in a tape (the memory is re-primed at `reset()`; in a checkpoint since 10-24, `FOG.filed`: a lamp the team knows another way is filed); a recording from before the key replays with 0
   (`journal.ts applyKnobs`). CHECK: `probes.ts fog-lit` (family `fog`; 9 lines; `FOGLIT_BREAK=1` red) on both stands — the block, only fixtures and the sun in
   the list with every carried light and a flash forced on, last known (off unseen stays lit, on unseen stays dark, a seen one follows), the mains, the shader's
   branch reads nothing live, the walk against `occludedTBoxes`, the address, the journal, the stands. MEASURED on software-adapter stills only
@@ -941,8 +941,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the row is on (the row put off mid-game cuts them again); the three places that wake a particle take it off, so a kicked case is cut again where
   nobody sees. The row rides the sight table's head (`FogFrame.kept` → bit 4 of
   the word `fogSmokeOn` / `fogThinOn` read; `common.wgsl fogKeptOn`). What a man nobody sees drops stays cut until the team has seen it lying.
-  NOT IN IT: the floor glint of a hidden torch, which the audit named, was already cut (`reflect.wgsl` asks `lightFogK`, since 10-16); a checkpoint
-  still forgets the fog's memory. SWITCH: on in the module and the page; `?fogkept=0` off; the debugger's fog page has the row; frozen stand off,
+  NOT IN IT: the floor glint of a hidden torch, which the audit named, was already cut (`reflect.wgsl` asks `lightFogK`, since 10-16); a checkpoint's
+  memory of the fog is the next bullet's switch. SWITCH: on in the module and the page; `?fogkept=0` off; the debugger's fog page has the row; frozen stand off,
   `TPS_FOGKEPT=1` (`FROZEN_HOLDS['FOG.kept']`); the journal carries it (a recording without the key replays with it off), and, being the picture alone, it is part of the replay page's
   fog look (`FOG_PAGE`, with the air: the engine replay shows any tape under the page's own; `fogkept` is a visit word). CHECK: `probes.ts fog-kept`
   (family `fog`; 6 lines; `FOGKEPT_BREAK=1` red on three) on both stands — a lit lamp with a face put out unseen (face lit for the picture as it glowed, a
@@ -950,10 +950,49 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   as it stands; lit again unseen: face dark; a fresh encounter, the row off, not the full picture, a lamp in sight:
   nothing written; the upload's two reads, no other game module reading them); the litter bit as written (the frame, the head, `fogKeptOn`, the kernel's
   one line in the resting branch, the bit clear of the others, the three wakes, the draw asking the row); the address; the journal; the stands; the night breach fought with a lamp put out unseen,
-  two seeds, with the row and without: the same digest and dice, a face kept with the row alone. NOT HELD: (a) the litter half is held as text and by
+  two seeds, with the row and without: the same digest and dice, a face kept with the row alone.
+  NOT HELD: (a) the litter half is held as text and by
   the page's boot alone — no particle was watched coming to rest and staying, on any adapter; (b) the fog's "seen" for a lamp is one spot under it
   (`lampSeen`), so a panel whose far corner the picture shows as seen can be drawn in its remembered state for the frames until that spot is seen;
   (c) a panel broken unseen keeps its lit face on the broken box. **Never seen on a GPU.**
+- **A checkpoint carries what the fog holds (`FOG.filed`, 10-24; the same principle through a load).** A load's restart forgets all the fog knew
+  (`FogOfWar.reset`), so the picture after it had every door, lamp and chair as it stands: what a man did unseen, told by a load. Now a save files
+  what the picture has ANOTHER WAY THAN THE WORLD STANDS and nothing else (`FogOfWar.snapshot` → `SaveState.fog`, a `FogSnap`; an EMPTY slice with
+  the fog up and nothing held, no key with the row off or the fog off): a door by its NAME with the angle shown (poured through `Door.sided`, as
+  the doors' own slice is); a lamp by its name (as the targets' slice is poured) as the team
+  knows it and, known lit, its boxes' emission as they glowed (`faceRecs`); furniture the picture holds, by its thing key with its parts' poses
+  (one a blast took unseen too: `PropSystem.all` keeps its boxes); the keys of furniture the picture leaves OUT (last seen on the move, or the
+  team has looked at the place it left); and the dead the team has seen lying (`Rec.body`, which the picture keeps for good: before, a known body
+  left the picture at a load), by their place on the roster. `loadState` hands it back after the world is poured (`FogOfWar.restore`): each is a record again at once,
+  built there (no pending table), and comes up to date the frame an eye has it like any record the fog made itself. THE FURNITURE'S MEMORY IS
+  MADE WHOLE AT THE LOAD: held where the file has it, no record for one left out, and every other piece on the floor at rest where it stands.
+  So the opening half second after a restart, which takes everything as it stands (`THING_PRIME`), passes the furniture by after a load
+  (`propsLoaded`, down when the half second ends, on a reset, or when the rule's memory is dropped): a chair pushed unseen a moment after the
+  load stays where the team knew it, as it would have carried on (primed, it was drawn moving and then dropped); a remembered chair the team
+  looks at is dropped and does not come back; one left out is not drawn where it stands. Items, rubble and unkeyed one-frame boxes still get
+  the half second. Each kind goes under its own rule's switch at the save and at the load (`FOG.doors`, `FOG.things`); with the fog off at the
+  load nothing is made, and found off on the first update after one, the load's records are forgotten (`loaded`). A row of another shape is left out, never a throw. This is a FILE's memory: a save
+  made with a team on the floor is a rollback snapshot (`docs/agents/qa.md`), which keeps the fog's records with the rest of the game. NOT filed:
+  a living man's last-seen mark (seconds long), rubble and broken pieces (no checkpoint files debris by key), items (their keys are serials). NOT
+  THE PICTURE ALONE: the
+  remembered leaf and chair are what the cursor's ray meets after the load, as before the save, so the row is its own switch and no row of the
+  replay page's fog look (`FOG_PAGE`: an old tape replays with it off, by the journal). SWITCH: on in the module and the page; `?fogfiled=0` off;
+  the debugger's fog page has the row; frozen stand off, `TPS_FOGFILED=1` (`FROZEN_HOLDS['FOG.filed']`); the journal carries it (a recording
+  without the key replays with it off). CHECK: `probes.ts fog-filed` (families `fog` and `checkpoints`; 9 lines; `FOGFILED_BREAK=1` loads with
+  the row off and reds five) on both stands, the solo night on the office with the fog up — a door swung open, a lamp put out and furniture
+  shoved unseen: the file has those three alone, as shown; loaded, a save before the first frame says what the file said, the picture two frames
+  in and a second later holds the three (the furniture's record with the middle and long side it had), a save then files them the same; an eye
+  on each: as it stands, nothing left to file; a look at the remembered place inside the half second: dropped, not back, filed as left out;
+  furniture left out and furniture a blast took: 70 frames after the load the first drawn nowhere and the second where it stood; the fog off at
+  the load, the fog put off straight after one, the row off, a file from before the slice, a file of another shape (no throw, nothing held,
+  nothing filed after); an empty slice and its load (a record for every piece; a chair pushed unseen five frames on remembered at frames 6 to
+  105; a row at the live pose; the furniture rule off and on, and a restart, two frames after a load); a body seen lying, named in the file and
+  in the picture after its load, a body never seen left out, bad rows; the address, the journal, the page look without it, the stands. NOT HELD: (a) never loaded in a page, on any adapter: headless alone, one level, one seed; (b)
+  no run was replayed across a load with the slice in its file (the `replay` and `journal` gates pass, and none of their tapes holds a door or a
+  chair in the fog at its save); (c) a lamp's name is taken as unique, as the targets' slice takes it; (d) WHAT A LOAD STILL TELLS: the
+  pieces of a thing broken unseen (a lamp's glass, rubble) and items get the opening half second after a load, so they are drawn as they stand
+  while the lamp they came off is still remembered lit; (e) the slice is handed back only while the fog is up at the load: a lesson's rails that
+  raise the fog a tick after a put-back (`rails.ts`, the sky seat's level alone today) get everything as it stands. **Never seen on a GPU.**
 - **A held man drops his gun** (`HOLD.dropGun`, the table in `src/game/character.ts`; the rule is `player.ts startGrab`; ON in the page, `?nogundrop` puts it
   off; OFF in the module and on the frozen stand, `TPS_HOLDDROP=1`; a `FROZEN_HOLDS` row; a recording from before the key replays with it off). The maintainer,
   10-15, of a rifleman in his arm with the rifle up in his fist: "held enemies should drop their gun". As the arm goes round, the weapon in his hand (rifle or

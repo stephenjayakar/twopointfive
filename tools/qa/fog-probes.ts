@@ -321,6 +321,148 @@ export async function fogRules(): Promise<boolean> {
   return done();
 }
 
+// ================================================================================================== fog-filed
+/** FOG.filed: a checkpoint carries what the fog holds another way than the world stands (a door, a lamp and its face, furniture held or left out) and it is the
+ *  picture's again after the load, whose restart forgets all the fog knew. FOGFILED_BREAK=1 loads with the row off: the picture after each load has it all as
+ *  it stands, and every line that asks for the memory is red. */
+export async function fogFiled(): Promise<boolean> {
+  const { verdict, done } = family('fog-filed: a checkpoint carries what the fog holds another way than the world stands');
+  const brk = process.env.FOGFILED_BREAK === '1';
+  const R = await rig(71, { fog: true, breach: false }); const { game, FW, W } = R; const world = W.engine.world, F = FW as any; const stood = FOG.filed;   // (what standUp left: read below, with the stands)
+  const SV = await import(`${ROOT}/src/game/savestate.ts`); const { fogFlags } = await import(`${ROOT}/src/game/fogofwar.ts`);
+  FOG.full = true; FOG.doors = true; FOG.things = true; FOG.kept = true; FOG.filed = true; game.aiEnabled = false; R.step(45);
+  const sum = (e: number[] | undefined) => e ? e[0] + e[1] + e[2] : -1, sam = game.player.char.pos, away = (x: number, z: number) => Math.hypot(x - sam[0], z - sam[2]);
+  const statics = () => game.engine.world.statics as any[], dyn = () => world.dynamics as any[];
+  const save = () => JSON.parse(JSON.stringify(SV.saveState(game, { label: 'fog', kind: 'harness', force: true })));
+  const load = (file: any, row = !brk) => { FOG.filed = row; SV.loadState(game, JSON.parse(JSON.stringify(file))); FOG.filed = true; };
+  const fresh = () => { game.restartEncounter(); game.aiEnabled = false; R.step(45); };   // (the level as it starts, the fog's memory empty, past the opening half second)
+  // ---- the scene: a door swung open, a lamp put out and a piece of furniture shoved, each where nobody on the team has a look
+  const doors = game.doors.list as any[], di = doors.map((d, i) => i).filter(i => !F.doorSeen(doors[i], doors[i].angle) && Math.abs(doors[i].angle) < 0.01).sort((a, b) => away(doors[b].def.hinge[0], doors[b].def.hinge[1]) - away(doors[a].def.hinge[0], doors[a].def.hinge[1]))[0];
+  const targets = game.targets as any[], ti = targets.findIndex(t => (t.light || t.areaLights) && t.boxes.length > 0 && sum(t.baseEmissive) > 0 && t.on && !t.broken && !(t.disabledUntil > 0) && !FW.lampSeen(t));
+  const props = game.props.all as any[], unseen = props.map((p, i) => i).filter(i => !FW.spotSeen(props[i].x, props[i].z)).sort((a, b) => away(props[b].x, props[b].z) - away(props[a].x, props[a].z)), pi = unseen[0];
+  if (di === undefined || ti < 0 || unseen.length < 2) { verdict(false, 'the scene: a door, a lit lamp with a face and two pieces of furniture, each out of the team\'s sight', `door ${di} · lamp ${ti} · furniture ${unseen.length}`); Object.assign(FOG, FOG_DEFAULTS); return done(); }
+  const lampName = targets[ti].name as string, doorName = doors[di].def.name as string, nothing = () => JSON.stringify(FW.snapshot()) === '{}', key = (i: number) => thingKeyOf(props[i].boxes[0]);
+  const glow = targets[ti].boxes.map((bi: number) => sum(statics()[bi].emissive));
+  const homeOf = (i: number) => props[i].boxes.map((b: any) => [...b.c]), home = homeOf(pi);
+  const ghostOf = (p: any) => dyn().filter(b => !p.boxes.includes(b) && p.boxes.some((q: any) => q.mkey === b.mkey)), liveIn = (p: any) => p.boxes.some((b: any) => dyn().includes(b));
+  const atHome = (i: number, h: number[][]) => { const g = ghostOf(props[i]); return g.length === props[i].boxes.length && g.every((b: any, k: number) => Math.hypot(b.c[0] - h[k][0], b.c[1] - h[k][1], b.c[2] - h[k][2]) < 1e-6) && !liveIn(props[i]); };
+  const swing = (d: any) => { d.angle = d.maxA > 0.5 ? Math.min(d.maxA, 1.5) : Math.max(d.minA, -1.5); d.vel = 0; d.latched = false; d.quietT = -3600; d.closing = false; d.place(); };
+  const shove = (i: number) => { const p = props[i]; p.x += 0.7; p.z += 0.3; p.yaw += 0.6; p.dirty = true; p.place(); };
+  swing(doors[di]); targets[ti].on = false; shove(pi); R.step(3);
+  const picture = () => { const d = doors[di], t = targets[ti];
+    return { door: FW.doorHeld(d) && Math.abs(FW.doorShown(d)) < 0.01 && Math.abs(d.angle) > 1, lamp: t.boxes.every((bi: number, i: number) => Math.abs(sum(statics()[bi].fogEmit) - glow[i]) < 1e-6 && sum(statics()[bi].emissive) === 0), thing: atHome(pi, home) }; };
+  const plain = () => { const d = doors[di], t = targets[ti], p = props[pi];
+    return { door: !FW.doorHeld(d) && Math.abs(FW.doorShown(d) - d.angle) < 1e-9, lamp: t.boxes.every((bi: number) => statics()[bi].fogEmit === undefined), thing: ghostOf(p).length === 0 && p.boxes.every((b: any) => dyn().includes(b)) }; };
+  const all = (o: { door: boolean; lamp: boolean; thing: boolean }) => o.door && o.lamp && o.thing, say = (o: { door: boolean; lamp: boolean; thing: boolean }) => `door ${o.door}, lamp ${o.lamp}, furniture ${o.thing}`;
+  const same = doors === game.doors.list && targets === game.targets && props === game.props.all;   // (asked again after the loads: the lists this probe holds are the game's)
+  const before = picture(), recWas = { ...F.thingRecs.get(key(pi)) };
+  const file = save(), fg = file.fog;
+  { // the file
+    const d = fg?.doors?.find((e: any) => e[0] === doorName), l = fg?.lamps?.find((e: any) => e[0] === lampName), th = fg?.things?.find((e: any) => e[0] === key(pi));
+    const rows = !!l && l[1] === 1 && Array.isArray(l[2]) && l[2].length === targets[ti].boxes.length && l[2].every((v: number[], i: number) => Math.abs(sum(v) - glow[i]) < 1e-6);
+    const poses = !!th && th[1].length === home.length && th[1].every((q: number[], i: number) => q.length === 4 && Math.hypot(q[0] - home[i][0], q[1] - home[i][1], q[2] - home[i][2]) < 1e-6);
+    const only = (fg?.doors?.length ?? 0) === 1 && (fg?.lamps?.length ?? 0) === 1 && (fg?.things?.length ?? 0) === 1 && fg?.out === undefined;
+    FOG.filed = false; const off = FW.snapshot() === null && !('fog' in save()); FOG.filed = true;
+    FW.on = false; const noFog = FW.snapshot() === null; FW.on = true;
+    verdict(all(before) && !!d && Math.abs(d[1]) < 0.01 && rows && poses && only && off && noFog,
+      'a door swung open, a lamp put out and furniture shoved where nobody looks: the picture holds each as last seen, and the checkpoint files those three and nothing else — the door by its name with the angle shown, the lamp by its name as known lit with its boxes\' emission as they glowed, the furniture by its key with its parts where they stood; with the row off, or the fog off, the file has no key',
+      `the picture before the save: ${say(before)} · the file: doors ${JSON.stringify(fg?.doors)} · lamps ${fg?.lamps?.length ?? 0} ('${l?.[0]}', as it glowed: ${rows}) · things ${fg?.things?.length ?? 0} (at the old pose: ${poses}) · those alone: ${only} · row off → no key: ${off} · fog off → none: ${noFog}`);
+  }
+  { // the load
+    load(file);
+    const again = JSON.stringify(save().fog) === JSON.stringify(fg);   // (before any frame: a save straight after the load says what the file said)
+    R.step(2); const first = picture(); const r = F.thingRecs.get(key(pi)), rec = !!r && Math.abs(r.x - recWas.x) + Math.abs(r.z - recWas.z) + Math.abs(r.ox - recWas.ox) + Math.abs(r.oz - recWas.oz) < 1e-9;
+    R.step(60); const later = picture();   // (… and past the opening half second, in which everything else is taken as it stands)
+    const kept = JSON.stringify(save().fog) === JSON.stringify(fg), lists = doors === game.doors.list && targets === game.targets && props === game.props.all;
+    verdict(same && lists && again && all(first) && rec && all(later) && kept, 'loaded (the restart under it forgets all the fog knew): a save before the first frame says what the file said; the picture two frames in and a second later holds the three as before the save, the furniture\'s record with the middle and the long side it had (where "is the team looking at it" is asked), and a save then files them the same',
+      `save(load) ≡ the file's fog: ${again} · two frames in: ${say(first)} · its record's middle and side as before: ${rec} · a second later: ${say(later)} · saved again the same: ${kept}`);
+  }
+  { // an eye has them
+    const d = doors[di], t = targets[ti];
+    const ds = F.doorSeen, ts = F.thingSeen, ss = FW.spotSeen; F.doorSeen = (x: any, a: number) => x === d || ds.call(FW, x, a); F.thingSeen = () => true; FW.spotSeen = (x: number, z: number) => (Math.abs(x - t.pos[0]) < 1e-6 && Math.abs(z - t.pos[2]) < 1e-6) || ss.call(FW, x, z);
+    R.step(4); const seen = plain(); F.doorSeen = ds; F.thingSeen = ts; FW.spotSeen = ss; R.step(2); const stays = plain(), none = nothing();
+    verdict(all(seen) && all(stays) && none, 'the frame an eye has each, it is as it stands, like any record the fog made itself; then nothing is held and a save\'s slice is empty', `seen: ${say(seen)} · after: ${say(stays)} · nothing to file: ${none}`);
+  }
+  { // a look at the remembered place inside the opening half second: gone, and not back
+    load(file); R.step(1); const p = props[pi], r0 = F.thingRecs.get(key(pi)), ts = F.thingSeen; const there = atHome(pi, home);
+    F.thingSeen = (x: number, z: number, ...rest: number[]) => (!!r0 && Math.abs(x - r0.x) < 1e-6 && Math.abs(z - r0.z) < 1e-6) || ts.call(FW, x, z, ...rest);
+    let back = 0, live = 0; for (let k = 0; k < 4; k++) R.step(1); F.thingSeen = ts; for (let k = 0; k < 24; k++) { R.step(1); if (ghostOf(p).length) back++; if (liveIn(p)) live++; }
+    const sv = save().fog, outRow = sv?.out?.includes(key(pi)) === true && !sv?.things; R.step(40); const after = ghostOf(p).length === 0 && !liveIn(p);
+    verdict(there && back === 0 && live === 0 && outRow && after, 'loaded again, and the team looks at the place the picture has the furniture inside the opening half second: it is not there, the picture drops it, and it does not come back for the rest of the half second nor is it drawn where it really stands unseen; a save then files it as left out; a second later still nothing',
+      `the remembered furniture one frame in: ${there} · after the look, of 24 frames: remembered again ${back}, drawn where it stands ${live} · filed as left out: ${outRow} (${JSON.stringify(sv?.out)}) · a second later nothing: ${after}`);
+  }
+  { // furniture the picture leaves out, and furniture a blast took
+    fresh(); const [a, b] = unseen, hb = homeOf(b); const ts = F.thingSeen;
+    shove(a); R.step(2); const ra = F.thingRecs.get(key(a)); F.thingSeen = (x: number, z: number, ...rest: number[]) => (!!ra && Math.abs(x - ra.x) < 1e-6 && Math.abs(z - ra.z) < 1e-6) || ts.call(FW, x, z, ...rest); R.step(4); F.thingSeen = ts;   // (the team has looked at the place it left: it is simply not there)
+    game.props.remove(props[b]); R.step(4);   // (…and one a blast took, unseen: the picture has it where it stood)
+    const outBefore = ghostOf(props[a]).length === 0 && !liveIn(props[a]), goneBefore = atHome(b, hb);
+    const f2 = save(), rowOut = f2.fog?.out?.length === 1 && f2.fog.out[0] === key(a), rowGone = f2.fog?.things?.length === 1 && f2.fog.things[0][0] === key(b);
+    load(f2); const again = JSON.stringify(save().fog) === JSON.stringify(f2.fog); let ok = true; for (let k = 0; k < 70; k++) { R.step(1); ok &&= ghostOf(props[a]).length === 0 && !liveIn(props[a]) && atHome(b, hb); }
+    const kept = JSON.stringify(save().fog) === JSON.stringify(f2.fog), isGone = !(game.props.props as any[]).includes(props[b]);
+    F.thingSeen = () => true; R.step(4); F.thingSeen = ts; const seenA = liveIn(props[a]) && ghostOf(props[a]).length === 0, seenB = ghostOf(props[b]).length === 0 && !liveIn(props[b]);
+    verdict(outBefore && goneBefore && rowOut && rowGone && again && ok && kept && isGone && seenA && seenB,
+      'furniture shoved unseen whose old place the team then looked at (drawn nowhere), and furniture a blast took unseen (drawn where it stood): the file has the first as left out and the second with its poses; loaded, a save before the first frame says the same, every one of 70 frames has the first drawn nowhere and the second where it stood, and a save then says the same; seen, the first is where it stands and the second is gone',
+      `before the save: left out ${outBefore}, the taken one remembered ${goneBefore} · the file: out ${JSON.stringify(f2.fog?.out)} (${rowOut}), things ${f2.fog?.things?.length ?? 0} (${rowGone}) · save(load) the same: ${again} · 70 frames: ${ok} · saved again the same: ${kept} · still off the floor: ${isGone} · seen: the first live ${seenA}, the second gone ${seenB}`);
+  }
+  { // the fog off at the load; the row off; a file from before the slice; a file of another shape
+    fresh(); FW.on = false; SV.loadState(game, JSON.parse(JSON.stringify(file))); R.step(30); const empty = F.doorRecs.size === 0 && F.lampRecs.size === 0 && F.thingRecs.size === 0 && F.propsLoaded === false;
+    FW.on = true; R.step(3); const offFog = plain();
+    load(file); const made = F.doorRecs.size > 0 && F.thingRecs.size > 0 && F.propsLoaded === true; FW.on = false; R.step(2); const dropped = F.doorRecs.size === 0 && F.lampRecs.size === 0 && F.thingRecs.size === 0 && F.propsLoaded === false && F.loaded === false; FW.on = true; R.step(3); const offAfter = plain();   // (… put off after the load, before a frame: the off branch forgets the load's records)
+    load(file, false); R.step(3); const offLoad = plain();
+    const old = JSON.parse(JSON.stringify(file)); delete old.fog; load(old, true); R.step(3); const oldLoad = plain();
+    const bad = JSON.parse(JSON.stringify(file)); bad.fog = { doors: [['no such door', 1], [di, 0], null, [doorName], [doorName, 'x']], lamps: [['no such lamp', 1], 7, [lampName, 'x'], [lampName], [ti, 1]], things: [[5, [[1, 2, 3, 4]]], 'q', [key(pi), [[0, 0, 0, 0]].concat(home.map(() => [0, 0, 0, 0]))], [key(pi), home.map(() => [0, 0, 0])]], out: ['x', 5, null] };
+    let threw = ''; try { load(bad, true); R.step(3); } catch (e) { threw = (e as Error).message; } const badLoad = plain(), badDoors = F.doorsHeld as number, badFile = JSON.stringify(save().fog);
+    const wrong = JSON.parse(JSON.stringify(file)); wrong.fog = 'fog'; let threw2 = ''; try { load(wrong, true); R.step(3); } catch (e) { threw2 = (e as Error).message; } const wrongLoad = plain();
+    verdict(empty && all(offFog) && (brk || made) && dropped && all(offAfter) && all(offLoad) && all(oldLoad) && !threw && all(badLoad) && badDoors === 0 && badFile === '{}' && !threw2 && all(wrongLoad),
+      'the fog off at the load: no record is made, and the fog switched on later has everything as it stands; the fog put off straight after a load: its records are forgotten, and on again everything is as it stands; the row off at the load, or a file from before the slice: the same (the build as it was); a file whose rows are of another shape (a door or a lamp the level does not have, a word for a number, a lamp with no state or a word for one, furniture of another part count or pose length, a slice that is a word) loads without a throw, holds nothing, and a save after it has an empty slice',
+      `fog off at the load → no records: ${empty}, then on: ${say(offFog)} · off after the load: records made ${made}, forgotten ${dropped}, then on: ${say(offAfter)} · row off: ${say(offLoad)} · no key: ${say(oldLoad)} · bad rows: threw '${threw}', ${say(badLoad)}, doors held ${badDoors}, saved after: ${badFile} · a word for the slice: threw '${threw2}', ${say(wrongLoad)}`);
+  }
+  { // the half second after a load is not an opening one for the furniture
+    fresh(); const c = unseen[1], hc = homeOf(c), f3 = save(), emptySlice = JSON.stringify(f3.fog) === '{}';
+    load(f3); const whole = F.propsLoaded === true && (game.props.props as any[]).every(p => !p.boxes.length || F.thingRecs.has(thingKeyOf(p.boxes[0]))); R.step(5); shove(c);   // (a chair the team knows at rest, no row in the file, pushed unseen five frames after the load)
+    const at: boolean[] = []; let n = 5; for (const f of [6, 11, 25, 45, 105]) { R.step(f - n); n = f; at.push(atHome(c, hc)); }
+    // a row at the pose the furniture is poured at: at rest there, drawn where it stands
+    fresh(); const f4 = save(); f4.fog = { things: [[key(pi), props[pi].boxes.map((b: any) => [b.c[0], b.c[1], b.c[2], b.yaw])]] }; load(f4); R.step(1); const live1 = liveIn(props[pi]) && ghostOf(props[pi]).length === 0; R.step(40); const live41 = liveIn(props[pi]) && ghostOf(props[pi]).length === 0, clean = nothing();
+    // the furniture rule put off and on two frames after a load: its memory is dropped, and the half second it then opens takes the furniture as it stands
+    load(file); R.step(2); const held = atHome(pi, home); FOG.things = false; R.step(1); FOG.things = true; R.step(2); const again = liveIn(props[pi]) && ghostOf(props[pi]).length === 0 && F.propsLoaded === false;
+    // a restart two frames after a load: an opening half second like any
+    load(file); R.step(2); game.restartEncounter(); game.aiEnabled = false; const lowered = F.propsLoaded === false && F.loaded === false; R.step(3); const opened = FW.thingStats.out === 0 && FW.thingStats.held === 0 && all(plain());
+    verdict(emptySlice && whole && at.every(Boolean) && live1 && live41 && clean && held && again && lowered && opened,
+      'a save with the fog up and nothing held files an empty slice, and its load makes the furniture\'s memory whole (a record for every piece on the floor): a chair pushed unseen five frames later stays in the picture where the team knew it, at frames 6, 11, 25, 45 and 105, as it would have carried on (the opening half second would have drawn it moving, then dropped it); a row at the very pose a piece is poured at leaves it drawn where it stands and nothing to file; the furniture rule put off and on two frames after a load takes the furniture as it stands; a restart two frames after a load opens like any',
+      `an empty slice: ${emptySlice} · a record for every piece: ${whole} · the pushed chair remembered at 6/11/25/45/105: ${at.join(' ')} · a row at the live pose: drawn live ${live1}, a second on ${live41}, nothing filed ${clean} · rule off and on: held before ${held}, as it stands after ${again} · a restart: flags down ${lowered}, everything as it stands ${opened}`);
+  }
+  { // a body the team has seen stays in the picture for good — through a load too
+    fresh(); const { killGuard } = await import(`${ROOT}/src/game/combat.ts`); const G = () => game.guards as any[];
+    const gi = G().map((x, i) => i).filter(i => G()[i].state !== 'dead' && !FW.drawn(G()[i])).sort((a, b) => away(G()[b].char.pos[0], G()[b].char.pos[2]) - away(G()[a].char.pos[0], G()[a].char.pos[2]))[0];
+    const gd = () => G()[gi]; killGuard(game, gd(), [0, 0, 1], true, 'choked'); R.step(3); const unseen0 = !FW.drawn(gd());   // (dead where nobody looks: not in the picture)
+    const f0 = save(), noRow = f0.fog?.bodies === undefined;
+    const r = F.recs.get(gd()); if (r) r.body = true; R.step(2); const known = FW.drawn(gd());   // (the team has seen him lying there: the record's own word, set by hand — no eye is walked over)
+    const f5 = save(), rowIn = JSON.stringify(f5.fog?.bodies) === JSON.stringify([gi]);
+    load(f5); const dead = gd().state === 'dead', again = JSON.stringify(save().fog?.bodies) === JSON.stringify([gi]); R.step(2); const first = FW.drawn(gd()); R.step(60); const later = FW.drawn(gd());
+    load(f0); R.step(3); const still = !FW.drawn(gd());   // (the file from before the team saw him: not in the picture after its load either)
+    const f6 = JSON.parse(JSON.stringify(f5)); f6.fog.bodies = [999, 'x', G().findIndex((x, i) => i !== gi && x.state !== 'dead')]; let threw = ''; try { load(f6, true); R.step(2); } catch (e) { threw = (e as Error).message; } const livingNot = !G().some(x => x.state !== 'dead' && F.recs.get(x)?.body);
+    verdict(gi !== undefined && unseen0 && noRow && known && rowIn && dead && again && first && later && still && !threw && livingNot,
+      'a man dead where nobody looks is not in the picture and has no row; once the team has seen him lying there the file names him by his place on the roster; loaded, he is dead, a save before the first frame names him again, and he is in the picture two frames in and a second later; the file from before he was seen leaves him out after its load; a row that names nobody, a word, or a living man makes no body',
+      `guard ${gi}: dead unseen → drawn ${!unseen0}, a row ${!noRow} · seen lying → drawn ${known}, the file's bodies ${JSON.stringify(f5.fog?.bodies)} · loaded: dead ${dead}, saved again the same ${again}, drawn at 2 frames ${first}, a second on ${later} · the earlier file: left out ${still} · bad rows: threw '${threw}', no living man a body ${livingNot}`);
+  }
+  { // the address, the journal, the stands
+    const g = globalThis as any, had = 'location' in g, was = g.location;
+    const at = (search: string, from: boolean) => { FOG.filed = from; g.location = { search }; fogFlags(); return FOG.filed; };
+    const zero = at('?fogfiled=0', true), bare = at('?fogfiled', false), one = at('?fogfiled=1', false), none = at('', true), noneOff = at('', false);
+    if (had) g.location = was; else delete g.location;
+    const JR = await import(`${ROOT}/src/game/journal.ts`), PR = await import(`${ROOT}/src/host/profile.ts`), { STAND_ENV } = await import(`${ROOT}/src/host/standEnv.ts`);
+    FOG.filed = true; const snap = JSON.parse(JSON.stringify(JR.knobsSnapshot(game))), old = JSON.parse(JSON.stringify(snap)); const had2 = snap.tables.FOG?.filed === true;
+    FOG.filed = false; JR.applyKnobs(game, snap); const rides = FOG.filed; delete old.tables.FOG.filed; FOG.filed = true; JR.applyKnobs(game, old); const beforeKey = FOG.filed; FOG.filed = true;
+    const fsrc = await import('node:fs'), fsrcText = fsrc.readFileSync(`${ROOT}/src/game/fogofwar.ts`, 'utf8'), pageRows = /const FOG_PAGE = \{([^}]*)\}/.exec(fsrcText)?.[1] ?? 'filed', page = !/filed/.test(pageRows), moduleOn = /\n  filed: true,\n/.test(fsrcText);   // (the replay page's look has no row for it: it is not the picture alone)
+    const shipped = process.env.TPS_PROFILE === 'shipped', word = process.env.TPS_FOGFILED === '1';
+    verdict(zero === false && bare === true && one === true && none === true && noneOff === false && moduleOn && had2 && rides === true && beforeKey === false && page && (STAND_ENV as string[]).includes('TPS_FOGFILED') && PR.FROZEN_HOLDS['FOG.filed'] === 'TPS_FOGFILED=1' && stood === (shipped || word),
+      'the switch: on in the module, ?fogfiled=0 puts it off and a bare or =1 word on, no word leaves it; it rides a recording\'s tables and a recording from before the key replays with it off; it is no row of the replay page\'s fog look (it is not the picture alone); a row of the two stands\' list with its word; up on the shipped stand, down on the frozen one unless its word raises it',
+      `?fogfiled=0 → ${zero} · bare → ${bare} · =1 → ${one} · no word → ${none} / ${noneOff} · the module's on: ${moduleOn} · rides the tables ${had2}, applied ${rides}, before the key ${beforeKey} · the page look without it: ${page} · ${shipped ? 'shipped' : 'frozen'} stand${word ? ' with its word' : ''}: stood up ${stood}`);
+  }
+  Object.assign(FOG, FOG_DEFAULTS);
+  return done();
+}
+
 // ================================================================================================== fog-things
 /** what the handed-over list did since the last call: the keyed loose things (not leaves, kit, devices, staging boxes) whose pose in the PICTURE's list changed
  *  this frame while the floor under them is not in the team's sight — the leak rule 4d closes. One watcher per game; call it once a frame after the step. */
