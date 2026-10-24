@@ -1397,7 +1397,7 @@ function destructionWeatherFlagsAndHooks(engine: Engine, game: Game) {
     // … and its lying snow's look (render/snowField.ts SNOW_SURF): change a number, then relook()
     get look() { return SNOW_SURF; }, get field() { return game.snowField?.stats ?? null; }, relook: () => { engine.gbuffer.setSnowCfg(snowCfgRows(game.snowField, game.snowTracks ? TRACK_RES : 0)); },
     // … and the prints boots press into it (game/snowTracks.ts): the numbers (they reach the next print), the counts
-    get tracks() { return SNOWTRACKS; }, get trackStats() { const T = game.snowTracks; return T ? { prints: T.prints, hollows: T.hollows, craters: T.craters, w: T.w, h: T.h } : null; } };
+    get tracks() { return SNOWTRACKS; }, get trackStats() { const T = game.snowTracks; return T ? { prints: T.prints, hollows: T.hollows, craters: T.craters, w: T.w, h: T.h, unseen: T.kept, found: T.found, lost: T.lost } : null; } };
   Object.defineProperties((window as any).__snow, { grains: { get: () => snowMod.SNOWGRAINS }, grainStats: { get: () => snowMod.grainStats(game) } });   // … and the fine grains that ride the air near the view (game/snowFx.ts): the numbers live
   Object.defineProperty((window as any).__snow, 'oneAir', { get: () => snowMod.oneAirActive(game) });   // … is the snow one snow in one air this frame (SNOW_LOOK.oneAir, with a field to read)
   Object.defineProperties((window as any).__snow, { blast: { get: () => snowBlastMod.SNOWBLAST }, blastStats: { get: () => snowBlastMod.snowBlastStats(game) }, blastAt: { value: (x: number, z: number, radius = 2.5, y = 0.2) => snowBlastMod.snowBlastAt(game, [x, y, z], radius) } });   // … and what a blast does to it (game/snowBlast.ts): the numbers live; blastAt marks the snow as a blast there would, with no blast

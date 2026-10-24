@@ -987,12 +987,63 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the load, the fog put off straight after one, the row off, a file from before the slice, a file of another shape (no throw, nothing held,
   nothing filed after); an empty slice and its load (a record for every piece; a chair pushed unseen five frames on remembered at frames 6 to
   105; a row at the live pose; the furniture rule off and on, and a restart, two frames after a load); a body seen lying, named in the file and
-  in the picture after its load, a body never seen left out, bad rows; the address, the journal, the page look without it, the stands. NOT HELD: (a) never loaded in a page, on any adapter: headless alone, one level, one seed; (b)
+  in the picture after its load, a body never seen left out, bad rows; the address, the journal, the page look without it, the stands. NOT HELD: (a) loaded in a page once, on the software adapter (the solo night: a door, a lamp and a box held before the save, in the file and held after the load; no console or GPU error), never on a GPU; headless otherwise, one level, one seed; (b)
   no run was replayed across a load with the slice in its file (the `replay` and `journal` gates pass, and none of their tapes holds a door or a
   chair in the fog at its save); (c) a lamp's name is taken as unique, as the targets' slice takes it; (d) WHAT A LOAD STILL TELLS: the
   pieces of a thing broken unseen (a lamp's glass, rubble) and items get the opening half second after a load, so they are drawn as they stand
   while the lamp they came off is still remembered lit; (e) the slice is handed back only while the fog is up at the load: a lesson's rails that
   raise the fog a tick after a put-back (`rails.ts`, the sky seat's level alone today) get everything as it stands. **Never seen on a GPU.**
+- **A man nobody sees leaves his tracks in the snow (`FOG.tracks`, 10-24; principle 3: everyone else is where your team last saw them, and what
+  they changed is found when the team looks).** The maintainer: "I won't see tracks forming in fog of war, right? but if an enemy off screen makes
+  tracks and then I see snow, I'll see the tracks?" Before, a man the fog hides pressed NOTHING (`snowTracks.ts`: nothing live shows in the fog),
+  so a patrol left no trail at all unless watched. Now what he would press is worked out the frame he presses it and KEPT OFF THE MAP, by the
+  half-metre square it is in (`SnowTracks.unseen`, a map of squares; the mark's own numbers: a print, a messy print or a lying man's hollow;
+  six a square, the oldest going, and 6000 in all, the square next in the look giving up its oldest; both counted in `lost`). Every mark of a
+  square is asked for at ONE point, where the square's first mark was made (`UnseenSquare.x/z`: a place a boot stood; the square's middle can
+  be inside a wall), so they are seen or not together. A kept mark is laid when the team SEES ITS SQUARE AFTER HAVING HAD IT OUT OF SIGHT (`Unseen.dark`): a print
+  made on snow the team is looking at (its man behind smoke, which the ground's question does not ask about, or low behind a crate) stays kept
+  for as long as they look, or each step would show as he takes it; they look away and back and the trail is there. A first cut laid it the
+  frame it was made: the review caught it, and a played run showed it (a mark "found" mid-fight on the shipped stand). A HOLLOW on watched
+  snow waits instead (nothing kept, `pressOf`): kept, it would lie unlaid under the body the fog then shows; it is pressed in the open the
+  frame he is shown, or kept once they look away, and never made if he is up again before either (a sight line a tick for each such man,
+  beside the look's). THE LOOK, once a TICK (`findUnseen`), from the head of the map, each square asked going to its tail:
+  `FogOfWar.groundLook` (`spotSeen`'s own walk, which now runs through it, off the things' tally) says 0 = in no eye's field, out of sight
+  for little (with no cone, off Hard, every square is in one), 1 = in a field and not seen, 2 = seen; at most 64 squares a tick cost a sight
+  line (3 µs each with five eyes, measured headless) and about 16 marks are laid a tick (a messy print is a tenth of a millisecond to
+  press, the same as one made in sight: 128 in one update was 20 ms; a slow page runs up to four ticks a frame). So a long trail found at
+  once comes in over a few frames (300 prints in a third of a second), in about the order walked, and with thousands of squares kept a
+  square is asked every half second or so. A mark is laid WHOLE: the same bytes as the mark pressed in sight and settled, with no forming
+  and no snow kicked up. The FOG off with marks still kept lays them at the same pace (the map is the world's then); the ROW put off with
+  marks kept drops them unlaid (off is a hidden man pressing nothing). Hidden marks are counted in `prints`
+  / `hollows` when made. PICTURE ONLY: the map is read by the snow's shading alone; nothing in the game reads `unseen`. But NO row of the
+  replay page's fog look (`FOG_PAGE`): a tape carries the row by its journal. Kept marks are not in a file checkpoint (the prints texture
+  never was) and go at a restart (`clearSnowTracks`). The page's `__snow.trackStats` has `unseen`, `found`, `lost`. SWITCH: on in the module
+  and the page; `?fogtracks=0` = a hidden man presses nothing, as it was; the debugger's fog page has the row; frozen stand off,
+  `TPS_FOGTRACKS=1` (`FROZEN_HOLDS['FOG.tracks']`); the journal carries it (a recording without the key replays with it off). CHECK:
+  `probes.ts fog-tracks` (`tools/qa/fogtracks-check.ts`, families `fog` and `snow`; 6 lines; `FOGTRACKS_BREAK=1` puts the row off where the
+  lines ask for it and reds five), both stands, on the pass. Stand-in men with a stub fog: a man down on snow, hidden, with marks forming
+  and kicking as on the page (1 kept, 0 texels on the map, no kick; seen: there that frame, 0 forming, 0 kicks, 0 of the map's bytes other
+  than the same man's hollow in sight, 872 texels; row off: nothing pressed, nothing kept); WATCHED snow (a standing man's two prints kept,
+  not dark, not laid through 90 frames; a frame out of sight then seen: laid; a body: nothing kept, shown: pressed with its kick; or looked
+  away from: kept, and found on the look back); 300 men down, a square each (backs turned: 0 lines, 0 laid; in field unseen: 64 lines a
+  tick and all 300 squares asked in five; seen: 16 then 32; the fog off: 16 a tick, all 300 in 17; eight men in one place: 6 kept, 2
+  lost, and the row put off drops them unlaid; six men in each of 1001 places: 6000 kept, 6 lost). THE GAME'S OWN FOG, the squad staged: ground a stride before Sam in a field and seen, the things' tally left
+  alone; a hollow kept on open snow 31 m off stays kept through 30 of the game's own frames; Sam put a stride from it, the game's own frame
+  lays it. PLAYED (marks forming, as on the page): the squad of four sent at a man the fog hides, 30 s, seeds 3 and 4, with the row and without:
+  the same 60 digests and the same dice on both stands; marks kept with the row (frozen 5 and 7, shipped 0 and 4) and none without. The address, the journal, the page look without it,
+  the stands. The older `snowtracks` line `fog` has a stand-in with no fog up: it holds the rule with the row off. NOT COVERED: furrows and
+  dents of things nobody sees (`snowMarks.ts`) are never pressed and never caught up, and a blast's crater is pressed at once, as before; a
+  kept mark does not age (snow that fell on a trail since is not on it when found); a square is asked at ONE point, its first mark's, so a
+  mark shows when that is seen (up to 70 cm from its own middle; a hollow is filed by the point between its hips and head and shows whole); a
+  found trail's marks dirty more rectangles than the texture's hand-over takes singly (24), so each tick of a find uploads their bounding
+  rectangle, up to the whole map (never timed); at the cap every snapshot walks some 18,000 more nodes (never timed); a
+  body's hollow can be laid a moment before the fog shows the body (the body's own rule asks more than the ground's); a print made on
+  watched snow has no trail behind the man when he walks out into view, until the team looks away. THE PAGE, driven on the software adapter (the pass, four men, Hard, `?paused&quality=low`; 119 of 119 pipelines, no console or GPU
+  error either way): the eight defenders stood on snow no eye has leave 8 marks kept and none on the map; the cone put off and Sam put beside
+  one, 6 are found within six ticks (2 still out of sight); with `?fogtracks=0` the same drive keeps none and presses none. NOT SEEN:
+  anything on a GPU, so not the found prints as a picture; a found trail in a played run (in the four headless runs no kept mark was FOUND:
+  the fight ended before the team looked at that snow again, so finding rests on the stand-in lines, the one staged look and the page
+  drive); the cost on the maintainer's machine (the pace's numbers are this box's).
 - **A held man drops his gun** (`HOLD.dropGun`, the table in `src/game/character.ts`; the rule is `player.ts startGrab`; ON in the page, `?nogundrop` puts it
   off; OFF in the module and on the frozen stand, `TPS_HOLDDROP=1`; a `FROZEN_HOLDS` row; a recording from before the key replays with it off). The maintainer,
   10-15, of a rifleman in his arm with the rifle up in his fist: "held enemies should drop their gun". As the arm goes round, the weapon in his hand (rifle or

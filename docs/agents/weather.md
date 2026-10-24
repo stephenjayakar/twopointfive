@@ -398,7 +398,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     his pace: an absolute speed alone read a slow crouch's swinging foot as down and its trail was a smear); it presses a sole (a capsule heel → toe, the heel `heel`
     of the ball's width) where the field holds snow (`cover` ≥ 0.5: none under a roof, none on swept earth), once every `apart`. A man who is down (dead, or his hips
     under `bodyLow` over where he stands) presses the hollow of his trunk and legs once he has lain `rest` s with his hips slower than `restV` — where he comes to
-    rest, not where he fell through. A guard or a civilian the fog of war hides presses nothing while hidden (nothing live shows in the fog); civilians not on the
+    rest, not where he fell through. A guard or a civilian the fog of war hides puts nothing on the map while hidden (nothing live shows in the fog): with `FOG.tracks` his
+    marks are kept off it and laid whole when the team next sees that snow after having had it out of sight (`docs/agents/stealth.md`), with it off he presses nothing; civilians not on the
     floor press nothing. The byte is a signed distance about the outline (255 inside, 128 on it, 0 half a `skirt` out): the shader reads its inner half as the
     print's wall and its outer half as the rim of pushed-up snow, slopes the lying snow's normal by it, breaks the pressed floor and the rim into clods (rough, no
     glints), and paints the floor darker and bluer. Deeper where a drift's skirt stands, shallower on trodden and old snow.
