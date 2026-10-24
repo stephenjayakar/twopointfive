@@ -45,7 +45,7 @@ export const FIRE_SHIMMER = 0.019, FIRE_PLUME = 1, FIRE_EMBERS = 60;
 /** … and the lamp's and the look's newer numbers as the page opens: FIRE.bright, .warm, .reach, .lift (`?firebright=0` = 1, no tint, 1 and 0.25: the level's lamp as
  *  it was hung), FIRE.wander / .wanderUp (`?firesway=0` = the 6 and 4 cm they were), FIRE.look.react (`?firereact=0`) and FIRE.look.lean (`?firelean=0` = the 0.07 it was) */
 export const FIRE_BRIGHT = 1.25, FIRE_REACH = 1.4, FIRE_LIFT = 0.5, FIRE_LIFT_WAS = 0.25, FIRE_WARM: readonly number[] = [1, 0.72, 0.51], FIRE_WANDER = 0.14, FIRE_WANDER_UP = 0.1, FIRE_WANDER_WAS = 0.06, FIRE_WANDER_UP_WAS = 0.04,
-  FIRE_REACT = 1, FIRE_LEAN = 0.2, FIRE_LEAN_WAS = 0.07;
+  FIRE_REACT = 1, FIRE_LEAN = 0.2, FIRE_LEAN_WAS = 0.07, FIRE_STEPS = 40;
 export const FIRE = {
   on: false,
   /** a level light whose name starts with one of these is an open fire */
@@ -109,7 +109,11 @@ export const FIRE = {
      *  "feels very static", "way too dark" — three looks, one cause, and the software adapter's stills, a frame at a time with no history, never showed it). The
      *  composite marks a fire's pixels and the resolve takes them from this frame by this much. `lean` = how far the wind leans the flame: metres at one flame
      *  height for each m/s (it was 0.07: "would also expect the fire to be affected by the wind, looks like only the smoke is"; `?firelean=0` = 0.07) */
-    react: FIRE_REACT, lean: FIRE_LEAN },
+    react: FIRE_REACT, lean: FIRE_LEAN,
+    /** HOW MANY SAMPLES OF THE FLAME A PIXEL'S RAY TAKES (4‥64; `?firesteps=N`, the lab's row): the flame's price is this × the pixels it covers, and a flame
+     *  this thin (sigma 2.5) never goes opaque, so no ray stops early. 40 is the count the maintainer's own numbers were tuned at; fewer is cheaper and bands
+     *  sooner. A lever for a timing on a real GPU: nobody has timed the flame, and the count's price is a model. */
+    steps: FIRE_STEPS },
   /** THE SMOKE (the solver's units: 6 /m of extinction a unit of density, +1.6 m/s² a unit of heat): how high over the coals the source's middle is as a share of the
    *  flame's height (its foot, a radius lower, stays over a standing man's head on a drum: tools/qa/fire-check.ts holds it), the source's radius (m) and its least width in cells, what it lets out a second, how hot, how fast it leaves, and how hard the air is dragged along;
    *  filed afresh every `every` s for that long; only for a fire within `viewR` m of what the view looks at; `on` false = a fire with no smoke (`?firesmoke=0`) */
@@ -221,7 +225,7 @@ function windAt(g: Game, mouth: Vec3): { wv: Vec3; wl: number; wind: [number, nu
   return { wv, wl, wind: [wv[0] * wk, wv[2] * wk] };
 }
 /** the look's numbers as the renderer takes them (fire.wgsl FireLook's sixteen, in its order) */
-function lookRow(): number[] { const L = FIRE.look; return [L.gain, L.core, L.sigma, L.speed, L.tall, L.torn, L.plume, L.shimmer, L.soot, L.breathe, FIRE.gas.ref, FIRE.gas.lo, L.react, L.lean, 0, 0]; }
+function lookRow(): number[] { const L = FIRE.look; return [L.gain, L.core, L.sigma, L.speed, L.tall, L.torn, L.plume, L.shimmer, L.soot, L.breathe, FIRE.gas.ref, FIRE.gas.lo, L.react, L.lean, L.steps, 0]; }
 /** whether a round or a blast leaves `t` burning: a fire, with the rule on (FIRE.hardy). To combat.ts's and destruction.ts's fixture rules such a fire is no
  *  fixture at all (a lamp behind one can still be shot, nothing is counted against the encounter's fixtures); its own box blown away still takes it (breakFixtureBox). */
 export function fireHolds(t: LightTarget): boolean { return FIRE.on && FIRE.hardy && isFire(t); }

@@ -26,6 +26,7 @@ const FLAME: Num[] = [
   { t: LOOK, key: 'plume', label: 'smoke off its tips', min: 0, max: 2, step: 0.05, tip: 'the smoke drawn straight over the flame, lit orange from below. 0 = none (the drifting smoke lower down is its own row)' },
   { t: LOOK, key: 'shimmer', label: 'heat shimmer, m', min: 0, max: 0.04, step: 0.001, tip: 'how far the hot air over the fire pushes the picture behind it aside. 0 = none' },
   { t: LOOK, key: 'react', label: 'how fresh each frame of it is', min: 0, max: 1, step: 0.05, tip: 'the picture is built up over the last ten frames or so, which turns a flame into a soft, dim shape that hardly moves. 1 = the flame is this frame\'s alone, 0 = averaged, as it was' },
+  { t: LOOK, key: 'steps', label: 'samples of the flame (its cost)', min: 4, max: 64, step: 1, tip: 'how many times each pixel looks into the flame. Fewer is cheaper on the GPU and shows bands sooner; 40 is the count the look was tuned at' },
   { t: LOOK, key: 'lean', label: 'how far the wind leans it', min: 0, max: 1, step: 0.01, tip: 'how far the flame lies over in the wind, with its smoke. 0 = it stands straight up in any wind' },
   { t: TOP, key: 'height', label: 'the flame\'s own height, m', min: 0.3, max: 1.6, step: 0.05, tip: 'the height the game gives the flame over the coals (its smoke and its light sit by this too)' },
 ];
