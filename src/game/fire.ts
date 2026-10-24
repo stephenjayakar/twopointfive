@@ -159,7 +159,7 @@ export interface FireStats { fires: number; lit: number; frames: number; cracks:
  *  smokes at once and not at the next second's mark, and one lit again asks for its bed at once; `smokes`, `beds` = how many this run. No rule reads any of
  *  it back. NOT KNOWN TO IT: whether the mixer still holds the bed — a page frozen past the mixer's own hold (audio.ts FOLLOW_SECS) resumes with no bed until
  *  the next `bedSecs` mark. */
-export interface FireShown { n: number; time: number; /** fires (by their own count, as `bed` and `gas` are) a round or a blast went into since the last frame: each throws embers once (FIRE.hardy), and when the last one was */ stir?: number[]; stirAt?: number; bed: number[]; smoke: number[]; smokes: number; beds: number; /** embers: what each fire still owes (a share of one), and how many were filed this run */ ember: number[]; embers: number; /** the gas: the frame each fire's source was last kept up, how far each has eased to its gas (0‥1), sources filed this run */ gas: number[]; gasMix: number[]; gases: number; /** what the solver was last told to keep (FIRE.gas.keep while a fire's flame is gas, else 0) */ kept?: number }
+export interface FireShown { n: number; time: number; /** fires (by their own count, as `bed` and `gas` are) a round or a blast went into since the last frame: each throws embers once (FIRE.hardy), and when each fire was last stirred (by the same count) */ stir?: number[]; stirAt?: number[]; bed: number[]; smoke: number[]; smokes: number; beds: number; /** embers: what each fire still owes (a share of one), and how many were filed this run */ ember: number[]; embers: number; /** the gas: the frame each fire's source was last kept up, how far each has eased to its gas (0‥1), sources filed this run */ gas: number[]; gasMix: number[]; gases: number; /** what the solver was last told to keep (FIRE.gas.keep while a fire's flame is gas, else 0) */ kept?: number }
 const states = new SideMap<Game, FireStats>('fire.states');
 const fresh = (): FireStats => ({ fires: 0, lit: 0, frames: 0, cracks: 0, lo: Infinity, hi: -Infinity, sum: 0, n: 0 });
 function stateOf(g: Game) { let s = states.get(g); if (!s) { s = fresh(); states.set(g, s); } return s; }
@@ -226,12 +226,23 @@ function lookRow(): number[] { const L = FIRE.look; return [L.gain, L.core, L.si
  *  fixture at all (a lamp behind one can still be shot, nothing is counted against the encounter's fixtures); its own box blown away still takes it (breakFixtureBox). */
 export function fireHolds(t: LightTarget): boolean { return FIRE.on && FIRE.hardy && isFire(t); }
 /** … and what the hit does to it instead: a crack now, and a throw of embers on the fire's next frame — the mixer and the host's book: nothing kept, nothing the
- *  game reads; one in `stirGap` s, however many rounds of a burst go into it */
+ *  game reads; one a fire in `stirGap` s, however many rounds of a burst go into it */
 export function fireStir(g: Game, t: LightTarget) {
-  const P = g.engine.hostBooks?.fire; if (!P || !burns(t) || g.time - (P.stirAt ?? -1e9) < FIRE.stirGap) return;
+  const P = g.engine.hostBooks?.fire; if (!P || !burns(t)) return;
   let ix = 0; for (const x of g.targets) { if (x === t) break; if (isFire(x)) ix++; }
-  P.stirAt = g.time; (P.stir ??= []).push(ix);
+  const at = (P.stirAt ??= []); if (g.time - (at[ix] ?? -1e9) < FIRE.stirGap) return;   // (each fire by its own clock: a grenade between two stirs both)
+  at[ix] = g.time; (P.stir ??= []).push(ix);
   g.audio.play('fireCrack', mouthOf(g, t).pos, FIRE.crack * heatOf(t), { rate: 0.7 });
+}
+/** OUT, BUT STILL LIT IN THE FOG'S PICTURE (the team has not seen it go out: RtLight.fogGhost, fogofwar.ts): the remembered pool stays a fire's — its steady
+ *  strength, its tint, its reach, its place in the flame and its size — and not the level's dimmer, paler, shorter lamp at the lid. The picture only: the lamp is
+ *  out, nobody reads it. Only under the fog's full picture with FIRE.fog on (that is what says a ghost); with either off the fog remembers the level's lamp. */
+function held(g: Game, t: LightTarget) {
+  const l = t.light!, K = FIRE;
+  if (!l.steady) l.steady = { intensity: 0, pos: [t.pos[0], t.pos[1], t.pos[2]], radius: l.radius, color: [l.color[0], l.color[1], l.color[2]], range: l.range };
+  const s = l.steady, c0 = s.color ?? l.color, w = K.warm;
+  s.intensity = Math.max(1e-4, t.baseIntensity * K.bright); l.radius = Math.max(s.radius, K.size * mouthOf(g, t).r); l.pos[0] = t.pos[0]; l.pos[1] = t.pos[1] + K.lift; l.pos[2] = t.pos[2];   // (in the body of the flame and as big as it, as it burned; no flicker, no wander)
+  l.color[0] = c0[0] * (w[0] ?? 1); l.color[1] = c0[1] * (w[1] ?? 1); l.color[2] = c0[2] * (w[2] ?? 1); l.range = (s.range ?? l.range) * K.reach;
 }
 /** the lamp back as the level hung it: where, and nothing said to the steady readers (its strength is updateTargets' own again the frame it paints) */
 function plain(t: LightTarget) { const l = t.light!; l.pos[0] = t.pos[0]; l.pos[1] = t.pos[1]; l.pos[2] = t.pos[2]; if (l.steady !== undefined) { l.radius = l.steady.radius; if (l.steady.range !== undefined) l.range = l.steady.range; const c0 = l.steady.color; if (c0) { l.color[0] = c0[0]; l.color[1] = c0[1]; l.color[2] = c0[2]; } l.steady = undefined; } }
@@ -245,7 +256,7 @@ export function updateFire(g: Game, dt: number) {
     return;
   }
   let any = false; for (const t of g.targets) if (isFire(t)) { any = true; break; }
-  if (!any) { if (E.fires?.length) E.fires = []; return; }   // (nothing of this file runs on a floor with no fire)
+  if (!any) { if (E.fires?.length) E.fires = []; const P0 = E.hostBooks?.fire; if (P0?.kept) { P0.kept = 0; g.smoke.keepHot?.(0); } return; }   // (nothing of this file runs on a floor with no fire)
   const T = stateOf(g), K = FIRE, time = g.time, was = time - Math.max(dt, 0);
   const moved = dt > 0; let P: FireShown | null = null;   // (the host's book, on a frame that moves the clock only)
   if (moved) { P = E.hostBooks?.fire ?? null; if (!P || was < P.time - 1e-9) P = (E.hostBooks ??= {}).fire = { n: 0, time: 0, bed: [], smoke: [], smokes: 0, beds: 0, ember: [], embers: 0, gas: [], gasMix: [], gases: 0 }; P.n++; P.time = time; }
@@ -256,12 +267,15 @@ export function updateFire(g: Game, dt: number) {
     if (!isFire(t)) continue;
     const ix = fires++;
     const l = t.light!, heat = heatOf(t);
-    if (!burns(t)) { plain(t); continue; }
+    if (!burns(t)) {   // (out: while the fog's picture has it lit it is held as a fire's lamp, and for the one frame before the fog has had its say)
+      const ghost = (l.fogGhost ?? 0) > 0, first = !!l.steady && !l.steady.out;
+      if (K.fog && (ghost || first)) { held(g, t); l.steady!.out = true; } else plain(t);
+      continue; }
     lit++;
     const seed = fireSeed(t), fl = fireFlicker(seed, time), M = mouthOf(g, t), si = Math.floor(seed * 65535);
     // the light: the authored lamp × the flicker, its place wandering with the flames; what a reader of the place's STEADY light takes it for is the authored lamp
     if (!l.steady) l.steady = { intensity: 0, pos: [t.pos[0], t.pos[1], t.pos[2]], radius: l.radius, color: [l.color[0], l.color[1], l.color[2]], range: l.range };
-    l.radius = Math.max(l.steady.radius, K.size * M.r);   // (as big as what burns, and never smaller than the level made it)
+    l.steady.out = false; l.radius = Math.max(l.steady.radius, K.size * M.r);   // (as big as what burns, and never smaller than the level made it)
     l.steady.intensity = t.baseIntensity * t.factor * K.bright;
     { const c0 = l.steady.color ?? l.color, w = K.warm; l.color[0] = c0[0] * (w[0] ?? 1); l.color[1] = c0[1] * (w[1] ?? 1); l.color[2] = c0[2] * (w[2] ?? 1); }
     l.range = (l.steady.range ?? l.range) * K.reach;

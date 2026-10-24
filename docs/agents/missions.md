@@ -387,7 +387,43 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     the hold's) until an order has moved it this run; the roadblock's rounds are aimed two times in three at the snow beside the files and the air over the
     trucks' tails (`AT_NEAR`), in longer strings with shorter gaps, so the men flinch (twelve flinches in 25 s on seed 1, nobody hit), and one of them shouts
     every six seconds or so. (2) SMOKE BEFORE ANYONE MOVES: the smoke's cue is on the step BEFORE the first order (`pan`), two cans from two men's hands, thrown
-    again every 27 s (a can burns about 32) until the order is given; the roadblock then fires blind at the smoke until the squad is through the gate. (3) 'WATCH
+    again every 27 s (a can burns about 32) until the order is given; the roadblock then fires blind at the smoke until the squad is through the gate. EVERY
+    CAN IS CALLED BY ITS THROWER (10-24; the maintainer, playing: "guys should announce that they're throwing out a smoke grenade" — one line had gone up, for
+    the first two cans only, on the tick they flew, with no sound and no arm moving): Red Two 'Throwing smoke!' (after the first: 'More smoke!'), Blue One
+    'Smoke out!' 0.45 s later, each can out of its man's hand 0.7 s after his own call, by the Director's `radio` (his bubble, at the view's edge with an
+    arrow when the view is off him; a row under his name on the HUD's radio strip; the net's click at his head) and `stimulus.charge … toss: true` (the
+    animator's quick toss; the frozen stand holds that move off and gives the old pointing chop). The roadblock's blind fire now starts BEFORE the volley
+    (after it, the road was silent for a second and a half with no smoke out yet). The cans pop 0.6 to 0.85 s later than they did; a volley every 27 s as
+    before. No switch: it is the level's script, as its other lines are. CHECK: `tut-sky-check` line 7 on both stands (each of four cans called at least a
+    third of a second ahead by its own thrower, in the bubble the page draws and on the strip, the arm on the shipped stand; `TUT_SKY_BREAK=1` takes the
+    lines off the men and is red) and `tut-page.cjs`'s line on the real page (before each can is in the air its thrower's bubble is drawn and his row is on
+    the strip). MEASURED: seed 1 on both stands; lesson-gate tut-sky 6 of 6 (the scripted player, 15 of 15 steps, and the 4 dice); the page played to the
+    'pan' step on the software adapter, one picture looked at. NOT DONE: the squad's other scripted lines here are still `say`s (a bubble alone, no row, no
+    sound); the click is at the caller's head, so it is faint with the view panned far off him; the caller's hand is still on the handset when the can
+    leaves it; at the sky seat's first zoom the men are about 25 pixels tall and the arm is not what tells you: the bubbles and the strip are. Nobody has
+    heard the click under the roadblock's fire. Never seen on a GPU. THE CALLS MOVED THE FIGHT OF SEED 1 AND TWO RIGS OF `rails-check` WITH IT (shipped stand;
+    the build before them 31 of 31): the cans leave 0.6 s later, so a squad ordered half a second after the cue runs before its smoke is out, and on that
+    seed it shot all three of the roadblock at their sandbags from the yard. The gate's line then stood 1.2 s on every arm (the arm that must be long too)
+    and on the last step the whole squad was still in that fight and nobody ran. Both rigs asked for a fight that went one way; they now stage what they
+    measure: the gate's rig keeps the roadblock's three out of rounds (`god`) until the gate's line is up (7.9 s with the direct walk, 99 s with the men
+    kept at their sandbags), the way out's rig puts those three down first (down by that step in play) and asks its run rule before the pace, because the
+    squad is at the trucks in under three seconds. One seed each, as before; what a player's own timing does to that fight nobody has measured. (2b) THE FLASHLIGHT MAN WHOSE MATE IS SHOT RUNS BACK IN (the `torches` beat, 10-24;
+    from a recorded play of the maintainer's, traced by the thread that owns the startle): the beat let its two go with `c.release(u, 'alert')` in the
+    yard, still `pinned` as the level stood them in their room and on no roster (the room fight never had them: the script has them from the first frame),
+    so the one left when his mate was shot stood alert behind the lorry for the rest of the mission (rerun here: 0.0 m in 36 s). Now a beat of its own,
+    `inside`, waits for one of the two to go down, whenever that is (on the way out, or later at the corner), and takes the other back under the script:
+    'Man down! I'm going back inside!', a run (3.4) to the mark he started on, let go 'alert' the moment he is on it (pinned there, as the men the `hold`
+    beat lets go in that room are), the door shut behind him — never on a squad that has come to it. With nobody down the two are let go at the corner as
+    they always were. The `hold` beat no longer lets go a man who is out in the yard (it let a runner go mid-run). TRIED AND DROPPED: (a) letting him go
+    un-pinned to search: he can walk to the breaker box, where a hand of their side puts the mains back, he re-opens the bunk door, and a roaming man
+    makes a cleared room 'held again'; (b) walking both back in after 7 s with nobody down: two men in a firefight nobody had died in yet would have
+    turned their backs on it. No switch: the level's script. CHECK: `tut-sky-check` line 8 on both stands (the rooms before the bunkhouse emptied, the
+    mate shot on the way: twelve seconds later the other is inside, let go, the door shut, the mains out; its break lets him go where he stands and is
+    red). MEASURED, seed 1, the squad still at the trucks: shot on the way, home and let go 3.6 s later; shot during the stay, home about 5 s later;
+    nobody shot, both stand at the corner as before. lesson-gate tut-sky 6 of 6. NOT DONE: with the squad already at the bunkhouse's door he is NOT
+    taken back (that room is a fight; he is then where the fault left him, and the beat's log says so); a run that takes more than 12 s lets him go where
+    he is (logged); the run was never watched with the squad in the yard (a man the script has does not fight: he is shot in the back or gets in); two
+    alive at the corner whom nobody ever shoots still stand there, pinned, for good. Never seen on a GPU. (3) 'WATCH
     IT' IS GONE: the gate's line is 'No order needed: they hold the gate', and Red One says so on the radio. (4) NO TEAMMATE'S LASER: `rails.lasers: false`
     (`Rails.noLasers`, one clause in `irlaser.ts laserOn`); the lasers anywhere else are untouched. (5) THE HOLD IS ITS OWN LINE. Step keys `noTap` (a tap of the
     command key gives no order while the step is up and these words come up under the line for 2.6 s, the line shaken once; only on a stand where the hold puts
@@ -1771,7 +1807,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   fault): a step that denies it shuts that click and nothing else, at the frame's gate (the left button is not given to the stalk) and at the
   stalk's own (`stalk.ts free`, `cornerGate`: so whatever else owns the button no stalk begins, and the row's "hold to sneak up" hint and the pose
   that tells are not shown for a click that would do nothing). The debugger's rails line says `stalk shut` while it is. A first mend that drew the rifle at the back door instead was dropped under
-  review (he could walk in without pressing the key and be stalked into the beam). What is left open: the grab's own row is still his close behind the man, and taking it holds the man and breaks the beam (the break path below): the room says no, not a dead key. That row's hint names the right button's knockout, which is shut until `sponge` (the frame does not edit a row's hint; he reads it only where he has already gone against the line). With
+  review (he could walk in without pressing the key and be stalked into the beam). IT IS THE CLICK THAT IS TAKEN, NOT THE GRAB (a review of the build that carried the word, mended on the next): the grab's own row is still his close behind the man, and taking it holds the man and breaks the beam (the break path below): the room says no, not a dead key. That grab is the stalk's own, the eased step in and all (`stalkKeyCan` asks `stalk.ts hands`, which leaves the shut out; through `free` it had lost the step in on exactly the lines that deny the click, a snap from 0.6 m to the hold). Where the held click was the ONE way to a man (`?stalkkey=0`, and any wall hold: `stalkClickOnly`) a step that takes the click gives the row back, so no line says "LMB hold to grab him" of a button the gate holds. And no line of a man's names the right button, or the hands' key, while the frame holds it (`close.ts closeRows` asks `rails.hushes`: the right button is `alt` and `menu`, the gate's own sum; the knockout and the choke are off the row's hint from `nook` to `sponge`, and with the rifle up there the row says the grab and no "sling it for the knockout"). THAT RULE IS EVERY TUTORIAL MISSION'S, NOT ONLY THE STORE'S: on this mission's own grab lines, before `drop` opens the right button, the row no longer names a knockout the button would not give, and the pair's mission the same wherever `alt` is shut. No switch (a row's words, and a grab that only a step denying `stalk` could change). NOT DONE: with `?noknife=0` the row can still name the left button's knife where `fire` is locked; with `?stalkkey=0`, or on a wall hold, the row that comes back grabs as the row always did, with no step in (the step in is the key's rule); a step's own line that names the held click is not rewritten by a step that denies it (`lesson.ts` asks `stalkClickOnly` with no game: no such line exists). With
   `alt` open the load's row is open too (the frame's rule), so from `sponge` he can swap back and fire the grenade: at 2.6 m it does not arm, and the
   man is staggered and alerted; no data of a level can shut that. NEVER STUCK: `sponge` also passes when the launcher has no sponge round left (`lesson.ts ringsOut`). CHECKS
   (2026-10-23, no GPU): `lesson-run tut-quiet` plays 24 of 24 on both stands (`TPS_RAILS=1` in front on the frozen one), seeds 1 to 4 on the shipped
@@ -1782,14 +1818,18 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   stands with the beam broken; `RAILS_BREAK=1` fails it at the held left click (the stalk walks him over a metre). `rails-check` has the word's own line (on the store's line
   the gate keeps the left button from him and leaves the interaction key, and `stalkCould` says no 1.6 m behind the man; a later `allow` gives
   both back; allowed and denied on one step is shut, as `allowed` folds the pair; no step naming it is the gate as it was; the word in a frame's
-  list is a fault), red under `RAILS_BREAK=1` on both stands.
+  list is a fault; and 0.6 m behind him on that line, by the key and by the click alone, a row grabs and no line names a mouse button, the click is
+  not the one way on a wall, the same place with the click his reads "LMB hold to grab him" with no row, the rifle up on `load`'s line reads the
+  grab and no key to put it away, and the key pressed takes him with the place he came from kept), red under `RAILS_BREAK=1` on both stands and red
+  on the build before the mend (run against that tree: the right button named three times, "sling it for the knockout", the click alone the one
+  way, the step in lost).
   `lesson-check` and `rails-check` on both stands, `lesson-gate tut-quiet`, `level-needs tut-quiet --run` on both, `issue-check`, `issuewhole`,
   `kit-audit`, `writing-check`, the `pouches` family, `handring-check` and `smokebreak-check` on both stands, `solofog`, `attentionway`, `radiohome`:
   green. `lesson-check`'s kit lines that staged this mission as "a lesson that issues no kit of its own" now stage `tut-sky` (the comment there says
   which rows issue or pack; no tutorial mission played alone is left without a card, so `standRow`'s `kitSolo` line is not walked). `lived-check`'s row
   for this level is moved to the commit that carries this. ON THE REAL PAGE: `tools/qa/tut-quiet-page.cjs` (headless Chromium, the software adapter,
   real keys and real mouse buttons; staged to the store and stood on each spot, not walked) reads the lines and their key caps, the card, the kit
-  strip before and after the swap ("HE ×1" to "SPONGE ×5"), both locks from the doorway's line, the shot from the mark and the hands' key. `levelData.ts` refuses a `loaded` the card carries none of. NOBODY HAS SEEN OR PLAYED
+  strip before and after the swap ("HE ×1" to "SPONGE ×5"), both locks from the doorway's line, the row right behind the man there ("Space grab him" and no mouse button named), the shot from the mark and the hands' key. `levelData.ts` refuses a `loaded` the card carries none of. NOBODY HAS SEEN OR PLAYED
   IT ON A GPU. The maintainer's to judge: the shot is taken from the doorway's light and not from the dark; whether the beam reads as "right behind
   him" from the store; whether a first-time player fires the one grenade once the right button opens (he cannot before the swap; after it he can swap
   back); the card's words; five sponge rounds.

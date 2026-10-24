@@ -762,7 +762,7 @@ export class FogOfWar {
       if (this.lampKnown(t, lit) === lit) continue;
       S.held++;
       if (lit) { if (t.light) t.light.fog = 1; if (t.areaLights) for (const al of t.areaLights) al.light.fog = 1; }
-      else if (!(t.mains && down)) { S.ghosts++; if (t.light) t.light.fogGhost = t.baseIntensity; if (t.areaLights) for (const al of t.areaLights) al.light.fogGhost = al.base * es; }
+      else if (!(t.mains && down)) { S.ghosts++; if (t.light) t.light.fogGhost = t.light.steady?.intensity ?? t.baseIntensity; if (t.areaLights) for (const al of t.areaLights) al.light.fogGhost = al.base * es; }   // (a fire put out unseen is remembered at a fire's strength, as a burning one is below: game/fire.ts `held`)
     }
     for (const l of L.lights) if (L.fogClass(l) === 1) S.hidden++;
     return true;

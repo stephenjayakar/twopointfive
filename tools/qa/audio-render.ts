@@ -45,9 +45,9 @@ const SPEC: Record<string, { dur: [number, number]; note: string }> = {
   shove: { dur: [0.35, 0.5], note: 'cloth burst + foot scuff' },
   murmur: { dur: [0.2, 0.32], note: "Sam's question: three quiet breathy syllables, ~250 ms" },
   heldProtest: { dur: [0.7, 0.9], note: 'muffled syllables, starting 0.3 s in' },
-  grabCatch: { dur: [0.26, 0.34], note: 'the grab, beat one: a whip of sleeve, ONE thump (100–500 Hz), a breath cut off' },
-  gunStrip: { dur: [0.17, 0.25], note: 'beat two, 0.22 s on: a dry snap, a rattle, one small click; bright (also at rate 0.8)' },
-  gunDown: { dur: [0.26, 0.34], note: 'beat three, 0.8 s on: one dull knock on the floor and a short settle (also at rate 0.8)' },
+  grabCatch: { dur: [0.26, 0.34], note: 'the grab, beat one (his pick): the forearm dragged over his collar, a soft bump, his breath pinched off' },
+  gunStrip: { dur: [0.13, 0.2], note: 'beat two, 0.25 s on (his pick): one snap and one click, nothing between them (also at rate 0.8)' },
+  gunDown: { dur: [0.26, 0.34], note: 'beat three, 0.70 s on: one dull knock on the floor and a short settle (also at rate 0.8)' },
 };
 const NEW = Object.keys(SPEC);   // (the hold's seven, and the grab's three beats)
 const REFS = ['bodyHit', 'bodyFall', 'propScrape', 'footSoft', 'doorLatch', 'radio'];
@@ -137,13 +137,14 @@ for (const n of names) {
   if (s.dur - s.onset < 0.2) fails.push('grabScuffle: less than 200 ms of sound');
   if (l.low + l.mid < 0.4) fails.push(`chokeLimp: ${((l.low + l.mid) * 100).toFixed(0)} % under 2 kHz (want breath AND body in it)`);
   void sh;
-  // the grab's three beats: low thump, bright snap, dull knock — the catch over the scuffle it stands in for and under the whip, the knock landing once
+  // the grab's three beats AS THE MAINTAINER PICKED THEM BY EAR (10-24; the lines below hold his picks' character, where they held the first takes'): cloth
+  // and a soft bump, a snap and a click, a dull knock — the catch about as loud as the scuffle it stands in for and under the whip, the knock landing once
   const gc = M.grabCatch, gs = M.gunStrip, gd = M.gunDown;
-  if (!(lvl('grabCatch') > lvl('grabScuffle') && lvl('grabCatch') < lvl('whipThud'))) fails.push(`grabCatch in-game ${db(lvl('grabCatch')).toFixed(1)} dB is not between the scuffle's ${db(lvl('grabScuffle')).toFixed(1)} and the whip's ${db(lvl('whipThud')).toFixed(1)}`);
+  if (!(Math.abs(db(lvl('grabCatch')) - db(lvl('grabScuffle'))) <= 4 && lvl('grabCatch') < lvl('whipThud'))) fails.push(`grabCatch in-game ${db(lvl('grabCatch')).toFixed(1)} dB is not within 4 dB of the scuffle's ${db(lvl('grabScuffle')).toFixed(1)} and under the whip's ${db(lvl('whipThud')).toFixed(1)}`);
   if (!(lvl('gunStrip') < lvl('grabCatch') && lvl('gunDown') < lvl('grabCatch'))) fails.push('the strip or the gun let down is louder in-game than the catch');
-  if (gc.centroid > 900 || gc.high > 0.15) fails.push(`grabCatch: centroid ${gc.centroid.toFixed(0)} Hz, ${(gc.high * 100).toFixed(0)} % above 2 kHz (want a low thump)`);
+  if (gc.high < 0.3 || gc.mid < 0.2 || gc.centroid > 4000 || gc.low < 0.04) fails.push(`grabCatch: centroid ${gc.centroid.toFixed(0)} Hz, ${(gc.low * 100).toFixed(0)} % low, ${(gc.mid * 100).toFixed(0)} % in the middle and ${(gc.high * 100).toFixed(0)} % above 2 kHz (want more sleeve than thump, with the bump still under it: 4 % or more in the low band)`);
   if (gc.winAt > 0.04 || gd.winAt > 0.02) fails.push(`the catch's loudest 50 ms starts at ${gc.winAt.toFixed(2)} s and the knock's at ${gd.winAt.toFixed(2)} s (want each on its beat: at the buffer's start)`);
-  if (gs.centroid < 2 * gc.centroid || gs.centroid < 2 * gd.centroid || gs.low > 0.1) fails.push(`gunStrip centroid ${gs.centroid.toFixed(0)} Hz against the catch's ${gc.centroid.toFixed(0)} and the knock's ${gd.centroid.toFixed(0)} (want the bright beat between two dull ones)`);
+  if (gs.centroid < 2 * gd.centroid || gs.low > 0.1 || gs.mid < 0.6) fails.push(`gunStrip centroid ${gs.centroid.toFixed(0)} Hz against the knock's ${gd.centroid.toFixed(0)}, ${(gs.mid * 100).toFixed(0)} % in the middle (want a dry snap, harder than the knock that follows it and with no weight under it)`);
   if (gd.centroid > 1200 || gd.high > 0.15) fails.push(`gunDown: centroid ${gd.centroid.toFixed(0)} Hz, ${(gd.high * 100).toFixed(0)} % above 2 kHz (want a dull knock, not a clatter)`);
 }
 // the choke's continuity: grains every 0.4 s at the game's gain, overlap-added; short-time RMS (20 ms) between the first grain's rise and the last one's start

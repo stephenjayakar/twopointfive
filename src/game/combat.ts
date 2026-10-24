@@ -270,7 +270,8 @@ function fireWeaponRaw(g: Game, shooter: Character, target: Vec3, isPlayer: bool
       }
       if (got) { AIMCOST_STATS.lampHits++; shootOut(got); }
     } else for (const t of g.targets) {
-      if (t.broken || !t.interactive || t.factor <= 0 && !t.on && !lampGlass(t) || fireHolds(t)) continue;   // scenery (rack LEDs / glow strips) cannot be shot out, nor a fire (FIRE.hardy)
+      if (t.broken || !t.interactive || t.factor <= 0 && !t.on && !lampGlass(t)) continue;   // scenery (rack LEDs / glow strips) cannot be shot out
+      if (fireHolds(t)) { if (st && Math.abs(tHit - st.t) < 1e-6 && t.boxes.includes(st.index)) fireStir(g, t); continue; }   // (fire.ts FIRE.hardy: nor a fire — a round that stopped in its drum stirs it, the rule of the search above, and this one goes on to a lamp behind it)
       const slack = t.kind === 'breaker' ? 0.08 : 0.3; let dist = -1;
       if (!pen) {
         const toT = v3.sub(t.pos, muzzle); const depth = v3.dot(toT, flown);

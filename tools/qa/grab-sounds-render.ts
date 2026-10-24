@@ -2,15 +2,15 @@
 // outside the game and for judging where nobody can listen. No browser: the table renders into plain Float32Arrays (audio/backend.ts sfxContext), a rate is a
 // linear resample (what a buffer source's playbackRate does), a mix is a sum at the game's gains with no room on it (no distance, no reverb, no occlusion).
 //   bun run tools/qa/grab-sounds-render.ts [outDir] [--shape]
-//     outDir   48 kHz mono 16-bit WAVs written there: each take alone at its game gain (catch|strip|down-game|new1|new2.wav), grab-old.wav (what the grab was:
+//     outDir   48 kHz mono 16-bit WAVs written there: each take alone at its game gain (catch|strip|down-game|new1|new2.wav; a take he picked is the `game` file and has none of its own), grab-old.wav (what the grab was:
 //              the scuffle, the knocked-out pistol's borrowed magazine drop, his muffled protest), grab-new-pistol.wav and grab-new-carbine.wav (catch at 0, strip
-//              at 0.22 s, the protest at 0.47, the gun down at 0.82, as tools/qa/grabvoice-check.ts measures them; the carbine = strip and down at rate 0.8)
+//              at 0.25 s, the protest at 0.47, the gun down at 0.70, read off the listening page's row, which grabvoice-check.ts ties to the game; the carbine = strip and down at rate 0.8)
 //     --shape  each take's envelope too, 10 ms a column (dB under its own peak, a digit per 6 dB: 0 = within 6 dB of the peak, 9 = 54 dB under or more)
 //   exit 0 = every take rendered finite, unclipped and no mix went over full scale; 1 otherwise
 import { resolve } from 'node:path';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { gameSfx } from '../../src/audio/audio';
-import { altSay, altTake, altTakes } from '../../src/audio/sfxAlt';
+import { altPicked, altSay, altTake, altTakes } from '../../src/audio/sfxAlt';
 import { sfxContext, type SfxBuffer } from '../../src/audio/backend';
 import { heard, loudest } from '../../src/audio/synth';
 import { SOUNDS } from '../../src/sounds/catalog';
@@ -74,7 +74,8 @@ console.log(`=== the grab's voices at ${SR} Hz: each take as rendered (its file 
 console.log('take          length   peak    RMS (dB)   loudest 50 ms (dB)  heard   centroid   under 500 Hz  100-500 Hz  over 2 kHz  loudest at   × gain → peak in the game');
 for (const [short, row] of [['catch', GRAB.catch], ['strip', GRAB.strip], ['down', GRAB.down]] as const) {
   const takes: [string, Float32Array | null, string][] = [['game', table[row.name] ? data(table[row.name]) : null, "the game's own"]];
-  for (let k = 0; k < altTakes(row.name); k++) { const b = altTake(ctx, row.name, k); takes.push([`new${k + 1}`, b ? data(b) : null, altSay(row.name, k)]); }
+  for (let k = 0; k < altTakes(row.name); k++) { if (altPicked(row.name, k)) continue;   // (a take he picked is the game's own row now)
+    const b = altTake(ctx, row.name, k); takes.push([`new${k + 1}`, b ? data(b) : null, altSay(row.name, k)]); }
   for (const [take, x, say] of takes) {
     if (!x) { console.log(`${short}-${take}: NOT RENDERED`); bad++; continue; }
     const r = read(x); if (!r.fin || r.pk > 1 || r.pk < 0.05) bad++;
