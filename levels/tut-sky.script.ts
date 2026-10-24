@@ -30,6 +30,8 @@ const ZONES: Zone[] = [
 const PINNED: [string, string][] = [['Blue Two', 'Taking fire! Stay down!'], ['Red Two', 'Rounds coming past the trucks!'], ['Blue One', 'We can not stay here!']];
 /** where the squad's two smokes land (between the trucks and the roadblock) · seconds before more goes out while no order has come (a can burns about 32) */
 const SMOKES: Vec3[] = [[15.6, 0, 22.4], [17.8, 0, 24.2]], SMOKE_AGAIN = 27;
+/** what each thrower calls, the first cans and the cans after them · seconds from a man's call to his can leaving his hand · seconds from one man's call to the next man's */
+const SMOKE_CALLS = [['Throwing smoke!', 'Smoke out!'], ['More smoke!', 'Smoke out!']], SMOKE_CALLED = 0.7, SMOKE_APART = 0.45;
 /** …and once the smoke is out: into it, and the south lane behind it (the squad's lane is the wall's) */
 const AT_SMOKE: Vec3[] = [[15.4, 0.9, 23.6], [14.0, 0.6, 24.6], [12.4, 1.0, 24.4], [16.8, 1.1, 24.9], [9.6, 0.9, 24.6]];
 const SQUAD = ['Red One', 'Red Two', 'Blue One', 'Blue Two'];
@@ -130,15 +132,23 @@ const script: LevelScriptFn = D => {
     // THE SMOKE, THEN THE BREAK: the squad's own smoke goes out while the player is still looking down the road (the step before the first order), so the
     // line that asks for the move comes up with it standing, and the move is made behind it (more goes out while no order comes). The roadblock fires blind
     // into the smoke — and, the squad gone through the gate, comes on for it, as men would: that fight is the game's own
+    // EVERY CAN IS CALLED BY THE MAN WHO THROWS IT, a beat before it leaves his hand, and he is seen to throw it (the maintainer, playing: "guys should
+    // announce that they're throwing out a smoke grenade" — one line went up before this, for the first two cans alone, on the tick they flew and the tick
+    // the step's new line came up, with no sound and no arm moved; the cans that went out later came with no word). The call is the man's bubble (at the
+    // view's edge with an arrow his way when the view has been panned off him), a row on the radio strip and the net's click (at his head: faint with the
+    // view panned far off him). His hand is on the handset when the can leaves it. A volley once begun is finished: an order given inside it finds both cans out
     P.beat('smoke', function* (c) {
       if (c.flag.smoke) return; c.flag.smoke = true;
-      const smoke = () => { const men = squad(c), by = [c.unit('Red Two') ?? men[0], c.unit('Blue One') ?? men[1] ?? men[0]];
-        SMOKES.forEach((at, i) => { const u = by[i]; if (u && c.query.alive(u)) c.stimulus.charge(at, { by: u, kind: 'smoke', fuse: 0.8 + i * 0.2 }); }); };
+      const smoke = function* (again: boolean) {
+        const men = squad(c), by = [c.unit('Red Two') ?? men[0], c.unit('Blue One') ?? men[1] ?? men[0]];
+        const call = (i: number) => { const u = by[i]; if (u && c.query.alive(u)) c.radio(u.callsign, SMOKE_CALLS[again ? 1 : 0][i]); };   // (c.radio, not c.say: his bubble, the net's click at his head and a row under his name on the HUD's radio strip — the squad's `say` lines are a bubble alone, and one of those was missed)
+        const toss = (i: number) => { const u = by[i]; if (u && c.query.alive(u)) c.stimulus.charge(SMOKES[i], { by: u, kind: 'smoke', fuse: 0.8, toss: true }); };
+        call(0); yield c.wait(SMOKE_APART); call(1); yield c.wait(SMOKE_CALLED - SMOKE_APART); toss(0); yield c.wait(SMOKE_APART); toss(1);
+      };
       c.start('ordered');   // (before the wait: an order given in it is still the one that breaks them out)
-      yield c.wait(0.5);
-      { const by = c.unit('Red Two') ?? squad(c)[0]; if (by) c.say(by, 'Smoke out!', { radio: true }); }
-      smoke(); c.start('blind');
-      while (!c.flag.broke) { yield c.any(c.wait(SMOKE_AGAIN), c.until(() => c.flag.broke === true)); if (!c.flag.broke) smoke(); }
+      yield c.wait(0.4);
+      c.start('blind'); yield* smoke(false);   // (the roadblock's fire goes on through the call and the throw: started after them it left the road silent for a second and a half before any smoke was out)
+      while (!c.flag.broke) { yield c.any(c.wait(SMOKE_AGAIN - SMOKE_CALLED - SMOKE_APART), c.until(() => c.flag.broke === true)); if (!c.flag.broke) yield* smoke(true); }
     });
     P.beat('break', function* (c) {
       if (!c.flag.smoke) c.start('smoke');

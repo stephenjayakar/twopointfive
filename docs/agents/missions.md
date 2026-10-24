@@ -387,7 +387,21 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     the hold's) until an order has moved it this run; the roadblock's rounds are aimed two times in three at the snow beside the files and the air over the
     trucks' tails (`AT_NEAR`), in longer strings with shorter gaps, so the men flinch (twelve flinches in 25 s on seed 1, nobody hit), and one of them shouts
     every six seconds or so. (2) SMOKE BEFORE ANYONE MOVES: the smoke's cue is on the step BEFORE the first order (`pan`), two cans from two men's hands, thrown
-    again every 27 s (a can burns about 32) until the order is given; the roadblock then fires blind at the smoke until the squad is through the gate. (3) 'WATCH
+    again every 27 s (a can burns about 32) until the order is given; the roadblock then fires blind at the smoke until the squad is through the gate. EVERY
+    CAN IS CALLED BY ITS THROWER (10-24; the maintainer, playing: "guys should announce that they're throwing out a smoke grenade" — one line had gone up, for
+    the first two cans only, on the tick they flew, with no sound and no arm moving): Red Two 'Throwing smoke!' (after the first: 'More smoke!'), Blue One
+    'Smoke out!' 0.45 s later, each can out of its man's hand 0.7 s after his own call, by the Director's `radio` (his bubble, at the view's edge with an
+    arrow when the view is off him; a row under his name on the HUD's radio strip; the net's click at his head) and `stimulus.charge … toss: true` (the
+    animator's quick toss; the frozen stand holds that move off and gives the old pointing chop). The roadblock's blind fire now starts BEFORE the volley
+    (after it, the road was silent for a second and a half with no smoke out yet). The cans pop 0.6 to 0.85 s later than they did; a volley every 27 s as
+    before. No switch: it is the level's script, as its other lines are. CHECK: `tut-sky-check` line 7 on both stands (each of four cans called at least a
+    third of a second ahead by its own thrower, in the bubble the page draws and on the strip, the arm on the shipped stand; `TUT_SKY_BREAK=1` takes the
+    lines off the men and is red) and `tut-page.cjs`'s line on the real page (before each can is in the air its thrower's bubble is drawn and his row is on
+    the strip). MEASURED: seed 1 on both stands; lesson-gate tut-sky 6 of 6 (the scripted player, 15 of 15 steps, and the 4 dice); the page played to the
+    'pan' step on the software adapter, one picture looked at. NOT DONE: the squad's other scripted lines here are still `say`s (a bubble alone, no row, no
+    sound); the click is at the caller's head, so it is faint with the view panned far off him; the caller's hand is still on the handset when the can
+    leaves it; at the sky seat's first zoom the men are about 25 pixels tall and the arm is not what tells you: the bubbles and the strip are. Nobody has
+    heard the click under the roadblock's fire. Never seen on a GPU. (3) 'WATCH
     IT' IS GONE: the gate's line is 'No order needed: they hold the gate', and Red One says so on the radio. (4) NO TEAMMATE'S LASER: `rails.lasers: false`
     (`Rails.noLasers`, one clause in `irlaser.ts laserOn`); the lasers anywhere else are untouched. (5) THE HOLD IS ITS OWN LINE. Step keys `noTap` (a tap of the
     command key gives no order while the step is up and these words come up under the line for 2.6 s, the line shaken once; only on a stand where the hold puts

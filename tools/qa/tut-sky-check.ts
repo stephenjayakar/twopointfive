@@ -10,8 +10,15 @@
 //   5. NO POCKETS: every free cell of the walk grid can be walked to from the yard (a man posted on a cut-off cell can be given no further order).
 //   6. THE SQUAD'S OWN BLAST IS IN THE PICTURE: on the step that blows the wall charge, the wall's face is floor the picture shows live (the mission has no
 //      fog of war; were it on, an eye of the fog's must have that floor). Twice played with the blast unseen before this line.
+//   7. EVERY SMOKE CAN IS CALLED: on the cue that puts the squad's smoke out, and again when more goes out, each can's thrower has a line on the net with
+//      'smoke' in it up over him from at least a third of a second before the can leaves his hand and a row under his name on the HUD's radio strip, his arm
+//      throws it (where the stand has the toss: the frozen one holds that move off), and each of the two throwers calls his own
+//      (the maintainer, playing: "guys should announce that they're throwing out a smoke grenade").
 //   bun run tools/qa/tut-sky-check.ts          and again with TPS_PROFILE=shipped in front (the stand the page opens on)
-//   TUT_SKY_BREAK=1 …   the mains are never put out and the fog of war is put on as the mission had it: lines 4 and 6 must be RED
+//   TUT_SKY_BREAK=1 …   the mains are never put out, the fog of war is put on as the mission had it and the squad's lines are taken off the men as they are said: lines 4 and 7 must be RED
+//                       (LINE 6's BREAK NO LONGER BITES, and did not on the build before line 7 was written: the fog is put on, but the 'blow' step has since been
+//                        given a lookout of its own (`eye`) that has the wall's face, so the line stays green under it. Not mended: taking the lookouts away
+//                        as well read 'fog of war off'. On the frame's book)
 // EXIT: 0 = every line holds · 1 = a fault, each a line.
 // Headless: no GPU. Nothing here saw a picture: whether the red light reads in the snow is the page's to show.
 import { readFileSync } from 'node:fs';
@@ -83,6 +90,33 @@ const L = JSON.parse(readFileSync(resolve(ROOT, 'levels/tut-sky.json'), 'utf8'))
     why || `beacons lit ${before} → ${after} of ${n} · mains fixtures lit ${mainsWere} → ${mainsLit} · other lamps still burning ${othersLit}`);
   line(!why && cut.length === 0, 'no free cell of the walk grid is cut off from the yard', why || (cut.length ? `${cut.length} cut off: ${cut.slice(0, 8).join(' ')}` : 'none'));
   line(!why && wallSeen, 'on the step that blows the wall charge the wall\'s face is in the live picture', why || `fog of war ${fogOn ? `on, ${eyes} eyes` : 'off'} · the wall's face ${wallSeen ? 'shown live' : 'HIDDEN'}`);
+}
+// 7 ---- every smoke can is called by the man who throws it
+{ const { standUp } = await import('./headless');
+  const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
+  const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
+  const log = console.log, warn = console.warn, err = console.error;
+  const { MOVES } = await import(`${ROOT}/src/game/character.ts`);
+  const { stripRows } = await import(`${ROOT}/src/game/cues.ts`);
+  let why = '', arms = false; const cans: { t: number; who: string; said: string; lead: number; arm: boolean; drawn: boolean }[] = [];
+  try { console.log = console.warn = console.error = () => { };
+    const W: any = await standUp({ level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels/tut-sky.json'), 'utf8'))), seed: 1 }), g = W.game;
+    const r = startFromQuery(g, '?levelFile=tut-sky.json&roomclear=1&squad4'); why = r.why ?? '';
+    for (let i = 0; i < 30; i++) W.step(1 / 60);
+    g.director.signal('lesson:ambush'); for (let i = 0; i < 240; i++) W.step(1 / 60);
+    const seen = new Set<number>(); arms = MOVES.on > 0.5 && MOVES.toss > 0.5;   // (the toss is a move of the page's stand: held off on the frozen one, where the arm is not asked)
+    const frame = () => { W.step(1 / 60);
+      if (BROKEN) for (const gd of g.guards) if (gd.unit && gd.bubble && /smoke/i.test(gd.bubble.text)) gd.bubble = null;
+      for (const it of g.items.items) { if (it.kind !== 'smoke' || seen.has(it.serial)) continue; seen.add(it.serial);
+        const gd = g.guards.find((x: any) => x.char.id === it.who), b = gd?.bubble, up = !!b && g.time - b.t < b.dur && /smoke/i.test(b.text) && !!b.radio;
+        cans.push({ t: g.time, who: gd?.callsign ?? '?', said: up ? b.text : '', lead: up ? g.time - b.t : 0, arm: !!gd?.char.anim.tossing, drawn: up && g.cues.bubbleOf(gd) === b && stripRows(g).some((r: any) => r.text.includes(gd.callsign) && r.text.includes(b.text)) }); } };   // (bubbleOf: the line the page draws over him; stripRows: the HUD's radio strip)
+    g.director.signal('lesson:smoke'); for (let i = 0; i < 180; i++) frame();
+    const first = cans.length; for (let i = 0; i < 60 * 30 && cans.length < first + 2; i++) frame();
+  } catch (x) { why = String((x as Error).message); } finally { console.log = log; console.warn = warn; console.error = err; }
+  const bad = cans.filter(c => !c.said || c.lead < 0.33 || (arms && !c.arm) || !c.drawn), who = new Set(cans.map(c => c.who));
+  line(!why && cans.length >= 4 && bad.length === 0 && who.size >= 2,
+    'every smoke can, the first two and the two that go out after them, is called on the net by its thrower before it leaves his hand, and his arm throws it',
+    why || (cans.length ? cans.map(c => `${c.who} ${c.said ? `"${c.said}" ${c.lead.toFixed(2)} s before` : 'SAID NOTHING'}${c.arm ? '' : arms ? ' (NO ARM THROWS IT)' : ' (the toss is held off on this stand)'}${c.said && !c.drawn ? ' (NOT DRAWN: another line is over him, or no row under his name on the radio strip)' : ''}`).join(' · ') : 'no can went out'));
 }
 console.log(faults.length ? `=== tut-sky-check: FAIL (${faults.length}) ===\n${faults.map(f => '  ' + f).join('\n')}` : '=== tut-sky-check: ALL PASS ===');
 process.exit(faults.length ? 1 : 0);
