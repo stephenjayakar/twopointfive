@@ -486,6 +486,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   }
   // the stalk (stalk.ts): the left button held on a man he is close behind walks him in to the grab — the direction, the pace and the facing are the game's; a
   // move key of his own ends it (STALK.orbit: takes him round the man instead)
+  input.dragOff = STALK.on && STALK.drag;   // (input.ts: the cursor followed off the view while the stick is held — only then)
   const stalk = STALK.on ? stalkStep(g, input.lmb(), input.lmbHit(), mx !== 0 || mz !== 0, STALK.drag ? { x: input.mouseX, y: input.mouseY, fwd, right } : undefined, STALK.orbit ? { mx, mz, dt } : undefined) : null;   // (STALK.drag: the mouse is a stick from where the press was made; STALK.orbit: his keys take him round the man)
   if (stalk) { mx = stalk.mx; mz = stalk.mz; pl.crouch = true; }
   if (g.puppet) {   // scripted movement: straight at the goal (the tour picks goals with a clear line), stop within 10 cm
