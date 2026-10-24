@@ -105,7 +105,7 @@ export interface EmitOpts { shape?: EmitShape; speed: number; spread?: number; l
   /** SPARK only: an EMBER off an open fire (game/fire.ts) — a spark filed with this (0‥1, under 1: × its light) rides the hot air up and goes with the wind where a
    *  spark flies and falls, and cools slowly through orange to a red that dies. It rides the colour word's top byte like `steam` (shaders: `emberIs`); left out = a spark as it always was */
   ember?: number; }
-interface EmitRec { kind: PKind; pos: Vec3; dir: Vec3; count: number; o: EmitOpts; seed: number; /** frames this record has waited in the queue past the one it was queued for (the birth cap) */ waited: number; }
+interface EmitRec { kind: PKind; pos: Vec3; dir: Vec3; count: number; o: EmitOpts; seed: number; /** filed while Particles.ours was up */ ours?: boolean; /** frames this record has waited in the queue past the one it was queued for (the birth cap) */ waited: number; }
 /** One impulse's numbers (particles_common.wgsl ImpulseRec; game/sheetModel.ts is the reference of what it does): `up` = upward share added to the radial push (default 0),
  *  `bias` = a direction folded in with its weight as its length (default none), `kinds` = which kinds respond (default every kind but sparks), `occlude` + `eye` = gate
  *  each particle further than half a metre by one any-hit ray from `eye` (default the impulse's position) — a wall between a charge and the litter behind it stops it. */
@@ -346,6 +346,9 @@ export class Particles {
   }
 
   // ------------------------------------------------------------------ emit API (game code; deterministic — the seed counts off this object's own serial)
+  /** WHAT IS FILED NOW IS THE TEAM'S OWN DOING (game/fogofwar.ts FOG.ours, set round an effect by FogOfWar.begin / done): the record's bit 18 → PB_OURS on each
+   *  particle born of it, which the draw does not cut over floor the fog of war hides (particles_draw.wgsl). Never read by the simulation */
+  ours = false;
   /** Queue `count` particles of `kind` at `pos` about `dir` with the numbers in `o` for the next frame (or a later one, if the frame's birth cap is spent). Returns how many
    *  were accepted: `count` (clamped to MAX_NEW_PER_FRAME, the excess counted in droppedBirths), or 0 when the queue is full of records that may not be shed. */
   emit(kind: PKind, pos: Vec3, dir: Vec3, count: number, o: EmitOpts): number {
@@ -362,7 +365,7 @@ export class Particles {
       if (si >= 0) { this.stats.droppedBirths += this.queue[si].count; this.shedSparks += this.queue[si].count; this.queue.splice(si, 1); }
       else { this.stats.droppedRecs++; return 0; }
     }
-    this.queue.push({ kind, pos: [pos[0], pos[1], pos[2]], dir: [dir[0], dir[1], dir[2]], count, o, seed: (o.seed ?? hashU32(this.serial++ * 2654435761)) >>> 0, waited: 0 });
+    this.queue.push({ kind, pos: [pos[0], pos[1], pos[2]], dir: [dir[0], dir[1], dir[2]], count, o, seed: (o.seed ?? hashU32(this.serial++ * 2654435761)) >>> 0, waited: 0, ours: this.ours });
     return count;
   }
   /** Queue an IMPULSE for the next frame: every live particle of `o.kinds` (default all but sparks) within `radius` of `pos` gets Δv = strength × its kind's gain ×
@@ -454,7 +457,7 @@ export class Particles {
       const va = o.vadd ?? [0, 0, 0]; f[b + 12] = va[0]; f[b + 13] = va[1]; f[b + 14] = va[2]; u[b + 15] = SHAPE_ID[o.shape ?? 'cone'];
       f[b + 16] = o.spread ?? 0.5; f[b + 17] = o.life; f[b + 18] = o.size; f[b + 19] = o.speedJit ?? 0.55;
       f[b + 20] = o.lifeJit ?? 0.35; f[b + 21] = o.lift ?? 0; f[b + 22] = o.sizeJit ?? 0.3; f[b + 23] = o.posJit ?? 0;
-      u[b + 24] = ((shardAsChip ? KIND_ID.debris : KIND_ID[e.kind]) | (((o.owner ?? 0) & 255) << 8) | (ring << 16)) >>> 0; u[b + 25] = e.seed >>> 0; u[b + 26] = base >>> 0; u[b + 27] = rgba8(o.color ?? [0.5, 0.5, 0.5]);
+      u[b + 24] = ((shardAsChip ? KIND_ID.debris : KIND_ID[e.kind]) | (((o.owner ?? 0) & 255) << 8) | (ring << 16) | (e.ours ? 1 << 18 : 0)) >>> 0; u[b + 25] = e.seed >>> 0; u[b + 26] = base >>> 0; u[b + 27] = rgba8(o.color ?? [0.5, 0.5, 0.5]);
       if (e.kind === 'spark' && o.ember !== undefined) u[b + 27] = ((u[b + 27] & 0xffffff) | (Math.round(Math.min(1, Math.max(0, o.ember)) * 254) << 24)) >>> 0;   // (EMBER: the same byte on a spark — EmitOpts.ember)
       if (e.kind === 'dust' && o.steam !== undefined) u[b + 27] = ((u[b + 27] & 0xffffff) | (Math.round(Math.min(1, Math.max(0, o.steam)) * 254) << 24)) >>> 0;   // (STEAM: the top byte under 255 — EmitOpts.steam)
       born += e.count; n++; this.stats.emitted += e.count; this.rateAcc += e.count;

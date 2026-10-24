@@ -57,6 +57,9 @@ export interface SmokeSystemLike {
   push(p: SmokePush): void;
   /** true if p lies inside one of the loose bounds round the smoke there is (a cheap 'could there be smoke here': a yes can be clear air) */
   inSmokeDomain(p: Vec3): boolean;
+  /** gas on the fine lattice hotter than `heat` is not let go while this stands (0 = none kept, as the solver was built: sparse.fineKeep) — a fire whose flame is
+   *  heat on that lattice asks for it (game/fire.ts FIRE.gas) and puts it back */
+  keepHot?(heat: number): void;
   /** how many more emitters would still be packed for the solver this step (an effect sizing its spark-trail count charges against this) */
   budget?(): number;
   /** is smoke handed over now stepped AND drawn (a solver switched off or frozen, or its rendering switched off, is not; absent = no: the harness's null one)? What a

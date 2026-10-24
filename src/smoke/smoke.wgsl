@@ -29,7 +29,7 @@ struct SP {
   viewX: f32, viewZ: f32, viewR: f32, viewBias: f32,              // where the camera looks (floor plan) and how far round it counts as seen: past viewR, rising to full at 2 viewR, the pool's ceiling comes sooner and harder (farOf); bias 0 = one ceiling for all
   calmCells: f32, farCells: f32, calmMax: u32, dtCap: f32,        // WHO STEPS (buildList): cells a brick's fastest air may cross between two of its steps, in sight / out of sight; the longest wait in frames (1 = every brick every frame, 2, 4); the most time one step integrates
   scaleCan: f32, scaleFx: f32, fineDecay: f32, fineShare: f32,    // the render density × of canister smoke / of everything else (publish) · THE FINE LATTICE LETS GO below
-  fineEps: f32, fineHeat: f32, fineRing: u32, spad3: f32,
+  fineEps: f32, fineHeat: f32, fineRing: u32, fineKeep: f32,     // … and fineKeep: gas hotter than this on the fine lattice is not let go (0 = none kept, as first built)
   levels: array<Level, 2>,
   dirty: array<vec4f, 16>,                                        // ≤ 8 boxes (lo, hi) whose obstacles changed since the last step
   windBound: array<vec4f, 8>,                                     // per wind source: bounding sphere (w < 0 = the storm: everywhere)
@@ -115,6 +115,8 @@ fn ringOf(l: u32, st: f32) -> i32 {
 // it shows: 1.7 s of automatic fire held 2,663 of 4,096 bricks for 3 % of the smoke in the air, and still held them 3 s later. In the boxes a fine domain was a 1.4 m cube whose faces ate what left it. Here:
 //   · density under the thin bar fades fineDecay/s faster on this lattice, always, and the heat in those cells with it (heat alone would hold a brick for seconds after its gas has gone): the crisp gas by the
 //     muzzle is untouched, what has spread to a haze is gone in a second or two;
+//   · … BUT NOT WHILE IT IS HOT (sp.fineKeep > 0; 0 = no such rule, as first built): a cell hotter than fineKeep is not thin, whatever its density, and from half of it up
+//     it is let go by degrees — so a flame (game/fire.ts FIRE.gas: heat with next to no smoke in it) keeps its lift for as long as its own cooling takes, then goes at once;
 //   · its floors are higher (fineEps, fineHeat: what is stored as nothing) and it keeps less air round the gas (fineRing cells): two bricks in three were clear air round thin wisps;
 //   · it has a share of the pool, counted by buildList, so a step late: fineShare of CAP, or whatever the coarse lattice leaves under the soft ceiling's foot (softLo) if that is more. From 0.7 of it new
 //     bricks are refused to the thinnest gas first, at all of it to everything but a source: the gas then meets an open face and fades there, as at a box's.
@@ -740,7 +742,8 @@ fn injectDecay(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) 
     var v = unpack2x16float(S[S_DEN1 + i]);
     var kd = vec4f(0.0); if (kinds) { kd = unpack4x8unorm(V[V_CURL + i].x); }
     // (the pool's soft ceiling: as it fills, THIN smoke goes faster — the body of a plume is untouched, its faint skirts give their bricks back)
-    let faint = 1.0 - smoothstep(0.0, thin, v.x);
+    var faint = 1.0 - smoothstep(0.0, thin, v.x);
+    if (k.l == 1u && sp.fineKeep > 0.0) { faint *= 1.0 - smoothstep(0.5 * sp.fineKeep, sp.fineKeep, v.y); }   // (hot gas on the fine lattice is not let go: THE FINE LATTICE LETS GO)
     v.x *= exp(-(sp.densDecay + extra * faint) * k.dt);
     v.y *= exp(-(sp.tempDecay + cool * faint) * k.dt);
     let Pw = worldP(k, c); var fed = false;
@@ -835,8 +838,9 @@ fn publish(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) l
     let r = cellRef(k, vec3i(c.x, select(c.y, max(c.y, 0), k.b.y == 0), c.z));   // (under the lattice's bottom row: that row again, as aboveFloor samples it)
     var o = vec4f(0.0);
     if (r.x != 0u) {
-      let at = (r.x - 1u) * 512u + r.y; let d = unpack2x16float(S[S_DEN0 + at]).x;
+      let at = (r.x - 1u) * 512u + r.y; let dt2 = unpack2x16float(S[S_DEN0 + at]); let d = dt2.x;
       if (kinds) { let kd = unpack4x8unorm(S[S_KIND + at]); o.x = d * mix(sp.scaleCan, sp.scaleFx, kd.x); o = vec4f(o.x, o.x * kd.yzw); } else { o.x = d * plain; }
+      if (k.l == 1u) { o.w = dt2.y; }   // (a FINE brick's last channel is its HEAT, as the solver has it: nobody read that channel of a fine brick — smoke_read.wgsl spgFineHot, for a fire's flame)
     }
     textureStore(atlasOut, org + c, o);
   }

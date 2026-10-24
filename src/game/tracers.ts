@@ -64,6 +64,8 @@ export class Tracers {
   /** tracers spawned since construction (QA / the panel line) */
   spawned = 0;
   private seed = 1;
+  /** WHOSE DOING AN EMBER IS (the Game hands its fog of war; null — the viewer — = nobody's, as it was): fogofwar.ts FOG.ours */
+  fog: { begin(who: number): number; done(was: number): void; lightBy(l: RtLight, who: number): RtLight } | null = null;
   constructor(private lights: LightSet | null, private sparks: SparkSink | null, public params = tracerFx) {
     for (let i = 0; i < Math.max(1, params.maxLive | 0); i++) this.pool.push({
       alive: false, from: [0, 0, 0], dir: [0, 0, 1], L: 0, s: 0, v: 0, age: 0, frames: 0, color: [1, 0.5, 0.2], owner: 0, impact: 'none', arrived: false, light: null,
@@ -150,8 +152,10 @@ export class Tracers {
   private ember(t: Tracer) {
     if (t.impact !== 'solid') return;
     const P = this.params; const at: Vec3 = [t.from[0] + t.dir[0] * (t.L - 0.03), t.from[1] + t.dir[1] * (t.L - 0.03), t.from[2] + t.dir[2] * (t.L - 0.03)];
-    if (this.sparks && P.emberSparks > 0) this.sparks.emitCone(at, [-t.dir[0], -t.dir[1] + 0.3, -t.dir[2]], { count: P.emberSparks, speed: P.emberSpeed, cone: P.emberCone, life: P.emberLife }, this.seed++);
-    if (this.lights && P.emberIntensity > 0) this.lights.flash(at, v3.copy(t.color), P.emberIntensity, P.emberRange, P.emberTtl, 0);
+    const was = this.fog ? this.fog.begin(t.owner) : -1;   // (the ember is its shooter's doing: fogofwar.ts FOG.ours)
+    try { if (this.sparks && P.emberSparks > 0) this.sparks.emitCone(at, [-t.dir[0], -t.dir[1] + 0.3, -t.dir[2]], { count: P.emberSparks, speed: P.emberSpeed, cone: P.emberCone, life: P.emberLife }, this.seed++);
+    if (this.lights && P.emberIntensity > 0) { const l = this.lights.flash(at, v3.copy(t.color), P.emberIntensity, P.emberRange, P.emberTtl, 0); this.fog?.lightBy(l, t.owner); }   // (fogofwar.ts FOG.ours: the glow where a teammate's round stops is the team's own)
+    } finally { this.fog?.done(was); }
   }
 
   /** everything gone at once (encounter restart / clearAftermath, the viewer's respawn): lights handed back, slots freed */

@@ -70,8 +70,10 @@ export class SmokeSystem implements SmokeSystemLike {
    *  can just thrown stands up in a pool full of old smoke (smoke.wgsl WHO GIVES WAY; 0 = first come, as first benched).
    *  fine* = gun gas gives its bricks back (smoke.wgsl THE FINE LATTICE LETS GO): thin smoke on the fine lattice, and the heat in it, fades fineDecay/s faster, always; density / heat at or under fineEps / fineHeat is
    *  stored as 0 there and fineRing cells of air are kept round it (these three only while fineDecay > 0); that lattice may hold fineShare of the pool, or what the coarse one leaves under softLo if that is more (haze is
-   *  refused bricks from 0.7 of it, all but sources at all of it). fineDecay 0 and fineShare 1 = none of it, as first benched: notebook §9.8 */
-  sparse = { keep: 20, ring: 4, flushEps: 2e-3, thinDecay: 0, thinBelow: 0.25, softLo: 0.6, softHi: 0.95, softEps: 0.03, softDecay: 1.5, viewBias: 1, viewR: 10, indirect: true, directAt: 0.5, split: false, calmMax: 4, farCells: 1, readSkip: false, fresh: 0.15, fineDecay: 3, fineShare: 0.25, fineEps: 0.01, fineHeat: 0.1, fineRing: 2 };
+   *  refused bricks from 0.7 of it, all but sources at all of it). fineDecay 0 and fineShare 1 = none of it, as first benched: notebook §9.8.
+   *  fineKeep = gas hotter than this on the fine lattice is not let go (0 = no such rule, as it was): what lets a fire's flame be heat on that lattice (game/fire.ts FIRE.gas
+   *  raises it through keepHot while such a fire burns near the view and puts it back to 0; while it is up, gun gas and breath that hot linger as long too) */
+  sparse = { keep: 20, ring: 4, flushEps: 2e-3, thinDecay: 0, thinBelow: 0.25, softLo: 0.6, softHi: 0.95, softEps: 0.03, softDecay: 1.5, viewBias: 1, viewR: 10, indirect: true, directAt: 0.5, split: false, calmMax: 4, farCells: 1, readSkip: false, fresh: 0.15, fineDecay: 3, fineShare: 0.25, fineEps: 0.01, fineHeat: 0.1, fineRing: 2, fineKeep: 0 };
   stats = {
     /** the pool in use in units of 512 bricks, at least 1 while anything is alive, 0 with no smoke: what the F9 recorder's smoke column and the tools' 'is there smoke yet' read (512 bricks = one of
      *  the 64³ boxes recordings from before 2026-10 counted, so the column still compares). No rule reads it. */
@@ -192,6 +194,8 @@ export class SmokeSystem implements SmokeSystemLike {
     for (const b of this.boxes) if ((only < 0 || b.level === only) && !(seen >> b.level & 1) && this.inBox(b, p.pos)) { seen |= 1 << b.level; this.pushes.push({ ...p, pos: v3.copy(p.pos), level: b.level }); }
   }
   private inBox(b: { lo: Vec3; hi: Vec3 }, p: Vec3) { return p[0] >= b.lo[0] && p[0] <= b.hi[0] && p[1] >= b.lo[1] && p[1] <= b.hi[1] && p[2] >= b.lo[2] && p[2] <= b.hi[2]; }
+  /** gas hotter than `heat` on the fine lattice is kept (sparse.fineKeep; 0 = no such rule): game/fire.ts raises it while a fire's flame is the solver's gas */
+  keepHot(heat: number) { this.sparse.fineKeep = Math.max(0, +heat || 0); }
   /** is p somewhere smoke is being simulated? (the bounds as last read back: a frame or two old, and loose — what its two callers ask is 'is it worth stirring / thickening here') */
   inSmokeDomain(p: Vec3): boolean { for (const b of this.boxes) if (this.inBox(b, p)) return true; return false; }
   budget(): number { let n = 0; for (const e of this.emitters) if (!e.look) n++; return Math.max(0, MAX_EMITTERS - 12 - n); }   // (a `look` source is never counted: types.ts)
@@ -294,7 +298,7 @@ export class SmokeSystem implements SmokeSystemLike {
     const vf = this.engine.viewFocus; f[28] = vf[0]; f[29] = vf[2]; f[30] = Math.max(1, X.viewR); f[31] = Math.min(1, Math.max(0, X.viewBias));
     f[32] = Math.max(0, +P.calmCells || 0); f[33] = Math.max(0, +X.farCells || 0); u[34] = calmMax; f[35] = calmMax > 1 ? DT_CAP_WAIT : DT_MAX;
     f[36] = P.densityScale; f[37] = P.fxDensityScale ?? 1; f[38] = Math.max(0, +X.fineDecay || 0); f[39] = Math.min(1, Math.max(0.02, Number.isFinite(+X.fineShare) ? +X.fineShare : 1));
-    const lets = f[38] > 0; f[40] = lets ? Math.max(0, +X.fineEps || 0) : 0; f[41] = lets ? Math.max(0, +X.fineHeat || 0) : 0; u[42] = lets ? Math.max(1, X.fineRing | 0) : 8; f[43] = 0;   // (its floors and its air go with the fade: one row off = all three)
+    const lets = f[38] > 0; f[40] = lets ? Math.max(0, +X.fineEps || 0) : 0; f[41] = lets ? Math.max(0, +X.fineHeat || 0) : 0; u[42] = lets ? Math.max(1, X.fineRing | 0) : 8; f[43] = lets ? Math.max(0, +X.fineKeep || 0) : 0;   // (its floors and its air go with the fade: one row off = all three)
     g.levels.forEach((L, l) => { const o = SP_HEADER_WORDS + l * 8; u[o] = L.dims[0]; u[o + 1] = L.dims[1]; u[o + 2] = L.dims[2]; u[o + 3] = L.pageBase; f[o + 4] = L.voxel; u[o + 5] = L.texY; u[o + 6] = L.tile; u[o + 7] = L.tileBase; });
     const dAt = SP_HEADER_WORDS + SP_LEVEL_WORDS;
     this.dirty.forEach((d, i) => { const o = dAt + i * 8; f[o] = d.lo[0]; f[o + 1] = d.lo[1]; f[o + 2] = d.lo[2]; f[o + 3] = 0; f[o + 4] = d.hi[0]; f[o + 5] = d.hi[1]; f[o + 6] = d.hi[2]; f[o + 7] = 0; });

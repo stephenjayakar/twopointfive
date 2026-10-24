@@ -98,9 +98,9 @@ export interface TaauFrame { prevViewProjU: Mat4; jitter: [number, number]; bypa
 const TAAU_PARAM_BYTES = 144;   // struct TaauParams in taau.wgsl: mat4 (64) + 3 vec2 + 11 scalars → 132, rounded to the struct's 16-byte alignment
 /** restir.wgsl RestirU ahead of prevLights: cfg (16) + cfg2 (16) + jitter (16) + mot (16) + fwd (64) + inv (64) = 192 B (was 176 before the MOTION vec4 — direct-motion lane) */
 /** lasers / tracers handed to the reflection pass (setBeams): segments at most, and the uniform's size — 16 B of count + 48 B a segment (reflect.wgsl `Beams`) */
-const BEAM_MAX = 8, BEAM_HEAD = 32, BEAM_SEG_BYTES = BEAM_HEAD + BEAM_MAX * 48, FIRE_MAX = 4, FIRE_REC = 64, FIRE_AT = BEAM_SEG_BYTES, FIRE_LOOK_AT = FIRE_AT + 16 + FIRE_MAX * FIRE_REC, FIRE_LOOK_FLOATS = 12, BEAM_BYTES = FIRE_LOOK_AT + FIRE_LOOK_FLOATS * 4;   // (header: n, flags, 2 spare words, then k: vec4f — reflect.wgsl / composite.wgsl `Beams` … and behind the segments, for the composite alone, THE OPEN FIRES: a count word + FIRE_MAX records of 4 vec4f — fire.wgsl FireRec, setFires — and behind those the look's twelve numbers, fire.wgsl FireLook, setFireLook)
+const BEAM_MAX = 8, BEAM_HEAD = 32, BEAM_SEG_BYTES = BEAM_HEAD + BEAM_MAX * 48, FIRE_MAX = 4, FIRE_REC = 64, FIRE_AT = BEAM_SEG_BYTES, FIRE_LOOK_AT = FIRE_AT + 16 + FIRE_MAX * FIRE_REC, FIRE_LOOK_FLOATS = 16, BEAM_BYTES = FIRE_LOOK_AT + FIRE_LOOK_FLOATS * 4;   // (header: n, flags, 2 spare words, then k: vec4f — reflect.wgsl / composite.wgsl `Beams` … and behind the segments, for the composite alone, THE OPEN FIRES: a count word + FIRE_MAX records of 4 vec4f — fire.wgsl FireRec, setFires — and behind those the look's twelve numbers, fire.wgsl FireLook, setFireLook)
 /** one open fire as the composite draws it (game/fire.ts makes them; shaders/fire.wgsl FireRec) */
-export interface FireRecord { pos: ArrayLike<number>; r: number; h: number; heat: number; seed: number; time: number; wind: ArrayLike<number>; flick: number; /** the bed of coals' radius, m (0 or absent = none drawn) */ bed?: number; /** under the fog of war (RtLight.fog's numbers): 0 or absent = drawn wherever it stands · 1 = only where the team sees · 2 = only where it does not */ fog?: number }
+export interface FireRecord { pos: ArrayLike<number>; r: number; h: number; heat: number; seed: number; time: number; wind: ArrayLike<number>; flick: number; /** the bed of coals' radius, m (0 or absent = none drawn) */ bed?: number; /** under the fog of war (RtLight.fog's numbers): 0 or absent = drawn wherever it stands · 1 = only where the team sees · 2 = only where it does not */ fog?: number; /** how much of its flame is the smoke solver's gas (0‥1; game/fire.ts FIRE.gas) */ gas?: number }
 const RESTIR_U_HEAD = 192, RESTIR_U_FWD = 64, RESTIR_U_INV = 128;
 const TF = { Reset: 1, Bypass: 2, Particles: 4, Velocity: 8 } as const;   // TaauParams.flags (TF_* in taau.wgsl)
 /** composite.wgsl as bundled (the scene tweak panel lists its constants off it: render/shaderTune.ts shaderConsts) */
@@ -377,11 +377,11 @@ export class LightingPasses implements CutSwappable {
     for (let i = 0; i < n; i++) { const r = list![i], o = 4 + i * (FIRE_REC / 4);
       F[o] = r.pos[0]; F[o + 1] = r.pos[1]; F[o + 2] = r.pos[2]; F[o + 3] = r.r;
       F[o + 4] = r.h; F[o + 5] = r.heat; F[o + 6] = r.seed; F[o + 7] = r.time;
-      F[o + 8] = r.wind[0]; F[o + 9] = r.wind[1]; F[o + 10] = r.flick; F[o + 11] = 0;
+      F[o + 8] = r.wind[0]; F[o + 9] = r.wind[1]; F[o + 10] = r.flick; F[o + 11] = r.gas ?? 0;
       F[o + 12] = r.bed ?? 0; F[o + 13] = r.fog ?? 0; F[o + 14] = 0; F[o + 15] = 0; }
     this.fireN = n; this.device.queue.writeBuffer(this.beamBuf, FIRE_AT, F.buffer, 0, 16 + n * FIRE_REC);
   }
-  /** … and THE LOOK'S NUMBERS every fire is drawn with (game/fire.ts FIRE.look → engine.fireLook; fire.wgsl FireLook: twelve floats in its order), written when they move */
+  /** … and THE LOOK'S NUMBERS every fire is drawn with (game/fire.ts FIRE.look → engine.fireLook; fire.wgsl FireLook: sixteen floats in its order), written when they move */
   private fireLook = new Float32Array(FIRE_LOOK_FLOATS); private fireLookSet = false;
   setFireLook(look: ArrayLike<number> | null | undefined) {
     if (!look) return;

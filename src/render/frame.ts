@@ -342,7 +342,7 @@ export function createSceneLayout(device: GPUDevice): GPUBindGroupLayout {
       { binding: 8, visibility: cf, texture: { sampleType: 'float', viewDimension: '3d' } },
       { binding: 9, visibility: cf, sampler: { type: 'filtering' } },
       { binding: 10, visibility: cf, buffer: { type: 'read-only-storage' } },
-      { binding: 11, visibility: all, buffer: { type: 'uniform' } },   // the fog of war's sight table (render/fogofwar.ts FogSight; common.wgsl fogSeenAt reads it for a light with a fog bit, the picture's smoke and its particles) — a uniform: no sampled texture is left to a fragment stage
+      { binding: 11, visibility: all, buffer: { type: 'uniform' } },   // the fog of war's sight table (render/fogofwar.ts FogSight; common.wgsl fogSeenAt reads it for a light with a fog bit, the picture's smoke — while FOG.air is off — and its particles) — a uniform: no sampled texture is left to a fragment stage
       { binding: 12, visibility: cf, buffer: { type: reachBinding.storage ? 'read-only-storage' : 'uniform' } },   // per-light reach masks (lights.ts reachBuf: REACH_BYTES = 17.5 KB as array<vec4u, REACH_VEC4S>). Uniform for the storage-buffer budget: the group binds 6 storage buffers (1 2 3 4 6 10); the cascade trace and the light probe add 2 each in group 1 = 8 in the compute stage = the WebGPU DEFAULT maxStorageBuffersPerShaderStage, so any core adapter runs it (engine.ts still checks ≥ 8 at boot with a readable message)
   ];
   if (meshBinding.enabled) entries.push({ binding: 13, visibility: cf, buffer: { type: 'read-only-storage' } });   // mesh-shadow trees (meshShadows.ts): the group's 8th storage buffer where the adapter affords 10 per stage (see meshBinding)
