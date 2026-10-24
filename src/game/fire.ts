@@ -136,7 +136,7 @@ export const FIRE = {
    *  fog's picture already had its lamp lighting the yard round a drum with a bare lid and no flame (the maintainer, playing the pass in plan mode: "weird that
    *  fire doesn't show up in fog of war"). It goes by the fog's memory of the fire's own lamp (fogofwar.ts, RtLight.fog / fogGhost): burning and known to burn =
    *  drawn wherever it stands; lit again where nobody saw = only where the team sees; out where nobody saw = still burning where the team does not see.
-   *  false = never over ground the fog hides, as it was. Its SMOKE is not this row's: the fog hides all smoke nobody sees (common.wgsl fogSmoke), a grenade's too */
+   *  false = never over ground the fog hides, as it was. Its SMOKE is not this row's: smoke over floor nobody sees is the fog's own rule (fogofwar.ts FOG.air: drawn there; `?fogair=0` = hidden, a grenade's too). Its EMBERS are particles and are cut over unseen floor like any the team did not make (FOG.ours) */
   fog: true,
   /** the renderer takes this many fires (four at most: its uniform's size), nearest the view first, none past `drawR` m of what it looks at; the wind a flame and
    *  its embers are shown is capped at `windMax` m/s (a storm lays the smoke over, not the flame flat) */
