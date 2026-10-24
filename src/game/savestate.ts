@@ -47,8 +47,9 @@
 //     heard it the frame it sounded — put back as a fresh object it would be answered a second time).
 //     Nor the animator's own momentum: with the movement pass on (character.ts MOVES — the page; off under the harness) the recoil sums, the glide's spring and
 //     a reaction under way restart on a load: poses a few centimetres off for a moment, so with it on 'continue ≡ load' is the harness's statement, not the
-//     page's. The turn weight (TURN) IS filed: a man caught mid-turn carries the turn itself (GuardSnap.turn, character.ts turnSnap / turnPut) and goes on
-//     coming round after a load; a file from before the key has him start from rest, facing where his weight had let him get to.
+//     page's. The turn weight (TURN) IS filed, under SAVETIMELINE.turn: a man caught mid-turn carries the turn itself (GuardSnap.turn, character.ts turnSnap /
+//     turnPut / bakeLoaded) and goes on coming round after a load; with the switch off, or in a file from before the key, he starts from rest, facing where
+//     his weight had let him get to.
 //
 // DETERMINISM: the game's dice (barks, spread, jitter) come through math/dice.ts simRandom(). A game that OWNS its die (the page: host/standup.ts StandOpts.seed)
 // has the stream's position in the file (`dice`), so the frames after a load roll what the frames after the save rolled. A game on Math.random (the QA harness)
@@ -194,8 +195,8 @@ export interface RagSnap { x: number[]; rot: Q4; sleeping: boolean; /** the trun
 export interface GuardSnap {
   id: number; routeI: number; callsign: string; state: GuardState;
   pos: V3; vel: V3; bodyYaw: number; aimYaw: number; aimPitch: number; crouch: number; animPhase: number;
-  /** the turn he was in the middle of (character.ts turnSnap: nine numbers; TURN — the page): absent with the turn weight off, on a body, and in a file from
-   *  before the key, where he starts from rest facing where his weight had let him get to */
+  /** the turn he was in the middle of (character.ts turnSnap: nine numbers; TURN — the page; written and read only under SAVETIMELINE.turn): absent with the
+   *  turn weight off, on a body, and in a file from before the key, where he starts from rest facing where his weight had let him get to */
   turn?: number[];
   wp: number; wait: number; awareness: number; lastKnown: V3 | null; lastSeenT: number;
   found: boolean; downKind: DownKind | null; downBy: DownBy | null; keys: string[];
@@ -345,6 +346,10 @@ export const SAVETIMELINE = {
    *  mode's held gait with the man it is held on (character.ts heldGaitSnap, close.ts closeModeSnapshot) — so the seconds after a load are the seconds after
    *  the save. false = no file says any of it, and a load stands him free of the wall and begins the gait from nothing, as it was. Its own key, whatever `on` says. */
   holds: false,
+  /** a save carries the turn a man is in the middle of (GuardSnap.turn; character.ts turnSnap / turnPut / bakeLoaded — the turn weight, TURN): a man caught
+   *  mid-turn goes on round after a load as he did in the run that went on. false = no file says it, and he starts from rest facing where he had got to, as it
+   *  was. Its own key, whatever `on` says; with TURN off there is no turn to file and it writes nothing. */
+  turn: false,
   /** the long side of a save's picture in pixels, and its JPEG quality (the host's numbers: main.ts takes the picture) */
   picPx: 256, picQ: 0.6,
 };
@@ -513,7 +518,7 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
     const scripted = !!gd.script && !dead;   // (forced: a scripted / drilling man is filed as the searching man the drill's end would leave)
     const state: GuardState = scripted ? (escalationOf(g) >= 1 || gd.awareness > 0.3 ? 'search' : 'patrol') : gd.state;
     const task: TaskSnap | null = !gd.task ? null : gd.task.kind === 'checkOn' ? { kind: 'checkOn', pos: c3(gd.task.pos), who: gi(gd.task.who), wp: gd.task.wp, left: gd.task.left, t0: gd.task.t0 } : { kind: gd.task.kind, pos: c3(gd.task.pos) };
-    const rag = c.ragdoll, turn = dead || scripted ? null : c.turnSnap();
+    const rag = c.ragdoll, turn = dead || scripted || !SAVETIMELINE.turn ? null : c.turnSnap();
     return {
       id: c.id, routeI: gd.routeI, callsign: gd.callsign, state,
       pos: c3(c.pos), vel: dead || scripted ? [0, 0, 0] : c3(c.vel), bodyYaw: c.bodyYaw, aimYaw: c.aimYaw, aimPitch: c.aimPitch, crouch: scripted ? 0 : c.anim.crouchTarget, animPhase: c.anim.phase, ...(turn ? { turn } : null),
@@ -698,7 +703,7 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
     // the row he carries: game.ts re-deals it off tune.carbineGuards next frame anyway; seat what the file says it held if it is the same row
     if (S.weapon && S.weapon.id !== gd.weapon.def.id && WEAPONS[S.weapon.id]?.enabled) { gd.weapon = new Firearm(WEAPONS[S.weapon.id]); c.muzzleAhead = gd.weapon.def.muzzleAhead; }
     if (S.weapon && S.weapon.id === gd.weapon.def.id) firearmApply(gd.weapon, S.weapon);
-    gd.state = S.state; c.pos = c3(S.pos); c.vel = dead ? [0, 0, 0] : c3(S.vel); c.bodyYaw = fin(S.bodyYaw); c.aimYaw = fin(S.aimYaw); c.aimPitch = fin(S.aimPitch); c.anim.crouchTarget = dead ? 0 : fin(S.crouch); c.anim.phase = fin(S.animPhase); if (!dead) c.turnPut(S.turn);
+    gd.state = S.state; c.pos = c3(S.pos); c.vel = dead ? [0, 0, 0] : c3(S.vel); c.bodyYaw = fin(S.bodyYaw); c.aimYaw = fin(S.aimYaw); c.aimPitch = fin(S.aimPitch); c.anim.crouchTarget = dead ? 0 : fin(S.crouch); c.anim.phase = fin(S.animPhase); if (!dead && SAVETIMELINE.turn) c.turnPut(S.turn);
     gd.wp = S.wp | 0; if (gd.wp >= gd.route.points.length) gd.wp = 0; gd.wait = fin(S.wait); gd.awareness = Math.max(0, Math.min(1, fin(S.awareness))); gd.lastKnown = c3n(S.lastKnown); gd.lastSeenT = fin(S.lastSeenT, -100);
     gd.found = !!S.found; gd.downKind = S.downKind ?? null; gd.downBy = S.downBy ?? null; gd.keys = new Set(S.keys ?? []);
     gd.missedAt = fin(S.missedAt, -1); gd.missingRaised = !!S.missingRaised;
@@ -729,7 +734,7 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
       if (S.rag && S.rag.x?.length === RAG_COUNT * 3 && c.ragdoll) { c.ragdoll.settleAt(S.rag.x, S.rag.rot, S.rag.own === true); if (S.rag.sleeping === false) c.ragdoll.wake(); }   // (a body the file caught still falling — only a forced / harness save can — falls on from rest where it was)
       c.vel = [0, 0, 0]; gd.speed = 0; c.anim.speed = 0;
       c.update(0);
-    } else c.update(0);
+    } else c.bakeLoaded();   // (posed where his turn had got him, his yaws as filed: character.ts)
   });
   // second pass: references between men
   s.guards.forEach((S, i) => {

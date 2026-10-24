@@ -5946,14 +5946,25 @@ export class Character {
     this.bodyYaw = T.body; this.aimYaw = T.aim;
     { const ld = clamp(wrapAngle(T.ia - T.aim), -TURN.lead, TURN.lead), was = this.anim.turnLead; this.anim.turnLead = damp(was, ld, Math.abs(ld) < Math.abs(was) ? TURN.leadRate * 2.5 : TURN.leadRate, dt); }   // (it comes off quicker than it goes on: the head does not carry past the point either)
   }
-  /** TURN, for a checkpoint (savestate.ts GuardSnap.turn): the turn he is in the middle of, or null with no weight on him — where his weight has let him get to
-   *  (body, aim), the speeds it carries, where his AI wants him, where he stood when it was weighed, and the neck's lead. Put back on a fresh man by turnPut,
-   *  his turn goes on from the frame it was filed on; without it he starts from rest facing where he had got to, and his AI eases from there, not from its wish. */
+  /** TURN, for a checkpoint (savestate.ts GuardSnap.turn, under SAVETIMELINE.turn): the turn he is in the middle of, or null with no weight on him — where his
+   *  weight has let him get to (body, aim), the speeds it carries, where his AI wants him, where he stood when it was weighed, and the neck's lead. Put back on
+   *  a fresh man by turnPut, his turn goes on from the frame it was filed on; without it he starts from rest facing where he had got to, and his AI eases from
+   *  there, not from its wish. */
   turnSnap(): number[] | null { const T = this.tn; return T && !this.ragdoll ? [T.body, T.aim, T.wb, T.wa, T.ib, T.ia, T.x, T.z, this.anim.turnLead] : null; }
+  /** … and put back from a file, which is read as untrusted as the rest of one: nine finite numbers or nothing, the speeds held to what a turn can carry
+   *  (turnWeigh's top rates at the best handling there is — a real file's are inside them, so they come back to the bit) and the lead to the neck's own reach. */
   turnPut(s: readonly number[] | null | undefined) {
     if (!Array.isArray(s) || s.length !== 9 || !s.every((v) => typeof v === 'number' && Number.isFinite(v)) || this.ragdoll) return;
-    this.tn = { body: s[0], aim: s[1], wb: s[2], wa: s[3], ib: s[4], ia: s[5], x: s[6], z: s[7] }; this.anim.turnLead = s[8];
-    this.turn.on = true;   // (he was being weighed when it was filed: a fresh man's `turn` is off until game.ts writes it, which is after his AI's turnBegin and the loader's own bake — both would drop the turn)
+    const wb = TURN.body * 1.5, wa = TURN.aim * 1.5;
+    this.tn = { body: s[0], aim: s[1], wb: clamp(s[2], -wb, wb), wa: clamp(s[3], -wa, wa), ib: s[4], ia: s[5], x: s[6], z: s[7] }; this.anim.turnLead = clamp(s[8], -TURN.lead, TURN.lead);
+    this.turn.on = true;   // (he was being weighed when it was filed, and a fresh man's `turn` is off until game.ts dealWeapons writes it on his next frame: the loader's bake below comes first, and would drop the turn of a man it reads as not weighed)
+  }
+  /** the loader's bake of a living man (savestate.ts loadState). With a turn put back he is posed where his weight had got him — what was drawn on the frame the
+   *  file was made — and his yaws are then handed back AS FILED: a wish somebody wrote after his own update that frame (two men turning to talk: dialogue.ts
+   *  updateAmbient) is still the wish his next frame eases from, as it was in the run that went on. With no turn it is update(0). */
+  bakeLoaded() {
+    const T = this.tn; if (!T) { this.update(0); return; }
+    const b = this.bodyYaw, a = this.aimYaw; this.bodyYaw = T.body; this.aimYaw = T.aim; this.update(0); this.bodyYaw = b; this.aimYaw = a;
   }
   /** TURN let go of (wounds.ts: a man going down wounded stays a posed figure): his yaws become the ones that were drawn, and no turn is carried on */
   turnDrop() { if (this.tn) { this.bodyYaw = this.tn.body; this.aimYaw = this.tn.aim; this.tn = null; } }

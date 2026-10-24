@@ -52,7 +52,7 @@ async function night(seed: number, on: boolean): Promise<any> {
   const W: any = await hushed(() => standUp()); const g = W.game;
   SAVETIMELINE.on = on;   // (after the stand-up: the frozen stand's holds it off, the shipped one's raises it)
   stoodAnim ??= { moves: MOVES.on, turn: TURN.on };
-  MOVES.on = 0; TURN.on = 0;   // (a FILE's terms — savestate.ts, its head: the animator's own momentum and a turn's weight are not in a file, so 'plays on as its save did' is the file's claim with them off, as the frozen stand has them; a save in memory holds them, and (5) runs with them as the stand has them)
+  MOVES.on = 0; TURN.on = stoodAnim.turn;   // (a FILE's terms — savestate.ts, its head: the animator's own momentum is not in a file, so 'plays on as its save did' is the file's claim with the movement pass off, as the frozen stand has it; a turn's weight IS in one (SAVETIMELINE.turn) and stays as the stand has it; a save in memory holds both, and (5) runs with them as the stand has them)
   g.player.visibility = 0.02; g.godMode = true; g.playerInvisible = true; g.saves.enabled = false; for (const gd of g.guards) gd.heardUpTo = 1e12; rollcallState(g).nextAt = 1e9;
   steps(W, 0.5); return W;
 }
