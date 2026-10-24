@@ -247,8 +247,12 @@ const script: LevelScriptFn = D => {
       const shut = () => { if (men.every(m => !c.query.alive(m.u) || inBunk(c.query, m.u)) && !taken()) c.doors.shut(bunkDoor); };   // (the last room is a shut door again, and its third man is not left standing in an open one)
       yield c.until(q => men.some(m => !q.alive(m.u)));
       const left = men.filter(m => c.query.alive(m.u));
-      if (!left.length || left.every(m => inBunk(c.query, m.u))) { shut(); return; }
-      if (taken()) { c.note('the bunkhouse is a fight already: the man left in the yard is the game\'s own where he stands'); return; }
+      // (WHOEVER IS NOT RUN BACK IS LET GO HERE: the `torches` beat lets nobody go once one of them is down, so a man this beat returned on without a
+      //  word stayed the script's for good — walking to his mark by the breaker box and fighting nobody. Shot before either had left: the other is
+      //  still in his room. The squad at the bunkhouse: he is in a fight where he stands)
+      const free = () => { for (const m of left) c.release(m.u, 'alert'); };
+      if (!left.length || left.every(m => inBunk(c.query, m.u))) { free(); shut(); return; }
+      if (taken()) { free(); c.note('the bunkhouse is a fight already: the man left in the yard is the game\'s own where he stands'); return; }
       c.say(left[0].u, left.length > 1 ? 'Man down! Get back inside!' : 'Man down! I\'m going back inside!', { radio: true });
       for (const m of left) c.order(m.u, { goal: m.to, speed: 3.4, aimAt: null, upper: 'aim', light: true, crouch: false, hot: false, flinch: true });
       const pending = new Set(left);

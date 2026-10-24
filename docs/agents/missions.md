@@ -420,7 +420,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     turned their backs on it. No switch: the level's script. CHECK: `tut-sky-check` line 8 on both stands (the rooms before the bunkhouse emptied, the
     mate shot on the way: twelve seconds later the other is inside, let go, the door shut, the mains out; its break lets him go where he stands and is
     red). MEASURED, seed 1, the squad still at the trucks: shot on the way, home and let go 3.6 s later; shot during the stay, home about 5 s later;
-    nobody shot, both stand at the corner as before. lesson-gate tut-sky 6 of 6. NOT DONE: with the squad already at the bunkhouse's door he is NOT
+    nobody shot, both stand at the corner as before. lesson-gate tut-sky 6 of 6. TWO WAYS OUT OF THE `inside` BEAT LEFT HIM THE SCRIPT'S FOR GOOD (a review's read, 10-24, true when run): his mate shot before either
+    had left their room, and his mate shot with the squad already in the bunkhouse. The beat returned on him without a word and `torches` lets
+    nobody go once one is down, so he walked to the breaker box and fought nobody. Both now let the living go first (`tut-sky-check` line 9: let
+    go 2.7 s and 0.0 s after the round on both stands; with the two releases taken out it fails). NOT DONE: with the squad already at the bunkhouse's door he is NOT
     taken back (that room is a fight; he is then where the fault left him, and the beat's log says so); a run that takes more than 12 s lets him go where
     he is (logged); the run was never watched with the squad in the yard (a man the script has does not fight: he is shot in the back or gets in); two
     alive at the corner whom nobody ever shoots still stand there, pinned, for good. Never seen on a GPU. (3) 'WATCH
