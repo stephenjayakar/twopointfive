@@ -1503,9 +1503,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (`aimweight.ts`, which turned him to the cursor's floor point, left where the press was) has no say in a creep: he faces the man. ON
   in the page, OFF in the module and on the frozen stand, a `FROZEN_HOLDS` row; a recording from before it replays with it off. The lab
   has the toggle ('keys go round him') and the three numbers ('nearly across' is `orbitSnap`). THE CHECK is `stalkorbit-check.ts` (`probes.ts stalkorbit`, the grab and
-  stealth families; `STALKORBIT_BREAK=1` reds seven of its ten lines), both stands: round (the key across him for a second, after 20 frames of
+  stealth families; `STALKORBIT_BREAK=1` reds eight of its eleven lines), both stands: round (the key across him for a second, after 20 frames of
   creep: 57° round him at 1.51 m, the gap within 1 cm, facing him within 3°), slant (the view turned 12° so that key is off square: the
-  same, and 34 cm off with `orbitSnap` 0), edge (six seconds: stops at -0.42 against the grab's -0.25, the creep on), in and out
+  same, and 34 cm off with `orbitSnap` 0), nogun (no round in a creep: his hands are empty in one, `stalk.ts hands`, and drawing ends
+  it; the pistol drawn out of one with the cursor a quarter turn off swings there at `AIMWEIGHT.rate`, not in a frame, so leaving the
+  aim's weight out while a creep is on gives no free turn onto a target), edge (six seconds: stops at -0.42 against the grab's -0.25, the creep on), in and out
   (closes to 0.80 m against `keyM` 0.8, the nearest 0.79; away opens 1.08 m in 0.75 s), walking (a man walking away at 1.2 m/s: the gap
   within 17 cm over a second), reach (from 0.9 m: stops at -0.51 and the key takes him), stick (the lab's drag across him: 53° round,
   within 6 cm), letgo (walked into reach in 2.6 s), off (a move key ends it), harness. `stalk-check` and `stalkdrag-check` hold it down

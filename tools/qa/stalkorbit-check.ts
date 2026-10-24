@@ -4,6 +4,8 @@
 //   round     the button held on a man 1.6 m ahead and the move key that points most across him held for a second: Sam goes round him, the gap within 6 cm
 //             of where it was, a good part of a quarter turn round him, facing him, the creep still on.
 //   slant     the view turned 12°, so that key is a little off square across him: still round on the same circle (STALK.orbitSnap), and with it at 0 a spiral.
+//   nogun     no round leaves in a creep (his hands are empty in one: stalk.ts hands); the pistol drawn out of one, the gun swings to the cursor at
+//             the aim's own rate (aimweight.ts AIMWEIGHT.rate), not in a frame — the aim's weight is only left out while a creep is on.
 //   edge      the same key held for six seconds: he goes no further round than the edge of the man's back arc and waits there, the creep still on.
 //   in, out   the key that points most at him closes the gap and stops at the waiting distance, never nearer; the one that points away opens it.
 //   walking   the man walking away at 1.2 m/s and the key across him held a second: the circle goes with him, the gap within 20 cm, the creep on.
@@ -12,7 +14,7 @@
 //   letgo     the key let go with the button still held: the creep walks him in to reach, as it did.
 //   off       the key down: a move key ends the creep and his feet are his own, as it was.
 //   harness   down on the frozen stand, up in the page, ?stalkorbit=0 puts it down; it rides a recording's tables, and a recording from before it replays with it down.
-// STALKORBIT_BREAK=1 = the key left down where round, slant, edge, in, walking, reach and stick ask for it up: each must FAIL.   exit 0 = all hold · 1 = one does not
+// STALKORBIT_BREAK=1 = the key left down where round, slant, nogun, edge, in, walking, reach and stick ask for it up: each must FAIL.   exit 0 = all hold · 1 = one does not
 // THE HARNESS HAS NO GPU and no hand on the keys: they are written into the input. Nobody has played it.
 import { standUp, ROOT } from './headless.ts';
 
@@ -23,6 +25,7 @@ const PR = await import(`${ROOT}/src/host/profile.ts`);
 const JR = await import(`${ROOT}/src/game/journal.ts`);
 const { STAND_ENV } = await import(`${ROOT}/src/host/standEnv.ts`);
 const { BEHIND_COS } = await import(`${ROOT}/src/game/close.ts`);
+const { AIMWEIGHT } = await import(`${ROOT}/src/game/aimweight.ts`);
 
 const BREAK = process.env.STALKORBIT_BREAK === '1', DT = 1 / 60, EAST = Math.PI / 2, AT = [10.2, 0, 19.5];   // (the lobby's open floor)
 let allPass = true, found = false;
@@ -73,6 +76,19 @@ async function slant() {
   verdict(a.on && a.most < 0.06 && a.turned > 20 && b.most > a.most + 0.05,
     'the view turned 12° so the move key across him is a little off square, held a second: he still goes round on the same circle, the gap never more than 6 cm off (and with `orbitSnap` at 0 the same key spirals him in)',
     `${a.k}: the gap ${f2(a.g0)} m, at most ${f2(a.most)} m off it · ${a.turned.toFixed(0)}° round him · the creep on ${a.on} · with orbitSnap 0: ${f2(b.most)} m off`);
+}
+async function nogun() {
+  console.log('\n=== nogun: no round in a creep, and the gun drawn out of one turns at the aim\'s rate ===');
+  const C = await world(up()), k = C.pick('across'), s0 = C.g.mission.stats.shots; let bare = true;
+  C.W.input.keys.add(k); for (let i = 0; i < 60; i++) { C.step(); bare &&= !!C.g.player.holstered; }
+  const on = C.on(), shots = C.g.mission.stats.shots - s0, y0 = C.c.aimYaw;
+  C.W.input.keys.delete(k); C.W.input.buttons &= ~1; C.g.player.holstered = false; C.g.player.slot = 'pistol';   // (the pistol drawn: the creep is over)
+  const p = C.c.pos, side = [p[0] + Math.cos(y0) * 3, 0, p[2] - Math.sin(y0) * 3]; C.W.cursorAt([side[0], 0, side[2]]);   // (the cursor a quarter turn off his line)
+  C.step(); const first = deg(C.c.aimYaw - y0), off = C.on() === null || C.on() === undefined || !C.on(); C.step(29); const later = deg(C.c.aimYaw - y0);
+  const rate = AIMWEIGHT.rate as number, cap = AIMWEIGHT.on ? rate * DT * 180 / Math.PI + 1 : 45;   // (the aim's weight down, as on the frozen stand: the old ease, a quarter of the way a frame)
+  verdict(on && bare && shots === 0 && off && first <= cap && later > first,
+    'the button held on a man and a key across him for a second: his hands stay empty and no round leaves; the pistol then drawn with the cursor a quarter turn off: the creep is over and the gun swings there at the aim\'s own rate, no snap',
+    `${k}: the creep on ${on}, hands empty throughout ${bare}, rounds ${shots} · drawn: the creep over ${off}, the first frame turned ${first.toFixed(1)}° (${AIMWEIGHT.on ? `the aim's rate allows ${cap.toFixed(1)}°` : `the aim's weight down: the old ease, under ${cap}°`}), half a second on ${later.toFixed(0)}°`);
 }
 async function edge() {
   console.log('\n=== edge: the key across him, held six seconds ===');
@@ -145,7 +161,7 @@ async function harness() {
 /** the whole card (probes.ts 'stalkorbit'): true = every check passed. The switches are put back as they were found. */
 export async function stalkorbitCheck(): Promise<boolean> {
   const hold = JSON.parse(JSON.stringify(HOLD)), close = JSON.parse(JSON.stringify(CLOSE)), stalk = { ...STALK }; allPass = true; found = STALK.orbit;
-  try { await roundLine(); await slant(); await edge(); await inOut(); await walking(); await reach(); await stick(); await letgo(); await off(); Object.assign(STALK, stalk); await harness(); }
+  try { await roundLine(); await slant(); await nogun(); await edge(); await inOut(); await walking(); await reach(); await stick(); await letgo(); await off(); Object.assign(STALK, stalk); await harness(); }
   finally { Object.assign(HOLD, hold); Object.assign(CLOSE, close); Object.assign(STALK, stalk); }
   console.log(`\n=== stalkorbit: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`); return allPass;
 }
