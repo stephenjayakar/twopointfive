@@ -1741,20 +1741,31 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   player to. THE KIT: the level issues its own card (`scenarios.issue.members.0`: the rifle, one grenade, five sponge rounds, no cans and no frag),
   dealt whole on the page. THE NEW KEY, `loaded: 'ring' | 'he40'` on that card (`scene/scenarios.ts IssueCard`, parsed in `levelData.ts`, read in
   `kit.ts kitPlayer` on the player's own card only; `docs/level-format.md`): the load the launcher COMES UP ON. Absent it is the sponge round wherever
-  he carries one, as before, so no other level changes. Here it is the grenade, so the swap is done for a reason and not only said. THE LOCKS: from
-  `nook` both mouse buttons are shut; `corner` shuts `use`, because the frame gives a held left click to the stalk wherever the interaction key is his
-  and his hands are empty, whatever a step denies (`rails.ts gate`; a reviewer's run took the man that way with `fire` denied); `rifle` opens
+  he carries one, as before, so no other level changes. Here it is the grenade, so the swap is done for a reason and not only said. THE LOCKS: `nook` shuts both mouse buttons, the whistle (it would bring the man round to the store) and `stalk`; `rifle` opens
   `slot:rifle`;
   `load` opens the frame's `load` (the load's row alone: a right click held before the swap sends nothing); `sponge` opens `alt`; `sling` opens `hands`;
-  `under` gives back the left button, the right and `use`, and shuts the rifle's key, the load and the hands' key again. The interaction key stays his on `nook` (the back door needs it), so the held click is shut from his first stride inside and not before. With
+  `under` gives back both buttons, the whistle and `stalk`, and shuts the rifle's key, the load and the hands' key again. THE INTERACTION KEY IS HIS ON
+  EVERY LINE, AND `stalk` IS A NEW WORD OF THE FRAME (`rails.ts ACTS`, `shuts`; mended the same day, on the build after the one that first carried
+  the lesson; the frame's owner agreed the line). The frame gives a held left click to the stalk wherever the interaction key is his and his hands
+  are empty, whatever `fire` says (a reviewer's run took the man that way), and the first build shut it the only way a level could, by denying
+  `use` from `corner` to `under`: a tap at the open back door then did nothing and said nothing (the maintainer, of this door, before: "nothing in
+  reach to close the door?") and `handring-check`'s line at that door went red on both stands. `stalk` has no key and is the one action that is
+  OPEN UNLESS A STEP DENIES IT (the last step that names it decides; a level that never says the word plays as it did; in `rails.allow` it is a
+  fault): a step that denies it shuts that click and nothing else, at the frame's gate (the left button is not given to the stalk) and at the
+  stalk's own (`stalk.ts free`, `cornerGate`: so whatever else owns the button no stalk begins, and the row's "hold to sneak up" hint and the pose
+  that tells are not shown for a click that would do nothing). The debugger's rails line says `stalk shut` while it is. A first mend that drew the rifle at the back door instead was dropped under
+  review (he could walk in without pressing the key and be stalked into the beam). What is left open: the grab's own row is still his close behind the man, and taking it holds the man and breaks the beam (the break path below): the room says no, not a dead key. That row's hint names the right button's knockout, which is shut until `sponge` (the frame does not edit a row's hint; he reads it only where he has already gone against the line). With
   `alt` open the load's row is open too (the frame's rule), so from `sponge` he can swap back and fire the grenade: at 2.6 m it does not arm, and the
   man is staggered and alerted; no data of a level can shut that. NEVER STUCK: `sponge` also passes when the launcher has no sponge round left (`lesson.ts ringsOut`). CHECKS
   (2026-10-23, no GPU): `lesson-run tut-quiet` plays 24 of 24 on both stands (`TPS_RAILS=1` in front on the frozen one), seeds 1 to 4 on the shipped
-  stand, two of them with `--pace 6`: a left click held on the man from the doorway's line stalks nobody, a right click held there before the swap
+  stand, two of them with `--pace 6`: inside the open back door the row `pull` shuts the leaf behind him; the whistle's own code does nothing in the store and the interaction key held on open floor puts no ring up (`WHISTLE_STATS.blown` does not move); a left click held on the man from the doorway's line stalks nobody, a right click held there before the swap
   sends nothing, a straight line to his head is blocked from the corner and clear from the mark (asked of the level's own collision), then one sponge round spent, the man out cold (the chronicle's `ko` by `ring`), no beam
   broken, the man at the table on patrol with awareness 0.00, GHOST at the end. Its BREAK PATHS: `TQSMOKE_BREAK=hands` (he goes for the man by hand after all,
-  crouched; on the frozen stand, which has no reaching hand and no row to grab by on that line, he then stands up behind him) fails the run on both
-  stands with the beam broken; `RAILS_BREAK=1` fails it at the held left click (the stalk walks him 1.35 m).
+  crouched, and takes the grab's row 0.4 m behind him) fails the run on both
+  stands with the beam broken; `RAILS_BREAK=1` fails it at the held left click (the stalk walks him over a metre). `rails-check` has the word's own line (on the store's line
+  the gate keeps the left button from him and leaves the interaction key, and `stalkCould` says no 1.6 m behind the man; a later `allow` gives
+  both back; allowed and denied on one step is shut, as `allowed` folds the pair; no step naming it is the gate as it was; the word in a frame's
+  list is a fault), red under `RAILS_BREAK=1` on both stands.
   `lesson-check` and `rails-check` on both stands, `lesson-gate tut-quiet`, `level-needs tut-quiet --run` on both, `issue-check`, `issuewhole`,
   `kit-audit`, `writing-check`, the `pouches` family, `handring-check` and `smokebreak-check` on both stands, `solofog`, `attentionway`, `radiohome`:
   green. `lesson-check`'s kit lines that staged this mission as "a lesson that issues no kit of its own" now stage `tut-sky` (the comment there says
