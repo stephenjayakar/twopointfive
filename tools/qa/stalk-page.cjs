@@ -48,6 +48,26 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
   } else {
     say(!boot.fatal && boot.on && boot.only && boot.men === 6 && boot.holstered && boot.panel && /^Sneak lab/.test(boot.sys) && boot.sliders >= 12,
       `the lab: stalk ${boot.on ? 'on' : 'OFF'}, the click the only way ${boot.only}, ${boot.men} men, empty hands ${boot.holstered}, the panel ${boot.panel ? 'open' : 'SHUT'} on '${boot.sys.slice(0, 20)}' with ${boot.sliders} sliders${boot.fatal ? ' · FATAL ' + boot.fatal : ''}`);
+    { // (the lab's knobs: named groups that fold, names that fit the row, and a hover on every row that says what to look for)
+      const P = await page.evaluate(async () => { const pg = [...document.querySelectorAll('#panel .ppage')].find(p => p.offsetParent !== null) || document.getElementById('panel');
+        const heads = [...pg.querySelectorAll('.psec > .pshead')], names = heads.map(h => h.querySelector('.nm')?.textContent || ''), shut = heads.filter(h => !h.classList.contains('open')).length;
+        for (const h of heads) if (!h.classList.contains('open')) h.click(); await window.__runFrames(2, 1 / 60, [], 'none');
+        const rows = [...pg.querySelectorAll('.row')].filter(r => r.querySelector('input')), cut = rows.map(r => r.querySelector('label')).filter(l => l && l.scrollWidth > l.clientWidth + 0.5).map(l => l.textContent);
+        const bare = rows.filter(r => (r.title || '').length < (r.querySelector('label')?.textContent.length || 0) + 20).map(r => r.querySelector('label')?.textContent), tries = rows.filter(r => /Look for|Try:|Off = |0 = |1 = /.test(r.title || '')).length;
+        return { names, shut, rows: rows.length, cut, bare, tries, headTips: heads.filter(h => (h.title || '').length > 10).length }; });
+      say(P.names.length >= 10 && P.shut >= 5 && P.rows >= 60 && P.cut.length === 0 && P.bare.length === 0 && P.headTips >= 10 && P.tries >= P.rows * 0.6,
+        `the lab's knobs are in ${P.names.length} groups (${P.shut} of them shut to begin with, ${P.headTips} with a hover of their own); of ${P.rows} rows, ${P.cut.length} have a name cut short${P.cut.length ? ' (' + P.cut.slice(0, 4).join(' · ') + ')' : ''}, ${P.bare.length} have no hover${P.bare.length ? ' (' + P.bare.slice(0, 4).join(' · ') + ')' : ''}, and ${P.tries} hovers say what to look for or what the ends mean`); }
+    { // (stalk.ts STALK.drag, the lab's prototype: the press on him is the stick's middle; the real mouse is dragged toward him, then the lines below are run with it down)
+      const dragUp = await page.evaluate(() => !!window.__knobs.registry().STALK.drag);
+      if (dragUp && !NOKEY) {
+        await behind(3.0); const [x, y] = await chest(); await page.mouse.move(x, y); await frames(2); await page.mouse.down(); const s0 = await frames(60);
+        const [sx, sy] = await page.evaluate(() => { const g = window.__game, v = document.getElementById('view'), r = v.getBoundingClientRect(), [a, b] = window.__cam.project([g.player.char.pos[0], 0.6, g.player.char.pos[2]], r.width, r.height); return [r.left + a, r.top + b]; });
+        const L = Math.hypot(x - sx, y - sy) || 1, full = await page.evaluate(() => window.__knobs.registry().STALK.dragFull);
+        await page.mouse.move(x + (x - sx) / L * full, y + (y - sy) / L * full, { steps: 6 }); const s1 = await frames(45), stick = await page.evaluate(([x, y]) => { const I = window.__input, v = document.getElementById('view').getBoundingClientRect(); return Math.hypot(I.mouseX + v.left - x, I.mouseY + v.top - y); }, [x, y]); await page.mouse.move(x, y, { steps: 6 }); const s2 = await frames(40); await page.mouse.up(); await frames(5);
+        say(Math.abs(s0.gap - 3.0) < 0.1 && s0.speed < 0.05 && s1.gap < s0.gap - 0.5 && s1.speed > 1 && s2.speed < 0.1, `the lab has drag to steer up: pressed on him 3 m behind, he holds still (${s0.gap.toFixed(2)} m, ${s0.speed.toFixed(2)} m/s); the mouse dragged toward him, he closes (${s1.gap.toFixed(2)} m, ${s1.speed.toFixed(2)} m/s, the game read the stick ${stick.toFixed(0)} px of ${full}); back to the press, he stops (${s2.speed.toFixed(2)} m/s)`);
+        await page.evaluate(() => { window.__knobs.registry().STALK.drag = false; });   // (the lines below are the hold's own)
+      } else { say(NOKEY && dragUp, `?stalkkey=0&stalklow=0: the lab still has drag to steer up (${dragUp}); it is put down for the lines below`); await page.evaluate(() => { window.__knobs.registry().STALK.drag = false; }); }
+    }
     { const v = await page.evaluate(() => { const R = window.__knobs.registry(), S = R.STALK, H = R.HOLD; return { jolt: S.jolt, turnIn: S.turnIn, show: S.cornerShow, way: H.wayShape, dip: H.lunge.dip, apart: H.apart.side }; }), up = v.jolt > 0 && v.turnIn && v.show && v.way && v.dip > 0 && v.apart > 0, down = v.jolt === 0 && !v.turnIn && !v.show && !v.way && v.dip === 0 && v.apart === 0;
       say(POLISH ? down : up, `${POLISH ? '?stalkpolish=0: the polish is down' : 'a plain address: the polish is up'} (the duck ${v.jolt}, the turn through the step ${v.turnIn}, the wait's pose ${v.show}, the shaped way in ${v.way}, the dip ${v.dip}, the heads apart ${v.apart})`); }
     say(boot.key === !NOKEY && boot.low === !NOKEY, `${NOKEY ? '?stalkkey=0&stalklow=0: both are down' : 'a plain address: the key finishes the grab and he goes lower'} (the key ${boot.key}, lower ${boot.low})`);
@@ -85,6 +105,10 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
         await page.evaluate(async () => { window.__game.restart(); await window.__runFrames(90, 1 / 60, [], 'none'); });
       }
     }
+    { const sf = await page.evaluate(() => { const H = window.__knobs.registry().HOLD, b = /gun out before the arm/.test(document.getElementById('panel').textContent); return { on: !!H.stripFirst, dis: !!H.disarm, take: H.first?.take, row: b }; });   // (disarm.ts HOLD.stripFirst)
+      say(sf.on && sf.dis && sf.take < 0.2 && sf.row, `a plain address: the disarm leads the grab (the key ${sf.on}, under the disarm ${sf.dis}, the gun out at ${sf.take} s) and the lab has its row (${sf.row})`); }
+    { const sw = await page.evaluate(() => { const T = window.__knobs.registry().STALK, b = /arms out wide/.test(document.getElementById('panel').textContent); return { on: !!T.wide, low: !!T.low, out: T.wideOut, row: b }; });   // (stalk.ts STALK.wide)
+      say(sw.on && sw.low === !NOKEY && sw.out > 0 && sw.row, `${NOKEY ? '?stalklow=0' : 'a plain address'}: his arms are out wide as he creeps (the key ${sw.on}, under the low creep ${sw.low}, ${sw.out} m out) and the lab has its row (${sw.row})`); }
     { // (player.ts CROUCHRUN, samlook.ts SAMLOOK: Shift in a crouch is a fast crouch walk; his head goes to the man; beside a man he gives him room)
       const K = await page.evaluate(() => { const R = window.__knobs.registry(); return { run: !!R.CROUCHRUN.on, look: !!R.SAMLOOK.on, slip: !!R.SAMLOOK.slip, pace: R.CROUCHRUN.pace }; });
       if (K.run) {
@@ -110,7 +134,7 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
           say(P.at && P.slip > 0.5, `a metre off the man's side, crouched with empty hands: he gives the man room (${P.at}, the lean ${P.slip.toFixed(2)} of whole)`);
         }
         if (K.slip) {   // (the lab's own button: two walkers stood a gap apart, and Sam dead between them)
-          const G = await page.evaluate(async () => { const b = [...document.querySelectorAll('#panel button')].find(x => /stand two men a gap apart/.test(x.textContent)); if (!b) return { found: false };
+          const G = await page.evaluate(async () => { const b = [...document.querySelectorAll('#panel button')].find(x => /two men, a gap/.test(x.textContent)); if (!b) return { found: false };
             window.__game.restart(); await window.__runFrames(90, 1 / 60, [], 'none'); b.click(); await window.__runFrames(150, 1 / 60, [], 'none');
             const g = window.__game, [A, B] = g.guards.filter(x => x.state !== 'dead' && !x.civ).slice(1, 3), a = A.char, c = B.char, apart = Math.hypot(a.pos[0] - c.pos[0], a.pos[2] - c.pos[2]), still = Math.hypot(a.vel[0], a.vel[2]) + Math.hypot(c.vel[0], c.vel[2]);
             const turn = Math.abs(Math.atan2(Math.sin(a.bodyYaw - c.bodyYaw), Math.cos(a.bodyYaw - c.bodyYaw)));

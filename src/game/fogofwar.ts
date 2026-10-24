@@ -777,7 +777,7 @@ export class FogOfWar {
       const lit = this.lampLit(t), rec = this.lampKnown(t, lit);
       if (rec !== lit) S.held++;
       if (!rec || (t.mains && down)) continue;
-      if (t.light) this.lampTake(t.light, t.baseIntensity, false);
+      if (t.light) this.lampTake(t.light, t.light.steady?.intensity ?? t.baseIntensity, false);   // (a burning fire's lamp is the fire's own steady strength, game/fire.ts FIRE.bright: the colour and reach packed below are the fire's too, so the remembered ground is as bright as the seen)
       if (t.areaLights) for (const al of t.areaLights) this.lampTake(al.light, al.base * es, false);
     }
     const pick = this.lampPick; let n = this.lampN;

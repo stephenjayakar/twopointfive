@@ -84,8 +84,9 @@ const LEVEL_BASE: Record<string, string> = {
   'tut-plan.json': '1955e5c1e',
 
   // the ledger's store teaches the rifle's launcher: the chest beam moved to the hall man's back, the hand-to-hand step gone and six in its place (the laser
-  // named inside the door, the rifle, the swap's card, a mark to shoot from, the shot, the hands' key), its own card for the player, a sixth checkpoint
-  'tut-quiet.json': 'f9a3f60e0',
+  // named inside the door, the rifle, the swap's card, a mark to shoot from, the shot, the hands' key), its own card for the player, a sixth checkpoint.
+  // Then its deny lists: the store's lines shut the stalk's click and the whistle, and no longer the interaction key
+  'tut-quiet.json': 'b89251542',
 
   // the tunnel station, played with no fog of war (its lesson's rails.fog); its last step tells the squad to run back to the trucks (onWay.run); the
   // brazier's melt patch laid round (eight turned slabs where two square ones were); the mission takes the flat ring (its lesson's rails.flatRing)

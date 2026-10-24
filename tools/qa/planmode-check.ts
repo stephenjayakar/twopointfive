@@ -22,7 +22,7 @@ export const dist = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] -
 const BREAK = process.env.PLANMODE_BREAK === '1';
 
 /** the stand's own word for CMDRING.planNear, as the first stand-up of this process left it (the rig then holds it as asked) */
-export const STOOD: { near: boolean | null } = { near: null };
+export const STOOD: { near: boolean | null; digits: boolean | null } = { near: null, digits: null };
 /** `near`: CMDRING.planNear for this rig — off for every line of this file (they ask the view's reach as it was first built; the bound has its own check,
  *  plannear-check.ts) */
 export async function rig(seed: number, plan = !BREAK, near = false) {
@@ -31,6 +31,7 @@ export async function rig(seed: number, plan = !BREAK, near = false) {
     Object.assign(NIGHTBREACH, { squad: 4 });
     Math.random = seeded(seed);
     W = await standUp(); STOOD.near ??= !!CMDRING.planNear; CMDRING.planNear = near && plan;
+    STOOD.digits ??= !!CMDRING.planDigits; CMDRING.planDigits = false;   // (the lines of this rig pick by the mouse and ask that a click on nothing is everyone, as the mode was built: the digits have their own check, plandigits-check.ts)
     CMDRING.on = true; CMDRING.hint = true; CMDRING.hands = true; CMDRING.plan = plan; CMDRING.planRts = plan; CMDRING.planRun = false; CMDRING.stay = false; CMDRING.tapNow = false; CMDRING.only = false; AUTOPILOT.on = true;   // (the ring that goes with its key and Shift always the mode's, as these lines were written: `probes.ts qring` has the page's)
     W.game.godMode = true;
     why = W.game.roomClear.start(seed);

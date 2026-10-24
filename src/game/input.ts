@@ -1,5 +1,5 @@
 // Keyboard + mouse state.
-import { gameCode, camKey } from '../host/keymap';
+import { gameCode, camKey, KEYMAP } from '../host/keymap';
 export class Input {
   keys = new Set<string>();
   pressed = new Set<string>();     // edge-triggered this frame
@@ -28,9 +28,12 @@ export class Input {
   /** the keys down on the board → the code each was filed under (host/keymap.ts: the player's own keys): a key let go lets go of what its press put down,
    *  whatever was rebound while it was held */
   private heldAs = new Map<string, string>();
-  /** the camera's key is down (host/keymap.ts camKey: the Space bar while it is no row's): the key on the board, '' = not. Ctrl needs no such note:
-   *  every mouse event says whether it is down */
+  /** the camera's key is down (host/keymap.ts camKey: the Space bar while it is no row's): the key on the board, '' = not. The turn under Ctrl needs no such note: every
+   *  mouse event says whether it is down; the wheel's own note of Ctrl is `ctrlDown` */
   camHeld = '';
+  /** a Ctrl key is DOWN, by the last key or mouse event's own word: every one carries the modifiers as they ARE, whatever has the focus, whoever took the
+   *  key and wherever Control sits on his board. The wheel asks it (KEYMAP.pinchOnly, below): a wheel that says Ctrl while no Ctrl key is down is a pinch */
+  private ctrlDown = false;
 
   /** an Input with EVERY field initialised and NO listeners — the headless harness's, the session replayer's and a native host's: they write keys / pressed / mouse /
    *  buttons themselves (tools/qa/headless.ts used to Object.create(Input.prototype) and forgot orbitDX / wheelCtrl / keyVeto). `el` is null: focusGame() is a no-op. */
@@ -47,6 +50,8 @@ export class Input {
     const typingTarget = (e: Event) => e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement || (e.target instanceof HTMLTextAreaElement && e.target !== this.sink) || (e.target instanceof HTMLElement && e.target.isContentEditable);
     // Capture phase on window = first in line: a game key is claimed here (stopPropagation) before any document-level shortcut handler the
     // embedding page may have installed sees it. Escape and anything with Cmd/Ctrl held stay shared (menus, browser and host shortcuts).
+    { const mods = (e: { ctrlKey: boolean }) => { this.ctrlDown = e.ctrlKey; };   // (ahead of this class's own listeners and behind none of their gates: a field with the focus, a lock and a repeat say it too. A screen whose listener is ahead of these and stops a BARE Ctrl key would hide it: none does. Focus lost keeps it: the next move of the mouse says how it is)
+      for (const t of ['keydown', 'keyup', 'mousemove', 'mousedown', 'mouseup'] as const) window.addEventListener(t, mods, { capture: true }); }
     window.addEventListener('keydown', e => {
       if (e.code === 'F5' && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && this.saveKey?.()) e.preventDefault();   // (F5 is the save by hand while the page says so — main.ts: a bare press must not reload the page under the run, a slider of the Options that kept the focus included; with a modifier, on the start page or over a broken frame it is the browser's reload as ever)
       if (typingTarget(e)) return;
@@ -67,11 +72,16 @@ export class Input {
     window.addEventListener('keyup', e => { if (e.code === this.camHeld) this.camHeld = ''; { const as = this.heldAs.get(e.code) ?? gameCode(e.code); this.heldAs.delete(e.code); if (as) this.keys.delete(as); } if (!typingTarget(e) && e.code !== 'Escape' && !e.metaKey) e.stopPropagation(); if (this.sink && e.target === this.sink) this.sink.value = ''; }, { capture: true });
     window.addEventListener('blur', () => { this.keys.clear(); this.heldAs.clear(); this.camHeld = ''; this.buttons = 0; this.pressed.add('Blur'); });   // ('Blur': a one-frame code for whoever must tell keys dropped from keys released — the squad's order menu)
     el.addEventListener('mousemove', e => { this.modsUp(e); const r = el.getBoundingClientRect(); this.mouseX = e.clientX - r.left; this.mouseY = e.clientY - r.top; if (!this.lockExcept && (this.camHeld ? !!camKey() || e.ctrlKey : e.ctrlKey && !camKey())) this.orbitDX += e.movementX; });   // (the cursor is tracked through a lock — the tour writes its own aim over it every frame it has one — so the reticle is where the mouse IS the moment the lock lifts; only the orbit is hands-off: review U9.11)
+    window.addEventListener('mousemove', e => { if (!(this.buttons & 1) || e.target === el) return; const r = el.getBoundingClientRect(); this.mouseX = e.clientX - r.left; this.mouseY = e.clientY - r.top; });   // (a drag begun on the view goes on being one over the panel or the HUD: stalk.ts STALK.drag reads it as a stick)
     el.addEventListener('mousedown', e => { e.preventDefault(); this.focusGame(); if (this.lockExcept) { this.onLockedInput?.(); return; } if (this.suppressClick) { this.suppressClick = false; return; } this.buttons |= 1 << e.button; this.clicked |= 1 << e.button; });
     window.addEventListener('mouseup', e => { if (this.lockExcept) return; this.buttons &= ~(1 << e.button); });
     el.addEventListener('contextmenu', e => e.preventDefault());
     window.addEventListener('contextmenu', () => { this.camHeld = ''; }, { capture: true });   // (a browser menu opened off the canvas swallows the key's coming up: the camera is let go of there, not left turning with every move of the mouse)
-    el.addEventListener('wheel', e => { e.preventDefault(); if (this.lockExcept) return; if (e.ctrlKey || (this.camHeld && camKey())) this.wheelCtrl += e.deltaY; else this.wheel += e.deltaY; }, { passive: false });   // (a trackpad pinch also arrives as ctrl+wheel: it zooms, which is what a pinch should do — whichever key the camera is on)
+    el.addEventListener('wheel', e => { e.preventDefault(); if (!e.ctrlKey) this.ctrlDown = false; if (this.lockExcept) return; const space = !!camKey(), cam = !!this.camHeld && space;
+      // (KEYMAP.pinchOnly: while the camera's key is Space, the wheel under a Ctrl key that is DOWN is nothing — neither the zoom nor his pace. A wheel
+      // that says Ctrl with no Ctrl key down is a trackpad pinch, and still zooms)
+      if (KEYMAP.pinchOnly && space && !cam && e.ctrlKey && this.ctrlDown) return;
+      if (e.ctrlKey || cam) this.wheelCtrl += e.deltaY; else this.wheel += e.deltaY; }, { passive: false });   // (a trackpad pinch also arrives as ctrl+wheel: it zooms, which is what a pinch should do — whichever key the camera is on)
   }
   /** A MODIFIER THE SYSTEM SAYS IS UP IS LET GO. A key-up the page never saw leaves its key held for good: a screenshot shortcut, the system's own menus
    *  and switchers take a modifier's key-up with them and the window is never blurred. Every key and mouse event carries the modifiers as they ARE, so a

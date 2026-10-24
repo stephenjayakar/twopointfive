@@ -214,6 +214,10 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
         let smokeReactK = f32((frame.volCfg.w >> 16u) & 15u) * 0.1;   // EXPERIMENT (settings.smokeTaaReact): a plume has no motion vectors — by (1 − its transmittance) the pixel leans on the fresh march instead of a stale plume clamped into place
         if (smokeReactK > 0.0) { react = max(react, clamp((1.0 - vr.y) * smokeReactK, 0.0, 1.0)); }
       }
+      // AN OPEN FIRE'S FLAME (composite.wgsl fireReact, in this frame's alpha as 1 − it; 1 everywhere else): new every frame with nothing to reproject it by. Left to the
+      // history it was a ten-frame average of ten different flames, and the anti-flicker term above (a bright flame on dark ground is all contrast) made that forty: a soft,
+      // dim, see-through shape that hardly moved — what every look at a fire on a GPU had shown
+      react = max(react, clamp(1.0 - textureLoad(curTex, clamp(q, vec2i(0), hi), 0).a, 0.0, 1.0));
       a = max(a, react * P.reactK);
     }
     a = clamp(a, 0.0, 1.0);

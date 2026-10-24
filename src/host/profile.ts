@@ -102,7 +102,7 @@ import { STARTLE } from '../game/startle';
 import { ROWSET } from '../game/rowset';
 import { SMOKEBREAK } from '../game/smokebreak';
 import { SHOWWHY } from '../game/showwhy';
-import { FIRE, FIRE_SIZE, FIRE_SHIMMER, FIRE_PLUME, FIRE_EMBERS } from '../game/fire';
+import { FIRE, FIRE_SIZE, FIRE_SHIMMER, FIRE_PLUME, FIRE_EMBERS, FIRE_BRIGHT, FIRE_REACH, FIRE_LIFT, FIRE_LIFT_WAS, FIRE_WARM, FIRE_WANDER, FIRE_WANDER_UP, FIRE_WANDER_WAS, FIRE_WANDER_UP_WAS, FIRE_REACT, FIRE_LEAN, FIRE_LEAN_WAS } from '../game/fire';
 import { FLINCH } from '../game/flinch';
 import { VERDICT } from '../game/verdict';
 import { DARKDOOR } from '../game/darkdoor';
@@ -283,6 +283,7 @@ export function pageSwitches(q: URLSearchParams): void {
   HANDRING.onThing = HANDRING.near && q.get('ringonthing') !== '0'; HANDRING.bare = HANDRING.near && q.get('ringbare') !== '0'; HANDRING.turn = HANDRING.near && q.get('ringturn') !== '0'; HANDRING.corner = HANDRING.near && q.get('corner') !== '0';   // his ring stands on the thing its first row is about (or on him), and has no line of words under it
   HANDRING.on = q.get('handring') !== '0';   // his own actions are a ring that stays (game/handring.ts): a tap of the interaction key does the default action, the key kept down a moment puts his rows up as a ring at the cursor that stays with no key held (a digit, a click or the key again does a wedge; a right click or Tab puts it away), the whistle is its last wedge and has no key, the corner shows the default action alone; on the page's board the key is E while empty hands are a slot (host/keymap.ts HAND) — ON in the page; ?handring=0 = the list on a held Space, the corner list and V for the whistle, as it was
   THROWBACK.restMark = !q.has('norestmark');   // the throw preview's ring is where the can comes to REST (game/throwback.ts `restMark`, player.ts throwRest; the overlay's): ?norestmark = the ring on its first touch, as it was
+  THROWBACK.reach = !q.has('noreach');   // the throw preview shows what the thing will reach (game/throwreach.ts; the overlay's): a frag's kill ring and the ring it hurts to, a stun canister's stun ring; ?noreach = the arc and its small ring alone
   THROWBACK.on = q.get('throwback') !== '0';   // a can in the wind-up goes back on the belt when a kick, a pick, the wand, hands at work, the keypad or a takedown begins (game/throwback.ts); `?throwback=0` = it freezes in his fist and leaves when the beat ends, as it did
   AUTOCAM.on = q.get('autocam') !== '0'; AUTOCAM.turn = q.get('autoturn') !== '0'; AUTOCAM.zoom = q.get('autozoom') !== '0'; AUTOCAM.sway = q.get('autosway') !== '0'; AUTOCAM.lock = q.get('autolock') !== '0'; AUTOCAM.tune = q.get('autotune') !== '0'; autoTuneApply();   // the camera's key tapped twice and the camera frames things itself (host/autocam.ts: the door ahead, the squad's orders, the men he could shoot; the key held with the mouse moved, or with a walk key, takes it back): ON in the page; `?autocam=0` = the double tap is the Options row's, as it was (`?autoturn=0` = it never turns the view, `?autozoom=0` = it never zooms)
   OWNBLOW.on = q.get('ownblow') !== '0';   // a charge his own hands set goes off from his own actions — a row of his list, a wedge of his ring — and the squad's key no longer blows it (game/ownblow.ts); `?ownblow=0` = the squad's key blows any set charge, as it did
@@ -297,6 +298,7 @@ export function pageSwitches(q: URLSearchParams): void {
   RAILS.eyeView = q.get('eyeview') !== '0'; RAILS.eyeFirst = q.get('eyefirst') !== '0'; RAILS.lineClear = q.get('lineclear') !== '0'; RAILS.wayRun = q.get('wayrun') !== '0'; RAILS.skyPlan = q.get('skyplan') !== '0'; RAILS.planWalk = q.get('planwalk') !== '0'; RAILS.planDown = q.get('plandown') !== '0'; RAILS.skyUp = q.get('skyup') !== '0';   // eight rules of that frame, each with its own word off (rails.ts RAILS): ?skyup=0 = a sky seat that asks for plan mode up is the plain sky seat, the mode down (the plan mode mission cannot be played so); ?plandown=0 = the tick plan mode comes down is his own, on a step that locks his feet, his sprint or his trigger too; ?planwalk=0 = Shift with the command key does nothing while a walk key is down, on a mission that gives his feet and plan mode and not his sprint (the two words together = the gate as it was before either); ?wayrun=0 = men a step tells to run a leg walk it; ?skyplan=0 = the sky seat is not drawn as plan mode is; ?eyeview=0 = a mission's lookout is one more of the team's eyes, as it was (the squad then knows what only the lookout has); ?eyefirst=0 = a step's lookout takes the last free place among the picture's eyes, not the first; ?lineclear=0 = the big line lies where it lies, over your own men too. On the frozen stand the frame itself is off (TPS_RAILS=1 raises it, these eight with it)
   RAILS.cardBeat = q.get('cardbeat') !== '0';   // …and the step before a card settles: its deed done, it stays up a beat (and, for a card marked quiet, until a fight of his has gone quiet) before the next step comes up with its card, its cue and its keys (rails.ts RAILS.cardBeat; this moves the tutorial missions' ticks) — ON in the page, off in the module and on the frozen stand (TPS_CARDBEAT=1 there); ?cardbeat=0 = the next step the tick the deed is done, its card over whatever is playing, as it was
   RAILS.flatRing = q.get('railflat') !== '0';   // …and a mission whose level says so takes the flat ring (rails.ts RAILS.flatRing: every order of the thing on one ring, its line the step's `flatLine`; today the first mission, for its wall charge) — ON in the page, off in the module and on the frozen stand (TPS_RAILFLAT=1)
+  RAILS.markClear = q.get('markclear') !== '0';   // …and the step's mark is not drawn under the squad's ring while that is up on the step's place (picture only; a knob of the frame's table like lineClear: on in the module, the frame itself is off on the frozen stand)
   NOSHOVE.on = q.get('noshove') !== '0';   // teammates falling in never shove the player (game/noshove.ts): a follower whose way lies through him goes round or stops short, and a shove from anybody is not read as his walking — ON in the page; ?noshove=0 = shouldered aside by his own file, as it was
   SPRINTDOOR.on = !q.has('nosprintdoor');   // a sprint into a door has weight (game/sprintdoor.ts): a shoulder through one that opens away costs a quarter of the run, one that opens toward him is booted off its hinges — ON in the page; ?nosprintdoor = every leaf flung at full speed from either face, as it was
   AIMWEIGHT.on = !q.has('noaimweight');   // the player's aim has weight (game/aimweight.ts): his gun turns at a limited rate and the aiming circle trails the cursor, shots going where the circle is — ON in the page; ?noaimweight = the gun eased onto the cursor as it was
@@ -351,6 +353,11 @@ export function pageSwitches(q: URLSearchParams): void {
   FIRE.size = q.get('firesize') === '0' ? 0 : FIRE_SIZE;   // … its lamp the pinpoint the level made it, not the flame's size: the drum's shadow on the ground with a drawn edge, as it was (to compare on a GPU)
   FIRE.look.shimmer = q.get('fireheat') === '0' ? 0 : FIRE_SHIMMER; FIRE.look.plume = q.get('fireplume') === '0' ? 0 : FIRE_PLUME;   // … the shimmer of the hot air over it, and the smoke drawn off its tips (both the picture only): ?fireheat=0, ?fireplume=0 = without
   FIRE.embers = q.get('fireembers') === '0' ? 0 : FIRE_EMBERS;   // … and its embers, which are GPU particles: ?fireembers=0 = none
+  { const plain = q.get('firebright') === '0'; FIRE.bright = plain ? 1 : FIRE_BRIGHT; FIRE.reach = plain ? 1 : FIRE_REACH; FIRE.lift = plain ? FIRE_LIFT_WAS : FIRE_LIFT; FIRE.warm = plain ? [1, 1, 1] : [...FIRE_WARM]; }   // … its lamp a fire's: a quarter stronger than the level's, reaching further, a deeper orange, in the body of the flame (the light meter reads it): ?firebright=0 = the lamp as the level hung it
+  { const still = q.get('firesway') === '0'; FIRE.wander = still ? FIRE_WANDER_WAS : FIRE_WANDER; FIRE.wanderUp = still ? FIRE_WANDER_UP_WAS : FIRE_WANDER_UP; }   // … its place shifting with the flames far enough to move a shadow's edge: ?firesway=0 = the few centimetres it was
+  FIRE.hardy = q.get('firehardy') !== '0';   // … and a round or a blast stirs it and does not put it out: ?firehardy=0 = out like a bulb, as it was
+  FIRE.look.react = q.get('firereact') === '0' ? 0 : FIRE_REACT; FIRE.look.lean = q.get('firelean') === '0' ? FIRE_LEAN_WAS : FIRE_LEAN;   // … its pixels taken from this frame by the temporal resolve (?firereact=0 = averaged over the picture's memory, as it was), and the wind leaning the flame (?firelean=0 = hardly, as it was)
+  FIRE.gas.on = q.get('firegas') === '1';   // … its flame as gas in the smoke solver's fine cells (the picture, and the page's smoke): OFF in the page until it has been seen; ?firegas=1 = on (and a row in the fire lab)
   FIRE.smoke.on = q.get('firesmoke') !== '0';   // … and its smoke, which keeps the smoke solver awake near a fire (picture only): ?firesmoke=0 = the fire with no smoke, to weigh what the smoke costs
   ROWSET.on = q.get('rowset') !== '0';   // a mission row's own hour and weather (game/rowset.ts): a row that names one is always started in it, over the link's — ON in the page; ?rowset=0 = the link's hour and weather as ever (no row names one: nothing to see either way)
   STARTLE.on = q.get('startle') !== '0';   // enemies startle when they first see you (game/startle.ts): a calm man whose own eyes have just told him it is a man jolts, his gun down for a beat, and only then draws — or, green and alone with you close, runs for it: ON in the page; ?startle=0 = he goes for his gun at once, as he did
@@ -399,6 +406,8 @@ export function pageSwitches(q: URLSearchParams): void {
   STALK.on = q.get('stalk') !== '0';   // the stalk (game/stalk.ts): the left button held on a man he is close behind walks Sam in to the grab. ON in the page; ?stalk=0 = the last metres are his own keys, as they were
   STALK.key = q.get('stalkkey') !== '0';   // …and the row's key finishes it (the interaction's: E): the held click walks him in and waits in reach, nothing grabs by itself. ON in the page; ?stalkkey=0 = the hold becomes the grab, as it was
   STALK.low = q.get('stalklow') !== '0';   // …and he goes LOWER as he closes, hands down, slower: no arm comes up and he does not rise until the grab. ON in the page; ?stalklow=0 = the arm up and the rise, as it was
+  STALK.drag = q.get('stalkdrag') === '1' || (q.has('sneaklab') && q.get('stalkdrag') !== '0');   // …and the mouse as a stick from where the press on him was made (a prototype: up in the sneak lab and with ?stalkdrag=1, down in the plain page and on the frozen stand, so no FROZEN_HOLDS row)
+  STALK.wide = q.get('stalkwide') !== '0';   // …and creeping up on a man his arms are out wide and low with open hands (under STALK.low). ON in the page; ?stalkwide=0 = his hands by his knees, as it was
   CROUCHRUN.on = q.get('crouchrun') !== '0';   // Shift in a crouch is a fast crouch walk, and the sprint is the standing man's (game/player.ts CROUCHRUN). ON in the page; ?crouchrun=0 = Shift stands him up into the sprint
   SAMLOOK.on = q.get('samlook') !== '0';   // his head goes to the man who matters (game/samlook.ts). ON in the page; ?samlook=0 = it stays where his body faces
   SAMLOOK.slip = q.get('slip') !== '0';   // crouched beside a man he tips away, sinks and puts the near arm out low (game/samlook.ts). ON in the page; ?slip=0 = the plain crouch
@@ -440,6 +449,7 @@ export function pageSwitches(q: URLSearchParams): void {
   CMDRING.planKnee = CMDRING.plan && CMDRING.planRts && q.get('planknee') !== '0';   // …he takes a knee at the radio while the mode is up, and the view eases back to him when it comes down (`?planknee=0` = he stands, the view's point jumps)
   CMDRING.planOne = CMDRING.plan && q.get('planone') !== '0';   // …one word that frees two or more doors of a plan puts their entries on one signal: the doors open together and two cans wait each other's burst (`?planone=0` = each chain's entry on its own clock, as it was)
   CMDRING.planNear = CMDRING.plan && CMDRING.planRts && q.get('plannear') !== '0';   // …the view of plan mode stays within a few metres of Sam, a room's worth and not the level's (`?plannear=0` = the reach as it was: 25 m past him and every teammate)
+  CMDRING.planDigits = CMDRING.plan && q.get('plandigits') !== '0';   // …and with plan mode up the digits pick the men: 1 to 4 a man, 5 everyone, and a click on bare ground picks nobody new (`?plandigits=0` = no digit is the mode's and a click on nothing is everyone, as it was)
   CMDRING.only = CMDRING.on && q.get('qonly') !== '0';   // the squad's only keys are the command key and the word's: the ring carries every order (a row off a letter on a spare wedge, 'more' where a page has more rows than wedges), the letters are nobody's while it is up, the middle button opens nothing (`?qonly=0` = the wedges and the letters as they were; host/keymap.ts takes the orders key and the who key off the board with it)
   CMDRING.flat = CMDRING.only && q.get('ringflat') !== '0';   // …and the ring is two rings deep at most: every order of the thing it was opened on, wedge 5 the one ring of the rest, the squad's posture row on it (`?ringflat=0` = the menu's pages as they were)
   CMDRING.plainHint = q.get('plainhint') !== '0';   // …no glyph beside the cursor or in the ring's middle: the mark of what the key orders on is the thing's own outline (a picture only; `?plainhint=0` = the glyph as it was)
@@ -492,6 +502,7 @@ export function pageSwitches(q: URLSearchParams): void {
   SAMESTART.on = q.get('samestart') !== '0';   // every mission starts the same way on every try (game/samestart.ts): a room clear's defenders on the level's own marks each load and each restart, a rescue's roamers and clock as written, a quiet mission the first of its lists — ON in the page; ?samestart=0 = every staging dealt as before (the line above, the restart's next placement, the quiet deal off the die)
   { const w = q.get('way'); ROOMCLEAR.way = w === 'any' ? -1 : w !== null && /^\d+$/.test(w) ? +w : 0; }   // …and the way in (ROOMCLEAR.way; the mission sheet's 'Way in' row writes it on the link): absent or ?way=1 = the level's own start, ?way=2 … = its other ones, ?way=any = dealt off this visit's die with the marks
   HOLD.disarm = q.get('disarm') !== '0';   // the grab disarms him (game/disarm.ts): Sam's right hand takes the gun out of the man's as the arm goes round him and lets it down beside them, with voices of its own for the catch, the strip and the gun on the floor — ON in the page; ?disarm=0 = knocked out of his hand on the first frame, as it was
+  HOLD.stripFirst = q.get('stripfirst') !== '0';   // the disarm leads (game/disarm.ts `lead`): the gun is out of his hands before the arm is round his neck, and the catch is heard behind the strip — ON in the page; ?stripfirst=0 = the two at once, as before
   HOLD.dropGun = !q.has('nogundrop');   // a man taken in the arm drops the gun he had in his hand: it lies on the floor like any dropped gun (game/player.ts startGrab)
   BACKKEY.tab = q.get('tabback') !== '0';   // Esc is only the pause; Tab backs out of the order menu, the Space list, a running verb, the launcher's arc (game/backkey.ts): ON in the page; ?tabback=0 = Esc backs out first, as it did
   HOLD.oneFacing = q.get('holdyaw') !== '0';   // a man in the arm faces where the hold faces him — nothing else turns him (game/nightbreach.ts: the calm defenders' marks)
@@ -593,6 +604,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'AUTOCAM.swayRate': 'TPS_AUTOTUNE=1 (the gentle mode\'s own number, the lean slower: host/autocam.ts AUTO_MODES)',
   'OWNBLOW.on': 'TPS_OWNBLOW=1',
   'THROWBACK.restMark': 'none: the overlay reads it, nothing headless does',
+  'THROWBACK.reach': 'none: the overlay reads it, nothing headless does',
   'GUNWALL.on': 'TPS_GUNWALL=1',
   'GUNWALL.mark': 'none: the overlay reads it, nothing headless does',
   'REARWATCH.on': 'TPS_REARWATCH=1',
@@ -603,6 +615,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'GUNHOLD.on': 'TPS_GUNHOLD=1',
   'HOLD.dropGun': 'TPS_HOLDDROP=1',
   'HOLD.disarm': 'TPS_DISARM=1',
+  'HOLD.stripFirst': 'TPS_STRIPFIRST=1 (acts only under HOLD.disarm: with TPS_HOLDDROP=1 TPS_DISARM=1)',
   'HOLD.oneFacing': 'TPS_HOLDYAW=1',
   'BACKKEY.tab': 'TPS_TABBACK=1',
   'WALLSHOT.on': 'TPS_WALLSHOT=1',
@@ -626,6 +639,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'STALK.on': 'TPS_STALK=1',
   'STALK.key': 'TPS_STALKKEY=1 (acts only under STALK.on: with TPS_STALK=1)',
   'STALK.low': 'TPS_STALKLOW=1 (acts only under STALK.on: with TPS_STALK=1)',
+  'STALK.wide': 'TPS_STALKWIDE=1 (acts only under STALK.low: with TPS_STALK=1 TPS_STALKLOW=1)',
   'STALK.turnIn': 'TPS_STALKPOLISH=1 (acts only under STALK.on: with TPS_STALK=1)',
   'STALK.cornerShow': 'TPS_STALKPOLISH=1 (acts only under STALK.on: with TPS_STALK=1)',
   'STALK.catchLong': 'TPS_STALKPOLISH=1 (acts only under STALK.on: with TPS_STALK=1)',
@@ -765,6 +779,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'CMDRING.planKnee': 'TPS_PLANKNEE=1 (needs TPS_QPLAN=1)',
   'CMDRING.planOne': 'TPS_PLANONE=1 (needs TPS_QPLAN=1)',
   'CMDRING.planNear': 'TPS_PLANNEAR=1 (needs TPS_QPLAN=1)',
+  'CMDRING.planDigits': 'TPS_PLANDIGITS=1 (needs TPS_QPLAN=1)',
   'CMDRING.flat': 'TPS_RINGFLAT=1 (needs TPS_QRING=1 TPS_QONLY=1)',
   'CMDRING.plainHint': 'TPS_PLAINHINT=1',
   'CMDRING.bareHint': 'TPS_BAREHINT=1',

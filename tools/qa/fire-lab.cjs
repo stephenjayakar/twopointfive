@@ -6,9 +6,9 @@
 //   node tools/qa/fire-lab.cjs            a sheet of frames 1/15 s apart from the play camera's distance and from close by, into OUT
 //   env: OUT (folder, default a temp one) · SRC (another fire.wgsl to draw) · LOOK ('tall=1.5,core=2': the look's numbers, game/fire.ts FIRE.look) · ROWS (play,close,far) ·
 //        DIST (m, default 5) · PITCH (degrees, default 55) · WIND (x,z m/s, default 0,0) · ALB (the ground's albedo, default 0.5; snow 0.85) · T0 (s, default 3) · N (frames a
-//        row, default 8) · DT (s between frames, default 1/15) · W / H (a frame's size, default 320 × 360) · HEAT (default 1) · FH (the flame's height, m; default 0.75) · POP (age of a crack at the
-//        first frame, s; default 0.05) · BED (the bed of coals' radius, m; default 0.27, 0 = the lid bare) · LAMP, SIZE (the stage's lamp: metres over the coals and its
-//        radius; default 0.41 and 0.24, the game's) · BLOOM (default 0.06, the game's) · SUB (marches a pixel, default 4)
+//        row, default 8) · DT (s between frames, default 1/15) · W / H (a frame's size, default 320 × 360) · HEAT (default 1) · FH (the flame's height, m; default 1.15) · POP (age of a crack at the
+//        first frame, s; default 0.05) · BED (the bed of coals' radius, m; default 0.27, 0 = the lid bare) · LAMP, SIZE, LAMPK, LAMPC (the stage's lamp: metres over the coals, its
+//        radius; default 0.66 and 0.24, the game's) · BLOOM (default 0.06, the game's) · SUB (marches a pixel, default 4)
 // Headless Chromium on the software adapter. Exit 0 = the shader compiled, the pipelines were made and every frame was written with no error on the page (what is IN a
 // frame is for the eye); 1 otherwise.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
@@ -18,14 +18,14 @@ const DIST = +(process.env.DIST || 5), PITCH = +(process.env.PITCH ?? 55), T0 = 
 const W = +(process.env.W || 320), H = +(process.env.H || 360), HEAT = +(process.env.HEAT ?? 1), POP = +(process.env.POP ?? 0.05);
 const WIND = (process.env.WIND || '0,0').split(',').map(Number);
 const ALB = +(process.env.ALB ?? 0.5);   // how much of the fire's light the ground gives back (0.5 = packed earth; 0.85 = snow, the hardest ground to see a flame against)
-const LAMP = +(process.env.LAMP ?? 0.41), SIZE = +(process.env.SIZE ?? 0.24);   // the stage's lamp: metres over the coals (the level hangs it 0.16 up, FIRE.lift 0.25 more) and its radius (FIRE.size; 0 = a pinpoint and a drawn shadow)
+const LAMP = +(process.env.LAMP ?? 0.66), SIZE = +(process.env.SIZE ?? 0.24), LAMPK = +(process.env.LAMPK ?? 1.25), LAMPC = (process.env.LAMPC || '1,0.36,0.1').split(',').map(Number);   // the stage's lamp: metres over the coals (the level hangs it 0.16 up, FIRE.lift 0.5 more; LAMPK = its strength × the level's 9, FIRE.bright; LAMPC = its colour, the level's × FIRE.warm) and its radius (FIRE.size; 0 = a pinpoint and a drawn shadow)
 const BED = +(process.env.BED ?? 0.27);   // the bed of coals' radius (0 = the bare lid, as the game lights it: clipped white by the lamp a hand above it)
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const fire = fs.readFileSync(process.env.SRC || path.join(__dirname, '../../src/render/shaders/fire.wgsl'), 'utf8');
 // THE LOOK'S NUMBERS (game/fire.ts FIRE.look, kept in step by hand): LOOK='gain=1,core=1,…' moves one
-const LOOK = { gain: 1, core: 1, sigma: 12, speed: 1, tall: 1.25, torn: 1, plume: 1, shimmer: 0.012, soot: 0.6, breathe: 1 };
+const LOOK = { gain: 3, core: 4, sigma: 2.5, speed: 0.7, tall: 0.95, torn: 1.1, plume: 1, shimmer: 0.019, soot: 0.5, breathe: 1, ref: 3.2, lo: 0.2, react: 1, lean: 0.2 };
 for (const kv of (process.env.LOOK || '').split(',').filter(Boolean)) { const [k, v] = kv.split('='); if (!(k in LOOK)) { console.log('FAIL unknown look key', k); process.exit(1); } LOOK[k] = +v; }
-const SUB = +(process.env.SUB ?? 4), FH = +(process.env.FH ?? 0.75), BLOOM = +(process.env.BLOOM ?? 0.06);
+const SUB = +(process.env.SUB ?? 4), FH = +(process.env.FH ?? 1.15), BLOOM = +(process.env.BLOOM ?? 0.06);
 const stage = /* wgsl */`
 struct Lab { eye: vec4f, fwd: vec4f, right: vec4f, up: vec4f, res: vec4f, fire: FireRec, look: FireLook };
 @group(0) @binding(0) var<uniform> lab: Lab;
@@ -50,7 +50,7 @@ fn rayAt(p: vec2f) -> vec3f { let uv = (p / lab.res.xy) * 2.0 - 1.0; let th = la
   let F = lab.fire; let base = F.a.xyz; let flick = F.c.z;
   // the stage: ground at y = 0, a drum under the coals (radius 0.29, its mouth at the coals' height)
   var tS = 1e30; var col = vec3f(0.0);
-  let lightP = base + vec3f(0.0, ${LAMP.toFixed(3)}, 0.0); let Li = vec3f(1.0, 0.5, 0.2) * (9.0 * flick * F.b.y);
+  let lightP = base + vec3f(0.0, ${LAMP.toFixed(3)}, 0.0); let Li = vec3f(${LAMPC.map(v => v.toFixed(3)).join(', ')}) * (${(9 * LAMPK).toFixed(3)} * flick * F.b.y);
   if (rd.y < 0.0) { let t = -ro.y / rd.y; let P = ro + rd * t; let d = lightP - P; let d2 = dot(d, d); tS = t;
     var lit = 0.0;   // the drum's own shadow, from a lamp as big as the flame: sixteen points of its ball, turned by the pixel (the same sixteen everywhere drew sixteen stacked edges)
     let turn = 6.2831853 * fireHu(u32(fp.x) + u32(fp.y) * 4099u);
@@ -61,7 +61,7 @@ fn rayAt(p: vec2f) -> vec3f { let uv = (p / lab.res.xy) * 2.0 - 1.0; let th = la
     col = vec3f(${ALB}, ${(ALB * 0.96).toFixed(3)}, ${(ALB * 0.92).toFixed(3)}) * (Li * (lit * max(d.y, 0.0) / (d2 * sqrt(d2))) + vec3f(0.004, 0.005, 0.008)) / 3.14159; }
   let dc = fireCyl(ro, rd, base - vec3f(0.0, base.y, 0.0), 0.29, 0.0, base.y);
   if (dc.x <= dc.y && dc.x > 0.0 && dc.x < tS) { tS = dc.x; let P = ro + rd * dc.x;
-    if (P.y > base.y - 0.002) { let r = length(P.xz - base.xz); col = select(vec3f(0.05, 0.02, 0.01), vec3f(4.6, 1.6, 0.38), length(P.xz - base.xz) < 0.275); }
+    if (P.y > base.y - 0.002) { let r = length(P.xz - base.xz); col = select(vec3f(0.05, 0.02, 0.01), vec3f(2.86, 0.99, 0.23), length(P.xz - base.xz) < 0.275); }
     else { col = vec3f(0.07, 0.035, 0.02) + vec3f(0.3, 0.1, 0.03) * smoothstep(0.5, 0.9, P.y / base.y) * 0.05; } }
   let cpix = 2.0 * th / lab.res.y;
   let jit = fract(52.9829189 * fract(0.06711056 * fp.x + 0.00583715 * fp.y) + lab.res.w * 0.61803399);
@@ -96,7 +96,7 @@ const html = `<!doctype html><body style="margin:0;background:#000"><canvas id="
     const mk = (entry, format) => dev.createRenderPipeline({ layout: 'auto', vertex: { module: mod, entryPoint: 'vs' }, fragment: { module: mod, entryPoint: entry, targets: [{ format }] } });
     const pipe = mk('fs', HDR), pDown = mk('fsDown', HDR), pOut = mk('fsOut', fmt);
     const e = await dev.popErrorScope(); if (e) return 'pipeline: ' + e.message;
-    const buf = dev.createBuffer({ size: 80 + 64 + 48, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    const buf = dev.createBuffer({ size: 80 + 64 + 64, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     const bg = dev.createBindGroup({ layout: pipe.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: buf } }] });
     const tex = (w, h) => dev.createTexture({ size: [Math.max(1, w), Math.max(1, h)], format: HDR, usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING });
     const hdr = tex(cv.width, cv.height), lv = [1, 2, 3, 4, 5].map(k => tex(cv.width >> k, cv.height >> k)), smp = dev.createSampler({ magFilter: 'linear', minFilter: 'linear' });
@@ -107,12 +107,12 @@ const html = `<!doctype html><body style="margin:0;background:#000"><canvas id="
       run(hdr.createView(), pipe, bg); lv.forEach((t, i) => run(t.createView(), pDown, downBg[i])); run(ctx.getCurrentTexture().createView(), pOut, outBg);
       dev.queue.submit([enc.finish()]); return dev.queue.onSubmittedWorkDone(); };
     return 'ok';
-  }, { code: fire + stage });
+  }, { code: fire + (/fn fireGas\(/.test(fire) ? '' : 'fn fireGas(p: vec3f) -> f32 { return 0.0; }\n') + stage });
   if (ok !== 'ok') { console.log('FAIL', ok, errs.join('\n')); await browser.close(); process.exit(1); }
   // the light's flicker and the cracks, as game/fire.ts makes them (kept in step with it by hand: this page is for looking)
-  const flick = t => 1 + 0.22 * (0.9 * Math.sin(6.283 * 1.3 * t + 1) + 0.7 * Math.sin(6.283 * 2.7 * t + 2) + 0.45 * Math.sin(6.283 * 4.9 * t + 3) + 0.2 * Math.sin(6.283 * 8.3 * t + 4)) / 2.25;
-  const L = LOOK, look = [L.gain, L.core, L.sigma, L.speed, L.tall, L.torn, L.plume, L.shimmer, L.soot, L.breathe, 0, 0];
-  const rec = (t, popAge) => [0, 0.89, 0, 0.22, FH, HEAT, 0.37, t, WIND[0], WIND[1], flick(t) + 0.25 * Math.exp(-Math.max(popAge, 0) / 0.12) * (popAge >= 0 ? 1 : 0), 0, BED, 0, 0, 0, ...look];
+  const flick = t => 1 + 0.29 * (0.9 * Math.sin(6.283 * 1.3 * t + 1) + 0.7 * Math.sin(6.283 * 2.7 * t + 2) + 0.45 * Math.sin(6.283 * 4.9 * t + 3) + 0.2 * Math.sin(6.283 * 8.3 * t + 4)) / 2.25;
+  const L = LOOK, look = [L.gain, L.core, L.sigma, L.speed, L.tall, L.torn, L.plume, L.shimmer, L.soot, L.breathe, L.ref, L.lo, L.react, L.lean, 0, 0];
+  const rec = (t, popAge) => [0, 0.89, 0, 0.22, FH, HEAT, 0.37, t, WIND[0], WIND[1], flick(t) + 0.6 * Math.exp(-Math.max(popAge, 0) / 0.12) * (popAge >= 0 ? 1 : 0), 0, BED, 0, 0, 0, ...look];
   const cam = (dist, pitch, look, frame) => { const p = pitch * Math.PI / 180, yaw = 0.5; const f = [-Math.sin(yaw) * Math.cos(p), -Math.sin(p), -Math.cos(yaw) * Math.cos(p)];
     const eye = [look[0] - f[0] * dist, look[1] - f[1] * dist, look[2] - f[2] * dist]; const r = [Math.cos(yaw), 0, -Math.sin(yaw)]; const u = [r[1] * f[2] - r[2] * f[1], r[2] * f[0] - r[0] * f[2], r[0] * f[1] - r[1] * f[0]];
     return [...eye, 0, ...f, 0, ...r, 0, ...u, 0, W, H, Math.tan(14 * Math.PI / 180), frame]; };

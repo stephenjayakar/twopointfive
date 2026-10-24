@@ -51,6 +51,7 @@ import { thinNote, thinAir } from './thinline';
 import { drawnBeam } from './stature';
 import { bulletMark, bangScorch, staticSurface } from './marks';
 import { gpuFx, impactFx, muzzleSparksFx, casingFx, bangFx, fixtureShatterFx, lensShatterFx, breakerSparkFx } from './particleFx';
+import { fireHolds, fireStir } from './fire';   // a round does not put a fire out (FIRE.hardy)
 import { lampGlass, deadLamp, CARLAMPS_STATS } from './carlamps';   // a vehicle's lamp is glass a round breaks, lit or not (a leaf)
 import { civilianDown, civilianBodies, civiliansShown } from './civilians';
 import { roundDoes, woundDown } from './wounds';
@@ -257,8 +258,9 @@ function fireWeaponRaw(g: Game, shooter: Character, target: Vec3, isPlayer: bool
     };
     if (legs) {
       const stIx = st && Math.abs(tHit - st.t) < 1e-6 ? st.index : -1;
-      const live = (t: LightTarget) => !(t.broken || !t.interactive || t.factor <= 0 && !t.on && !lampGlass(t));   // (a vehicle's lamp is glass whether it burns or not)
+      const live = (t: LightTarget) => !(t.broken || !t.interactive || t.factor <= 0 && !t.on && !lampGlass(t) || fireHolds(t));   // (a vehicle's lamp is glass whether it burns or not)
       const own = (t: LightTarget) => t.kind === 'breaker' ? g.level.breaker.boxes : t.boxes;   // (the breaker's target lists its LED alone: a round into the panel is a round into the breaker)
+      if (stIx >= 0) { const fire = g.targets.find(t => fireHolds(t) && t.boxes.includes(stIx)); if (fire) fireStir(g, fire); }   // (fire.ts FIRE.hardy: a round into a burning drum stirs it — a crack and a throw of embers — and puts nothing out; a fire is no lamp to this search, so a lamp behind one can still be shot)
       let got = stIx >= 0 ? g.targets.find(t => live(t) && own(t).includes(stIx)) : undefined;   // the thing the round STOPPED in first, whatever else its line passed
       if (!got) for (const t of g.targets) {
         if (!live(t) || legsNear(t.pos, legs) > 3) continue;
@@ -268,7 +270,7 @@ function fireWeaponRaw(g: Game, shooter: Character, target: Vec3, isPlayer: bool
       }
       if (got) { AIMCOST_STATS.lampHits++; shootOut(got); }
     } else for (const t of g.targets) {
-      if (t.broken || !t.interactive || t.factor <= 0 && !t.on && !lampGlass(t)) continue;   // scenery (rack LEDs / glow strips) cannot be shot out
+      if (t.broken || !t.interactive || t.factor <= 0 && !t.on && !lampGlass(t) || fireHolds(t)) continue;   // scenery (rack LEDs / glow strips) cannot be shot out, nor a fire (FIRE.hardy)
       const slack = t.kind === 'breaker' ? 0.08 : 0.3; let dist = -1;
       if (!pen) {
         const toT = v3.sub(t.pos, muzzle); const depth = v3.dot(toT, flown);
