@@ -2230,8 +2230,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   A CUE IS A BEAT LATE BY DESIGN: a step's cue comes with its card, 1.2 s or more after the deed before it. That is the right time for men a script
   moves WHEN the step comes up; men who must be out of sight BEFORE the player can see them are placed from the first tick (or the card says `now`).
   The squad mission's hall men stood in the window's line until their step's cue and were shot through the glass a step early (mended there).
-  ON THE RUNNER'S BOOK: `lesson-run` exits 0 when a `fightOk` step goes by with the fight before it ever came up; three such in a row were three
-  lessons nobody read. A runner-wide bar (a NOTE, or a fail unless the script says it may) is not built.
+  THE RUNNER'S BAR (`tools/qa/lesson-run.ts`, a script's `fightRun`, default 1): a `fightOk` step that goes by before the script reaches it is
+  logged with how long it was up and named on the run's last line; two in a row fail the run ("lessons nobody played") unless the script raises
+  `fightRun` and says why. Before, three such in a row still ended 24 of 24. Tried on the squad mission (the only script with `fightOk`): no step
+  goes by that way on seeds 1 to 6 in its own arm or on seeds 1 to 4 plain; with the lesson pushed on by hand one step is a note and two fail.
   NOT DONE: Tab's objectives card and the small objective row still read the done step's ask while it settles; an order given in the beat still snaps
   to the done step's mark. The other missions' cards are plain (the beat): which of them follow a fight he only watches is their parts' to mark.
   Never seen on a GPU; nobody has played it.
