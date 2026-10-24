@@ -8,7 +8,7 @@
 //     browser zooms with — Ctrl or ⌘ with + and − step it, with 0 it is the window's again. Kept per machine (localStorage `twopointsix.textsize`: the step's
 //     index; nothing kept = the window's). A step never takes the layout under `floor` (1200 × 675 of its own pixels, the smallest the screens hold whole
 //     at): on a window with less room than the largest step asks for, the larger steps share the room there is, so each is still a step.
-//   THE PAGE DOES NOT ZOOM: Ctrl / ⌘ + − 0, Ctrl + wheel (the camera's own zoom over the picture, nothing over a menu) and a pinch are taken from the browser.
+//   THE PAGE DOES NOT ZOOM: Ctrl / ⌘ + − 0, Ctrl + wheel (nothing over a menu; over the picture a pinch is the camera's zoom and the wheel under a held Ctrl key nothing — game/input.ts) and a pinch are taken from the browser.
 // HOW: CSS `zoom` on each layer of the page that carries words (`LAYERS`; never the picture's canvas), the factor in `--tz` on the root, which also wears the
 // class `tsz` while the switch is on. Inside a zoomed layer a length in px is that many of the LAYER's pixels, and three things do not follow by themselves:
 //   · a viewport unit is multiplied like any other length, so a rule in a layer writes `calc(25vw / var(--tz, 1))`, never a bare `25vw`
@@ -140,7 +140,7 @@ export function bootTextSize(q: URLSearchParams, child = false) {
   window.addEventListener('resize', apply);
   // a style sheet that joins the page later (each screen puts its own rules in when it first opens) has its `@media` rules asked the same way
   if (typeof MutationObserver === 'function') { const mo = new MutationObserver(ms => { if (ms.some(m => Array.from(m.addedNodes).some(n => n.nodeName === 'STYLE' || n.nodeName === 'LINK'))) mediaRules(); }); mo.observe(document.head, { childList: true }); if (document.body) mo.observe(document.body, { childList: true }); }
-  // the browser's zoom is the page's: its keys step the size here, Ctrl + wheel is left to whatever is under the cursor (the picture: the camera), a pinch is nothing
+  // the browser's zoom is the page's: its keys step the size here, Ctrl + wheel is left to whatever is under the cursor (the picture: game/input.ts, where a pinch zooms the camera), a pinch is nothing
   window.addEventListener('keydown', e => {
     const d = zoomKey(e); if (d === null) return;
     e.preventDefault(); if (e.repeat || !TEXTSIZE.keys) return;

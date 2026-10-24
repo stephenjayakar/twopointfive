@@ -1067,6 +1067,21 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   swallows the key's coming up) lets go of it. It is a latch where Ctrl was read off every mouse event: a keyup lost some other way leaves the
   view turning until Space is tapped. While Space is
   the camera's, Ctrl and the mouse turn NOTHING; a wheel that says Ctrl still zooms, because that is what a trackpad pinch sends.
+  CTRL AND THE WHEEL (2026-10-24; `KEYMAP.pinchOnly`, `?pinchonly=0`; the maintainer: "ctrl-scroll still zooms in and out, should remove"): while
+  Space is the camera's, the wheel under a Ctrl key that is DOWN is nothing, neither the zoom nor his pace. A PINCH STILL ZOOMS: Chrome and Firefox
+  send a trackpad pinch as a wheel that says Ctrl with no Ctrl key down, and `game/input.ts` tells the two apart by `ctrlDown`, the `ctrlKey` of the
+  last key or mouse event on the window (first in line, behind no gate: a field with the focus, a lock, a Control he put on another key and a Ctrl
+  pressed in another frame all say it; a lost focus keeps it and a plain wheel clears it). So zoom is Space and the wheel, or a pinch. Space pressed
+  UNDER a held Ctrl is the camera's too while the rule is on (it was no key of ours before: neither the turn nor, now, the zoom). With the camera on
+  Ctrl (`?camspace=0`, or a row he put on Space) Ctrl and the wheel is the only zoom there is and stays. Like `camSpace` it is the page's own
+  (`keysBoot`), off in the module, in no recording and on no stand: no run reads a wheel. CHECK: `camspace`, its line 'the wheel under a held Ctrl
+  key is nothing…' (left and right Ctrl, a pinch, a plain wheel, a Ctrl key whose coming up was never seen, Space and Ctrl in either order, Ctrl
+  pressed in a field, on Caps Lock, through a lost focus and in another frame, the camera on Ctrl, the rule off, the page's word);
+  `PINCHONLY_BREAK=1` fails that line alone. KNOWN: (1) a Ctrl key-up the page never saw (a system shortcut) leaves a pinch dead until the mouse
+  next moves or a plain wheel turns; (2) a device that makes its pinch or its zoom button out of a REAL Ctrl press and a wheel (some older Windows
+  touchpad drivers, some mice) cannot be told from the chord and is nothing: `?pinchonly=0`, there is no Options row; (3) Ctrl held and the wheel
+  turned before the mouse has moved over a page that never saw the key go down (another frame has the keys) still zooms once; (4) Safari sends a
+  pinch as its own gesture events and no wheel, so a pinch there was never the zoom (not checked here). NOBODY HAS TRIED IT ON A TRACKPAD.
   TWICE (`host/findme.ts watchCtrlTaps(win, idle, key)`; main.ts hands it `camKey`): the "Double tap" option of Options, Game (off unless he turns
   it on) is two taps of the camera's key, wherever it is. findme.ts still imports nothing.
   A tap of Space with Shift held counts (Shift is his sprint; with Ctrl it is a browser chord and still does not). With a text box focused (the
@@ -1078,8 +1093,8 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   swap shown. Making the camera hold a row of the board would give it caps, words and a swap by the board's own machinery. `tools/qa/findme-page.cjs`
   (the settings thread's) reads "Double tap Ctrl" and presses Control: it needs `&camspace=0` or the new words. The engine replay's own view still
   turns on Ctrl (`replay/engineplay.ts`). A laptop touchpad that goes dead while a key is held would not turn the view under Space: not tried.
-  CHECK: `bun run tools/qa/probes.ts camspace` (family `player`), 5 lines: the board, held, Ctrl, twice, off; on game/input.ts's own listeners and
-  the double tap's, stood on a window and a canvas that are lists of them. `CAMSPACE_BREAK=1` fails 4 (the `off` line is the build as it was).
+  CHECK: `bun run tools/qa/probes.ts camspace` (family `player`), 6 lines: the board, held, Ctrl, the wheel (above), twice, off; on game/input.ts's own listeners and
+  the double tap's, stood on a window and a canvas that are lists of them. `CAMSPACE_BREAK=1` fails 5 (the `off` line is the build as it was).
   `tools/qa/keybinds-page.cjs` reads the camera's cap in its last line.
   Never seen on a GPU; nobody has felt Space held under a thumb while the same hand walks.
 - **A can in the wind-up goes back on the belt when his hands start something else** (`src/game/throwback.ts THROWBACK.on`, 10-22; the deep

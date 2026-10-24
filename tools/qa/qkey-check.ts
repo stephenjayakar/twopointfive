@@ -166,7 +166,7 @@ export async function qkeyCheck(): Promise<boolean> {
         code.why || q.why || b.why ? `not played: ${code.why ?? q.why ?? b.why}` : `the code straight in: ${code.rows.length} rows, digest ${code.digest} · the Q key: ${q.rows.length} rows, digest ${q.digest}, filed '${q.filed[0]}' · ${same ? 'the same' : `DIFFERENT (first row that differs: ${q.rows.find((r, i) => r !== code.rows[i]) ?? 'none — the game differs'})`} · the orders: ${q.rows.map(r => r.split(' ')[1]).join(', ')} · from the stack: ${entry?.split(' ')[1]} · the order ${CMDRING.on ? 'on the tick the key is seen up (the orders ring is on)' : 'on the frame of the press'}: ${q.lag === 1} · the B key: filed '${b.filed.join('')}', ${b.rows.length} rows`);
     }
   } finally {
-    K.setKeys({}); K.KEYMAP.on = false; K.KEYMAP.qFree = false; K.KEYMAP.qCmd = false; K.KEYMAP.freeWhen = null; AUTOPILOT.on = keep.ap; Math.random = keep.rnd;
+    K.setKeys({}); K.KEYMAP.on = false; K.KEYMAP.qFree = false; K.KEYMAP.qCmd = false; K.KEYMAP.camSpace = false; K.KEYMAP.pinchOnly = false; K.KEYMAP.freeWhen = null; AUTOPILOT.on = keep.ap; Math.random = keep.rnd;
     for (const n of stubs) delete G[n]; for (const k of ['localStorage', 'window'] as const) { if (had[k] === undefined) delete G[k]; else G[k] = had[k]; }
   }
   console.log(fails ? `qkey-check: ${fails} FAIL` : 'qkey-check: ALL PASS');
