@@ -1475,22 +1475,27 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   leaves him on frame 10 and the hand is at his neck on frame 16: six frames between, three with the key down), others, harness.
   `disarm-check.ts` writes the key down in its worlds: it reads the two beats as they were. The lab has the toggle and both moments.
   One seed: a fixed staging. Nobody has seen it on a GPU or heard it.
-- **Arms out wide and low in the creep (10-23; `STALK.wide`, `wideOut` / `wideDown` / `wideFwd` / `wideBy`; `CREEP.wide`;
-  `?stalkwide=0`, `TPS_STALKWIDE=1`).** The maintainer: "having the hands up just doesn't look cool", and the low creep's answer (hands
-  down by his knees) read as a man picking something up. In the footage he works from, the man creeping has both arms out to his sides
-  with open hands. THE RULE (`close.ts` feeds the animator, `character.ts creepLayer` draws it): under `STALK.low`, bare hands, in his
-  crouch, closing on a man from behind, each hand is 0.3 m outside its own shoulder, 0.2 m under it and 0.16 m ahead of it, open, palm
-  to the floor, elbows out and back. It comes with the sink (all of it once he is `wideBy` 0.35 of the way down, about 2.1 m from the
-  man), in at 4 1/s and out at 14. It is by distance, not by the click: it holds while he waits behind the man and goes with the
-  carriage when no man is in front of him. Upright it is nothing. The stealth pose layer gives the left arm back to the creep by the
-  share shown (it owned that arm through the creep: with it the left hand stayed by his knee and only the right went out). ON in the
-  page, OFF in the module and on the frozen stand, a `FROZEN_HOLDS` row; a recording from before the key replays with it off. The lab
-  has the toggle and the four numbers. THE CHECK is `stalkwide-check.ts` (`probes.ts stalkwide`, the grab and stealth families;
-  `STALKWIDE_BREAK=1` reds two of its five lines), both stands: out (his hands 1.0 m apart under two metres against 0.6 with the key
-  down, the same before he sinks, neither hand above his neck), waits (still out two seconds after the click is let go; the plain
-  crouch's half a second after the man is taken away), upright, grab (held on frame 29 either way), harness. Judged on CPU stills
-  (`close-stills.ts` scene `stalk-rifle`, the page's stand): it reads as a prowl from the game's camera, and it is wide. One seed: a
-  fixed staging. Nobody has seen it on a GPU.
+- **Arms out and low in the creep (10-23, reshaped 10-24; `STALK.wide`, `wideOut` / `wideDown` / `wideFwd` / `wideLead` / `wideBy` / `widePole`;
+  `CREEP.wide`; `?stalkwide=0`, `TPS_STALKWIDE=1`).** The maintainer: "having the hands up just doesn't look cool", and the low creep's
+  answer (hands down by his knees) read as a man picking something up. The first shape (each hand 0.3 m outside its shoulder, 0.2 m
+  under it, elbows out) flung the arms out like wings; on his GPU (10-24): "having sam's arms out so wide looks pretty jank. we should
+  really look at the frame by frame from the chaos theory footage". Read off two of the footage's creeps, frame by frame: elbows bent and back, the upper arms hanging a little off his sides, the hands open by his knees, one reaching ahead.
+  THE RULE (`close.ts` feeds the animator, `character.ts creepLayer` draws it): under `STALK.low`, bare hands, in his crouch, closing on a
+  man from behind, each hand is 0.1 m outside its own shoulder, 0.32 m under it and 0.24 m ahead of it, the left 0.07 m further ahead
+  and the right as far back, open, palm to the floor, the elbow pole back and a little out (`widePole` [0.45, 0.15, -0.88]; the
+  animator's own `CREEP.wide.pole` keeps the first shape's, for a recording from before it). It comes with the sink
+  (all of it once he is `wideBy` 0.35 of the way down, about 2.1 m from the man), in at 5 1/s and out at 14. It is by distance, not by
+  the click: it holds while he waits behind the man and goes with the carriage when no man is in front of him. Upright it is nothing.
+  The stealth pose layer gives the left arm back to the creep by the share shown (it owned that arm through the creep). ON in the page,
+  OFF in the module and on the frozen stand, a `FROZEN_HOLDS` row; a recording from before the key replays with it off, and one from
+  before `wideLead` with both hands as far ahead. The lab has the toggle ('arms out') and the five numbers. THE CHECK is
+  `stalkwide-check.ts` (`probes.ts stalkwide`, the grab and stealth families; `STALKWIDE_BREAK=1` reds two of its five lines), both
+  stands: out (under two metres neither hand more than 0.25 m outside its shoulder, both at least 0.2 m under it, the left ahead, and
+  1.6 m out a good way off the key down's hands; the same hands as the key down before he sinks, neither above his neck), waits (still out two
+  seconds after the click is let go, 0.5 to 0.7 m off the key down's hands; the plain crouch's half a second after the man is taken
+  away), upright, grab (held on frame 29 either way), harness. Judged on CPU stills next to the footage's frames
+  (`close-stills.ts` scene `stalk-rifle`, the page's stand). One
+  seed: a fixed staging. Nobody has seen the new shape on a GPU.
 - **Drag to steer the creep, a prototype (10-23; `STALK.drag`, `dragDead` 14 px, `dragFull` 140 px; `stalk.ts dragged`; lab only:
   `?sneaklab` raises it, `?stalkdrag=1` anywhere, `?stalkdrag=0` in the lab; `TPS_STALKDRAG=1`).** The maintainer: "you click on the guy
   and then you can drag towards him to move in that direction. like a joystick centered on the guy. that would make things feel more
@@ -1502,10 +1507,36 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   Everything else is the creep's (the arc ends it, a wall ends it, the key grabs). NOT the switch rule on purpose: it changes how the
   hold plays everywhere (the tutorials teach "hold left click"), so it is down in the plain page and on both stands until the
   maintainer has tried it; there is no `FROZEN_HOLDS` row because the stands agree. The line over the man reads "press and drag to
-  sneak up on him" while it is up. THE CHECK is `stalkdrag-check.ts` (`probes.ts stalkdrag`; `STALKDRAG_BREAK=1` reds three of six),
+  sneak up on him" while it is up. THE CHECK is `stalkdrag-check.ts` (`probes.ts stalkdrag`; `STALKDRAG_BREAK=1` reds four of seven),
   both stands: still (2 s, 0 cm moved), toward (the whole drag 1.6 m/s, half of it 0.8), side (across, 2° off the man), stops (0.79 m
-  behind him, the key takes him), off, harness. The page drive drags the real mouse in the lab. No hand has held it and nobody has
+  behind him, the key takes him), outside, off, harness. OFF THE VIEW: a press made on the view goes on being the stick with the mouse
+  over the panel or the HUD (`input.ts` window `mousemove`), only while `Input.dragOff`, which `Game.update` writes on the host's input
+  from `STALK.on && STALK.drag` each frame (the editor imports `Input`, so input.ts does not import stalk.ts). It asks the event's own
+  `buttons` (a button let go outside the window sends no mouseup), calls `modsUp` first, keeps tracking through a lock as the view's
+  listener does, and follows no press begun off the view (a lab slider). The `outside` line drives it on a window of lists. The page
+  drive drags the real mouse in the lab (on the real page the drag goes over the panel: 139 px of 140 read with the listener, 46 without). No hand has held it and nobody has
   seen it on a GPU.
+- **Round him: the keys and the stick orbit the man (10-24; `STALK.orbit`, `orbitK` 3, `orbitEdge` 0.05, `orbitSnap` 0.3; `stalk.ts orbited`;
+  `?stalkorbit=0`, `TPS_STALKORBIT=1`).** The maintainer: "when you're clicking on an enemy and moving around them, you should really be
+  "orbiting" them". THE RULE: with the button held on a man, a move key no longer ends the creep. The way it points is split, as it is
+  first asked for (and again when it swings more than 30° off that), into a share toward the man and a share round him, and those shares
+  are kept while it is held (a share toward him under `orbitSnap`, about 17° off square, counts as none: the screen's keys are seldom
+  square to the man, and on the real page a key 10° off spiralled him 21 cm in over 0.8 s): a key held across him carries Sam round him on the circle he is on, facing him, at the creep's `pace`
+  (1.6 m/s), with a pull of `orbitK` per metre back onto that circle, and a man who walks takes the circle with him; the share toward or
+  away closes or opens the gap, down to `keyM` (the stick's own taper, `intoKeep`). He goes round no further than `orbitEdge` short of
+  the grab's own arc (`close.ts BEHIND_COS`, inside where the creep ends), and waits there, so the grab is still on offer. His hips turn
+  toward the man as far as they do with a gun up. Keys let go, the held button walks him in as before. The stick (`STALK.drag`, the lab's) is taken the same way. With it up the aim's weight
+  (`aimweight.ts`, which turned him to the cursor's floor point, left where the press was) has no say in a creep: he faces the man. ON
+  in the page, OFF in the module and on the frozen stand, a `FROZEN_HOLDS` row; a recording from before it replays with it off. The lab
+  has the toggle ('keys go round him') and the three numbers ('nearly across' is `orbitSnap`). THE CHECK is `stalkorbit-check.ts` (`probes.ts stalkorbit`, the grab and
+  stealth families; `STALKORBIT_BREAK=1` reds seven of its ten lines), both stands: round (the key across him for a second, after 20 frames of
+  creep: 57° round him at 1.51 m, the gap within 1 cm, facing him within 3°), slant (the view turned 12° so that key is off square: the
+  same, and 34 cm off with `orbitSnap` 0), edge (six seconds: stops at -0.42 against the grab's -0.25, the creep on), in and out
+  (closes to 0.80 m against `keyM` 0.8, the nearest 0.79; away opens 1.08 m in 0.75 s), walking (a man walking away at 1.2 m/s: the gap
+  within 17 cm over a second), reach (from 0.9 m: stops at -0.51 and the key takes him), stick (the lab's drag across him: 53° round,
+  within 6 cm), letgo (walked into reach in 2.6 s), off (a move key ends it), harness. `stalk-check` and `stalkdrag-check` hold it down
+  (their cards are of a key that ends the creep and of the stick's own way). The real page (`stalk-page.cjs`) drives it with a real button and key and picks the clearest of the four. Nobody
+  has played it and it was never seen on a GPU; the harness has no hand on the keys. One seed: a fixed staging.
 - **The sneak lab's knobs in groups (10-23; `src/host/sneaklab.ts` GROUPS, NUMS, TOGS).** The maintainer, of the panel on his GPU:
   "it's hard to tweak the knobs in the debug panel, illegible. maybe more grouping, shorter names, alt text would help? and some
   explanation of what to look for / test in the alt text?" The one long "The creep" list is ten sections that fold (Start and stop,

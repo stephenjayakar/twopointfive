@@ -411,6 +411,7 @@ export function pageSwitches(q: URLSearchParams): void {
   STALK.key = q.get('stalkkey') !== '0';   // …and the row's key finishes it (the interaction's: E): the held click walks him in and waits in reach, nothing grabs by itself. ON in the page; ?stalkkey=0 = the hold becomes the grab, as it was
   STALK.low = q.get('stalklow') !== '0';   // …and he goes LOWER as he closes, hands down, slower: no arm comes up and he does not rise until the grab. ON in the page; ?stalklow=0 = the arm up and the rise, as it was
   STALK.drag = q.get('stalkdrag') === '1' || (q.has('sneaklab') && q.get('stalkdrag') !== '0');   // …and the mouse as a stick from where the press on him was made (a prototype: up in the sneak lab and with ?stalkdrag=1, down in the plain page and on the frozen stand, so no FROZEN_HOLDS row)
+  STALK.orbit = q.get('stalkorbit') !== '0';   // …and a move key with the button held on a man takes Sam round him (stalk.ts STALK.orbit, orbited) — ON in the page; ?stalkorbit=0 = a move key ends the creep, as it was
   STALK.wide = q.get('stalkwide') !== '0';   // …and creeping up on a man his arms are out wide and low with open hands (under STALK.low). ON in the page; ?stalkwide=0 = his hands by his knees, as it was
   CROUCHRUN.on = q.get('crouchrun') !== '0';   // Shift in a crouch is a fast crouch walk, and the sprint is the standing man's (game/player.ts CROUCHRUN). ON in the page; ?crouchrun=0 = Shift stands him up into the sprint
   SAMLOOK.on = q.get('samlook') !== '0';   // his head goes to the man who matters (game/samlook.ts). ON in the page; ?samlook=0 = it stays where his body faces
@@ -645,6 +646,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'STALK.key': 'TPS_STALKKEY=1 (acts only under STALK.on: with TPS_STALK=1)',
   'STALK.low': 'TPS_STALKLOW=1 (acts only under STALK.on: with TPS_STALK=1)',
   'STALK.wide': 'TPS_STALKWIDE=1 (acts only under STALK.low: with TPS_STALK=1 TPS_STALKLOW=1)',
+  'STALK.orbit': 'TPS_STALKORBIT=1 (acts only under STALK.on: with TPS_STALK=1)',
   'STALK.turnIn': 'TPS_STALKPOLISH=1 (acts only under STALK.on: with TPS_STALK=1)',
   'STALK.cornerShow': 'TPS_STALKPOLISH=1 (acts only under STALK.on: with TPS_STALK=1)',
   'STALK.catchLong': 'TPS_STALKPOLISH=1 (acts only under STALK.on: with TPS_STALK=1)',

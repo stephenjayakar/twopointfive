@@ -5,10 +5,12 @@
 //   toward    the mouse dragged the whole way toward the man on the screen: Sam closes on him at the creep's top speed; half the way, about half of it.
 //   side      dragged across the screen: he goes across, not in, and keeps facing the man.
 //   stops     dragged toward him for six seconds: he comes up to `keyM` behind him and stops there, never nearer, the stalk still on; the key then takes him.
+//   outside   (game/input.ts's window listener, on a window of lists) the press held and the mouse taken off the view: followed while the stick is up
+//             (Game.update says so to the host's input every frame), let go of when the event says the button is up; with the stick down, nothing.
 //   off       the key down: the same press with the mouse left on him walks him in to reach, as it did.
 //   harness   down on the frozen stand and in the plain page, up in the lab (?sneaklab) and with ?stalkdrag=1, down in the lab with ?stalkdrag=0; rides a
 //             recording's tables, and a recording from before the key replays with it down.
-// STALKDRAG_BREAK=1 = the key left down where still, toward and side ask for it up: each must FAIL.   exit 0 = all hold · 1 = one does not
+// STALKDRAG_BREAK=1 = the key left down where still, toward, side and outside ask for it up: each must FAIL.   exit 0 = all hold · 1 = one does not
 // THE HARNESS HAS NO GPU and no hand on a mouse: the drag is written into the input as numbers. Nobody has felt it.
 import { standUp, ROOT } from './headless.ts';
 
@@ -27,7 +29,8 @@ const up = () => !BREAK, f2 = (x: number) => x.toFixed(2);
 /** the lobby's floor, the rifleman facing east with Sam `gap` m behind him, crouched with empty hands, the rest parked; the press made on the man's chest */
 async function world(drag: boolean, gap = 3) {
   const W: any = await quiet(() => standUp({ seed: 11 } as any)), g = W.game;
-  HOLD.dropGun = true; HOLD.disarm = true; CLOSE.on = true; CLOSE.noKnife = true; STALK.on = STALK.key = STALK.low = true; STALK.drag = drag; stalkPolish(true);   // (the frozen stand's pins write them at every stand-up)
+  HOLD.dropGun = true; HOLD.disarm = true; CLOSE.on = true; CLOSE.noKnife = true; STALK.on = STALK.key = STALK.low = true; STALK.drag = drag; STALK.orbit = false; stalkPolish(true);   // (STALK.orbit down: this card is of the stick's own way; stalkorbit-check takes the stick round him)
+    // (the frozen stand's pins write them at every stand-up)
   g.godMode = true; g.aiEnabled = false; g.playerInvisible = true; g.player.slot = 'pistol'; g.player.holstered = true;
   g.tune.carbineGuards = 'reyes'; for (let i = 0; i < 5; i++) W.step(DT);
   const A = g.guards.find((x: any) => x.callsign === 'Reyes'), rest = g.guards.filter((x: any) => x !== A);
@@ -35,7 +38,7 @@ async function world(drag: boolean, gap = 3) {
   A.char.pos = [...AT]; A.char.bodyYaw = A.char.aimYaw = EAST; A.char.vel = [0, 0, 0]; A.path = []; A.pathGoal = null; A.hold = true; A.pinned = true; A.awareness = 0; A.heardUpTo = 1e12;
   W.cam.yaw = 0; W.cam.rebuild?.(); g.teleportPlayer([AT[0] - gap, 0, AT[2]]); g.player.crouch = true;
   const c = g.player.char, chest = () => [A.char.pos[0], 1.2, A.char.pos[2]];
-  const step = (n = 1) => { for (let i = 0; i < n; i++) { STALK.drag = drag; A.char.vel = [0, 0, 0]; W.step(DT); g.player.visibility = 0.02; } };
+  const step = (n = 1) => { for (let i = 0; i < n; i++) { STALK.drag = drag; STALK.orbit = false; A.char.vel = [0, 0, 0]; W.step(DT); g.player.visibility = 0.02; } };
   step(40); W.cursorAt(chest()); W.input.buttons |= 1; W.input.clicked |= 1; step(1);
   const mid = [W.input.mouseX, W.input.mouseY];
   /** the screen's way from Sam to the man, a unit vector in px */
@@ -83,6 +86,29 @@ async function off() {
   const C = await world(false); let n = 0; for (; n < 600; n++) { C.step(); if (n > 30 && C.speed() < 0.02 && C.gapNow() < 0.95) break; }
   verdict(C.gapNow() < 0.95 && n < 600, 'the key down: the same press with the mouse left on him walks him in to reach by itself, as it did', `in reach (${f2(C.gapNow())} m) after ${(n * DT).toFixed(1)} s`);
 }
+async function outside() {
+  console.log('\n=== outside: the press held and the mouse taken off the view ===');
+  const C = await world(up()); C.step(2); const wired = C.W.input.dragOff === true;   // (Game.update writes the host's input.dragOff from STALK.drag every frame)
+  const { Input } = await import(`${ROOT}/src/game/input.ts`), G: any = globalThis, had = G.window;
+  const L: Record<string, ((e: any) => void)[]> = {}, V: Record<string, ((e: any) => void)[]> = {};   // (the window's listeners and the view's, apart)
+  const win: any = { addEventListener: (t: string, f: any) => { (L[t] ??= []).push(f); } }; win.top = win.self = win;
+  const el: any = { addEventListener: (t: string, f: any) => { (V[t] ??= []).push(f); }, getBoundingClientRect: () => ({ left: 0, top: 0 }) };
+  const make = () => { G.window = win; try { return new Input(el) as any; } finally { if (had === undefined) delete G.window; else G.window = had; } }, I = make();
+  const ev = (e: any) => ({ repeat: false, metaKey: false, ctrlKey: false, shiftKey: false, altKey: false, target: {}, movementX: 0, movementY: 0, clientX: 0, clientY: 0, buttons: 0, button: 0, code: '', key: '', preventDefault() { }, stopPropagation() { }, ...e });
+  const win$ = (t: string, e: any) => { for (const f of L[t] ?? []) f(ev(e)); }, view$ = (t: string, e: any) => { for (const f of V[t] ?? []) f(ev(e)); };
+  const at = () => `${I.mouseX},${I.mouseY}`;
+  I.dragOff = C.W.input.dragOff; view$('mousemove', { target: el, clientX: 100, clientY: 100 }); I.buttons |= 1;   // (the press made on the view: its mousedown asks the document for the focus, which the harness has not)
+  win$('mousemove', { clientX: 300, clientY: 200, buttons: 1 }); const off = at();   // (over the panel, the button held)
+  I.lockExcept = new Set<string>(); win$('mousemove', { clientX: 320, clientY: 210, buttons: 1 }); const locked = at(); I.lockExcept = null;
+  I.keys.add('ShiftLeft'); I.heldAs.set('ShiftLeft', 'ShiftLeft');   // (Shift held, as its keydown files it)
+   win$('mousemove', { clientX: 330, clientY: 220, buttons: 1, shiftKey: false }); const shiftUp = !I.down('ShiftLeft');
+  win$('mousemove', { clientX: 400, clientY: 300, buttons: 0 }); const letGo = at(), latch = (I.buttons & 1) === 0;   // (let go outside the window: no mouseup ever comes)
+  win$('mousemove', { clientX: 500, clientY: 300, buttons: 1 }); const panel = at();   // (a press begun on the panel, a slider: not the view's)
+  for (const k in L) L[k] = []; const down = make(); down.dragOff = false; down.buttons = 1; const before = `${down.mouseX},${down.mouseY}`; for (const f of L.mousemove ?? []) f(ev({ clientX: 300, clientY: 200, buttons: 1 })); const downAt = `${down.mouseX},${down.mouseY}`;
+  verdict(wired && off === '300,200' && locked === '320,210' && shiftUp && letGo === '330,220' && latch && panel === '330,220' && downAt === before,
+    'the press made on the view and the mouse taken off it with the button down: the cursor is followed there (through a lock too) and a modifier the event says is up is let go; let go outside the window, it stops and the button is up; a press begun off the view is not followed; with the stick down, nothing of it',
+    `the game says the stick is up: ${wired} · followed over the panel ${off} · under a lock ${locked} · Shift let go ${shiftUp} · let go outside ${letGo}, the button up ${latch} · a press off the view ${panel} · the stick down: ${before} → ${downAt}`);
+}
 async function harness() {
   console.log('\n=== harness: the lab and ?stalkdrag=1 have it, the page and the frozen stand do not ===');
   const shipped = process.env.TPS_PROFILE === 'shipped'; STALK.drag = shipped ? found : true;   // (the frozen stand's pin writes it down at every stand-up; the page's stand has it from the page's boot)
@@ -100,7 +126,7 @@ async function harness() {
 /** the whole card (probes.ts 'stalkdrag'): true = every check passed. The switches are put back as they were found. */
 export async function stalkdragCheck(): Promise<boolean> {
   const hold = JSON.parse(JSON.stringify(HOLD)), close = JSON.parse(JSON.stringify(CLOSE)), stalk = { ...STALK }; allPass = true; found = STALK.drag;
-  try { await still(); await toward(); await side(); await stops(); await off(); Object.assign(STALK, stalk); await harness(); }
+  try { await still(); await toward(); await side(); await stops(); await outside(); await off(); Object.assign(STALK, stalk); await harness(); }
   finally { Object.assign(HOLD, hold); Object.assign(CLOSE, close); Object.assign(STALK, stalk); }
   console.log(`\n=== stalkdrag: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`); return allPass;
 }

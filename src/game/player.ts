@@ -485,8 +485,8 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
     if (input.down('KeyA')) { mx -= right[0]; mz -= right[2]; }
   }
   // the stalk (stalk.ts): the left button held on a man he is close behind walks him in to the grab — the direction, the pace and the facing are the game's; a
-  // move key of his own ends it
-  const stalk = STALK.on ? stalkStep(g, input.lmb(), input.lmbHit(), mx !== 0 || mz !== 0, STALK.drag ? { x: input.mouseX, y: input.mouseY, fwd, right } : undefined) : null;   // (STALK.drag: the mouse is a stick from where the press was made)
+  // move key of his own ends it (STALK.orbit: takes him round the man instead)
+  const stalk = STALK.on ? stalkStep(g, input.lmb(), input.lmbHit(), mx !== 0 || mz !== 0, STALK.drag ? { x: input.mouseX, y: input.mouseY, fwd, right } : undefined, STALK.orbit ? { mx, mz, dt } : undefined) : null;   // (STALK.drag: the mouse is a stick from where the press was made; STALK.orbit: his keys take him round the man)
   if (stalk) { mx = stalk.mx; mz = stalk.mz; pl.crouch = true; }
   if (g.puppet) {   // scripted movement: straight at the goal (the tour picks goals with a clear line), stop within 10 cm
     mx = 0; mz = 0; const gl = g.puppet.goal;
@@ -603,7 +603,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
     c.aimYaw += wrapAngle(look - c.aimYaw) * (1 - Math.exp(-8 * dt)); c.aimPitch = damp(c.aimPitch, 0.05, 6, dt);
     pl.backpedal = false; c.anim.reverse = moving && w.v * w.side < 0;   // (the beat after a change of direction: still coasting the old way with the legs already turned the new one)
   } else {
-    if (aimWeighTurn(g, dt)) { /* aimweight.ts: the gun's heading swings to the cursor's bearing at a limited rate, the circle trailing the cursor */ }
+    if (!(stalk && STALK.orbit) && aimWeighTurn(g, dt)) { /* aimweight.ts: the gun's heading swings to the cursor's bearing at a limited rate, the circle trailing the cursor (STALK.orbit: not in a creep, where he faces the man — the cursor was left where the press was) */ }
     else if (aimDist > 0.25) c.aimYaw += wrapAngle(v3.yawOf(toAim) - c.aimYaw) * (1 - Math.exp(-16 * dt));   // eased, not snapped: the arms swing through to a new bearing instead of teleporting
     c.aimPitch = damp(c.aimPitch, cursorPitch(), 12, dt);
     // a leaf he is walking open (or about to, or easing by hand: game.ts handsOnDoors feeds anim.doorPush) is taken square on unless the gun is actually up:
@@ -619,7 +619,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
       else if (pl.backpedal ? d > -0.05 : d < -0.35) pl.backpedal = !pl.backpedal;
       // hips follow the legs' travel direction (or its reverse) but yield up to ~45° toward the aim so the spine twist stays natural
       const base = pl.backpedal ? wrapAngle(moveYaw + Math.PI) : moveYaw;
-      const bodyTarget = byHand ? intoDoor! : intoDoor !== null ? base + clamp(wrapAngle(intoDoor - base), -0.35, 0.35) : base + clamp(wrapAngle(c.aimYaw - base), -0.8, 0.8) * (aiming ? 1 : 0.6);   // (square to the leaf, within 20° of his line: it swings as it opens and he is walking through, not round it)
+      const bodyTarget = byHand ? intoDoor! : intoDoor !== null ? base + clamp(wrapAngle(intoDoor - base), -0.35, 0.35) : base + clamp(wrapAngle(c.aimYaw - base), -0.8, 0.8) * (aiming || (stalk && STALK.orbit) ? 1 : 0.6);   // (square to the leaf, within 20° of his line: it swings as it opens and he is walking through, not round it)
       c.bodyYaw = approachAngle(c.bodyYaw, bodyTarget, (intoDoor !== null ? 12 : 9) * dt);
       c.anim.reverse = pl.backpedal;
     } else {
