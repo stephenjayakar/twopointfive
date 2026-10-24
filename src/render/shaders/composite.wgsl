@@ -680,7 +680,7 @@ fn fireOver(c: vec3f, pixf: vec2f, rd: vec3f, tMax: f32) -> vec3f {
     if (F.d.y > 0.5) { let seen = fogSeenAt(F.a.xyz, vec3f(0.0)) >= 0.5; if (seen != (F.d.y < 1.5)) { continue; } }
     let fa = fireAir(F, beams.fireLook, frame.camPos, rd, tMax, beamPix(), jit);
     col = col * fa.a + fa.rgb;
-    fireReact = max(fireReact, fireVeil * beams.fireLook.d.x);   // (a flame is new every frame and has nothing to be reprojected by: taau.wgsl takes these pixels from this frame)
+    fireReact = max(fireReact, min(1.0, 4.0 * fireVeil) * beams.fireLook.d.x);   // (a quarter veiled is wholly the flame's: a thin flame — the look's sigma is the maintainer's 2.5 — is as new every frame as a solid one)   // (a flame is new every frame and has nothing to be reprojected by: taau.wgsl takes these pixels from this frame)
   }
   return col;
 }
