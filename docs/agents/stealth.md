@@ -1485,24 +1485,26 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   both stands: still (2 s, 0 cm moved), toward (the whole drag 1.6 m/s, half of it 0.8), side (across, 2° off the man), stops (0.79 m
   behind him, the key takes him), off, harness. The page drive drags the real mouse in the lab. No hand has held it and nobody has
   seen it on a GPU.
-- **Round him: the keys and the stick orbit the man (10-24; `STALK.orbit`, `orbitK` 3, `orbitEdge` 0.12; `stalk.ts orbited`;
+- **Round him: the keys and the stick orbit the man (10-24; `STALK.orbit`, `orbitK` 3, `orbitEdge` 0.05, `orbitSnap` 0.3; `stalk.ts orbited`;
   `?stalkorbit=0`, `TPS_STALKORBIT=1`).** The maintainer: "when you're clicking on an enemy and moving around them, you should really be
   "orbiting" them". THE RULE: with the button held on a man, a move key no longer ends the creep. The way it points is split, as it is
   first asked for (and again when it swings more than 30° off that), into a share toward the man and a share round him, and those shares
-  are kept while it is held: a key held across him carries Sam round him on the circle he is on, facing him, at the creep's `pace`
+  are kept while it is held (a share toward him under `orbitSnap`, about 17° off square, counts as none: the screen's keys are seldom
+  square to the man, and on the real page a key 10° off spiralled him 21 cm in over 0.8 s): a key held across him carries Sam round him on the circle he is on, facing him, at the creep's `pace`
   (1.6 m/s), with a pull of `orbitK` per metre back onto that circle, and a man who walks takes the circle with him; the share toward or
   away closes or opens the gap, down to `keyM` (the stick's own taper, `intoKeep`). He goes round no further than `orbitEdge` short of
   the grab's own arc (`close.ts BEHIND_COS`, inside where the creep ends), and waits there, so the grab is still on offer. His hips turn
   toward the man as far as they do with a gun up. Keys let go, the held button walks him in as before. The stick (`STALK.drag`, the lab's) is taken the same way. With it up the aim's weight
   (`aimweight.ts`, which turned him to the cursor's floor point, left where the press was) has no say in a creep: he faces the man. ON
   in the page, OFF in the module and on the frozen stand, a `FROZEN_HOLDS` row; a recording from before it replays with it off. The lab
-  has the toggle ('keys go round him') and the two numbers. THE CHECK is `stalkorbit-check.ts` (`probes.ts stalkorbit`, the grab and
-  stealth families; `STALKORBIT_BREAK=1` reds six of its nine lines), both stands: round (the key across him for a second: 53° round
-  him, the gap within 1 cm, facing him within 3°), edge (six seconds: stops at -0.32 against the grab's -0.25, the creep on), in and out
+  has the toggle ('keys go round him') and the three numbers ('nearly across' is `orbitSnap`). THE CHECK is `stalkorbit-check.ts` (`probes.ts stalkorbit`, the grab and
+  stealth families; `STALKORBIT_BREAK=1` reds seven of its ten lines), both stands: round (the key across him for a second, after 20 frames of
+  creep: 57° round him at 1.51 m, the gap within 1 cm, facing him within 3°), slant (the view turned 12° so that key is off square: the
+  same, and 34 cm off with `orbitSnap` 0), edge (six seconds: stops at -0.42 against the grab's -0.25, the creep on), in and out
   (closes to 0.80 m against `keyM` 0.8, the nearest 0.79; away opens 1.08 m in 0.75 s), walking (a man walking away at 1.2 m/s: the gap
-  within 17 cm over a second), reach (from 0.9 m: stops at -0.36 and the key takes him), stick (the lab's drag across him: 43° round,
+  within 17 cm over a second), reach (from 0.9 m: stops at -0.51 and the key takes him), stick (the lab's drag across him: 53° round,
   within 6 cm), letgo (walked into reach in 2.6 s), off (a move key ends it), harness. `stalk-check` and `stalkdrag-check` hold it down
-  (their cards are of a key that ends the creep and of the stick's own way). The real page drives it with a real button and key. Nobody
+  (their cards are of a key that ends the creep and of the stick's own way). The real page (`stalk-page.cjs`) drives it with a real button and key and picks the clearest of the four. Nobody
   has played it and it was never seen on a GPU; the harness has no hand on the keys. One seed: a fixed staging.
 - **The sneak lab's knobs in groups (10-23; `src/host/sneaklab.ts` GROUPS, NUMS, TOGS).** The maintainer, of the panel on his GPU:
   "it's hard to tweak the knobs in the debug panel, illegible. maybe more grouping, shorter names, alt text would help? and some
