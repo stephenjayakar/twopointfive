@@ -8,12 +8,14 @@ const U: any = await import(`${ROOT}/src/game/unseen.ts`);
 const { TWOGEARS } = (await import(`${ROOT}/src/game/player.ts`)) as any;
 const { FRIENDS } = (await import(`${ROOT}/src/game/friends.ts`)) as any;
 const HF: any = await import(`${ROOT}/src/game/holdfire.ts`);
+const WS: any = await import(`${ROOT}/src/game/wallsnap.ts`);
 const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 let fails = 0;
 const check = (ok: boolean, what: string) => { console.log(`${ok ? '- PASS —' : '- FAIL —'} ${what}`); if (!ok) fails++; return ok; };
 const reset = () => { Object.assign(U.UNSEEN, JSON.parse(JSON.stringify(U.UNSEEN_DEFAULTS))); for (const k of Object.keys(U.UNSEEN_STATS)) U.UNSEEN_STATS[k] = 0; U.UNSEEN_LOG.length = 0; };
 async function stand(query: string, level?: string, set: Record<string, unknown> = {}): Promise<Run> {
   const R = await Run.start(query, 1, { hard: true, level }); R.stopOnNotice = false; R.cap = 600;
+  WS.WALLSNAP.press = false;   // (the walks here are driven at their goals and run along walls: the shipped stand's hold-without-a-key, wallsnap.ts `press`, would take a wall hold on an upright walk, and a wall hold is sneaking — `wallbeat-check` asks about that meeting)
   HF.HOLDFIRE.on = false;   // (this file asks about the SNEAK's own hold: the unfound squad's hold, holdfire.ts, which the shipped stand raises, would hold the same rounds with UNSEEN.hold off)
   reset(); Object.assign(U.UNSEEN, { on: true }, set);   // (after the stand-up: the frozen stand holds the switch off — src/host/standup.ts)
   const why = R.g.orders.give('fallIn', { kind: 'none', at: [R.pos[0], 0, R.pos[2]] }); if (why) throw new Error(`fall in refused — ${why}`);

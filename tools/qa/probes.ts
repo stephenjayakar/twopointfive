@@ -2741,6 +2741,8 @@ if (on('roomfight-friends', 'roomfight', 'all')) await run('roomfight-friends', 
 if (on('roomfight-duel', 'roomfight', 'all')) await run('roomfight-duel', async () => (await import('./roomfight-probes.ts')).roomfightDuel());
 if (on('roomfight-orders', 'roomfight', 'all')) await run('roomfight-orders', async () => (await import('./roomfight-probes.ts')).roomfightOrders());
 if (on('roomfight-off', 'roomfight', 'all')) await run('roomfight-off', async () => (await import('./roomfight-probes.ts')).roomfightOff());
+if (on('wall-beat', 'unseen', 'roomfight', 'all')) await run('wall-beat', async () => (await import('./wallbeat-check.ts')).wallBeatCheck());   // a wall hold counts as sneaking once his back has been on it a beat (UNSEEN.wallBeat; WALLBEAT_BREAK=1 fails it)
+if (on('door-shots', 'roomfight', 'all')) await run('door-shots', async () => (await import('./doorshots-check.ts')).doorShotsCheck());   // rounds through a doorway keep his gun on it (ROOMFIGHT.doorShots; DOORSHOTS_BREAK=1 fails it)
 // ---------------------------------------------------------------- the team starts a mission fallen in (startfile-probes.ts; game/startfile.ts, START.fallIn / ?nofallin / TPS_FALLIN=1): 'startfile' = the family
 if (on('startfile-off', 'startfile', 'all')) await run('startfile-off', async () => (await import('./startfile-probes.ts')).startfileOff());
 if (on('startfile-stage', 'startfile', 'all')) await run('startfile-stage', async () => (await import('./startfile-probes.ts')).startfileStage());
