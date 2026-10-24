@@ -62,6 +62,7 @@ import { IR } from './irlaser';
 import { AIRDUST } from './airDust';
 import { FOG } from './fogofwar';
 import { WALLSNAP } from './wallsnap';
+import { UNSEEN } from './unseen';
 import { FRAG } from './frag';
 import { GUNWALL } from './gunwall';
 import { REARWATCH } from './rearwatch';
@@ -606,6 +607,8 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if ((k.tables.FURN as { mouth?: { base?: unknown } } | undefined)?.mouth?.base === undefined) FURN.mouth.base = false;   // (a file from before the bottom layer of a blown pile went with it: the layer lay in the hole)
   if ((k.tables.SNEAK as { byEye?: boolean } | undefined)?.byEye === undefined) SNEAK.byEye = false;   // (…and from before a lit step was read by the eye that has the line)
   if ((k.tables.ROOMFIGHT as { coverKeep?: boolean } | undefined)?.coverKeep === undefined) ROOMFIGHT.coverKeep = false;   // (…and from before a man told to cover kept his angle)
+  if ((k.tables.ROOMFIGHT as { doorShots?: boolean } | undefined)?.doorShots === undefined) ROOMFIGHT.doorShots = false;   // (…and from before rounds through a doorway kept his gun on it)
+  if ((k.tables.UNSEEN as { wallBeat?: boolean } | undefined)?.wallBeat === undefined) UNSEEN.wallBeat = false;   // (…and from before a wall hold waited a beat to count as sneaking: the table itself is carried from that key on)
   if ((k.tables.ROOMFIGHT as { doorEars?: boolean } | undefined)?.doorEars === undefined) ROOMFIGHT.doorEars = false;   // (…and from before a teammate looked at a door an enemy's hand opens in his sight)
   if (!k.tables.AIR_SIM) AIR_SIM.on = false;   // (a file from before the air was a simulated field: no field is fed — a picture only, the run is the same either way)
   if (!k.tables.WX_OWN) WX_OWN.roofs = false;   // (a file from before a level's own storm rained by its own roofs: the office's two rectangles on every level)
