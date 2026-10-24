@@ -49,6 +49,7 @@ import { IRLIGHT } from '../game/irlight';
 import { IR } from '../game/irlaser';
 import { AIRDUST } from '../game/airDust';
 import { WALLSNAP, LEAN_GUN_M } from '../game/wallsnap';
+import { UNSEEN } from '../game/unseen';
 import { HANDSLOT } from '../game/handslot';
 import { HANDRING } from '../game/handring';
 import { THROWBACK } from '../game/throwback';
@@ -217,6 +218,8 @@ export function pageSwitches(q: URLSearchParams): void {
   ORDERS.sameWay = q.get('sameway') !== '0';   // a pair handed one order on one door from one spot goes round a building by one side (game/orders.ts sameWays): ?sameway=0 = each man his own short way, as it was
   ORDERS.trailDoors = q.get('traildoors') !== '0';   // a follower goes by the doors Sam took where his own short way to his place would take others (game/orders.ts trailWay): ?traildoors=0 = his own short way, as it was
   ROOMFIGHT.coverKeep = q.get('coverkeep') !== '0';   // a man told to cover keeps his angle: an enemy off the way he was given whom a mate is already shooting at is not his (src/game/roomfight.ts)
+  UNSEEN.wallBeat = q.get('wallbeat') !== '0';   // a wall hold counts as sneaking once his back has been on it a beat: brushing a wall on an upright walk no longer drops the squad into a sneak (src/game/unseen.ts)
+  ROOMFIGHT.doorShots = q.get('doorshots') !== '0';   // rounds coming through an open doorway keep every teammate's gun that can see it on it (src/game/roomfight.ts)
   PAIR.steady = q.get('pairsteady') !== '0';   // a partner on his way to a man's back does not turn about: never back to a corner he has passed, and a short wait on a watched way does not square him to the man (game/pairorders.ts takeTick): ?pairsteady=0 = as it was
   COVER.rearRead = q.get('rearread') !== '0';   // a rear man on a mark with no door (a wall charge's stand-off, the mate covering a man at work) watches what the ground round him offers — a way in, a long run of floor — not the spot he stood on when the order came (game/cover.ts readRear over roomfit.ts watchablesAt): ON in the page; ?rearread=0 = 'the way he came', as it was
   COVER.backTurn = q.get('backturn') !== '0';   // a man walking backwards whose opening the deal lets go of comes out of it on his feet: the path kept, his body turning to the way he goes (game/cover.ts turnOut): ?backturn=0 = he walks forward along a body still turned to the rear, a quarter of a metre the wrong way, as he did
@@ -283,6 +286,7 @@ export function pageSwitches(q: URLSearchParams): void {
   HANDRING.onThing = HANDRING.near && q.get('ringonthing') !== '0'; HANDRING.bare = HANDRING.near && q.get('ringbare') !== '0'; HANDRING.turn = HANDRING.near && q.get('ringturn') !== '0'; HANDRING.corner = HANDRING.near && q.get('corner') !== '0';   // his ring stands on the thing its first row is about (or on him), and has no line of words under it
   HANDRING.on = q.get('handring') !== '0';   // his own actions are a ring that stays (game/handring.ts): a tap of the interaction key does the default action, the key kept down a moment puts his rows up as a ring at the cursor that stays with no key held (a digit, a click or the key again does a wedge; a right click or Tab puts it away), the whistle is its last wedge and has no key, the corner shows the default action alone; on the page's board the key is E while empty hands are a slot (host/keymap.ts HAND) — ON in the page; ?handring=0 = the list on a held Space, the corner list and V for the whistle, as it was
   THROWBACK.restMark = !q.has('norestmark');   // the throw preview's ring is where the can comes to REST (game/throwback.ts `restMark`, player.ts throwRest; the overlay's): ?norestmark = the ring on its first touch, as it was
+  THROWBACK.reach = !q.has('noreach');   // the throw preview shows what the thing will reach (game/throwreach.ts; the overlay's): a frag's kill ring and the ring it hurts to, a stun canister's stun ring; ?noreach = the arc and its small ring alone
   THROWBACK.on = q.get('throwback') !== '0';   // a can in the wind-up goes back on the belt when a kick, a pick, the wand, hands at work, the keypad or a takedown begins (game/throwback.ts); `?throwback=0` = it freezes in his fist and leaves when the beat ends, as it did
   AUTOCAM.on = q.get('autocam') !== '0'; AUTOCAM.turn = q.get('autoturn') !== '0'; AUTOCAM.zoom = q.get('autozoom') !== '0'; AUTOCAM.sway = q.get('autosway') !== '0'; AUTOCAM.lock = q.get('autolock') !== '0'; AUTOCAM.tune = q.get('autotune') !== '0'; autoTuneApply();   // the camera's key tapped twice and the camera frames things itself (host/autocam.ts: the door ahead, the squad's orders, the men he could shoot; the key held with the mouse moved, or with a walk key, takes it back): ON in the page; `?autocam=0` = the double tap is the Options row's, as it was (`?autoturn=0` = it never turns the view, `?autozoom=0` = it never zooms)
   OWNBLOW.on = q.get('ownblow') !== '0';   // a charge his own hands set goes off from his own actions — a row of his list, a wedge of his ring — and the squad's key no longer blows it (game/ownblow.ts); `?ownblow=0` = the squad's key blows any set charge, as it did
@@ -448,6 +452,7 @@ export function pageSwitches(q: URLSearchParams): void {
   CMDRING.planKnee = CMDRING.plan && CMDRING.planRts && q.get('planknee') !== '0';   // …he takes a knee at the radio while the mode is up, and the view eases back to him when it comes down (`?planknee=0` = he stands, the view's point jumps)
   CMDRING.planOne = CMDRING.plan && q.get('planone') !== '0';   // …one word that frees two or more doors of a plan puts their entries on one signal: the doors open together and two cans wait each other's burst (`?planone=0` = each chain's entry on its own clock, as it was)
   CMDRING.planNear = CMDRING.plan && CMDRING.planRts && q.get('plannear') !== '0';   // …the view of plan mode stays within a few metres of Sam, a room's worth and not the level's (`?plannear=0` = the reach as it was: 25 m past him and every teammate)
+  CMDRING.planDigits = CMDRING.plan && q.get('plandigits') !== '0';   // …and with plan mode up the digits pick the men: 1 to 4 a man, 5 everyone, and a click on bare ground picks nobody new (`?plandigits=0` = no digit is the mode's and a click on nothing is everyone, as it was)
   CMDRING.only = CMDRING.on && q.get('qonly') !== '0';   // the squad's only keys are the command key and the word's: the ring carries every order (a row off a letter on a spare wedge, 'more' where a page has more rows than wedges), the letters are nobody's while it is up, the middle button opens nothing (`?qonly=0` = the wedges and the letters as they were; host/keymap.ts takes the orders key and the who key off the board with it)
   CMDRING.flat = CMDRING.only && q.get('ringflat') !== '0';   // …and the ring is two rings deep at most: every order of the thing it was opened on, wedge 5 the one ring of the rest, the squad's posture row on it (`?ringflat=0` = the menu's pages as they were)
   CMDRING.plainHint = q.get('plainhint') !== '0';   // …no glyph beside the cursor or in the ring's middle: the mark of what the key orders on is the thing's own outline (a picture only; `?plainhint=0` = the glyph as it was)
@@ -545,6 +550,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'FOG.full': 'TPS_FOGFULL=1',
   'FOG.air': 'TPS_FOGAIR=1',
   'FOG.ours': 'TPS_FOGOURS=1',
+  'FOG.thin': 'TPS_FOGTHIN=1',
   'FOG.edge': 'TPS_FOGEDGE=1',
   'FOG.desat': 'TPS_FOGCOLOUR=1',
   'FOG.squadDoors': 'TPS_SQUADDOORS=1',
@@ -601,6 +607,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'AUTOCAM.swayRate': 'TPS_AUTOTUNE=1 (the gentle mode\'s own number, the lean slower: host/autocam.ts AUTO_MODES)',
   'OWNBLOW.on': 'TPS_OWNBLOW=1',
   'THROWBACK.restMark': 'none: the overlay reads it, nothing headless does',
+  'THROWBACK.reach': 'none: the overlay reads it, nothing headless does',
   'GUNWALL.on': 'TPS_GUNWALL=1',
   'GUNWALL.mark': 'none: the overlay reads it, nothing headless does',
   'REARWATCH.on': 'TPS_REARWATCH=1',
@@ -747,6 +754,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'ORDERS.trailDoors': 'TPS_TRAILDOORS=1',
   'PAIR.steady': 'TPS_PAIRSTEADY=1',
   'ROOMFIGHT.coverKeep': 'TPS_COVERKEEP=1',
+  'ROOMFIGHT.doorShots': 'TPS_DOORSHOTS=1',
   'COVER.rearRead': 'TPS_REARREAD=1',
   'COVER.backTurn': 'TPS_BACKTURN=1',
   'UNDERFOOT.on': 'TPS_UNDERFOOT=1',
@@ -775,6 +783,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'CMDRING.planKnee': 'TPS_PLANKNEE=1 (needs TPS_QPLAN=1)',
   'CMDRING.planOne': 'TPS_PLANONE=1 (needs TPS_QPLAN=1)',
   'CMDRING.planNear': 'TPS_PLANNEAR=1 (needs TPS_QPLAN=1)',
+  'CMDRING.planDigits': 'TPS_PLANDIGITS=1 (needs TPS_QPLAN=1)',
   'CMDRING.flat': 'TPS_RINGFLAT=1 (needs TPS_QRING=1 TPS_QONLY=1)',
   'CMDRING.plainHint': 'TPS_PLAINHINT=1',
   'CMDRING.bareHint': 'TPS_BAREHINT=1',
@@ -865,6 +874,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'WORDS.radioHome': 'TPS_RADIOHOME=1',
   'WORDS.guide': 'TPS_GUIDEWORDS=1',
   'UNSEEN.on': 'TPS_UNSEEN=1',
+  'UNSEEN.wallBeat': 'TPS_WALLBEAT=1',
   'HOLDFIRE.on': 'TPS_HOLDFIRE=1',
   'SILENT.stackSet': 'TPS_SILENTSET=1',
   'LOOK.on': 'TPS_LOOK=1',

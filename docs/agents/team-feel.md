@@ -570,6 +570,19 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   min(`SILENT.step`, `UNSEEN.lowStep`) — the ordered squad is never the louder one in the same crouch. `UNSEEN.lights` (teammates' lights follow Sam's) ships OFF. Switches `UNSEEN.*` in the
   knob registry; `?nosneakwith` = all of it off, `?sneakfire` = no fire hold. The FROZEN stand holds `UNSEEN.on` off (`TPS_UNSEEN=1`); the shipped stand has it on. QA:
   `bun run tools/qa/unseen-probes.ts [follow|wall|hold|entry|idle|all] [arm]` (pair and four, office and records; each check in its own process, raising the switch itself; passes on both stands — under `TPS_PROFILE=shipped` the doors' manners hand a wall place in an open doorway's lane back, `UNSEEN_STATS.wallLost`, and the man is off the face on a knee: the office's corridor by the lobby arch; on a short run of face — a furnished room's — the place is on the side with room and a file on the other side of Sam is not walked past him to it, `UNSEEN_STATS.wallPast`, a knee where they are; the probe's wall search tries 3 m, then 2 m, then 1.5 m of clear face either side).
+- **A wall hold counts as sneaking once his back has been on it a beat** (`src/game/unseen.ts`, switch `UNSEEN.wallBeat`, `wallSecs`
+  0.8 s, `onWall`, 10-24; a red the build's own run of `unseen-probes all` kept on the page's stand: "Sam walking upright at full
+  pace: nobody sneaks, nobody crouches"). Since a move key held into a wall takes the hold with no key of its own (`wallsnap.ts`
+  `press`), an upright walk that brushes a wall is on one for a moment; a wall hold was sneaking from its first step, so the squad
+  dropped into its sneak for the brush and `linger` 1.5 s after. Now the hold counts from `wallSecs` after his back lands (the
+  hold's own clock, `hitT`); a hold with no such clock (the wall feel pass off) counts at once; crouched or with the wheel down he
+  is sneaking whatever the wall says. Page on, `?wallbeat=0`; frozen off, `TPS_WALLBEAT=1`; the `UNSEEN` table is carried by the
+  journal from this key on (no panel row: the table has no panel group). Check `wall-beat` (family unseen, `tools/qa/wallbeat-check.ts`,
+  `WALLBEAT_BREAK=1` fails it), both stands, 8 lines: the office as a room clear, four fallen in, Sam walked into a wall by the sneak
+  probes' walker: staying on it, off the squad sneaks from the hold's first step, on from 0.80 s of his back on it; turned about
+  0.25 s after his back lands (0.37 s on the wall), off the squad sneaks 121 steps, on none. `unseen-probes.ts`'s own stand now holds
+  the hold-without-a-key off, as it holds `HOLDFIRE`: its walks run along walls. One wall, one walk; whether 0.8 s is the beat for a
+  hand on the keys is a thing to play. Never seen on a GPU, nobody has played it.
 - **An unfound squad never fires first** (`src/game/holdfire.ts`; the maintainer: "while nobody has found the squad, nobody fires until you do or you order it, whatever your
   posture"). While nobody has FOUND a LOUD squad, a teammate's round at a man who has not noticed anybody is held — gun on him, 'eyes on. holding.' — walking or sneaking; a man
   who is himself alert / searching or past `SILENT.noticed` may be shot by the teammate on him, and a captor's last warning holds nothing. `HOLDFIRE {on, liftSecs 45, glass,
@@ -617,6 +630,30 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   in the staging), a mate reloading or with a friend in his line (read, not run). One staging, one seed; no fight was run with it and no
   tally: a covering man now leaves a far flank to his mates, which a fight's numbers would show. Never seen on a GPU, nobody has
   played it.
+- **Rounds through a doorway keep his gun on it** (`src/game/roomfight.ts`, switch `ROOMFIGHT.doorShots`, `doorShot`, reach
+  `doorShotM` 8 m, 10-24; the maintainer, on his recording of four stacked on a door an enemy had opened: "enemy was immediately in
+  front of them and shooting, nothing happened"). The recording, rerun step for step: the man firing stood inside the room behind the
+  far jamb. One teammate had a line to him, was hit, and on that rails level took a knee for five seconds, blind, with the rounds
+  still coming at him (the knee rule is the Training frame's; told). The other three had the wall between them and him. A round fired
+  where a man has no line to the shooter turned nobody (`cue` asks for the line), so one of them looked at the doorway for the
+  `doorLookSecs` a door gets and then turned his back to it, and one never looked. Now a hostile round that FLEW THROUGH an open
+  doorway towards a man's side of its wall (the shot event's own muzzle and stop, crossing the frame inside the opening, fired within
+  `doorShotM` of it) turns a man with nobody in his sight to the doorway itself (a point just his side of the frame, which he must
+  have a line to), for `doorLookSecs` after the last such round. It is the LAST cue asked: a shooter in his line, a mate's call, a
+  footfall and a door just opened come first. A hold's arc still rules, a man walking to a door order is left alone, a gun an order
+  has on another door keeps that door (as `doorEars`), a shut leaf is no opening, and the nearest such doorway wins. It moves nobody
+  and fires nothing: he steps into the doorway and the gun is already there. Page on, `?doorshots=0`; frozen off, `TPS_DOORSHOTS=1`;
+  panel rows under Team feel. Check `door-shots` (family roomfight, `tools/qa/doorshots-check.ts`, `DOORSHOTS_BREAK=1` fails it), both
+  stands, 8 lines: on the office's server door, the shooter stood and fired by hand out through the opening, off nobody looks and a
+  man with a line to the doorway has his gun 115° to 171° off it through five seconds of fire, on every such man is on it inside a
+  second and to the last round and turns away again after; rounds into his own room, a shut leaf and a reach shorter than he stands
+  turn nobody. One door, one seed (the staging does not turn on the seed). On the recording itself, rule on: the two who had looked
+  away or not at all keep the doorway, the fourth has no line to it and stays as he was, and the man still went down to the teammate
+  off his knee, 0.07 s LATER than as played: the rule keeps guns where the danger is and did not win that exchange. Found beside it,
+  not mended here: a jamb man leaning has the shooter in his sight and no round to send past the frame (the page's stand, the whole
+  five seconds). A stack's rear men leave their rear watch for the doorway while the rounds come, and a man looking at it is `busy`
+  to the pace and rescue rules for that long, as he is for a door that opens. Not covered: an opening with no door in it, a blown
+  hole. Never seen on a GPU, nobody has played it.
 - **The partner does not turn about on his way** (`src/game/pairorders.ts`, switch `PAIR.steady`, 10-22; the maintainer, of the pair
   mission: "partner seems to be very paranoid about always turning around to check the other guy"). Two causes, both in the walk to a
   man's back, both found in the scripted run of `tut-pair` on hard. (1) The kept way (`PAIR.keepWay`) took up at its NEAREST corner, and

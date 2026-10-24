@@ -1067,6 +1067,21 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   swallows the key's coming up) lets go of it. It is a latch where Ctrl was read off every mouse event: a keyup lost some other way leaves the
   view turning until Space is tapped. While Space is
   the camera's, Ctrl and the mouse turn NOTHING; a wheel that says Ctrl still zooms, because that is what a trackpad pinch sends.
+  CTRL AND THE WHEEL (2026-10-24; `KEYMAP.pinchOnly`, `?pinchonly=0`; the maintainer: "ctrl-scroll still zooms in and out, should remove"): while
+  Space is the camera's, the wheel under a Ctrl key that is DOWN is nothing, neither the zoom nor his pace. A PINCH STILL ZOOMS: Chrome and Firefox
+  send a trackpad pinch as a wheel that says Ctrl with no Ctrl key down, and `game/input.ts` tells the two apart by `ctrlDown`, the `ctrlKey` of the
+  last key or mouse event on the window (first in line, behind no gate: a field with the focus, a lock, a Control he put on another key and a Ctrl
+  pressed in another frame all say it; a lost focus keeps it and a plain wheel clears it). So zoom is Space and the wheel, or a pinch. Space pressed
+  UNDER a held Ctrl was never a key of ours (a system's own chord), so with Ctrl down first there is neither the turn nor, now, the zoom. With the camera on
+  Ctrl (`?camspace=0`, or a row he put on Space) Ctrl and the wheel is the only zoom there is and stays. Like `camSpace` it is the page's own
+  (`keysBoot`), off in the module, in no recording and on no stand: no run reads a wheel. CHECK: `camspace`, its line 'the wheel under a held Ctrl
+  key is nothing…' (left and right Ctrl, a pinch, a plain wheel, a Ctrl key whose coming up was never seen, both Ctrl keys and one let go, Space and Ctrl in either order, Ctrl
+  pressed in a field, on Caps Lock, through a lost focus and in another frame, the camera on Ctrl, the rule off, the page's word);
+  `PINCHONLY_BREAK=1` fails that line alone. KNOWN: (1) a Ctrl key-up the page never saw (a system shortcut) leaves a pinch dead until the mouse
+  next moves or a plain wheel turns; (2) a device that makes its pinch or its zoom button out of a REAL Ctrl press and a wheel (some older Windows
+  touchpad drivers, some mice) cannot be told from the chord and is nothing: `?pinchonly=0`, there is no Options row; (3) Ctrl held and the wheel
+  turned over a page that never saw the key go down (another frame, the address bar or devtools has the keys) still zooms until the mouse moves; (4) Safari sends a
+  pinch as its own gesture events and no wheel, so a pinch there was never the zoom (not checked here). NOBODY HAS TRIED IT ON A TRACKPAD.
   TWICE (`host/findme.ts watchCtrlTaps(win, idle, key)`; main.ts hands it `camKey`): the "Double tap" option of Options, Game (off unless he turns
   it on) is two taps of the camera's key, wherever it is. findme.ts still imports nothing.
   A tap of Space with Shift held counts (Shift is his sprint; with Ctrl it is a browser chord and still does not). With a text box focused (the
@@ -1078,8 +1093,8 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   swap shown. Making the camera hold a row of the board would give it caps, words and a swap by the board's own machinery. `tools/qa/findme-page.cjs`
   (the settings thread's) reads "Double tap Ctrl" and presses Control: it needs `&camspace=0` or the new words. The engine replay's own view still
   turns on Ctrl (`replay/engineplay.ts`). A laptop touchpad that goes dead while a key is held would not turn the view under Space: not tried.
-  CHECK: `bun run tools/qa/probes.ts camspace` (family `player`), 5 lines: the board, held, Ctrl, twice, off; on game/input.ts's own listeners and
-  the double tap's, stood on a window and a canvas that are lists of them. `CAMSPACE_BREAK=1` fails 4 (the `off` line is the build as it was).
+  CHECK: `bun run tools/qa/probes.ts camspace` (family `player`), 6 lines: the board, held, Ctrl, the wheel (above), twice, off; on game/input.ts's own listeners and
+  the double tap's, stood on a window and a canvas that are lists of them. `CAMSPACE_BREAK=1` fails 5 (the `off` line is the build as it was).
   `tools/qa/keybinds-page.cjs` reads the camera's cap in its last line.
   Never seen on a GPU; nobody has felt Space held under a thumb while the same hand walks.
 - **A can in the wind-up goes back on the belt when his hands start something else** (`src/game/throwback.ts THROWBACK.on`, 10-22; the deep
@@ -1208,6 +1223,28 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   IS STILL THE FIRST TOUCH: the ring now sits metres past it, and aiming the throw so the can RESTS under the cursor would be a rule of the game
   (every throw, the scripted ones too) — asked of the maintainer, not built. `tools/qa/hudmarks-page.cjs` reads the ring, the tick and the roll on
   the real page (software adapter). NEVER SEEN ON A GPU: the tick, the dots, the ring's place on the screen.
+- **The throw preview shows what the thing will reach** (`THROWBACK.reach`, throwback.ts; `src/game/throwreach.ts throwReach`, `ui/overlay.ts
+  drawReach`, 10-23; the maintainer off a GPU shot of a grenade's arc: "we should also have kill radius / stun radius when throwing grenades"). While a
+  throw is aimed the overlay draws, flat on the floor round the point the can comes to REST (`frag.ts restOfThrow`: where its fuse finds it, whatever
+  the rest mark's own switch says): for a FRAG a solid red-orange KILL ring at `FRAG.lethalM` (4 m) and a dotted, fainter ring at `FRAG.woundM` (8 m,
+  the band it hurts in and kills by a falling chance); for a STUN canister a dashed bright ring at the canister's own dazzle radius (`effects.ts
+  bang.dazzleRadius`, 8 m: the edge every part of `combat.ts FLASH` falls off to); for the LAUNCHER'S GRENADE the frag's two rings on the floor under
+  where the arc ends (it bursts through `frag.ts blast`), none while the arc is too short to arm (a dud). Smoke, a sponge round and a sticky camera
+  draw none. The radii are read from the tables the burst is judged by, never copied. No word and no number is drawn. THEY ARE RADII, NOT SHADOWS: a
+  wall, a shut door or a desk between is not drawn, though the burst asks what of a man is exposed; a ring that crosses a wall overstates the reach
+  past it. THEY ARE BIG: at the page's own zoom the kill ring is about half the view's width and the 8 m rings run off its edges. A point behind the
+  camera breaks the ring there and the rest stays (as `ui/squadthrowviz.ts` draws the squad's); a cut ring has no fill. The overlay asks when the arc
+  has changed, not every frame, and writes a ring only when it has moved.
+  SWITCH: `THROWBACK.reach`, the overlay's (nothing in the game reads it), OFF in the module and on the frozen stand (`standGame` pins it off;
+  `FROZEN_HOLDS` row with no word, like the rest mark's), ON in the page (`?noreach`); a recording from before the key replays with it off (`journal.ts
+  applyKnobs`). CHECK: `probes.ts throwreach` (`tools/qa/throwreach-check.ts`, families `throw`, `player`; `THROWREACH_BREAK=1` must fail) on BOTH
+  stands: what the overlay is handed for a frag, a stun canister and a smoke, with the rest mark off, that asking changes nothing, one frag thrown by
+  the click with three men stood by the rings (inside the kill ring down, in the band hurt, past the outer ring untouched: one throw, no seeds), the
+  40 mm on an armed arc, a dud arc and the sponge round, and the journal. THE PAGE: `tools/qa/throwreach-page.cjs` reads the paths on the software
+  adapter (the small ring inside each, the hurt ring about twice the kill ring's width, none for smoke, none with the switch off). NOT DONE: the
+  squad's own throw rings (`ui/squadthrowviz.ts`: a frag's two, none for a stun) and the floor plan's (the kill radius alone) are other drawings of
+  the same numbers and were left as they are. NOBODY HAS seen it on a GPU or thrown by it in play; the colours and line weights are a first guess
+  against the snow level's shot.
 - **One footfall a step** (`FOOTFALL.once`, src/game/player.ts; 2026-10-22, from the quiet lesson's scripted run). THE FLAW: a footfall is filed when the
   walk cycle's phase crosses a half or wraps. Backpedal runs the cycle backwards, so when backpedal flips frame by frame the phase rocks over ONE edge
   and every frame files a footfall: 20 in 20 frames staged, and a calm man 0.76 m in front goes alert on eight of them. What flips it: forwards and

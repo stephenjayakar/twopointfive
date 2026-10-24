@@ -68,11 +68,29 @@ const at = (page, p) => page.evaluate(p => { const c = document.getElementById('
 
   // ---- the steps, by hand
   const camKey = async () => (await page.evaluate(() => document.querySelector('#railprompt kbd')?.textContent || '')) === 'Space' ? 'Space' : 'ControlLeft';
+  let smokeCall = null;   // (the 'zoom' hand's reading of the squad's smoke calls)
   const hand = {
     // (the camera's key is the one the line's own cap names: Ctrl, or the Space bar where the page's board leaves it spare)
     turn: async () => { const k = await camKey(); await page.keyboard.down(k); for (let x = 400; x <= 900; x += 50) { await page.mouse.move(x, 320); await run(page, 3); } await page.keyboard.up(k); },
-    zoom: async () => { const k = await camKey(); await page.keyboard.down(k); for (let n = 0; n < 8; n++) { await page.mouse.wheel(0, 120); await run(page, 4); } await page.keyboard.up(k); },
-    pan: async () => { await page.keyboard.down('KeyD'); await run(page, 70); await page.keyboard.up('KeyD'); },
+    // (…and the squad's smoke goes out on the NEXT step's cue, the tick that step comes up: the page is stepped a twentieth of a second at a time from the
+    //  zoom's last frame, so each thrower's call is read as the page draws it before his can is in the air)
+    zoom: async () => { const k = await camKey(); await page.keyboard.down(k); for (let n = 0; n < 8; n++) { await page.mouse.wheel(0, 120); await run(page, 4); } await page.keyboard.up(k);
+      // (the page as it is DRAWN, a twentieth of a second at a time: the bubbles on it with 'smoke' in them, the radio strip's rows, and — from the game —
+      //  each can in the air with its thrower's name)
+      const look = () => page.evaluate(() => { const g = window.__game, shown = e => { const cs = getComputedStyle(e); return cs.display !== 'none' && cs.visibility !== 'hidden' && +cs.opacity > 0.3; };
+        return { bubbles: [...document.querySelectorAll('.bubble')].filter(e => shown(e) && /smoke/i.test(e.textContent)).map(e => e.textContent), strip: [...document.querySelectorAll('#log .rx')].map(e => e.textContent).filter(t => /smoke/i.test(t)),
+          cans: g.items.items.filter(i => i.kind === 'smoke').map(i => ({ n: i.serial, who: g.guards.find(x => x.char.id === i.who)?.callsign ?? '?', said: g.guards.find(x => x.char.id === i.who)?.bubble?.text ?? '' })) }; });
+      if (steps[steps.findIndex(s => s.id === 'zoom') + 1]?.cue !== 'smoke') return;   // (a mission whose next step throws no smoke)
+      for (let n = 0; n < 60 && (await read(page)).id === 'zoom'; n++) await run(page, 3);
+      smokeCall = { cans: [], pic: '' }; let was = { bubbles: [], strip: [] };
+      for (let n = 0; n < 120 && smokeCall.cans.length < 2; n++) { await run(page, 3); const L = await look();   // (six seconds at most: the second can is out about 1.6 s after the cue)
+        for (const c of L.cans) if (!smokeCall.cans.some(x => x.n === c.n)) smokeCall.cans.push({ ...c, bubble: !!c.said && was.bubbles.some(t => t.includes(c.said)), row: was.strip.find(t => t.includes(c.who) && t.includes(c.said)) || '' });   // (`was`: the page a twentieth of a second BEFORE the can was first in the air)
+        if (L.cans.length === 1 && !smokeCall.pic) smokeCall.pic = await shot('2-call'); was = L; }
+      check(smokeCall.cans.length >= 2 && new Set(smokeCall.cans.map(c => c.who)).size >= 2 && smokeCall.cans.every(c => c.bubble && c.row),
+        'the squad\'s smoke is called on the page: before each can is in the air its own thrower\'s line is drawn in a bubble and is a row under his name on the radio strip',
+        `${smokeCall.cans.map(c => `${c.who}: ${c.said ? `"${c.said}"` : 'SAID NOTHING'} · bubble ${c.bubble ? 'drawn' : 'NOT DRAWN'} · strip ${c.row ? `"${c.row.trim()}"` : 'NO ROW'}`).join(' | ') || 'no can went out'} · picture ${smokeCall.pic}`); },
+    pan: async () => {
+      await page.keyboard.down('KeyD'); await run(page, 70); await page.keyboard.up('KeyD'); },
     move: async s => { await point(s.at); await tap('KeyQ'); for (let k = 0; k < 25; k++) { await run(page, 120); if ((await read(page)).id !== 'move') break; } },
     gate: async () => { for (let k = 0; k < 40; k++) { await run(page, 120); if ((await read(page)).id !== 'gate') break; } },
     // (the stack's tap is made WITH SHIFT DOWN: plan mode is locked on this step and the pair is then the plain key — the second play's 'Q doesn't do anything here')

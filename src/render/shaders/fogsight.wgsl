@@ -10,7 +10,7 @@ struct SightU {
   eyes: array<vec4f, 5>,    // FowU's head (shaders/fogofwar.wgsl), field for field
   looks: array<vec4f, 5>,
   cfg: vec4f,               // x = eyes
-  soft: vec4f,              // xyz = FowU's · w is NOT FowU's (its own light): here 1 = smoke is drawn under the fog too (common.wgsl FogSightT.soft, fogSmoke)
+  soft: vec4f,              // xyz = FowU's · w is NOT FowU's (its own light): here the table's own two bits (common.wgsl FogSightT.soft): 1 = smoke is drawn under the fog too, 2 = thin things that stand free do not stop an eye
 };
 @group(1) @binding(0) var<uniform> sight: SightU;
 @group(1) @binding(1) var<storage, read_write> sightOut: array<f32>;   // FogSightT.dist, a float a bin
@@ -21,6 +21,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   if (x >= u32(FOG_SIGHT_BINS) || k >= 5u) { return; }
   var t = 0.0;
   if (k < u32(sight.cfg.x) && sight.eyes[k].w >= 0.5) {
+    fogEyeThin = (u32(sight.soft.w + 0.5) & 2u) != 0u;   // (FOG.thin: every ray below is a fog eye's. Read off this pass's own block — the table it writes is not bound here; the marked boxes' bits are, in the stand-in: common.wgsl fogThinBox)
     let e = sight.eyes[k];
     let a = (f32(x) + 0.5) / f32(FOG_SIGHT_BINS) * 6.283185307179586 - 3.141592653589793;   // the bin's own bearing (fogEyeSay's map, the other way)
     let rd = vec3f(cos(a), 0.0, sin(a));

@@ -413,8 +413,12 @@ export async function railsCheck(): Promise<boolean> {
       // the way out: nobody runs before the order, every man sent to the trucks runs once it is given, none with the switch off, none at another step
       const ko = L.steps.findIndex((T: any) => T.id === 'out'), To = L.steps[ko], count = () => men.filter((m: any) => g.rails.runs(m)).length;
       g.lesson.i = L.steps.findIndex((T: any) => T.id === 'move'); R.run(0.3); R.command(YARD); R.run(5);   // (off the trucks first: a man holding beside the mark is under an order to it already)
+      // (THE ROADBLOCK IS DOWN BY THE LAST STEP: left alive here it had the whole squad in a fight when the order came on seed 1, once the smoke's calls moved
+      //  the script by half a second, and nobody ran inside the two and a half seconds. Only its three: with nobody of theirs left the room fight is over, the
+      //  team's pace governs nobody and the rule asked below has no man to give a run to)
+      { for (const gd of g.guards as any[]) if (/^Tango (8|9|10)$/.test(gd.callsign ?? '') && gd.state !== 'dead') killGuard(g, gd, [1, 0, 0], true); R.run(1.5); }
       g.lesson.i = ko; R.run(0.3); const before = count();
-      R.command(To.at as number[]); R.run(0.4); const told = count(); let top = 0; for (let i = 0; i < 150; i++) { R.run(1 / 60); for (const m of men) top = Math.max(top, m.speed); }
+      R.command(To.at as number[]); R.run(0.4); const told = count();
       // (each asked on the tick after it is set: the frame says once a tick whether the step's order is out)
       const wr = RAILS.wayRun; let offRun = -1; try { RAILS.wayRun = false; R.run(2 / 60); offRun = count(); } finally { RAILS.wayRun = wr; } R.run(2 / 60);
       const r0 = To.onWay.run; let unasked = -1; try { To.onWay.run = false; R.run(2 / 60); unasked = count(); } finally { To.onWay.run = r0; } R.run(2 / 60);
@@ -422,6 +426,9 @@ export async function railsCheck(): Promise<boolean> {
       // a man with somebody in his sights does not run (teampace.ts teamTold, as a run to cover): asked of the rule with the fight's answer forced
       const { teamTold } = await import(`${ROOT}/src/game/teampace.ts`), own = Object.prototype.hasOwnProperty.call(g.fight, 'engaged'), e0 = g.fight.engaged; let free = -1, fought = -1;
       try { free = men.filter((m: any) => teamTold(g, m) !== null).length; g.fight.engaged = () => true; fought = men.filter((m: any) => teamTold(g, m) !== null).length; } finally { if (own) g.fight.engaged = e0; else delete g.fight.engaged; }
+      // (the pace LAST: with the roadblock down the squad is at the trucks in under three seconds and the order is done, so everything asked of a man on
+      //  his way is asked before it. The eight frames above are inside the two and a half seconds)
+      let top = 0; for (let i = 0; i < 142; i++) { R.run(1 / 60); for (const m of men) top = Math.max(top, m.speed); }
       // (a man the roadblock has in a fight on this floor is not given the run: at least one is)
       verdict(To?.onWay?.run === true && before === 0 && told === men.length && again === men.length && (!paced || (top >= TEAMPACE.runAt && free >= 1 && fought === 0)) && offRun === 0 && unasked === 0,
         'the job done, the squad runs back: on the last step nobody runs before the order, every man of the squad is told to run once it is given and (where the team\'s pace is the rule\'s) is at a run inside two and a half seconds, and none of them while he has a man in his sights; nobody with RAILS.wayRun off, nobody when the step does not ask',
@@ -434,7 +441,11 @@ export async function railsCheck(): Promise<boolean> {
     //      roadblock to the gate, so the walk with the word taken off is the same road and is only told; the run that must be long is the third, where the
     //      script's men are kept at their sandbags: the line is gone because they came, not because the step lets go of it
     { const beat = async (how: 'direct' | 'plain' | 'kept') => { const plain = how === 'plain'; const R = await rig(true), g = R.g, L = g.level.scenarios.lesson, km = L.steps.findIndex((T: any) => T.id === 'move'), kg = L.steps.findIndex((T: any) => T.id === 'gate');
-        R.run(6); g.lesson.i = km; R.run(0.5); R.command(L.steps[km].at as V);
+        // (THE ROADBLOCK IS NOT TO BE HAD BEFORE THE SQUAD SETS: what is measured is its men's walk once the gate's line is up, not the fight across the yard
+        //  before it — which half a second in the script turns. With the smoke's calls the squad of seed 1 shot all three at their sandbags from the yard, the
+        //  line stood 1.2 s on every arm and the arm that must be long was as short. `god` is the game's own word for a man rounds pass through)
+        const guard = (on: boolean) => { for (const gd of g.guards as any[]) if (/^Tango (8|9|10)$/.test(gd.callsign ?? '')) gd.god = on; };
+        R.run(6); guard(true); g.lesson.i = km; R.run(0.5); R.command(L.steps[km].at as V);
         const seen = new Set<unknown>(), home = new Map<unknown, number[]>(); let t0 = -1, t1 = -1, priced = 0, unpriced = 0;
         for (let i = 0; i < 60 * 60 && t1 < 0; i++) {
           if (plain) for (const gd of g.guards as any[]) if (/^Tango (8|9|10)$/.test(gd.callsign ?? '') && gd.script?.direct) { gd.script.direct = false; if (!seen.has(gd)) { seen.add(gd); gd.path = []; gd.pathGoal = null; } }
@@ -442,7 +453,7 @@ export async function railsCheck(): Promise<boolean> {
           //  with it never a price; without it, on a stand with covered lanes, the lanes' price while his side knows one)
           if (plain) for (const gd of seen as Set<any>) { if (!gd.script || gd.state === 'dead') continue; gd.script.direct = true; const a = lanePenalty(g, gd, undefined); gd.script.direct = false; const b = lanePenalty(g, gd, undefined); if (a !== undefined) unpriced = -1e9; else if (typeof b === 'function') priced++; else unpriced++; }
           if (how === 'kept') for (const gd of g.guards as any[]) if (/^Tango (8|9|10)$/.test(gd.callsign ?? '')) { const at = home.get(gd) ?? [gd.char.pos[0], gd.char.pos[2]]; home.set(gd, at); gd.char.pos[0] = at[0]; gd.char.pos[2] = at[1]; }   // (alive, armed, and where they stood)
-          R.run(1 / 60); if (t0 < 0 && g.lesson.i === kg) t0 = g.time; if (t0 >= 0 && g.lesson.i > kg) t1 = g.time; }
+          R.run(1 / 60); if (t0 < 0 && g.lesson.i === kg) { t0 = g.time; guard(false); } if (t0 >= 0 && g.lesson.i > kg) t1 = g.time; }
         return { secs: t0 < 0 ? -1 : t1 < 0 ? 99 : t1 - t0, up: R.squad().length, nav: g.col.nav, sent: seen.size, priced, unpriced }; };
       const { LANES, lanePenalty } = await import(`${ROOT}/src/game/lanes.ts`);   // (covered lanes are a newer rule: where the stand holds them off there is no price to take the word off)
       const A = await beat('direct'), B = await beat('plain'), C = await beat('kept');

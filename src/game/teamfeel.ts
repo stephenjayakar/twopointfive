@@ -173,3 +173,5 @@ Object.assign(KEPT.DOORTOOLS, { openHand: null });
 Object.assign(KEPT.DOORTOOLS, { gateHand: null });
 // a door an enemy's hand opens is looked at by every free teammate with a line to its doorway (roomfight.ts ROOMFIGHT.doorEars)
 Object.assign(KEPT.ROOMFIGHT, { coverKeep: null, doorEars: null, doorLookSecs: [1, 8, 0.5] });
+// rounds through a doorway keep a gun on it (roomfight.ts ROOMFIGHT.doorShots)
+Object.assign(KEPT.ROOMFIGHT, { doorShots: null, doorShotM: [0, 12, 0.5] });

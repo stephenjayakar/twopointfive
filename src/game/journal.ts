@@ -62,6 +62,7 @@ import { IR } from './irlaser';
 import { AIRDUST } from './airDust';
 import { FOG } from './fogofwar';
 import { WALLSNAP } from './wallsnap';
+import { UNSEEN } from './unseen';
 import { FRAG } from './frag';
 import { GUNWALL } from './gunwall';
 import { REARWATCH } from './rearwatch';
@@ -316,7 +317,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (typeof (k.tables.CMDRING as { tapNow?: boolean } | undefined)?.tapNow !== 'boolean') CMDRING.tapNow = false;   // (… and from before a press already up in its own tick was given on that tick: it was given on the next)
   if (typeof (k.tables.CMDRING as { planRun?: boolean } | undefined)?.planRun !== 'boolean') CMDRING.planRun = false;   // (… and from before a sprint's Shift was not the mode's: Shift + the key was always the mode's)
   if (typeof (k.tables.CMDRING as { only?: boolean } | undefined)?.only !== 'boolean') CMDRING.only = false;   // (… and from before the ring carried every order: its wedges were the rows on digits, the letters worked beside it)
-  for (const key of ['planLook', 'planWaits', 'planKnee', 'planOne', 'planNear'] as const) if (typeof (k.tables.CMDRING as Record<string, unknown> | undefined)?.[key] !== 'boolean') CMDRING[key] = false;   // (… and from before plan mode's right drag, its own waits and the knee at the radio: a right press was a click or the ring, the pauses were the build's, he stood)
+  for (const key of ['planLook', 'planWaits', 'planKnee', 'planOne', 'planNear', 'planDigits'] as const) if (typeof (k.tables.CMDRING as Record<string, unknown> | undefined)?.[key] !== 'boolean') CMDRING[key] = false;   // (… and from before plan mode's right drag, its own waits and the knee at the radio: a right press was a click or the ring, the pauses were the build's, he stood)
   for (const key of ['flat', 'plainHint', 'bareHint'] as const) if (typeof (k.tables.CMDRING as Record<string, unknown> | undefined)?.[key] !== 'boolean') CMDRING[key] = false;   // (… and from before the flat tree, the outline with no glyph and the squad's corner down to its keys: the menu's pages, the glyph, the block)
   if (!k.tables.WORDS) WORDS.on = false;   // (a file from before the dialogue pass: every line as it was said, and as long)
   if (!k.tables.GEAR) GEAR.on = false;   // (a file from before the 2010s issue kit: the kit it was recorded in — words and picture only, kept with the rest)
@@ -328,10 +329,12 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (typeof (k.tables.FOG as { full?: boolean } | undefined)?.full !== 'boolean') FOG.full = false;   // (a file from before the fog got the full picture: its fog was the lit one, the fixed light, or the live frame dimmed with every light in it)
   if (typeof (k.tables.FOG as { air?: boolean } | undefined)?.air !== 'boolean') FOG.air = false;   // (a file from before smoke was drawn under the fog: its picture took no smoke over floor nobody saw)
   if (typeof (k.tables.FOG as { ours?: boolean } | undefined)?.ours !== 'boolean') FOG.ours = false;   // (a file from before what the team does was always shown: its blasts' flashes lit only what the team saw, its tracers and sparks were cut there)
+  if (typeof (k.tables.FOG as { thin?: boolean } | undefined)?.thin !== 'boolean') FOG.thin = false;   // (a file from before thin things that stand free stopped cutting the fog's sight: every static stopped the squad's eye and the picture's)
   if (typeof (k.tables.FOG as { edge?: number } | undefined)?.edge !== 'number') FOG.edge = 0;   // (a file from before the fog's edge was soft: its fog ended on a hard line)
   if (typeof (k.tables.FOG as { squadDoors?: boolean } | undefined)?.squadDoors !== 'boolean') FOG.squadDoors = false;   // (a file from before a door the squad works was seen: its leaves stood as the eyes last had them)
   if (typeof (k.tables.FOG as { squadFire?: boolean } | undefined)?.squadFire !== 'boolean') FOG.squadFire = false;   // (a file from before a man the squad shoots at was in the picture: the reticle took only the men the fog's eyes had)
   if (typeof (k.tables.HOLD as { dropGun?: boolean } | undefined)?.dropGun !== 'boolean') HOLD.dropGun = false;   // (a file from before a held man dropped his gun: its men kept it in the fist through the hold)
+  if (typeof (k.tables.HOLD as { strip?: { fall?: number } } | undefined)?.strip?.fall !== 'number') HOLD.strip.fall = 0;   // (a file from before the stripped gun's fall was timed: thrown down at the fixed push, wherever that landed it)
   if (typeof (k.tables.HOLD as { disarm?: boolean } | undefined)?.disarm !== 'boolean') HOLD.disarm = false;   // (a file from before the grab disarmed him: the gun left his hand on the grab's first frame, thrown clear)
   if (typeof (k.tables.HOLD as { stripFirst?: boolean } | undefined)?.stripFirst !== 'boolean') HOLD.stripFirst = false;   // (a file from before the disarm led: the take and the arm at once)
   if (typeof (k.tables.HOLD as { oneFacing?: boolean } | undefined)?.oneFacing !== 'boolean') HOLD.oneFacing = false;   // (a file from before a held man kept the hold's facing: a calm defender in the arm was turned to his mark each frame)
@@ -444,6 +447,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.CARLAMPS) CARLAMPS.on = false;   // (a file from before a vehicle's lamps were light targets: its floor has none)
   if (!k.tables.CLEANRESTART) CLEANRESTART.on = false;   // (a file from before a restart gave a clean level: its restarts mended the mains by the breaker's own road and kept the last try's lines and clocks)
   if (!k.tables.THROWBACK) THROWBACK.on = false;   // (a file from before a can in the wind-up went back on the belt: its cans froze through a kick or a pick and left his hand after)
+  if ((k.tables.THROWBACK as Partial<typeof THROWBACK> | undefined)?.reach === undefined) THROWBACK.reach = false;   // (…and a file from before the throw preview showed what the thing would reach: its arcs had the small ring alone)
   if (!k.tables.AUTOCAM) AUTOCAM.on = false;   // (a file from before the camera could run itself: its double tap was the Options row's)
   if ((k.tables.AUTOCAM as Partial<typeof AUTOCAM> | undefined)?.sway === undefined) AUTOCAM.sway = false;   // (…and one from before it could turn in a fight)
   if ((k.tables.AUTOCAM as Partial<typeof AUTOCAM> | undefined)?.lock === undefined) AUTOCAM.lock = false;   // (…and one from before it came in on a man the player sneaks up on)
@@ -605,6 +609,8 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if ((k.tables.FURN as { mouth?: { base?: unknown } } | undefined)?.mouth?.base === undefined) FURN.mouth.base = false;   // (a file from before the bottom layer of a blown pile went with it: the layer lay in the hole)
   if ((k.tables.SNEAK as { byEye?: boolean } | undefined)?.byEye === undefined) SNEAK.byEye = false;   // (…and from before a lit step was read by the eye that has the line)
   if ((k.tables.ROOMFIGHT as { coverKeep?: boolean } | undefined)?.coverKeep === undefined) ROOMFIGHT.coverKeep = false;   // (…and from before a man told to cover kept his angle)
+  if ((k.tables.ROOMFIGHT as { doorShots?: boolean } | undefined)?.doorShots === undefined) ROOMFIGHT.doorShots = false;   // (…and from before rounds through a doorway kept his gun on it)
+  if ((k.tables.UNSEEN as { wallBeat?: boolean } | undefined)?.wallBeat === undefined) UNSEEN.wallBeat = false;   // (…and from before a wall hold waited a beat to count as sneaking: the table itself is carried from that key on)
   if ((k.tables.ROOMFIGHT as { doorEars?: boolean } | undefined)?.doorEars === undefined) ROOMFIGHT.doorEars = false;   // (…and from before a teammate looked at a door an enemy's hand opens in his sight)
   if (!k.tables.AIR_SIM) AIR_SIM.on = false;   // (a file from before the air was a simulated field: no field is fed — a picture only, the run is the same either way)
   if (!k.tables.WX_OWN) WX_OWN.roofs = false;   // (a file from before a level's own storm rained by its own roofs: the office's two rectangles on every level)

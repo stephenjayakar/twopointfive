@@ -78,6 +78,11 @@ export const UNSEEN = {
   hold: true, glass: true,
   /** said once as it starts · not again inside this many seconds */
   cue: true, cueGap: 30,
+  /** A WALL HOLD COUNTS ONCE HIS BACK HAS BEEN ON IT A BEAT. Since a move key held into a wall takes the hold with no key of its own (wallsnap.ts `press`), a man
+   *  walking upright who brushes a wall is on one for a moment, and the squad dropped into a sneak for that moment and `linger` after it. On: the hold counts
+   *  from `wallSecs` after his back lands (the hold's own clock, `hitT`); a hold with no such clock (the wall feel pass off) counts at once, as before. Low, or
+   *  with the wheel down, he is sneaking whatever the wall says. Off = any wall hold counts from its first step. */
+  wallBeat: false, wallSecs: 0.8,
 };
 export const UNSEEN_DEFAULTS: typeof UNSEEN = JSON.parse(JSON.stringify(UNSEEN));
 /** `?nosneakwith` (or `?sneakwith=0`) turns it off for the visit, `?sneakfire` the fire hold alone; the harness's frozen stand holds it off (src/host/standup.ts; TPS_UNSEEN=1 raises it, TPS_PROFILE=shipped plays it as the page) */
@@ -99,8 +104,11 @@ const stateOf = (g: Game): State => { let S = states.get(g); if (!S) states.set(
 const lead = (g: Game): Player => g.player;
 const mate = (gd: Guard) => gd.team === 'operative' && !!gd.unit;
 
+const WALLBEAT_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.WALLBEAT_BREAK === '1';
+/** on a wall, as the sneak counts it (UNSEEN.wallBeat: his back on it `wallSecs`, where the hold keeps that clock) */
+const onWall = (pl: Player): boolean => { const w = pl.wall; return !!w && (!UNSEEN.wallBeat || WALLBEAT_BREAK || w.hitT === undefined || w.hitT >= UNSEEN.wallSecs); };
 /** Sam is sneaking: low, on a wall, or with the wheel right down — and not sprinting */
-export function samSneaks(pl: Player): boolean { return !pl.down && !pl.sprinting && !pl.dash && (pl.crouch || !!pl.wall || pl.pace <= UNSEEN.paceAt + 1e-6); }
+export function samSneaks(pl: Player): boolean { return !pl.down && !pl.sprinting && !pl.dash && (pl.crouch || onWall(pl) || pl.pace <= UNSEEN.paceAt + 1e-6); }
 /** what has given the squad away (null: nothing): loud in a teammate's ears inside the room fight's hot clock, or a defender roused */
 export function squadFound(g: Game, men: Guard[]): string | null {
   for (const gd of men) if (g.fight.hotFor(gd)) return 'loud';
@@ -132,7 +140,7 @@ export function unseenLive(g: Game): boolean {
 function cue(g: Game, S: State) {
   if (!UNSEEN.cue || g.time - S.cueT < UNSEEN.cueGap) return;
   const gd = g.orders.squad().find(m => m.state !== 'dead' && m.state !== 'alert' && !m.held); if (!gd) return;
-  S.cueT = g.time; UNSEEN_STATS.cues++; g.say(gd, lead(g).crouch || lead(g).wall ? 'low and quiet.' : 'slow and quiet.');
+  S.cueT = g.time; UNSEEN_STATS.cues++; g.say(gd, lead(g).crouch || onWall(lead(g)) ? 'low and quiet.' : 'slow and quiet.');
 }
 /** this teammate is unseen this frame */
 export function unseenMan(g: Game, gd: Guard): boolean { return UNSEEN.on && mate(gd) && unseenLive(g) && !entering(g, gd); }
@@ -143,7 +151,7 @@ const entering = (g: Game, gd: Guard) => !!g.doorTools?.ops.some(op => op.men.in
 /** no place on Sam's wall for this man right now (the face ends, the floor along it is shut): he goes down on a knee where the file has him rather than stand tall beside a man hugging a wall */
 const onWallAt = new SideMap<Guard, number>('unseen.onWallAt');
 const kneelAt = new SideMap<Guard, number>('unseen.kneelAt');
-const offWall = (g: Game, gd: Guard) => !!lead(g).wall && (onWallAt.get(gd) !== g.time || kneelAt.get(gd) === g.time);
+const offWall = (g: Game, gd: Guard) => onWall(lead(g)) && (onWallAt.get(gd) !== g.time || kneelAt.get(gd) === g.time);
 const lowNow = (g: Game, gd: Guard) => UNSEEN.crouch && (!!lead(g).crouch || (UNSEEN.wall && offWall(g, gd)));
 export function unseenLow(g: Game, gd: Guard): boolean { return unseenMan(g, gd) && lowNow(g, gd); }
 
@@ -170,7 +178,7 @@ const placed = new SideMap<Guard, object>('unseen.placed');
 export function unseenWallLost(gd: Guard) { onWallAt.delete(gd); placed.delete(gd); UNSEEN_STATS.wallLost++; }
 function wallSlot(g: Game, gd: Guard, back: number, file: Guard[]): Vec3 | null {
   if (!UNSEEN.wall || !unseenMan(g, gd)) return null;
-  const pl = lead(g), w = pl.wall; if (!w) return null;
+  const pl = lead(g), w = pl.wall; if (!w || !onWall(pl)) return null;   // (wallBeat: a wall he has only brushed deals nobody a place along it)
   const S = stateOf(g), t = w.along, n = w.n, sam = pl.char.pos, su = sam[0] * t[0] + sam[2] * t[2];
   if (S.hold !== w) {   // the side, once a hold: away from the end of the face he has taken (the corner he is looking round is not where a file stacks) — else where the file is now — else behind the shoulder he leads with
     let m = 0; for (const o of file) m += o.char.pos[0] * t[0] + o.char.pos[2] * t[2] - su;

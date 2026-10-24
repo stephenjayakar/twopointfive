@@ -18,4 +18,8 @@ export const THROWBACK = {
    *  point, a small tick stays on the touchdown, the floor between them is dotted). The overlay's: nothing in the game reads it. Off here; the page turns
    *  it on (?norestmark = the ring on the first touch, as it was). The journal carries it as it finds it: a replay draws the mark its recording had */
   restMark: false,
+  /** THE THROW PREVIEW SHOWS WHAT THE THING WILL REACH (throwreach.ts throwReach, overlay.ts: a frag's kill ring and the fainter ring it hurts to, a stun
+   *  canister's stun ring, the launcher grenade's two — flat on the floor round where it ends). The overlay's: nothing in the game reads it. Off here; the
+   *  page turns it on (?noreach = the arc and its small ring alone, as it was). A recording from before the key replays with it off (journal.ts applyKnobs) */
+  reach: false,
 };
