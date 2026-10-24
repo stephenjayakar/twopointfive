@@ -136,6 +136,25 @@ but synthetic writes still work.
   forgets the floor-wide bark clocks (`forgetGuardClocks` / `forgetSuppressionClocks`) — Game.time has gone BACK, and any new module clock keyed by the Game must
   tolerate that (compare like `wet.ts`, or reset in loadState). DETERMINISM: with the harness's seeded Math.random re-seeded after the save and after the load, the
   next 10 s digest identically (continue ≡ load into the same game ≡ load into a fresh game — `probes.ts checkpoint-identity`); in the browser only the dice differ.
+  A MAN CAUGHT MID-TURN (10-24; `SAVETIMELINE.turn`, savestate.ts: ON in the page, `?saveturn=0`; OFF in the module and on the frozen stand,
+  `TPS_SAVETURN=1`; a `FROZEN_HOLDS` row; the journal carries the table, and a recording from before the key replays with it off — its go-backs started a
+  turning man from rest; its own key, whatever `SAVETIMELINE.on` says): with the turn weight on (`character.ts TURN`, the page and the shipped stand) a
+  guard's turn was not in the file, so after a load he started from rest facing where his weight had let him get to and his AI eased from there, not from
+  its wish: continue and load parted on his first frame (`checkpoint-identity` on the SHIPPED stand was red from the build step that moved its staging so
+  the save lands while a man turns; `TPS_TURN=0` passed). The turn is filed now (`GuardSnap.turn`, nine numbers: where he has got to, the speeds his weight
+  carries, where his AI wants him, where he stood, the neck's lead; `character.ts turnSnap` / `turnPut`, which reads the nine as untrusted — finite or
+  nothing, the speeds held to a turn's top rates and the lead to the neck's reach — and marks him weighed for the loader's bake: game.ts `dealWeapons`
+  writes `turn.on` only on his next frame; with the weight off at the load, `?turn=0`, nothing is put back and he is the file's yaws). The loader bakes a living man with `bakeLoaded`: posed where his weight had got him, his yaws then handed back
+  AS FILED, so a wish written after his own update on the frame of the save (two men turning to talk: `dialogue.ts updateAmbient`) is still what his next
+  frame eases from. No key with the weight or the switch off (those files are byte for byte what they were), on a body, or on a scripted man; a file from
+  before the key loads as it did. CHECK, both stands: `probes.ts checkpoint-turn` (in `checkpoints`; it raises `TPS_TURN=1 TPS_SAVETURN=1` itself), three
+  lines: the patrols walk until a man has over 1 rad/s in his feet and over 0.3 rad to come round, saved there, every man's place and yaws the same frame
+  for frame over the first 30 frames of A, B and C and one digest over the 3 s after, and a file made after a load holds the same turns and yaws; the same
+  again with his body yaw written 0.4 rad on after his update (the loader with a plain `update(0)` fails this line); with the switch off no file says a
+  turn, the rest of the guards' slice is the same, and a file that has one loads frame for frame as the same file with the key taken out (the load's
+  own reading of the switch). `CHECKPOINT_TURN_BREAK=1` (the key taken out of the file before the load) fails the first two on both
+  stands, from frame 1. `savetimeline-check.ts` no longer puts TURN off for its file comparison (it did on the grounds that no file held a turn). One
+  seed, the office; in play the gap it closes was small (a turn restarted). The page, headless on the software adapter (the office, a man handed a turn of 1.6 rad and saved three frames in, 1.9 rad/s in his feet): the turn straight after the load is the saved one and four frames on load and continue agree to the bit, 0 console errors. Never seen on a GPU, and nobody has watched a load land on a turning man.
   `Game.saves: Checkpoints` (ticked LAST in update): AUTOSAVE requests on the stage advancing, first entry into a room region (chronicle.ts `roomOf`), a hauled body
   let go of ≥ `CKPT.bodyHideM`, every `CKPT.quietSecs` 90 of quiet play; written once the gates pass (missionLive, AI on, nobody alert / searching / awareness >
   `awareMax` 0.4, no civilian startled / frightened / running / telling / hiding from him untold and no word of theirs pending — `civilianCompromise`, `playerBusy`
@@ -195,8 +214,8 @@ but synthetic writes still work.
     on one made by hand, a regretted autosave dimmed, one that is ahead of the mission clock marked. One stop for the keys (Left / Right or A / D walk it, Enter loads),
     or a click. Fewer than two saves = no strip. `Restart from checkpoint`, Enter once down and `newest()` are as they were: the newest sound one.
   Check: `probes.ts savetimeline` (families `checkpoints`, `all`; `SAVETIMELINE_BREAK=1` fails; green on BOTH stands): the rings roll at five and five and neither kind
-  pushes out the other; every file entry loads and the next 10 s digest as the run that simply went on (the camera put back and MOVES / TURN off for the comparison: the
-  camera is the host's and the animator's momentum is in no file, as the head of savestate.ts says); an old build's slots list and load, on and back off; a store that
+  pushes out the other; every file entry loads and the next 10 s digest as the run that simply went on (the camera put back and MOVES off for the comparison: the
+  camera is the host's and the animator's momentum is in no file, as the head of savestate.ts says; a turn's weight is in one since 10-24, `SAVETIMELINE.turn`); an old build's slots list and load, on and back off; a store that
   refuses, throws or is full; Training five with its pair: memory saves, each loads and plays on to the same digest with the animator as the stand has it, the store
   untouched, F5, Enter once down, a restart drops them. `checkpoint-slots` / `checkpoint-autosave` read the ring's size from the stand. ONE SAVE WEIGHS (headless, one
   seed): the plain night's file 28 KB frozen / 31 KB shipped; Training one's 9 / 11 KB; Training five in memory 5.0 / 6.9 MB (14–19 thousand objects, about 30 ms to
