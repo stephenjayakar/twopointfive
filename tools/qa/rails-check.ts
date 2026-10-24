@@ -32,7 +32,7 @@
 //  THE FRAME'S EYES ARE THE PLAYER'S VIEW (fogofwar.ts update, RAILS.eyeFirst, RAILS.eyeView): a step's eye has a place among the fog's five, and a man
 //      only a frame's eye has is drawn, not seen: the squad's entry on his room's door is the one it would take with no eye there. RAILS_BREAK=1 reaches
 //      both lines through the step's eye (none is named under it).
-// RAILS_BREAK=1 = the gate lets everything through, the ring is no place, nothing keeps it in the picture and the menu lists every order: lines 3, 4, 10, 11, 12, 13 and 14, the last line's, the wall's, the stalk's, the first play's notes', the second play's, the card's, the card's beat's, the spared man's (reached through guards.ts acquireFoe: the other places that ask railsDown — roomfight.ts, qrf.ts, tactics.ts, frag.ts — are read, not staged), the big line's, the two of the step's eye and the plan on the move must fail (the opening card's line is data and a screen: no break of its own).   exit 0 = all hold · 1 = one does not
+// RAILS_BREAK=1 = the gate lets everything through, the ring is no place, nothing keeps it in the picture and the menu lists every order: lines 3, 4, 10, 11, 12, 13 and 14, the last line's, the wall's, the stalk's, the first play's notes', the second play's, the card's, the card's beat's, the spared man's (reached through guards.ts acquireFoe and roomfight.ts tickMove, both staged; qrf.ts, tactics.ts and frag.ts are held by a read of their source only), the big line's, the two of the step's eye and the plan on the move must fail (the opening card's line is data and a screen: no break of its own).   exit 0 = all hold · 1 = one does not
 import { readFileSync } from 'node:fs';
 import { ROOT, standUp } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
@@ -294,7 +294,7 @@ export async function railsCheck(): Promise<boolean> {
     { const J = await import(`${ROOT}/src/game/journal.ts`), PR = await import(`${ROOT}/src/host/profile.ts`), { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`), { canSeeChar } = await import(`${ROOT}/src/game/guards.ts`), k0 = knobsCopy();
       const stood = RAILS.spareDown, holds = (PR.FROZEN_HOLDS as Record<string, string>)['RAILS.spareDown'];
       try {
-        const arm = async (rule: boolean, two: boolean) => { const R = await rig(true), g = R.g, secs = g.level.scenarios.lesson.rails.respawn as number; RAILS.spareDown = rule; R.run(0.5);
+        const stage = async (rule: boolean, two: boolean) => { const R = await rig(true), g = R.g, secs = g.level.scenarios.lesson.rails.respawn as number; RAILS.spareDown = rule; R.run(0.5);
           const men = R.squad(), mate = men[0], other = men[1]; let by: any = null, at: V = [], at2: V = [];
           const stand = () => { mate.char.pos[0] = at[0]; mate.char.pos[2] = at[2]; if (two) { other.char.pos[0] = at2[0]; other.char.pos[2] = at2[2]; } };
           // (a place a defender sees: tried round each man who is not the script's, the teammate held there a few frames so that his bones are)
@@ -306,6 +306,8 @@ export async function railsCheck(): Promise<boolean> {
           if (!by) return null;
           by.god = true; let t = 0; for (; t < 600 && !(by.foe === mate && by.sawFoeThisFrame); t++) { R.run(1 / 60); stand(); }
           const took = by.foe === mate; R.run(0.5); stand(); const t0 = g.time; killGuard(g, mate, [1, 0, 0], false, 'shot', 'guard'); const knee = g.rails.isSpared(mate);
+          return { R, g, secs, by, mate, other, stand, at, took, knee, t0 }; };
+        const arm = async (rule: boolean, two: boolean) => { const S = await stage(rule, two); if (!S) return null; const { R, g, secs, by, mate, other, stand, took, knee, t0 } = S;
           let onHim = 0, rounds = 0, fired = 0, calm = false, next = '', back = -1, first = true;
           for (let i = 0; i < Math.round((secs + 3) * 60); i++) { const was = g.time; R.run(1 / 60); stand();
             const down = g.rails.isSpared(mate); if (!down) first = false;
@@ -315,7 +317,19 @@ export async function railsCheck(): Promise<boolean> {
               if (by.state !== 'alert') calm = true; if (!next && by.foe && by.foe !== 'player' && by.foe !== mate) next = by.foe.callsign; }
             else if (back < 0 && by.foe === mate) back = g.time - t0; }
           return { g, by: by.callsign as string, mate: mate.callsign as string, other: other.callsign as string, took, knee, onHim, rounds, fired, calm, next, back, secs }; };
-        const on = await arm(true, false), pair = await arm(true, true), off = await arm(false, false);
+        // A DEFENDER ON THE MOVE (roomfight.ts tickMove: a man of theirs walking to cover or falling back stops to fight an enemy he sees close). The same
+        // staging; then the defender is put on a walk away from the kneeling man with his eyes on him, and the room fight's own step for a moving man is run
+        // once: with the rule he walks on, without it the kneeling man stops him.
+        const moving = async (rule: boolean) => { const S = await stage(rule, false); if (!S) return 'NO DEFENDER SEES A PLACE'; const { R, g, by, mate, stand, at } = S; R.run(1 / 60); stand();
+          const { order } = await import(`${ROOT}/src/game/squad.ts`), D = g.fight?.defs?.find((d: any) => d.gd === by); if (!D) return 'THE ROOM FIGHT HAS NO RECORD OF HIM';
+          const p = by.char.pos, yaw = Math.atan2(at[0] - p[0], at[2] - p[2]); by.foe = null; by.char.bodyYaw = by.char.aimYaw = yaw;
+          order(by, { goal: [p[0] - Math.sin(yaw) * 4, p[1], p[2] - Math.cos(yaw) * 4], speed: 2, face: null, strafe: false, aimAt: null, upper: 'aim', stance: 'none', crouch: false });
+          Object.assign(D, { mode: 'move', moveKind: 'cover', cameBy: null, moveT: 0, stallAt: [p[0], p[1], p[2]], stallT: 0 }); (g.fight as any).tickMove(D, 1 / 60);
+          return by.foe === mate ? 'stops to fight him' : 'walks on'; };
+        const on = await arm(true, false), pair = await arm(true, true), off = await arm(false, false), mvOn = await moving(true), mvOff = await moving(false);
+        // (the places that ask: acquireFoe and the moving defender are staged above; the response's eye, a colleague's man handed on and the grenade's count are
+        //  only READ here — each file still asks `railsDown` of the man it picks)
+        const unasked = ['guards', 'roomfight', 'qrf', 'tactics', 'frag'].filter(f => !/railsDown\(g, /.test(readFileSync(`${ROOT}/src/game/${f}.ts`, 'utf8')));
         const g = (on ?? off)?.g ?? (await rig(true)).g, snap = () => JSON.parse(JSON.stringify(J.knobsSnapshot(g)));
         const was = snap(); delete was.tables.RAILS.spareDown; RAILS.spareDown = true; J.applyKnobs(g, was); const old = RAILS.spareDown;
         RAILS.spareDown = true; const made = snap(); RAILS.spareDown = false; J.applyKnobs(g, made); const kept = RAILS.spareDown;
@@ -323,9 +337,10 @@ export async function railsCheck(): Promise<boolean> {
         const say = (A: Awaited<ReturnType<typeof arm>>) => A ? `${A.by} on ${A.mate} (${A.took ? 'firing' : 'NEVER TOOK HIM'}), ${A.knee ? 'on his knee' : 'NOT SPARED'}: on him ${A.onHim} frames of it, ${A.rounds} rounds at him of ${A.fired} fired, ${A.calm ? 'off the alert' : 'alert throughout'}${A.next ? `, next ${A.next}` : ''}, on him again ${A.back < 0 ? 'NEVER' : `${A.back.toFixed(1)} s after the round`}` : 'NO DEFENDER SEES A PLACE';
         verdict(!!on && !!pair && !!off && on.took && on.knee && on.onHim === 0 && on.rounds === 0 && on.fired === 0 && on.calm && on.back >= on.secs && on.back < on.secs + 3
           && pair.took && pair.knee && pair.onHim === 0 && pair.rounds === 0 && pair.next === pair.other && off.took && off.knee && off.onHim > 120 && off.rounds > 0
+          && mvOn === 'walks on' && mvOff === 'stops to fight him' && unasked.length === 0
           && stood === (process.env.TPS_PROFILE === 'shipped' ? (process.env.TPS_SPAREDOWN ?? '1') === '1' : process.env.TPS_SPAREDOWN === '1') && /TPS_SPAREDOWN=1/.test(holds ?? '') && old === false && kept === true && word === 'true/false',
-          'to the enemy a spared man is a man down: the defender firing at a teammate is off him the tick he is spared, fires nothing at all while he is on his knee with nobody else in sight (a round of his at the man beside him is not counted against it) and comes off the alert and takes the man beside him where there is one, and is on him again once he is up; with RAILS.spareDown off he is on him and firing throughout; the rule is on as the page stands and off on the frozen stand, under its word, and off for a recording from before it',
-          `ALONE: ${say(on)} · WITH A MAN BESIDE HIM (${pair?.other}): ${say(pair)} · SWITCH OFF: ${say(off)} · as this stand comes up: ${stood ? 'on' : 'off'} (the frozen stand's word: ${holds ?? 'NONE'}) · a recording from before the key: ${old ? 'ON' : 'off'}, one made with it: ${kept ? 'on' : 'OFF'} · the page's word and ?sparedown=0: ${word}`);
+          'to the enemy a spared man is a man down: the defender firing at a teammate is off him the tick he is spared, fires nothing at all while he is on his knee with nobody else in sight (a round of his at the man beside him is not counted against it) and comes off the alert and takes the man beside him where there is one, and is on him again once he is up; a defender on the move walks on past him; with RAILS.spareDown off he is on him and firing throughout and the moving man stops to fight him; every file that picks a man to fight still asks; the rule is on as the page stands and off on the frozen stand, under its word, and off for a recording from before it',
+          `ALONE: ${say(on)} · WITH A MAN BESIDE HIM (${pair?.other}): ${say(pair)} · SWITCH OFF: ${say(off)} · A DEFENDER ON THE MOVE, the kneeling man in his eye: ${mvOn}, switch off ${mvOff} · asked in guards, roomfight, qrf, tactics, frag: ${unasked.length ? `NOT IN ${unasked.join(', ')}` : 'all five'} · as this stand comes up: ${stood ? 'on' : 'off'} (the frozen stand's word: ${holds ?? 'NONE'}) · a recording from before the key: ${old ? 'ON' : 'off'}, one made with it: ${kept ? 'on' : 'OFF'} · the page's word and ?sparedown=0: ${word}`);
       } finally { knobsBack(k0); } }
 
     // ---- the card's beat (RAILS.cardBeat; "we show the modals too quickly. like it should happen a beat after something happens on screen"): THE STEP
