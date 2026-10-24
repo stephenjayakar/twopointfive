@@ -291,7 +291,8 @@ export function lying(gd: Guard): Vec3[] {
 }
 /** how much of those points a burst at `from` has a line to (0‥1), through the glass as `view` reckons it */
 export const lyingShows = (g: Game, from: Vec3, pts: Vec3[], view: GlassView): number => throughGlass(g, from, view, () => { let n = 0; for (const p of pts) if (!burstBlocked(g, from, p)) n++; return n / pts.length; });
-export function blast(g: Game, at: Vec3, spec: BlastSpec): BlastReport {
+export function blast(g: Game, at: Vec3, spec: BlastSpec): BlastReport { return g.fogOfWar.doing(spec.who, () => blastRaw(g, at, spec)); }   // (its sparks and dust are its thrower's doing: fogofwar.ts FOG.ours)
+function blastRaw(g: Game, at: Vec3, spec: BlastSpec): BlastReport {
   const F = FRAG, lethal = spec.lethalM ?? F.lethalM, wound = Math.max(lethal, spec.woundM ?? F.woundM), serial = spec.serial ?? Math.floor(g.time * 1000);
   const from: Vec3 = [at[0], at[1] + F.lift, at[2]]; const name = spec.name ?? 'frag grenade';
   const rep: BlastReport = { at: v3.copy(at), who: spec.who, hits: [], killed: 0, finished: 0, wounded: 0, shielded: 0, stunned: 0, player: null };
@@ -300,7 +301,7 @@ export function blast(g: Game, at: Vec3, spec: BlastSpec): BlastReport {
     const gpu = gpuFx(g);
     const L = fx.spawnBurst(g.smoke, g.sparks, from, g.fxSeed++, gpu ? { sparkCount: Math.min(fx.bang.sparkCount, fx.flags.trails ? fx.bang.trailCount : 0) } : undefined);
     if (gpu) bangFx(g, from);
-    const light = g.engine.lights.flash(L.pos, [1, 0.74, 0.42], L.intensity * 0.7, L.range, L.ttl, 0); if (L.radius) light.radius = L.radius;   // (HE: a short orange flash, not the stun charge's white)
+    const light = g.fogOfWar.lightBy(g.engine.lights.flash(L.pos, [1, 0.74, 0.42], L.intensity * 0.7, L.range, L.ttl, 0), spec.who); if (L.radius) light.radius = L.radius;   // (HE: a short orange flash, not the stun charge's white)
     g.audio.play('stunBang', from, 1.0, { rate: 0.62 });   // (no sample of its own yet: the stun charge's, an octave-ish down)
     bangScorch(g, from);
     const eye = g.player.char.bones.head ?? v3.add(g.player.char.pos, [0, 1.6, 0]);

@@ -1710,7 +1710,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   Space at the lock DRAG him; the `door` step's reach is 0.8 m so it does not pass from where he was taken. WORDS: the grab line is "When he lights a
   smoke, sneak up behind him and press [Space] to grab him"; the card keeps the maintainer's sentence ("He'll check out the sound and then stop for a
   smoke, with his back to you."). CHECKS: `lesson-run tut-quiet` on both stands (`TPS_RAILS=1` in front on the frozen one; `--pace 6` on the shipped)
-  finishes 19 of 19 and prints where he looked from and how far his light was off the mark (it fails under 4 m or past 16 degrees), and that his torch is still in his hand, lit, and under his shoulder at his smoke (0.48 m under; it fails above 0.2); its BREAK PATHS,
+  finishes 19 of 19 and prints where he looked from and how far his light was off the mark (it fails under 4 m or past 16 degrees), and that his torch is still in his hand and under his shoulder at his smoke (0.48 m under; it fails above 0.2; and, since 2026-10-24, switched off: the bullet after this one); its BREAK PATHS,
   each of which must fail the run: `TQSMOKE_BREAK=front` (the player stands on the walk), `=beam` (he stays on the whistle's mark), `=upright` (he
   walks up behind the smoking man on his feet). All three fail on the frozen stand, seed 1. `lesson-gate`, `level-needs --run` on both stands,
   `rails-check` on both, `second-way-check`, `ownroofs-check`, `rowset-check`: green. `quiet-light`: its three red lines by design, no fourth.
@@ -1722,6 +1722,23 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   A SMALL FLAW IT TURNED UP, not this change's and not mended: creeping up behind the hall's man the scripted player's footfall was filed on seven
   frames running (0.1 s) at 1.1 m, and seven crouched steps on stone at that range take a calm man to suspicious; the same approach six seconds
   earlier in the same run files one. It looks like the walk cycle's phase crossing its half back and forth (`player.ts`, the footstep's edge test).
+- **The ledger's smoking man clicks his torch off** (2026-10-24; `levels/tut-quiet.script.ts` beat `night`; a level script only, no switch, the level
+  file and its fingerprint untouched). The maintainer, on a GPU, of the man at his chair with his beam on the wall: "guy taking a smoke would have
+  turned his flashlight off". WHAT HE DOES NOW: his torch burns on the way to the gap, through the look and on the walk back up the strip; the tick
+  he is at his chair the script orders `light: false` (`squad.ts runGuardScript` puts a scripted man's own light out) and he smokes in the dark, the
+  torch still in his hand at his side. It burns again when he moves off: a second whistle's look order asks for `light: true`, and let go (the smoke
+  done, or handed back `alert`) he is the game's own man with the game's own light. If something turns him before he reaches the chair the light was
+  never put out. WHAT THAT DOES TO LIGHT AND SIGHT: nothing in the rules (a scripted man is blind and deaf either way, and the script's own eyes and
+  ears are the same volumes and footfall levels as before); the scripted player's light on the walk reads 0.02 with it off (the headless meter: no moon, no bounce); what is
+  gone is the beam on the strip's end wall, so the man himself is lit by his lighter's flame, the lit end and whatever the back court's own light
+  gives. CHECKS: `lesson-run tut-quiet` on both stands (frozen with `TPS_RAILS=1`, 2:33; shipped at `--pace 6`, 4:44; all steps pass, seed 1) now
+  fails unless the torch is in his hand, under his shoulder and OUT at his smoke; a fifth break path, `TQSMOKE_BREAK=wait` (the player hides and
+  never comes), must fail and says in its failure that the man finished, was let go and has his light on again (it does, on the frozen stand);
+  the four older paths (`front`, `beam`, `upright`, `hands`) still fail; `smokebreak-check` 10 of 10 on both stands. NEVER SEEN ON A GPU and never
+  played by a hand: whether a man with no beam reads from the gap, and whether the flame and the lit end (first numbers, `SMOKEBREAK`) are enough to
+  find him by, are the maintainer's to see. NOT DONE HERE, the tutorial frame's: the lock's row ("pick the lock") shows from the whistle's step on
+  whenever the player is in reach of the back door, so it is on screen while the line says to grab the man; `rails.rows` is one list for the whole
+  mission and the frame's own check asks for the pick at that door on the whistle's step.
 - **The ledger teaches the sponge round and the swap of the launcher's load** (2026-10-23; `tools/levels/tut-quiet.ts`, THE SPONGE ROUND at its head;
   level data, a level's own card and one new card key, no switch of its own). The maintainer, taking both out of the solo loud mission: "we can introduce
   sponge rounds + swapping secondaries later when we have a stealth tutorial". The store's old `strike` step (the hall's man taken by hand) is gone; in its
@@ -1741,20 +1758,31 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   player to. THE KIT: the level issues its own card (`scenarios.issue.members.0`: the rifle, one grenade, five sponge rounds, no cans and no frag),
   dealt whole on the page. THE NEW KEY, `loaded: 'ring' | 'he40'` on that card (`scene/scenarios.ts IssueCard`, parsed in `levelData.ts`, read in
   `kit.ts kitPlayer` on the player's own card only; `docs/level-format.md`): the load the launcher COMES UP ON. Absent it is the sponge round wherever
-  he carries one, as before, so no other level changes. Here it is the grenade, so the swap is done for a reason and not only said. THE LOCKS: from
-  `nook` both mouse buttons are shut; `corner` shuts `use`, because the frame gives a held left click to the stalk wherever the interaction key is his
-  and his hands are empty, whatever a step denies (`rails.ts gate`; a reviewer's run took the man that way with `fire` denied); `rifle` opens
+  he carries one, as before, so no other level changes. Here it is the grenade, so the swap is done for a reason and not only said. THE LOCKS: `nook` shuts both mouse buttons, the whistle (it would bring the man round to the store) and `stalk`; `rifle` opens
   `slot:rifle`;
   `load` opens the frame's `load` (the load's row alone: a right click held before the swap sends nothing); `sponge` opens `alt`; `sling` opens `hands`;
-  `under` gives back the left button, the right and `use`, and shuts the rifle's key, the load and the hands' key again. The interaction key stays his on `nook` (the back door needs it), so the held click is shut from his first stride inside and not before. With
+  `under` gives back both buttons, the whistle and `stalk`, and shuts the rifle's key, the load and the hands' key again. THE INTERACTION KEY IS HIS ON
+  EVERY LINE, AND `stalk` IS A NEW WORD OF THE FRAME (`rails.ts ACTS`, `shuts`; mended the same day, on the build after the one that first carried
+  the lesson; the frame's owner agreed the line). The frame gives a held left click to the stalk wherever the interaction key is his and his hands
+  are empty, whatever `fire` says (a reviewer's run took the man that way), and the first build shut it the only way a level could, by denying
+  `use` from `corner` to `under`: a tap at the open back door then did nothing and said nothing (the maintainer, of this door, before: "nothing in
+  reach to close the door?") and `handring-check`'s line at that door went red on both stands. `stalk` has no key and is the one action that is
+  OPEN UNLESS A STEP DENIES IT (the last step that names it decides; a level that never says the word plays as it did; in `rails.allow` it is a
+  fault): a step that denies it shuts that click and nothing else, at the frame's gate (the left button is not given to the stalk) and at the
+  stalk's own (`stalk.ts free`, `cornerGate`: so whatever else owns the button no stalk begins, and the row's "hold to sneak up" hint and the pose
+  that tells are not shown for a click that would do nothing). The debugger's rails line says `stalk shut` while it is. A first mend that drew the rifle at the back door instead was dropped under
+  review (he could walk in without pressing the key and be stalked into the beam). What is left open: the grab's own row is still his close behind the man, and taking it holds the man and breaks the beam (the break path below): the room says no, not a dead key. That row's hint names the right button's knockout, which is shut until `sponge` (the frame does not edit a row's hint; he reads it only where he has already gone against the line). With
   `alt` open the load's row is open too (the frame's rule), so from `sponge` he can swap back and fire the grenade: at 2.6 m it does not arm, and the
   man is staggered and alerted; no data of a level can shut that. NEVER STUCK: `sponge` also passes when the launcher has no sponge round left (`lesson.ts ringsOut`). CHECKS
   (2026-10-23, no GPU): `lesson-run tut-quiet` plays 24 of 24 on both stands (`TPS_RAILS=1` in front on the frozen one), seeds 1 to 4 on the shipped
-  stand, two of them with `--pace 6`: a left click held on the man from the doorway's line stalks nobody, a right click held there before the swap
+  stand, two of them with `--pace 6`: inside the open back door the row `pull` shuts the leaf behind him; the whistle's own code does nothing in the store and the interaction key held on open floor puts no ring up (`WHISTLE_STATS.blown` does not move); a left click held on the man from the doorway's line stalks nobody, a right click held there before the swap
   sends nothing, a straight line to his head is blocked from the corner and clear from the mark (asked of the level's own collision), then one sponge round spent, the man out cold (the chronicle's `ko` by `ring`), no beam
   broken, the man at the table on patrol with awareness 0.00, GHOST at the end. Its BREAK PATHS: `TQSMOKE_BREAK=hands` (he goes for the man by hand after all,
-  crouched; on the frozen stand, which has no reaching hand and no row to grab by on that line, he then stands up behind him) fails the run on both
-  stands with the beam broken; `RAILS_BREAK=1` fails it at the held left click (the stalk walks him 1.35 m).
+  crouched, and takes the grab's row 0.4 m behind him) fails the run on both
+  stands with the beam broken; `RAILS_BREAK=1` fails it at the held left click (the stalk walks him over a metre). `rails-check` has the word's own line (on the store's line
+  the gate keeps the left button from him and leaves the interaction key, and `stalkCould` says no 1.6 m behind the man; a later `allow` gives
+  both back; allowed and denied on one step is shut, as `allowed` folds the pair; no step naming it is the gate as it was; the word in a frame's
+  list is a fault), red under `RAILS_BREAK=1` on both stands.
   `lesson-check` and `rails-check` on both stands, `lesson-gate tut-quiet`, `level-needs tut-quiet --run` on both, `issue-check`, `issuewhole`,
   `kit-audit`, `writing-check`, the `pouches` family, `handring-check` and `smokebreak-check` on both stands, `solofog`, `attentionway`, `radiohome`:
   green. `lesson-check`'s kit lines that staged this mission as "a lesson that issues no kit of its own" now stage `tut-sky` (the comment there says
@@ -2199,6 +2227,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   of 36, with each mission's four dice (two at six seconds a line). On the real page (headless Chromium, the software adapter, real keys,
   `tut-page.cjs tut-sky`): mission 1 played to its end, its three cards up and closed, 24 lines and no fault — on the tree before the last mends
   (the deeds carried forward then, and the rule was on in the module), not run again after them.
+  A CUE IS A BEAT LATE BY DESIGN: a step's cue comes with its card, 1.2 s or more after the deed before it. That is the right time for men a script
+  moves WHEN the step comes up; men who must be out of sight BEFORE the player can see them are placed from the first tick (or the card says `now`).
+  The squad mission's hall men stood in the window's line until their step's cue and were shot through the glass a step early (mended there).
+  THE RUNNER'S BAR (`tools/qa/lesson-run.ts`, a script's `fightRun`, default 1): a `fightOk` step that goes by before the script reaches it is
+  logged with how long it was up and named on the run's last line; two in a row fail the run ("lessons nobody played") unless the script raises
+  `fightRun` and says why. Before, three such in a row still ended 24 of 24. Tried on the squad mission (the only script with `fightOk`): no step
+  goes by that way on seeds 1 to 6 in its own arm or on seeds 1 to 4 plain; with the lesson pushed on by hand one step is a note and two fail.
   NOT DONE: Tab's objectives card and the small objective row still read the done step's ask while it settles; an order given in the beat still snaps
   to the done step's mark. The other missions' cards are plain (the beat): which of them follow a fight he only watches is their parts' to mark.
   Never seen on a GPU; nobody has played it.
@@ -2246,3 +2281,15 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   line are what is asked); `ringflat-check` 14 on both; mission 1 played to the breaker step on the real page with real keys on the software
   adapter: one ring, one key cap in the line, [2] gives the charge and no second ring comes up.
   NOT DONE: the digit in a `flatLine` is hand-written, and only tut-sky's is held by a check. Never seen on a GPU; nobody has played it.
+- **A tutorial step's mark gives way to a ring over it (2026-10-23, from the first picture of mission 1's one ring, where the mark's orange
+  circle lay over the second wedge's digit; his own 19:46Z shot of that step shows the same, "the line and circle are weird")**. `ui/cmdring.ts`
+  keeps the rings it draws as discs (`covers(x, y)`, the squad's ring and his own), and `ui/overlay.ts` draws no step mark that lies under one.
+  Picture only, asked of where the rings are DRAWN, so a ring opened elsewhere, a ring left on the screen while the view pans, or the old list
+  under `?qring=0` hides nothing. SWITCH `RAILS.markClear`: a knob of the frame's table like `lineClear` (on in the module and the page,
+  `?markclear=0` off; no FROZEN_HOLDS row, the frame itself being off on the frozen stand), off for a recording from before the key.
+  CHECK `tools/qa/tut-page.cjs` on mission 1's wall step, real keys: the mark is drawn before the ring and not with the ring up;
+  `MARKCLEAR_BREAK=1` loads the page with `?markclear=0` and that line fails. No headless line: the harness draws no overlay.
+  MEASURED: mission 1 played to the wall step with real keys on the software adapter, twice: with the knob on the mark is drawn before the ring
+  and not under it (18 lines pass, and the picture shows both digits clear); with `?markclear=0` the mark is drawn under the ring and that line
+  fails. `rails-check` 30 of 30 on both stands with the change in.
+  NOT DONE: his own ring over a mark was not played (the same code path); never seen on a GPU; nobody has played it.

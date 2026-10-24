@@ -3273,7 +3273,8 @@ export class DoorTools {
 
   // ------------------------------------------------------------ the charge
   /** Sam's trigger: the set charge nearest him (or the one given) goes. Returns what it did, null with none set. */
-  blow(c: SetCharge | null = this.nearest()): { knocked: number; stunned: number; backblast: number } | null {
+  blow(c: SetCharge | null = this.nearest()): { knocked: number; stunned: number; backblast: number } | null { return this.g.fogOfWar.doing(PLAYER_ID, () => this.blowRaw(c)); }   // (a door charge's blast is the team's doing: fogofwar.ts FOG.ours)
+  private blowRaw(c: SetCharge | null): { knocked: number; stunned: number; backblast: number } | null {
     if (!c) return null;
     const g = this.g, K = DOORTOOLS, d = c.door, side = c.side, W = d.def.width, into = -side as 1 | -1;
     const at = this.set.indexOf(c); if (at < 0) return null; this.set.splice(at, 1);

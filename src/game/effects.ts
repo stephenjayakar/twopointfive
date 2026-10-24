@@ -196,7 +196,10 @@ export function muzzleFrame(o: Vec3, d: Vec3): { o: Vec3; x: Vec3; y: Vec3; z: V
   const z = v3.normalize(d); let y = v3.sub([0, 1, 0], v3.scale(z, z[1])); if (v3.len(y) < 1e-3) y = v3.sub([1, 0, 0], v3.scale(z, z[0])); y = v3.normalize(y);
   return { o: v3.copy(o), x: v3.cross(y, z), y, z };
 }
-export function spawnShot(smoke: SmokeSystemLike, sp: Sparks | null, muzzle: Vec3, dir: Vec3, o: { seed: number; lightGain?: number; lightRange?: number; track?: Track; eject?: Track }): FxLight[] {
+/** a solver that takes nothing (spawnShot's `gas: false`) */
+const NO_GAS: SmokeSystemLike = { emit() {}, push() {}, inSmokeDomain: () => false };
+export function spawnShot(smoke: SmokeSystemLike, sp: Sparks | null, muzzle: Vec3, dir: Vec3, o: { seed: number; lightGain?: number; lightRange?: number; track?: Track; eject?: Track; gas?: boolean }): FxLight[] {
+  if (o.gas === false) smoke = NO_GAS;   // (the fog of war, FOG.air: a shot nobody on the team sees fired files no gas — the sparks and the flash are as ever)
   const S = shot; const d = v3.normalize(dir); const F = muzzleFrame(muzzle, d); const at3 = (off: Vec3): Vec3 => v3.mad(v3.mad(v3.mad(muzzle, F.x, off[0]), F.y, off[1]), F.z, off[2]);
   // (`anchor`: where the old box solver centred the shot's one 1.4 m box, ahead of the muzzle. The page's solver has no boxes and reads nothing of it; the retired native host's port does)
   const at = at3(S.jetOff); const anchor = v3.mad(muzzle, d, 0.38);

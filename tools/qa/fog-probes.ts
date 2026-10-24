@@ -28,7 +28,7 @@ import { standUp, ROOT } from './headless.ts';
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { FOG, thingKeyOf } = await import(`${ROOT}/src/game/fogofwar.ts`);
 const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
-const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
+const { killGuard, fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
 const { MKEY } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { say, spawnUnit } = await import(`${ROOT}/src/game/guards.ts`);
 const { START } = await import(`${ROOT}/src/game/startfile.ts`);
@@ -685,12 +685,12 @@ export async function fogFull(): Promise<boolean> {
     const vol = strip(rd('volumetrics.wgsl')), draw = strip(rd('particles_draw.wgsl')), smokeFn = fnBody(common, 'fogSmoke');
     const air = (vol.match(/let dens = fogSmoke\(smokeDensity(In\(X, onMask\)|At\(X\)), X\);/g) ?? []).length === 3 && !/let dens = smokeDensity/.test(vol) && /fogSeenAt\(X, vec3f\(0\.0\)\)/.test(smokeFn)
       && /if \(\(li\.kind & \(?LIGHT_FOG_UNSEEN(?: \| LIGHT_[A-Z_]+)*\)?\) != 0u\) \{ continue; \}/.test(fnBody(common, 'directIrradiance'))   // (other kinds may share the skip: an infrared light does)
-      && /if \(kind != P_RAIN && fogSeenBins\(p\.pos\) < 0\.5\) \{ return cull\(\); \}/.test(draw) && /flux \*= lightFogK\(li, x, hit\.n\);/.test(strip(rd('cards.wgsl'))) && /lightFogK\(li, ro \+ rd \* s0, vec3f\(0\.0\)\)/.test(vol);
+      && /if \(kind != P_RAIN && \(p\.bits & PB_OURS\) == 0u && fogSeenBins\(p\.pos\) < 0\.5\) \{ return cull\(\); \}/.test(draw) && /flux \*= lightFogK\(li, x, hit\.n\);/.test(strip(rd('cards.wgsl'))) && /lightFogK\(li, ro \+ rd \* s0, vec3f\(0\.0\)\)/.test(vol);
     const wired = /binding: 11, visibility: all, buffer: \{ type: 'uniform' \}/.test(frameTs) && /binding: 11, resource: \{ buffer: b\.fogSight \}/.test(frameTs) && /U\[o \+ 14\] = full \? 1 : 0;/.test(up)
       && /unseen = select\(own, unseen \+ own, fow\.lit2\.z > 0\.5\);/.test(strip(fog)) && /let rd = vec3f\(cos\(a\), 0\.0, sin\(a\)\);\s*t = occludedTBoxes\(e\.xyz, rd, 1e9, u32\(e\.w \+ 0\.5\), -1\.0\);/.test(strip(sight))
       && bins(common, /const FOG_SIGHT_BINS: i32 = (\d+);/) === bins(up, /export const FOG_BINS = (\d+);/) && bins(common, /dist: array<vec4f, (\d+)>/) * 4 === bins(up, /export const FOG_BINS = (\d+);/) * 5 && /sightOut\[k \* u32\(FOG_SIGHT_BINS\) \+ x\] = t;/.test(strip(sight));
     verdict(gate && raw.length === 0 && truth.length === 1 && truth[0] === 'probe.wgsl' && own.length === 0 && wired && air,
-      'the picture\'s evalLight is the light under its fog class (asked of the sight table; 1 while none is written) and the game\'s reading (probe.wgsl alone) is the light as it is; the glints, the torch cards (where the footprint falls) and the froxels\' beams ask the class themselves, and a beam the class cuts takes no place among a ray\'s beams, and a lamp lit only in the fog\'s picture gives the cascades (whose bounce the meter reads) nothing; the table is bound to every pass (binding 11, a uniform), written by the eye ray the fog pass walks — which is walked again wherever the table\'s two rays beside a spot disagree — and the fog pass adds its fill to the live frame under the full picture; the picture\'s march takes no smoke, and draws no particle but the weather\'s, over floor the table says nobody sees; ',
+      'the picture\'s evalLight is the light under its fog class (asked of the sight table; 1 while none is written) and the game\'s reading (probe.wgsl alone) is the light as it is; the glints, the torch cards (where the footprint falls) and the froxels\' beams ask the class themselves, and a beam the class cuts takes no place among a ray\'s beams, and a lamp lit only in the fog\'s picture gives the cascades (whose bounce the meter reads) nothing; the table is bound to every pass (binding 11, a uniform), written by the eye ray the fog pass walks — which is walked again wherever the table\'s two rays beside a spot disagree — and the fog pass adds its fill to the live frame under the full picture; the picture\'s march takes every plume\'s density through fogSmoke (which cuts it over floor the table says nobody sees unless the head says the air is drawn there — fog-air), and no particle but the weather\'s and the team\'s own doing (fog-ours) is drawn over such floor; ',
       `evalLight / evalLightTrue / lightFogK as written: ${gate} · other files calling evalLightRaw: ${raw.join(', ') || 'none'} · calling evalLightTrue: ${truth.join(', ') || 'none'} · own-work files without the class: ${own.join(', ') || 'none'} · binding, block, fill and table ray: ${wired} · smoke (3 march sites), particles, the card and the beams' places: ${air}`);
   }
   { // the address
@@ -1018,6 +1018,226 @@ export async function fogEdge(): Promise<boolean> {
     const H = (await import(`${ROOT}/src/host/profile.ts`)).FROZEN_HOLDS, row = H['FOG.edge'], rowC = H['FOG.desat'];
     verdict(stood === want && stoodGrey === wantGrey && (FOG_DEFAULTS as any).edge === FOG_EDGE_ON && typeof row === 'string' && /TPS_FOGEDGE=1/.test(row) && typeof rowC === 'string' && /TPS_FOGCOLOUR=1/.test(rowC), frozen ? 'standUp() on the frozen stand puts FOG.edge and FOG.desat to what TPS_FOGEDGE / TPS_FOGCOLOUR say (unset: the hard line, greyed as it was), the module ships both the new way, and FROZEN_HOLDS names the rows' : 'standUp() on the shipped stand leaves FOG.edge and FOG.desat as the page has them (a word said: that), and FROZEN_HOLDS names the rows',
       `after standUp: edge ${stood}, greying ${stoodGrey} · the module's: ${(FOG_DEFAULTS as any).edge}, ${(FOG_DEFAULTS as any).desat} · TPS_FOGEDGE ${word ?? 'unset'} · TPS_FOGCOLOUR ${wordC ?? 'unset'} · TPS_PROFILE ${process.env.TPS_PROFILE ?? 'unset'} · FROZEN_HOLDS ${row ?? '—'} / ${rowC ?? '—'}`);
+  }
+  Object.assign(FOG, FOG_DEFAULTS);
+  return done();
+}
+
+// THE AIR IS THE PLACE (game/fogofwar.ts FOG.air — the maintainer, 10-23, on a fire with no flame in the fog: 'I think we should at least show everything in the
+// environment visible at the start of the level all the time?'): smoke and dust are drawn over floor the team does not see too. The march is shader text
+// (common.wgsl fogSmoke, read by volumetrics.wgsl and its dust twin), so headless this asks (1) what reaches the renderer — the block's row every frame, and the
+// sight table's head as render/fogofwar.ts writes it, (2) the wiring as written — fogSmoke leaves a density alone while the head says so and cuts it by
+// fogSeenAt otherwise, every march of the smoke takes its density through it, and nothing else in the shaders reads the row, (3) WHAT A HIDDEN MAN FIRES IS
+// NOT FILED: the fog's airHides says so of a man out of the picture and of nobody else, a shot told to leave its gas out files none and gives the same flash,
+// and combat.ts asks it of every shooter, (4) that the fight is the same either way: the night breach ordered in and fought with it on digests the same as
+// with it off, dice and all, then the address, the journal (and the engine replay's page look) and the stands. What a plume looks like under the fog is a
+// real page's to show (the software adapter) and a GPU's to judge.
+//   FOGAIR_BREAK=1 → the row is left off while the probe asks about it on: the block's line FAILS.
+export async function fogAir(): Promise<boolean> {
+  const { verdict, done } = family('fog-air: smoke and dust are drawn under the fog of war too');
+  const brk = process.env.FOGAIR_BREAK === '1';
+  const R = await rig(57, { fog: true }); const { game, FW } = R;
+  const stood = FOG.air;   // (what standUp left: read below, with the stands)
+  const { fogFlags } = await import(`${ROOT}/src/game/fogofwar.ts`);
+  const fsrc = await import('node:fs'); const rd = (f: string): string => fsrc.readFileSync(`${ROOT}/src/render/${f}`, 'utf8');
+  const strip = (t: string) => t.split('\n').map(l => l.replace(/\/\/.*$/, '')).join('\n');
+  const F = FW.frame;
+  { // the block
+    FOG.full = true; FOG.air = !brk; R.step(20); const on1 = F.air, fogOn = F.on && F.count > 0 && !!F.full;
+    FOG.air = false; R.step(2); const off = F.air; FOG.air = !brk; R.step(2); const back = F.air;
+    FOG.full = false; R.step(2); const plain = F.air, fullOff = !F.full; FOG.full = true; R.step(2);
+    const up = rd('fogofwar.ts'), head = /U\[o \+ 7\] = F!\.air \? 1 : 0;/.test(up) && /air: false/.test(/export function makeFogFrame\(\)[^\n]*/.exec(up)?.[0] ?? '');
+    verdict(fogOn && on1 === true && off === false && back === true && fullOff && head, 'the fog\'s block carries the row every frame — on while the knob is, off as soon as it is not — and the sight table\'s head takes it as its last float (a frame with no fog block says off)',
+      `fog on with the full picture: ${fogOn} · the row in the block: ${on1} · the knob off → ${off} · on again → ${back} · without the full picture the block still says ${plain} (no sight table is written: nothing reads it) · the head's write and the empty frame's row as written: ${head}`);
+  }
+  { // the shaders
+    const common = strip(rd('shaders/common.wgsl')), a = common.indexOf('fn fogSmoke('), body = a < 0 ? '' : common.slice(a, common.indexOf('\n', a));
+    const rule = /fn fogSmoke\(dens: f32, X: vec3f\) -> f32 \{ if \(dens <= 0\.002 \|\| fogSight\.soft\.w > 0\.5\) \{ return dens; \} return dens \* fogSeenAt\(X, vec3f\(0\.0\)\); \}/.test(body);
+    const vol = strip(rd('shaders/volumetrics.wgsl')), marches = (vol.match(/let dens = [^;]*;/g) ?? []), through = marches.filter(m => /fogSmoke\(/.test(m)).length;
+    const twin: string = rd('dustLookVol.ts'), twinThrough = (twin.match(/'let d[^']*let dens = fogSmoke\(|'let dens = fogSmoke\(smokeDensityAt\(X\), X\); let dTint/g) ?? []).length;
+    const dir = `${ROOT}/src/render/shaders`, others = (fsrc.readdirSync(dir) as string[]).filter(f => f.endsWith('.wgsl') && f !== 'common.wgsl' && /fogSight\.soft\.w/.test(strip(fsrc.readFileSync(`${dir}/${f}`, 'utf8'))));
+    verdict(rule && marches.length === 3 && through === 3 && twinThrough === 2 && others.length === 0, 'as written: fogSmoke hands a density back whole while the sight table\'s head says the air is drawn, and cut by what the team sees otherwise; each of the smoke\'s three marches takes its density through it, the dust look\'s twin lines too; no other shader reads the row',
+      `fogSmoke as expected: ${rule} · marches in volumetrics.wgsl: ${marches.length}, through fogSmoke: ${through} · the dust twin's lines through it: ${twinThrough} of 2 · other shaders reading the row: ${others.join(', ') || 'none'}`);
+  }
+  { // what a hidden man fires is not filed
+    FOG.full = true; FOG.air = true; R.step(2);
+    const gs: any[] = game.guards.filter((x: any) => x.state !== 'dead'), hid = gs.find((x: any) => FW.hidden(x)), mate = gs.find((x: any) => FW.onTeam(x));
+    const onHid = !!hid && FW.airHides(hid.char), onMate = !!mate && FW.airHides(mate.char), onSam = FW.airHides(game.player.char);
+    FOG.air = false; const offHid = !!hid && FW.airHides(hid.char); FOG.air = true;
+    const fx = await import(`${ROOT}/src/game/effects.ts`); let filed = 0; const sink: any = { emit() { filed++; }, push() {}, inSmokeDomain: () => false };
+    const shot = (gas: boolean | undefined) => { filed = 0; const L = fx.spawnShot(sink, null, [0, 1.4, 0], [0, 0, 1], { seed: 7, gas }); return { filed, lights: JSON.stringify(L) }; };
+    const plain = shot(undefined), kept = shot(true), left = shot(false);
+    const asks = /gas: !g\.fogOfWar\.airHides\(shooter\)/.test(fsrc.readFileSync(`${ROOT}/src/game/combat.ts`, 'utf8'));
+    verdict(!!hid && !!mate && onHid && !onMate && !onSam && !offHid && plain.filed > 0 && kept.filed === plain.filed && left.filed === 0 && left.lights === plain.lights && asks,
+      'a man out of the picture files no gun gas while smoke is drawn under the fog — a teammate and the player always do, and with the row off everybody does, as it was; a shot told to leave its gas out files nothing and gives the same flash; combat.ts asks of every shooter',
+      `a hidden defender: ${hid ? hid.callsign : 'NONE'} → ${onHid}; with the row off → ${offHid} · a teammate: ${mate ? mate.callsign : 'NONE'} → ${onMate} · the player → ${onSam} · emitters a shot files: ${plain.filed}, said to keep its gas ${kept.filed}, to leave it out ${left.filed} · the same flash: ${left.lights === plain.lights} · combat.ts asks: ${asks}`);
+  }
+  { // the address
+    const g = globalThis as any, had = 'location' in g, was = g.location;
+    const at = (search: string, from: boolean) => { FOG.air = from; g.location = { search }; fogFlags(); return FOG.air; };
+    const zero = at('?fogair=0', true), bare = at('?fogair', false), one = at('?fogair=1', false), none = at('', true), noneOff = at('', false);
+    if (had) g.location = was; else delete g.location;
+    verdict(zero === false && bare === true && one === true && none === true && noneOff === false, '?fogair=0 on the address puts the smoke under the fog off; ?fogair or ?fogair=1 puts it on; nothing said leaves it as it stands',
+      `?fogair=0 → ${zero} · ?fogair → ${bare} · ?fogair=1 → ${one} · no word, from on → ${none}, from off → ${noneOff}`);
+  }
+  { // an old recording
+    const { knobsSnapshot, applyKnobs } = await import(`${ROOT}/src/game/journal.ts`);
+    FOG.air = true; const snap = knobsSnapshot(game); const hasKey = typeof (snap.tables.FOG as any)?.air === 'boolean';
+    const old = JSON.parse(JSON.stringify(snap)); delete old.tables.FOG.air; FOG.air = true; applyKnobs(game, old); const fromOld = FOG.air;
+    R.step(4); const held = F.air;   // (no viewer asked: the tape's own look stands)
+    { const g = globalThis as any, had = 'location' in g, was = g.location; g.location = { search: '?fogair=1' }; fogFlags(); if (had) g.location = was; else delete g.location; }   // (the page's look, said outright: the address lines above left other words standing)
+    FOG.air = false; FW.pageLook(); R.step(4); const viewed = F.air;   // (the engine replay's call)
+    const visit = /VISIT_FLAGS = \[([^\]]*)\]/.exec(fsrc.readFileSync(`${ROOT}/src/ui/replaykey.ts`, 'utf8'))?.[1] ?? '', kept = /'fogair'/.test(visit);
+    applyKnobs(game, snap); const fromNew = FOG.air;
+    verdict(hasKey && fromOld === false && held === false && viewed === true && kept && fromNew === true, 'the session journal carries the row: a recording from before the key replays in the harness with no smoke under the fog, one from now as it says — and the engine replay, which alone asks, shows either under the page\'s own look, a visit\'s ?fogair kept',
+      `the snapshot has FOG.air: ${hasKey} · a file without the key → ${fromOld}; in the block ${held} · after the replay asked: ${viewed} · the visit keeps ?fogair: ${kept} · a file from now → ${fromNew}`);
+  }
+  { // the stands
+    const frozen = !process.env.TPS_PROFILE || process.env.TPS_PROFILE === 'frozen', word = process.env.TPS_FOGAIR;
+    const want = frozen || word !== undefined ? word === '1' : (FOG_DEFAULTS as any).air;
+    const row = (await import(`${ROOT}/src/host/profile.ts`)).FROZEN_HOLDS['FOG.air'];
+    verdict(stood === want && (FOG_DEFAULTS as any).air === true && typeof row === 'string' && /TPS_FOGAIR=1/.test(row), frozen ? 'standUp() on the frozen stand puts FOG.air to what TPS_FOGAIR says (unset: off, as every stored frame was drawn), the module ships it on, and FROZEN_HOLDS names the row' : 'standUp() on the shipped stand leaves FOG.air as the page has it (a word said: that), and FROZEN_HOLDS names the row',
+      `after standUp: ${stood} · the module's: ${(FOG_DEFAULTS as any).air} · TPS_FOGAIR ${word ?? 'unset'} · TPS_PROFILE ${process.env.TPS_PROFILE ?? 'unset'} · FROZEN_HOLDS ${row ?? '—'}`);
+  }
+  { // the picture's alone: the fight is the same with it as without
+    const fight = async (seed: number, air: boolean) => { const Q = await rig(seed, { fog: true, chaos: 0.5 }); FOG.full = true; FOG.air = air; let asked = 0, left = 0;
+      const ah = Q.FW.airHides.bind(Q.FW); Q.FW.airHides = (c: any) => { const r = ah(c); asked++; if (r) left++; return r; };
+      Q.step(40); const hid = Q.game.guards.find((x: any) => x.state !== 'dead' && Q.FW.hidden(x));   // (a defender nobody sees fires one round before the order, through combat.ts's own fireWeapon: the gate is asked whatever the fight then does)
+      if (hid) { const p = hid.char.pos; fireWeapon(Q.game, hid.char, [p[0] + 2, 1.2, p[2] + 0.5], false, { spread: 0 }); }
+      Q.NB.order(); Q.step(60 * 7); Q.NB.order(); Q.step(60 * 14);
+      return { d: JSON.stringify(digestGame(Q.game)), draws: (Q.dice as any).draws(), state: Q.NB.state as string, air: Q.FW.frame.air, asked, left, hid: !!hid }; };
+    const rows: string[] = []; let same = true, fought = true, gated = true;
+    for (const seed of [21, 22]) { const a = await fight(seed, false), b = await fight(seed, true); same &&= a.d === b.d && a.draws === b.draws && a.air === false && b.air === true; fought &&= a.state !== 'staged' && b.state !== 'staged'; gated &&= a.hid && b.hid && a.asked >= 1 && a.asked === b.asked && a.left === 0 && b.left >= 1;
+      rows.push(`seed ${seed}: ${a.state} / ${b.state}, dice ${a.draws} / ${b.draws}, digest ${a.d === b.d ? 'same' : 'DIFFERENT'}, shots ${a.asked} / ${b.asked}, their gas left out ${a.left} / ${b.left}`); }
+    verdict(same && fought && gated, 'the night breach under the fog\'s full picture, a hidden defender firing a round and the team then ordered in, two seeds, 21 s each: the same digest and the same dice with the smoke drawn under the fog as without — and only with it is the hidden man\'s gas left out', rows.join(' · '));
+  }
+  Object.assign(FOG, FOG_DEFAULTS);
+  return done();
+}
+
+// WHAT THE TEAM DOES IS ALWAYS SHOWN (game/fogofwar.ts FOG.ours — the maintainer, of the tutorial's wall charge: 'still can't see the wall shot detonate').
+// Headless this asks (1) WHOSE a doing is: the player's and a teammate's are the team's, a defender's and nobody's are not, and nothing is with the row off;
+// (2) THE LIGHTS: a flash somebody made without carrying it takes his class (lights.ts RtLight.fogBy) — the team's lights the fog's picture, a defender's
+// and an ownerless one only what the team sees, as ever — asked of flashes made here and of the real stun charge (combat.ts detonateStun) set off where
+// nobody sees, by the player and by a defender; the other sites as written (the frag, the wall charge's afterglow, a round's strike, a tracer's ember);
+// (3) THE LOOSE BOXES: a one-frame box a teammate owns (a tracer's streak) over floor nobody sees is handed to the renderer, a defender's and nobody's
+// are not, and the same of a chunk of RUBBLE by who threw it (debris.ts Chunk.who), in flight and once it lies; (4) THE PARTICLES: what is filed while one of the team is the doer carries the mark, what a defender files does not, a doing inside a doing
+// keeps its cause, and the mark is back off afterwards — on a stand-in for the GPU system, round a real round fired by a teammate and by a defender, and a
+// teammate's round that stops in a man nobody sees (nothing marked off him, no flash given the shooter) — and
+// the record's bit, the kernel's and the draw's lines as written; (5) the address, the journal (and that the replay leaves the row as the tape has it), the stands, and the fight digesting
+// the same either way. What a blast looks like under the fog is a real page's to show and a GPU's to judge.
+//   FOGOURS_BREAK=1 → the row is left off while the probe asks about it on: whose, the lights', the boxes' and the particles' lines FAIL.
+export async function fogOurs(): Promise<boolean> {
+  const { verdict, done } = family('fog-ours: what the team does is always shown under the fog of war');
+  const brk = process.env.FOGOURS_BREAK === '1';
+  const R = await rig(59, { fog: true }); const { game, FW } = R;
+  const stood = FOG.ours;   // (what standUp left: read below, with the stands)
+  const { fogFlags, thingKeyOf } = await import(`${ROOT}/src/game/fogofwar.ts`), { makeBox } = await import(`${ROOT}/src/scene/boxes.ts`), { detonateStun } = await import(`${ROOT}/src/game/combat.ts`);
+  const fsrc = await import('node:fs'), src = (f: string): string => fsrc.readFileSync(`${ROOT}/src/${f}`, 'utf8');
+  const L = game.engine.lights, PID = game.player.char.id;
+  FOG.full = true; FOG.ours = !brk; R.step(60);   // (past the first half second, in which the fog takes every thing as it stands)
+  const gs: any[] = game.guards.filter((x: any) => x.state !== 'dead'), hid = gs.find((x: any) => FW.hidden(x)), mate = gs.find((x: any) => FW.onTeam(x));
+  const HID = hid?.char.id ?? 0, MATE = mate?.char.id ?? 0, spot: number[] = hid ? [hid.char.pos[0], 1.2, hid.char.pos[2]] : [0, 1.2, 0];
+  { // whose
+    const on = [FW.oursId(PID), FW.oursId(MATE), FW.oursId(HID), FW.oursId(0), FW.oursId(undefined)];
+    FOG.ours = false; const off = [FW.oursId(PID), FW.oursId(MATE)]; FOG.ours = !brk;
+    verdict(!!hid && !!mate && on[0] && on[1] && !on[2] && !on[3] && !on[4] && !off[0] && !off[1], 'the player\'s doing and a teammate\'s are the team\'s own; a defender\'s and nobody\'s are not; nothing is with the row off',
+      `the player ${on[0]} · a teammate (${mate ? mate.callsign : 'NONE'}) ${on[1]} · a hidden defender (${hid ? hid.callsign : 'NONE'}) ${on[2]} · nobody ${on[3]} / ${on[4]} · the row off: ${off.join(' / ')}`);
+  }
+  { // the lights
+    const made = (who: number) => { const l = FW.lightBy(L.flash(spot, [1, 1, 1], 5, 5, 0.3, 0), who); const c = L.fogClass(l); l.ttl = 0; l.age = 1; return c; };
+    const teamOn = L.fogTeam.on, c = { sam: made(PID), mate: made(MATE), tango: made(HID), nobody: made(0) };
+    FOG.ours = false; const offSam = made(PID); FOG.ours = !brk;
+    const can = (who: number, ours: boolean) => { FOG.ours = ours; const n0 = L.lights.length; const it = game.items.spawn('flash', [spot[0], 0.3, spot[2]], [0, 0, 0], { fuse: 99, who }); it.fired = true;
+      const all = game.guards; game.guards = []; try { detonateStun(game, it, true); } finally { game.guards = all; }
+      const fl = L.lights.slice(n0).filter((l: any) => l.name === 'flash'); FOG.ours = !brk; { const all: any[] = game.items.items, ix = all.indexOf(it); if (ix >= 0) all.splice(ix, 1); } return fl.length ? fl.map((l: any) => L.fogClass(l)).join('') : 'none'; };
+    const stun = { sam: can(PID, !brk), tango: can(HID, !brk), off: can(PID, false) };
+    const sites = /lightBy\(g\.engine\.lights\.flash\([^;]*\), spec\.who\)/.test(src('game/frag.ts')) && /lightBy\(g\.engine\.lights\.flash\([^;]*\), PLAYER_ID\)/.test(src('game/blastLook.ts'))
+      && /if \(!blind\) g\.fogOfWar\.lightBy\(fl, shooter\.id\);/.test(src('game/combat.ts')) && /this\.fog\?\.lightBy\(l, t\.owner\);/.test(src('game/tracers.ts')) && /this\.tracers\.fog = \{ begin:/.test(src('game/game.ts'));
+    verdict(teamOn && c.sam === 0 && c.mate === 0 && c.tango === 1 && c.nobody === 1 && offSam === 1 && stun.sam === '0' && stun.tango === '1' && stun.off === '1' && sites,
+      'a flash somebody made without carrying it takes his class: the team\'s own lights the fog\'s picture too, a defender\'s and an ownerless one only what the team sees — and with the row off every one of them does, as it was; the real stun charge set off where nobody sees says the same; the frag, the wall charge\'s afterglow, a round\'s strike and a tracer\'s ember say whose they are',
+      `the lights' team list is up: ${teamOn} · class of a flash by the player ${c.sam}, a teammate ${c.mate}, a defender ${c.tango}, nobody ${c.nobody}; by the player with the row off ${offSam} · detonateStun's flash: the player's ${stun.sam}, a defender's ${stun.tango}, the player's with the row off ${stun.off} · the other sites as written: ${sites}`);
+  }
+  { // the loose boxes
+    R.step(2); const unseen = !FW.spotSeen(spot[0], spot[2]); const rf = FW.rigFrom, rt = FW.rigTo; FW.rigFrom = FW.rigTo = 0;
+    const kept = (ours: boolean) => { FOG.ours = ours; const list = [MATE, HID, 0, PID].map(owner => makeBox({ c: [spot[0], 1.2, spot[2]], h: [0.01, 0.01, 0.6], owner })); const out = FW.things(list.slice()).slice(); FOG.ours = !brk; return list.map(b => out.includes(b) ? 1 : 0).join(''); };
+    const on = kept(!brk), off = kept(false);
+    // the rubble: a chunk thrown where nobody sees, by the player and by a defender (debris.ts Chunk.who) — off first: neither is in the picture, so neither has a record yet
+    const D = game.destr?.debris, recs = (FW as any).thingRecs as Map<number, any>; let rub = 'NO DEBRIS POOL', fell = '';
+    if (D) { const n0 = D.list.length, mk = (who: number, dx: number) => D.spawnRaw('chunk', makeBox({ c: [spot[0] + dx, 1.0, spot[2]], h: [0.08, 0.05, 0.06] }), [0, 0, 0], [0, 0, 0], who);
+      const mine = mk(PID, 0.2), his = mk(HID, -0.2), boot = mk(PID, 0.5); boot.foot = true;
+      const ask = (ours: boolean) => { FOG.ours = ours; const out = FW.things([mine.box, his.box, boot.box]).slice(); FOG.ours = !brk; return [mine, his, boot].map(c => out.includes(c.box) ? 1 : 0).join(''); };
+      const offR = ask(false), onR = ask(!brk);
+      // …and when it lands: at rest and unmoved, the picture keeps it where it fell with nobody looking
+      mine.rest = true; const landed = ask(!brk), after = ask(!brk), stays = ask(false);
+      rub = `${offR.split('').join(' ')} with the row off, ${onR.split('').join(' ')} with it`; fell = `${landed}/${after}/${stays}`;
+      D.list.length = n0; for (const c of [mine, his, boot]) recs.delete(thingKeyOf(c.box));
+      FW.rigFrom = rf; FW.rigTo = rt;
+      verdict(unseen && on === '1001' && off === '0000' && offR === '000' && onR === '100' && landed[0] === '1' && after[0] === '1' && stays[0] === '1', 'a one-frame box over floor nobody sees (a tracer\'s streak) is handed to the renderer when a teammate or the player owns it, not when a defender or nobody does; a chunk of rubble the player threw is drawn on its way down and lies in the picture where it fell, a defender\'s is not and neither is one a boot slides — and none of it with the row off, as it was',
+        `the spot is unseen: ${unseen} · streaks kept (a teammate's, a defender's, nobody's, the player's): ${on.split('').join(' ')} · with the row off: ${off.split('').join(' ')} · rubble in flight (the player's, a defender's, the player's under a boot): ${rub} · the player's once at rest (the landing frame / the next / the row then put off): ${fell}`);
+    } else { FW.rigFrom = rf; FW.rigTo = rt; verdict(false, 'the rig has no debris pool to throw rubble in', rub); }
+  }
+  { // the particles
+    const filed: boolean[] = []; const fake: any = new Proxy({ ours: false } as any, { get: (t, k) => k === 'ours' ? t.ours : k === 'emit' ? (..._a: any[]) => { filed.push(t.ours); return 0; } : () => 0, set: (t, k, v) => { t[k] = v; return true; } });
+    const eng: any = game.engine, had = eng.particles, hadOn = eng.settings.gpuParticles; eng.particles = fake; eng.settings.gpuParticles = true;
+    let unit = '', shots = { mate: '', tango: '' }, blindShot = 'not asked', blindOk = false;
+    try {
+      const mark = (who: number | undefined, inner?: number) => { let m = ''; FW.doing(who, () => { m += fake.ours ? '1' : '0'; if (inner !== undefined) { FW.doing(inner, () => { m += fake.ours ? '1' : '0'; }); m += fake.ours ? '1' : '0'; } }); return m + (fake.ours ? '1' : '0'); };
+      unit = [mark(PID), mark(HID), mark(MATE, 0), mark(MATE, HID), mark(0)].join(' '); FOG.ours = false; unit += ' · off ' + mark(PID); FOG.ours = !brk;
+      const { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
+      const fire = (gd: any) => { filed.length = 0; const p = gd.char.pos; fireWeapon(game, gd.char, [p[0] + 2, 1.2, p[2] + 0.5], false, { spread: 0 }); return filed.length ? `${filed.filter(Boolean).length} of ${filed.length}` : 'none filed'; };
+      if (mate) shots.mate = fire(mate); if (hid) shots.tango = fire(hid);
+      // a round of the team's that stops in a man nobody sees: what is filed before it met him is the team's, nothing after it is, and its flash is nobody's
+      // (the hidden man is PUT in the round's path: his own ray test answers 'entered at 0.3 m' for this one round — the men stand rooms apart)
+      if (mate && hid) { const p = mate.char.pos; let mark = -1; const hu = FW.hush.bind(FW); FW.hush = () => { mark = filed.length; hu(); }; const rh = hid.char.rayHit;
+        const n0 = L.lights.length; filed.length = 0; hid.char.rayHit = () => 0.3;
+        try { fireWeapon(game, mate.char, [p[0] + 2, 1.2, p[2] + 0.5], false, { spread: 0 }); } finally { FW.hush = hu; hid.char.rayHit = rh; }
+        const fl = L.lights.slice(n0).filter((l: any) => l.fogBy === MATE).length;
+        blindShot = mark < 0 ? 'the round met nobody hidden (no hush)' : `hushed after ${mark} filed, ${filed.slice(mark).filter(Boolean).length} of ${filed.length - mark} marked after it, ${fl} flash given the shooter`; blindOk = mark >= 0 && filed.slice(mark).every(x => !x) && fl === 0 && !fake.ours; }
+    } finally { eng.particles = had; eng.settings.gpuParticles = hadOn; }
+    const ts = src('render/particles.ts'), em = src('render/shaders/particles.wgsl'), pc = src('render/shaders/particles_common.wgsl'), dr = src('render/shaders/particles_draw.wgsl');
+    const bits = [...pc.matchAll(/const (PB_[A-Z]+): u32 = (\d+)u;/g)].filter(m => m[1] !== 'PB_KIND').map(m => Number(m[2])), clash = bits.some((b, i) => bits.some((c, j) => i !== j && (b & c) !== 0)) || bits.some(b => b <= 15 || b > 255);
+    const text = /waited: 0, ours: this\.ours \}\);/.test(ts) && /\| \(ring << 16\) \| \(e\.ours \? 1 << 18 : 0\)\) >>> 0;/.test(ts) && /let ours = \(rec\.k\.x >> 18u\) & 1u;/.test(em) && /p\.bits = kind \| PB_NEW \| \(owner << 8u\) \| \(ours \* PB_OURS\);/.test(em)
+      && /const PB_OURS: u32 = 128u;/.test(pc) && !clash && (em.match(/&= ~\(PB_ASLEEP \| PB_OURS\)/g) ?? []).length === 3 && /if \(kind != P_RAIN && \(p\.bits & PB_OURS\) == 0u && fogSeenBins\(p\.pos\) < 0\.5\) \{ return cull\(\); \}/.test(dr);
+    const mateAll = /^(\d+) of \1$/.test(shots.mate) && !/^0 /.test(shots.mate), tangoNone = /^0 of [1-9]/.test(shots.tango);
+    verdict(unit === '10 00 1110 1010 00 · off 00' && mateAll && tangoNone && blindOk && text,
+      'what is filed while one of the team is the doer carries the mark and what a defender files does not; a doing by nobody inside another keeps its cause, a defender\'s inside a teammate\'s is his own, and the mark is back off afterwards; a real round fired by a teammate files every particle marked, a defender\'s none, and a teammate\'s round that stops in a man nobody sees files nothing marked off him and gives its flash to nobody; the record carries the bit, the kernel puts it on the particle, no other particle bit shares it, a particle that has lain and is woken loses it (the kernel\'s three wakes), and the draw leaves a marked particle uncut',
+      `the mark inside [· inside the inner · after the inner] · afterwards — the player, a defender, nobody inside a teammate, a defender inside a teammate, nobody: ${unit} · a teammate's round: ${shots.mate} marked · a defender's: ${shots.tango} marked · a teammate's round into a hidden man: ${blindShot} · the record, the kernel, the bits and the draw as written: ${text} (particle bits ${bits.join(', ')})`);
+  }
+  { // the address
+    const g = globalThis as any, had = 'location' in g, was = g.location;
+    const at = (search: string, from: boolean) => { FOG.ours = from; g.location = { search }; fogFlags(); return FOG.ours; };
+    const zero = at('?fogours=0', true), bare = at('?fogours', false), none = at('', true), noneOff = at('', false);
+    if (had) g.location = was; else delete g.location;
+    verdict(zero === false && bare === true && none === true && noneOff === false, '?fogours=0 on the address puts it off; ?fogours puts it on; nothing said leaves it as it stands', `?fogours=0 → ${zero} · ?fogours → ${bare} · no word, from on → ${none}, from off → ${noneOff}`);
+  }
+  { // an old recording, and the replay's look
+    const { knobsSnapshot, applyKnobs } = await import(`${ROOT}/src/game/journal.ts`);
+    FOG.ours = true; const snap = knobsSnapshot(game); const hasKey = typeof (snap.tables.FOG as any)?.ours === 'boolean';
+    const old = JSON.parse(JSON.stringify(snap)); delete old.tables.FOG.ours; FOG.ours = true; applyKnobs(game, old); const fromOld = FOG.ours;
+    // NOT the page's look: what the row hands the renderer is what the cursor's ray meets (world.dynamics), so the engine replay shows a tape as it was recorded
+    FOG.ours = false; FW.pageLook(); R.step(4); const viewed = FOG.ours; FOG.ours = true; FW.pageLook(); R.step(4); const viewedOn = FOG.ours;
+    const kept = !/'fogours'/.test(/VISIT_FLAGS = \[([^\]]*)\]/.exec(src('ui/replaykey.ts'))?.[1] ?? '');
+    applyKnobs(game, snap); const fromNew = FOG.ours;
+    verdict(hasKey && fromOld === false && viewed === false && viewedOn === true && kept && fromNew === true, 'the session journal carries the row: a recording from before the key replays with it off, one from now as it says — and the engine replay leaves it as the tape has it (it is not the page\'s look: the cursor\'s ray meets what it draws), no visit word kept for it',
+      `the snapshot has FOG.ours: ${hasKey} · a file without the key → ${fromOld} · after the replay asked for the page's look: off stays ${viewed}, on stays ${viewedOn} · no visit word: ${kept} · a file from now → ${fromNew}`);
+  }
+  { // the stands
+    const frozen = !process.env.TPS_PROFILE || process.env.TPS_PROFILE === 'frozen', word = process.env.TPS_FOGOURS;
+    const want = frozen || word !== undefined ? word === '1' : (FOG_DEFAULTS as any).ours;
+    const row = (await import(`${ROOT}/src/host/profile.ts`)).FROZEN_HOLDS['FOG.ours'];
+    verdict(stood === want && (FOG_DEFAULTS as any).ours === true && typeof row === 'string' && /TPS_FOGOURS=1/.test(row), frozen ? 'standUp() on the frozen stand puts FOG.ours to what TPS_FOGOURS says (unset: off, as every stored frame was drawn), the module ships it on, and FROZEN_HOLDS names the row' : 'standUp() on the shipped stand leaves FOG.ours as the page has it (a word said: that), and FROZEN_HOLDS names the row',
+      `after standUp: ${stood} · the module's: ${(FOG_DEFAULTS as any).ours} · TPS_FOGOURS ${word ?? 'unset'} · TPS_PROFILE ${process.env.TPS_PROFILE ?? 'unset'} · FROZEN_HOLDS ${row ?? '—'}`);
+  }
+  { // the picture's alone
+    const fight = async (seed: number, ours: boolean) => { const Q = await rig(seed, { fog: true, chaos: 0.5 }); FOG.full = true; FOG.ours = ours; let lit = 0;
+      const lb = Q.FW.lightBy.bind(Q.FW); Q.FW.lightBy = (l: any, who: any) => { const r = lb(l, who); if (r.fogBy) lit++; return r; };
+      Q.step(40); Q.NB.order(); Q.step(60 * 7); Q.NB.order(); Q.step(60 * 14);
+      return { d: JSON.stringify(digestGame(Q.game)), draws: (Q.dice as any).draws(), state: Q.NB.state as string, lit }; };
+    const rows: string[] = []; let same = true, fought = true;
+    for (const seed of [21, 22]) { const a = await fight(seed, false), b = await fight(seed, true); same &&= a.d === b.d && a.draws === b.draws && a.lit === 0 && (brk || b.lit > 0); fought &&= a.state !== 'staged' && b.state !== 'staged';
+      rows.push(`seed ${seed}: ${a.state} / ${b.state}, dice ${a.draws} / ${b.draws}, digest ${a.d === b.d ? 'same' : 'DIFFERENT'}, flashes given a doer ${a.lit} / ${b.lit}`); }
+    verdict(same && fought, 'the night breach ordered in and fought under the fog\'s full picture, two seeds, 21 s each: the same digest and the same dice with the team\'s doings shown as without (no cursor in the harness: on a page the cursor\'s ray meets what is drawn), and flashes given their doer only with it', rows.join(' · '));
   }
   Object.assign(FOG, FOG_DEFAULTS);
   return done();

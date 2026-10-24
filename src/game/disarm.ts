@@ -30,7 +30,7 @@ import { HOLD } from './character';
 import { inHand } from './guards';
 import { Vec3, v3 } from '../math/vec';
 
-/** the move while it runs: seconds since the grab's first frame · what he had (the item's kind, and whether it wore a can) · the man's gun hand as last posed
+/** the move while it runs: its own clock, s (the hold's, but for HOLD.stripFirst, which runs it ahead until the gun is let go) · what he had (the item's kind, and whether it wore a can) · the man's gun hand as last posed
  *  (WORLD; held where it was once the gun is taken) · the gun while it is in Sam's hand · the pistol hold's (rapped out, never carried) · it has left him */
 export interface Strip { t: number; kind: DropKind; supp: boolean; at: Vec3; item: Item | null; rap: boolean; gone: boolean; yaw: number; }
 /** the three voices' gains (audio/sfx.ts grabCatch, gunStrip, gunDown) and the rate a long gun's strip and fall are played at (one buffer each: lower = heavier) */
@@ -45,11 +45,21 @@ export function disarmBegin(g: Game): void {
   const H = g.player.holding; if (!H || !HOLD.disarm || !HOLD.dropGun) return;
   const gd = H.g; if (inHand(gd) !== 'weapon') return;
   H.strip = { t: 0, kind: gd.weapon.def.drop, supp: gd.weapon.def.suppressed, at: handOf(gd), item: null, rap: H.variant === 'gun', gone: false, yaw: v3.yawOf(gd.char.gunDir) };
+  if (leads(H.strip)) g.player.catchDue = g.time + HOLD.first.catch;
 }
 /** the grab's first voice (player.ts startGrab, every grab): the catch with the move's two keys on, the scuffle it always was without — so one condition
  *  decides all three voices. Its rate is pinned: the beat does not wander */
 export function disarmCatch(g: Game, at: Vec3): void {
+  if (leads(g.player.holding?.strip)) return;   // (HOLD.stripFirst: the strip is heard first, and the catch as the arm lands — disarmTick)
   if (HOLD.disarm && HOLD.dropGun) g.audio.play('grabCatch', at, DISARM_GAIN.catch, { rate: 1 }); else g.audio.play('grabScuffle', at, 0.4);
+}
+/** THE DISARM LEADS (HOLD.stripFirst) for this move: a gun to take with an empty hand (the pistol hold's rap comes down with the frame, as it did) */
+const leads = (S: Strip | null | undefined): boolean => !!S && HOLD.stripFirst && !S.rap;
+/** …the rate its clock runs at: ahead of the hold's, so that the take falls `first.take` s in and the let-go at `first.drop`, and the hold's own pace from there */
+function lead(S: Strip): number {
+  if (!leads(S)) return 1;
+  const K = HOLD.strip, F = HOLD.first;
+  return S.t < K.take ? K.take / Math.max(0.02, F.take) : S.t < K.drop ? (K.drop - K.take) / Math.max(0.02, F.drop - F.take) : 1;
 }
 /** what both figures' hold layers are told of it this frame (player.ts holdTail) */
 export function disarmPose(S: Strip): StripPose { return { t: S.t, at: S.at }; }
@@ -60,9 +70,11 @@ export function disarmHand(H: Hold): boolean { return !!H.strip && H.strip.t < H
 export function disarmTick(g: Game, dt: number): void {
   const pl = g.player, H = pl.holding, S = H?.strip ?? null;
   for (const it of g.items.items) if (it.carried && it !== S?.item) letGo(g, it, pl.char);   // (a gun in his hand and no hold to carry it for — however that ended — falls from where it is)
+  if (pl.catchDue !== undefined && (!H || !S || g.time >= pl.catchDue || H.phase !== 'grab')) {   // (HOLD.stripFirst: the catch's voice as the arm lands — or now, if the hold or the move ended first: a grab is never silent)
+    pl.catchDue = undefined; g.audio.play('grabCatch', v3.add((H?.g.char ?? pl.char).pos, [0, 1.4, 0]), DISARM_GAIN.catch, { rate: 1 }); }
   if (!H || !S) return;
   const K = HOLD.strip, gd = H.g;
-  S.t += dt * (S.gone && H.phase !== 'grab' && H.phase !== 'held' ? 2 : 1);   // (a choke or the knife begun at once: the hand is home in half the time, ahead of what that move asks of it)
+  S.t += dt * lead(S) * (S.gone && H.phase !== 'grab' && H.phase !== 'held' ? 2 : 1);   // (a choke or the knife begun at once: the hand is home in half the time, ahead of what that move asks of it)
   if (!S.item && !S.gone) {
     if (inHand(gd) !== 'weapon') { H.strip = undefined; return; }   // (something else has had it out of his hand since the grab: nothing left to take)
     S.at = handOf(gd);
