@@ -401,7 +401,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     'pan' step on the software adapter, one picture looked at. NOT DONE: the squad's other scripted lines here are still `say`s (a bubble alone, no row, no
     sound); the click is at the caller's head, so it is faint with the view panned far off him; the caller's hand is still on the handset when the can
     leaves it; at the sky seat's first zoom the men are about 25 pixels tall and the arm is not what tells you: the bubbles and the strip are. Nobody has
-    heard the click under the roadblock's fire. Never seen on a GPU. (2b) THE FLASHLIGHT MAN WHOSE MATE IS SHOT RUNS BACK IN (the `torches` beat, 10-24;
+    heard the click under the roadblock's fire. Never seen on a GPU. THE CALLS MOVED THE FIGHT OF SEED 1 AND TWO RIGS OF `rails-check` WITH IT (shipped stand;
+    the build before them 31 of 31): the cans leave 0.6 s later, so a squad ordered half a second after the cue runs before its smoke is out, and on that
+    seed it shot all three of the roadblock at their sandbags from the yard. The gate's line then stood 1.2 s on every arm (the arm that must be long too)
+    and on the last step the whole squad was still in that fight and nobody ran. Both rigs asked for a fight that went one way; they now stage what they
+    measure: the gate's rig keeps the roadblock's three out of rounds (`god`) until the gate's line is up (7.9 s with the direct walk, 99 s with the men
+    kept at their sandbags), the way out's rig puts those three down first (down by that step in play) and asks its run rule before the pace, because the
+    squad is at the trucks in under three seconds. One seed each, as before; what a player's own timing does to that fight nobody has measured. (2b) THE FLASHLIGHT MAN WHOSE MATE IS SHOT RUNS BACK IN (the `torches` beat, 10-24;
     from a recorded play of the maintainer's, traced by the thread that owns the startle): the beat let its two go with `c.release(u, 'alert')` in the
     yard, still `pinned` as the level stood them in their room and on no roster (the room fight never had them: the script has them from the first frame),
     so the one left when his mate was shot stood alert behind the lorry for the rest of the mission (rerun here: 0.0 m in 36 s). Now a beat of its own,
