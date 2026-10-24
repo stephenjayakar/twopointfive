@@ -115,9 +115,10 @@ export const STALK = {
    *  him closes or opens the gap; the part across him carries Sam round on the circle he is on (he keeps facing the man, and a pull of `orbitK` per metre off
    *  that circle holds him to it), at the creep's `pace`, and a man who walks takes the circle with him. The stick (`drag`) is taken the same way. He goes no
    *  further round than `orbitEdge` short of the grab's own arc (close.ts BEHIND_COS, inside where the creep ends), and no closer than `keyM`. Keys let go: the held button walks him in as before. With it up he faces the man in any creep, the aim's weight (aimweight.ts, which turned him
-   *  to the cursor's floor point, left where the press was) has no say there. ON in the page
+   *  to the cursor's floor point, left where the press was) has no say there. A key that is within `orbitSnap` of straight across him (its share toward him,
+   *  0.3 ≈ 17°) is taken as all the way across: the screen's keys are seldom square to the man, and one a little off would spiral Sam in or out. ON in the page
    *  (?stalkorbit=0: a move key ends the creep, as it was), OFF here and on the frozen stand. */
-  orbit: false, orbitK: 3, orbitEdge: 0.05,
+  orbit: false, orbitK: 3, orbitEdge: 0.05, orbitSnap: 0.3,
   /** …and with it a press can begin one from further off ("i think we can make the start radius a bit larger too"): inside `lowBeginM`, kept out to `lowOutM`,
    *  where close.ts's mode range (3.0 and 3.6 m) was the limit. From out there he comes on at his plain crouch walk; the mode's carriage and the sink come in inside it */
   lowBeginM: 4.2, lowOutM: 5,
@@ -274,7 +275,9 @@ const intoKeep = (dist: number) => clamp((dist - STALK.keyM - 0.04) / 0.16, 0, 1
 function orbited(g: Game, S: St, gd: Guard, p: ArrayLike<number>, at: Vec3, dist: number, dx: number, dz: number, pace: number, dt: number): StalkMove {
   const gp = gd.char.pos, d = Math.max(1e-3, dist), ux = (gp[0] - p[0]) / d, uz = (gp[2] - p[2]) / d;   // (toward him)
   const stale = S.orbitR === undefined || S.orbitT === undefined || g.time - S.orbitT > 0.1 || g.time < S.orbitT, A = S.orbitAsk;   // (g.time < orbitT: a load has put the clock back)
-  if (stale || !A || dx * A[0] + dz * A[1] < Math.cos(Math.PI / 6)) { const r0 = dx * ux + dz * uz; S.orbitAsk = [dx, dz, r0, (ux * dz - uz * dx) >= 0 ? Math.sqrt(Math.max(0, 1 - r0 * r0)) : -Math.sqrt(Math.max(0, 1 - r0 * r0))]; }
+  if (stale || !A || dx * A[0] + dz * A[1] < Math.cos(Math.PI / 6)) { const r0 = dx * ux + dz * uz, sn = clamp(STALK.orbitSnap, 0, 0.9), a0 = Math.abs(r0);
+    const r1 = a0 <= sn ? 0 : Math.sign(r0) * (a0 - sn) / (1 - sn), t1 = Math.sqrt(Math.max(0, 1 - r1 * r1));   // (nearly across him is across him: `orbitSnap`)
+    S.orbitAsk = [dx, dz, r1, (ux * dz - uz * dx) >= 0 ? t1 : -t1]; }
   const K = S.orbitAsk!; let r = K[2], tx = -uz * K[3], tz = ux * K[3];
   if (r > 0) r *= intoKeep(dist);   // (as the stick has it: the last 20 cm into him taken off)
   const tl = Math.hypot(tx, tz);

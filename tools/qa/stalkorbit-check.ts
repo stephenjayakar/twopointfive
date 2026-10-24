@@ -3,6 +3,7 @@
 //   bun run tools/qa/stalkorbit-check.ts        (also `probes.ts stalkorbit`; run it on BOTH stands: TPS_PROFILE=shipped in front for the second)
 //   round     the button held on a man 1.6 m ahead and the move key that points most across him held for a second: Sam goes round him, the gap within 6 cm
 //             of where it was, a good part of a quarter turn round him, facing him, the creep still on.
+//   slant     the view turned 12°, so that key is a little off square across him: still round on the same circle (STALK.orbitSnap), and with it at 0 a spiral.
 //   edge      the same key held for six seconds: he goes no further round than the edge of the man's back arc and waits there, the creep still on.
 //   in, out   the key that points most at him closes the gap and stops at the waiting distance, never nearer; the one that points away opens it.
 //   walking   the man walking away at 1.2 m/s and the key across him held a second: the circle goes with him, the gap within 20 cm, the creep on.
@@ -11,7 +12,7 @@
 //   letgo     the key let go with the button still held: the creep walks him in to reach, as it did.
 //   off       the key down: a move key ends the creep and his feet are his own, as it was.
 //   harness   down on the frozen stand, up in the page, ?stalkorbit=0 puts it down; it rides a recording's tables, and a recording from before it replays with it down.
-// STALKORBIT_BREAK=1 = the key left down where round, edge, in, walking, reach and stick ask for it up: each must FAIL.   exit 0 = all hold · 1 = one does not
+// STALKORBIT_BREAK=1 = the key left down where round, slant, edge, in, walking, reach and stick ask for it up: each must FAIL.   exit 0 = all hold · 1 = one does not
 // THE HARNESS HAS NO GPU and no hand on the keys: they are written into the input. Nobody has played it.
 import { standUp, ROOT } from './headless.ts';
 
@@ -29,7 +30,7 @@ const verdict = (ok: boolean, label: string, detail: string) => { allPass &&= ok
 async function quiet<T>(fn: () => Promise<T>): Promise<T> { const log = console.log; console.log = () => {}; try { return await fn(); } finally { console.log = log; } }
 const up = () => !BREAK, f2 = (x: number) => x.toFixed(2), deg = (a: number) => Math.abs(Math.atan2(Math.sin(a), Math.cos(a))) * 180 / Math.PI;
 /** the lobby's floor, the rifleman facing east with Sam `gap` m behind him, crouched with empty hands, the rest parked; the button pressed on the man's chest and held */
-async function world(orbit: boolean, gap = 1.6, walk = 0, drag = false) {
+async function world(orbit: boolean, gap = 1.6, walk = 0, drag = false, yaw = 0) {
   const W: any = await quiet(() => standUp({ seed: 11 } as any)), g = W.game;
   HOLD.dropGun = true; HOLD.disarm = true; CLOSE.on = true; CLOSE.noKnife = true; STALK.on = STALK.key = STALK.low = true; STALK.drag = drag; STALK.orbit = orbit; stalkPolish(true);   // (the frozen stand's pins write them at every stand-up)
   g.godMode = true; g.aiEnabled = false; g.playerInvisible = true; g.player.slot = 'pistol'; g.player.holstered = true;
@@ -37,7 +38,7 @@ async function world(orbit: boolean, gap = 1.6, walk = 0, drag = false) {
   const A = g.guards.find((x: any) => x.callsign === 'Reyes'), rest = g.guards.filter((x: any) => x !== A);
   for (const [i, gd] of rest.entries()) { gd.char.pos = [37.5, 0, 4.5 + i * 1.5]; gd.path = []; gd.pathGoal = null; gd.hold = true; gd.heardUpTo = 1e12; }
   A.char.pos = [...AT]; A.char.bodyYaw = A.char.aimYaw = EAST; A.char.vel = [0, 0, 0]; A.path = []; A.pathGoal = null; A.hold = true; A.pinned = true; A.awareness = 0; A.heardUpTo = 1e12;
-  W.cam.yaw = 0; W.cam.rebuild?.(); g.teleportPlayer([AT[0] - gap, 0, AT[2]]); g.player.crouch = true;
+  W.cam.yaw = yaw; W.cam.rebuild?.(); g.teleportPlayer([AT[0] - gap, 0, AT[2]]); g.player.crouch = true;
   const c = g.player.char;
   let wt: number | null = null;   // (`walk`: when the man set off, east at `walk` m/s — `go()`)
   const step = (n = 1) => { for (let i = 0; i < n; i++) { STALK.orbit = orbit; STALK.drag = drag; const on = wt !== null; A.char.vel = [on ? walk : 0, 0, 0]; A.char.pos = [AT[0] + (on ? walk * (g.time - wt!) : 0), 0, AT[2]]; A.char.bodyYaw = EAST; W.step(DT); g.player.visibility = 0.02; } };
@@ -62,6 +63,16 @@ async function roundLine() {
   verdict(on && most < 0.06 && turned > 20 && face < 30,
     'the button held on a man 1.6 m ahead and the move key that points most across him held for a second: Sam goes round him, the gap never more than 6 cm off where it was, over 20° round him, facing him, the creep still on',
     `${k}: the gap ${f2(g0)} m, at most ${f2(most)} m off it · ${turned.toFixed(0)}° round him · he faces ${face.toFixed(0)}° off the man · the creep on ${on}`);
+}
+async function slant() {
+  console.log('\n=== slant: the view turned 12°, so the key across him is a little off ===');
+  const run = async (snap: number) => { const C = await world(up(), 1.6, 0, false, 12 * Math.PI / 180); STALK.orbitSnap = snap; C.step(20); const k = C.pick('across'), g0 = C.gapNow(), b0 = C.round(); let most = 0;
+    C.W.input.keys.add(k); for (let i = 0; i < 60; i++) { C.step(); most = Math.max(most, Math.abs(C.gapNow() - g0)); }
+    const r = { k, g0, most, turned: deg(C.round() - b0), on: C.on() }; C.W.input.keys.delete(k); return r; };
+  const snap = STALK.orbitSnap, a = await run(snap), b = await run(0); STALK.orbitSnap = snap;
+  verdict(a.on && a.most < 0.06 && a.turned > 20 && b.most > a.most + 0.05,
+    'the view turned 12° so the move key across him is a little off square, held a second: he still goes round on the same circle, the gap never more than 6 cm off (and with `orbitSnap` at 0 the same key spirals him in)',
+    `${a.k}: the gap ${f2(a.g0)} m, at most ${f2(a.most)} m off it · ${a.turned.toFixed(0)}° round him · the creep on ${a.on} · with orbitSnap 0: ${f2(b.most)} m off`);
 }
 async function edge() {
   console.log('\n=== edge: the key across him, held six seconds ===');
@@ -134,7 +145,7 @@ async function harness() {
 /** the whole card (probes.ts 'stalkorbit'): true = every check passed. The switches are put back as they were found. */
 export async function stalkorbitCheck(): Promise<boolean> {
   const hold = JSON.parse(JSON.stringify(HOLD)), close = JSON.parse(JSON.stringify(CLOSE)), stalk = { ...STALK }; allPass = true; found = STALK.orbit;
-  try { await roundLine(); await edge(); await inOut(); await walking(); await reach(); await stick(); await letgo(); await off(); Object.assign(STALK, stalk); await harness(); }
+  try { await roundLine(); await slant(); await edge(); await inOut(); await walking(); await reach(); await stick(); await letgo(); await off(); Object.assign(STALK, stalk); await harness(); }
   finally { Object.assign(HOLD, hold); Object.assign(CLOSE, close); Object.assign(STALK, stalk); }
   console.log(`\n=== stalkorbit: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`); return allPass;
 }
