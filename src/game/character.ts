@@ -5946,6 +5946,15 @@ export class Character {
     this.bodyYaw = T.body; this.aimYaw = T.aim;
     { const ld = clamp(wrapAngle(T.ia - T.aim), -TURN.lead, TURN.lead), was = this.anim.turnLead; this.anim.turnLead = damp(was, ld, Math.abs(ld) < Math.abs(was) ? TURN.leadRate * 2.5 : TURN.leadRate, dt); }   // (it comes off quicker than it goes on: the head does not carry past the point either)
   }
+  /** TURN, for a checkpoint (savestate.ts GuardSnap.turn): the turn he is in the middle of, or null with no weight on him — where his weight has let him get to
+   *  (body, aim), the speeds it carries, where his AI wants him, where he stood when it was weighed, and the neck's lead. Put back on a fresh man by turnPut,
+   *  his turn goes on from the frame it was filed on; without it he starts from rest facing where he had got to, and his AI eases from there, not from its wish. */
+  turnSnap(): number[] | null { const T = this.tn; return T && !this.ragdoll ? [T.body, T.aim, T.wb, T.wa, T.ib, T.ia, T.x, T.z, this.anim.turnLead] : null; }
+  turnPut(s: readonly number[] | null | undefined) {
+    if (!Array.isArray(s) || s.length !== 9 || !s.every((v) => typeof v === 'number' && Number.isFinite(v)) || this.ragdoll) return;
+    this.tn = { body: s[0], aim: s[1], wb: s[2], wa: s[3], ib: s[4], ia: s[5], x: s[6], z: s[7] }; this.anim.turnLead = s[8];
+    this.turn.on = true;   // (he was being weighed when it was filed: a fresh man's `turn` is off until game.ts writes it, which is after his AI's turnBegin and the loader's own bake — both would drop the turn)
+  }
   /** TURN let go of (wounds.ts: a man going down wounded stays a posed figure): his yaws become the ones that were drawn, and no turn is carried on */
   turnDrop() { if (this.tn) { this.bodyYaw = this.tn.body; this.aimYaw = this.tn.aim; this.tn = null; } }
   /** TURN: his AI is about to ease his yaws (guards.ts updateGuard's first line) — they read back as it LEFT them, so its easings run from where it wanted

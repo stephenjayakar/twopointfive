@@ -5,6 +5,10 @@
 //                            second over guards / Sam / doors / mission / chronicle / lights / devices / items with the seeded Math.random re-seeded to one
 //                            value at their start: A = the game simply stepped on after the save, B = the SAME game after loadState(snapshot), C = a FRESH game
 //                            after loadState(snapshot). A ≡ B ≡ C (the file holds everything the next frames hang on), and save(load(s)) ≡ s slice by slice;
+//   checkpoint-turn      (a2) a man caught in the MIDDLE OF A TURN (character.ts TURN, the turn weight: on in the page, raised here on either stand by
+//                            TPS_TURN=1) is filed with it (GuardSnap.turn, character.ts turnSnap) and goes on turning after a load: A ≡ B ≡ C over three
+//                            seconds, and the file made from a fresh game after a load holds the same turn. CHECKPOINT_TURN_BREAK=1 = the key taken out of
+//                            the file before it is loaded, as a file from before the key: he starts from rest, and the line must fail;
 //   checkpoint-autosave  (b) every autosave trigger fires exactly once in a scripted run — a room entered, the stage advancing, a body hauled away, 90 s of
 //                            quiet — and NOTHING is written while compromised: a man alert / searching / over the awareness line, Sam mid-pick, a can on its
 //                            fuse (the request waits, then lands or lapses); the slots rotate through three; the HUD tag and the chronicle row appear;
@@ -165,6 +169,40 @@ export async function checkpointIdentity() {
     if (!g2.blackout.active) fails.push('blackout not restored'); if (!g2.player.keys.size && s.player.keys.length) fails.push('key not restored'); if (!g2.doors.byName('storage').lockBroken) fails.push('kicked lock not restored'); if (g2.mission.stage !== 'exfil' || !g2.mission.pulled) fails.push(`mission ${g2.mission.stage} pulled ${g2.mission.pulled}`); }
   const ok = !fails.length; if (!ok) familyFails++;
   verdictLine(ok, '(a) the staged state (body hauled, door kicked, key taken, mains thrown, beam tripped, marks, chair, drive out) saves; A ≡ B ≡ C over 10 s at one seed; save∘load is the identity on the file; the body / marks / blackout / key / lock / stage are back in a fresh game', notes.join('\n    '), fails);
+}
+
+// ================================================================================================================================ (a2) a man caught mid-turn
+export async function checkpointTurn() {
+  console.log('\n=== checkpoint-turn: a man in the middle of a turn at the save is filed with it and goes on turning after a load (the turn weight raised: TPS_TURN=1) ===');
+  const fails: string[] = []; const notes: string[] = []; const BREAK = process.env.CHECKPOINT_TURN_BREAK === '1';
+  const { TURN } = await import(`${ROOT}/src/game/character.ts`); const had = process.env.TPS_TURN, wasOn = TURN.on; process.env.TPS_TURN = '1';
+  try {
+    Math.random = seeded(4242); const W = await standUp(); const { game } = W;
+    const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
+    // the patrols walk until a living man's weight is carrying him round (speed in his feet, his AI's wish well ahead of where he has got to) on a frame that can be saved
+    const mid = () => game.guards.filter((gd: any) => { const t = gd.state !== 'dead' && gd.char.turnSnap(); return !!t && Math.abs(t[2]) > 1 && Math.abs(wrap(t[4] - t[0])) > 0.3; });
+    const hit = steps(W, 90, () => mid().length > 0 && !canSave(game) && !ambientState(game).run);
+    if (TURN.on <= 0.5) fails.push('the turn weight is not on under TPS_TURN=1');
+    if (!hit) fails.push('no man was caught mid-turn on a frame that can be saved inside 90 s');
+    else {
+      const who = mid().map((gd: any) => gd.callsign); const s = saveState(game, { label: 'turn', kind: 'harness' }); const json = JSON.stringify(s);
+      const filed = s.guards.filter((x: any) => Array.isArray(x.turn)); const t0 = filed.find((x: any) => who.includes(x.callsign))?.turn as number[] | undefined;
+      notes.push(`t ${game.time.toFixed(2)}: ${who.join(', ')} mid-turn (${t0 ? `${Math.abs(wrap(t0[4] - t0[0])).toFixed(2)} rad still to come round, ${Math.abs(t0[2]).toFixed(1)} rad/s in his feet` : 'NOT in the file'}); ${filed.length} of ${s.guards.length} men filed with a turn`);
+      if (!t0 || t0.length !== 9) fails.push('the man mid-turn has no turn in the file');
+      const file = () => { const f = JSON.parse(json); if (BREAK) for (const x of f.guards) delete x.turn; return f; };   // (the break: a file from before the key)
+      const SEED = 31337, SECS = 3;
+      const A = digestRun(W, SECS, SEED);
+      loadState(game, file()); W.cam.target = v3.copy(game.player.char.pos); const B = digestRun(W, SECS, SEED);
+      Math.random = seeded(777); const W2 = await standUp(); loadState(W2.game, file()); W2.cam.target = v3.copy(W2.game.player.char.pos); const Cd = digestRun(W2, SECS, SEED);
+      notes.push(`digests over ${SECS} s: A ${A.hash} · B ${B.hash} · C ${Cd.hash}${BREAK ? ' (CHECKPOINT_TURN_BREAK=1: the key taken out of the file — this line must fail)' : ''}`);
+      if (A.hash !== B.hash) fails.push(`A ≠ B — ${firstDiff(A.samples, B.samples)}`);
+      if (B.hash !== Cd.hash) fails.push(`B ≠ C — ${firstDiff(B.samples, Cd.samples)}`);
+      { Math.random = seeded(1); const W3 = await standUp(); loadState(W3.game, file()); const s2 = saveState(W3.game, { label: 'turn', kind: 'harness' });
+        const a = JSON.stringify(s.guards.map((x: any) => x.turn ?? null)), b = JSON.stringify(s2.guards.map((x: any) => x.turn ?? null)); if (a !== b) fails.push('save(load(s)) does not hold the same turns'); }
+    }
+  } finally { if (had === undefined) delete process.env.TPS_TURN; else process.env.TPS_TURN = had; TURN.on = wasOn; }
+  const ok = !fails.length; if (!ok) familyFails++;
+  verdictLine(ok, '(a2) a man caught mid-turn is filed with his turn; A ≡ B ≡ C over 3 s at one seed; the file made after a load holds the same turns', notes.join('\n    '), fails);
 }
 
 // ================================================================================================================================ (b) autosave triggers + gates

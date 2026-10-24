@@ -136,6 +136,16 @@ but synthetic writes still work.
   forgets the floor-wide bark clocks (`forgetGuardClocks` / `forgetSuppressionClocks`) — Game.time has gone BACK, and any new module clock keyed by the Game must
   tolerate that (compare like `wet.ts`, or reset in loadState). DETERMINISM: with the harness's seeded Math.random re-seeded after the save and after the load, the
   next 10 s digest identically (continue ≡ load into the same game ≡ load into a fresh game — `probes.ts checkpoint-identity`); in the browser only the dice differ.
+  A MAN CAUGHT MID-TURN (10-24, no switch): with the turn weight on (`character.ts TURN`, the page and the shipped stand) a guard's turn was not in the
+  file, so after a load he started from rest facing where his weight had let him get to and his AI eased from there, not from its wish: continue and load
+  parted on his first frame (`checkpoint-identity` on the SHIPPED stand was red from the build step that moved its staging so the save lands while a man
+  turns; `TPS_TURN=0` passed). The turn is filed now (`GuardSnap.turn`, nine numbers: where he has got to, the speeds his weight carries, where his AI wants
+  him, where he stood, the neck's lead; `character.ts turnSnap` / `turnPut`, which also marks him weighed so the loader's own bake and his AI's first
+  `turnBegin` keep it). No key with the weight off (the frozen stand's files are byte for byte what they were), on a body, or on a scripted man; a file
+  from before the key loads as it did. CHECK, both stands: `probes.ts checkpoint-turn` (in `checkpoints`; it raises `TPS_TURN=1` itself): the patrols walk
+  until a man has over 1 rad/s in his feet and over 0.3 rad to come round, saved there, A ≡ B ≡ C over 3 s at one seed, and a file made after a load
+  holds the same turns; `CHECKPOINT_TURN_BREAK=1` (the key taken out of the file before the load) fails it on both. One seed, the office; in play the
+  gap it closes was small (a turn restarted). Nobody has watched a load land on a turning man.
   `Game.saves: Checkpoints` (ticked LAST in update): AUTOSAVE requests on the stage advancing, first entry into a room region (chronicle.ts `roomOf`), a hauled body
   let go of ≥ `CKPT.bodyHideM`, every `CKPT.quietSecs` 90 of quiet play; written once the gates pass (missionLive, AI on, nobody alert / searching / awareness >
   `awareMax` 0.4, no civilian startled / frightened / running / telling / hiding from him untold and no word of theirs pending — `civilianCompromise`, `playerBusy`

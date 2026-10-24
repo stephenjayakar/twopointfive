@@ -46,8 +46,9 @@
 //     and of the last half second's hearing events a WHISTLE is let go (whistle.ts resolves each event object once for the whole floor and everybody in earshot
 //     heard it the frame it sounded — put back as a fresh object it would be answered a second time).
 //     Nor the animator's own momentum: with the movement pass on (character.ts MOVES — the page; off under the harness) the recoil sums, the glide's spring and
-//     a reaction under way restart on a load, and with the turn weight on (TURN) a man caught mid-turn is filed facing where his weight had let him get to and
-//     starts from rest: poses a few centimetres off for a moment, so 'continue ≡ load' is the harness's statement, not the page's.
+//     a reaction under way restart on a load: poses a few centimetres off for a moment, so with it on 'continue ≡ load' is the harness's statement, not the
+//     page's. The turn weight (TURN) IS filed: a man caught mid-turn carries the turn itself (GuardSnap.turn, character.ts turnSnap / turnPut) and goes on
+//     coming round after a load; a file from before the key has him start from rest, facing where his weight had let him get to.
 //
 // DETERMINISM: the game's dice (barks, spread, jitter) come through math/dice.ts simRandom(). A game that OWNS its die (the page: host/standup.ts StandOpts.seed)
 // has the stream's position in the file (`dice`), so the frames after a load roll what the frames after the save rolled. A game on Math.random (the QA harness)
@@ -193,6 +194,9 @@ export interface RagSnap { x: number[]; rot: Q4; sleeping: boolean; /** the trun
 export interface GuardSnap {
   id: number; routeI: number; callsign: string; state: GuardState;
   pos: V3; vel: V3; bodyYaw: number; aimYaw: number; aimPitch: number; crouch: number; animPhase: number;
+  /** the turn he was in the middle of (character.ts turnSnap: nine numbers; TURN — the page): absent with the turn weight off, on a body, and in a file from
+   *  before the key, where he starts from rest facing where his weight had let him get to */
+  turn?: number[];
   wp: number; wait: number; awareness: number; lastKnown: V3 | null; lastSeenT: number;
   found: boolean; downKind: DownKind | null; downBy: DownBy | null; keys: string[];
   wound?: Wound & { clock?: number };   // (wounds.ts: down wounded — posed, not a ragdoll: `rag` is null for him and the pose is laid again from this; absent on everybody else)
@@ -509,10 +513,10 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
     const scripted = !!gd.script && !dead;   // (forced: a scripted / drilling man is filed as the searching man the drill's end would leave)
     const state: GuardState = scripted ? (escalationOf(g) >= 1 || gd.awareness > 0.3 ? 'search' : 'patrol') : gd.state;
     const task: TaskSnap | null = !gd.task ? null : gd.task.kind === 'checkOn' ? { kind: 'checkOn', pos: c3(gd.task.pos), who: gi(gd.task.who), wp: gd.task.wp, left: gd.task.left, t0: gd.task.t0 } : { kind: gd.task.kind, pos: c3(gd.task.pos) };
-    const rag = c.ragdoll;
+    const rag = c.ragdoll, turn = dead || scripted ? null : c.turnSnap();
     return {
       id: c.id, routeI: gd.routeI, callsign: gd.callsign, state,
-      pos: c3(c.pos), vel: dead || scripted ? [0, 0, 0] : c3(c.vel), bodyYaw: c.bodyYaw, aimYaw: c.aimYaw, aimPitch: c.aimPitch, crouch: scripted ? 0 : c.anim.crouchTarget, animPhase: c.anim.phase,
+      pos: c3(c.pos), vel: dead || scripted ? [0, 0, 0] : c3(c.vel), bodyYaw: c.bodyYaw, aimYaw: c.aimYaw, aimPitch: c.aimPitch, crouch: scripted ? 0 : c.anim.crouchTarget, animPhase: c.anim.phase, ...(turn ? { turn } : null),
       wp: gd.wp, wait: gd.wait, awareness: gd.awareness, lastKnown: c3n(gd.lastKnown), lastSeenT: gd.lastSeenT,
       found: gd.found, downKind: gd.downKind, downBy: gd.downBy, keys: [...gd.keys], ...(gd.wound ? { wound: { ...gd.wound, clock: gd.char.anim.woundClock } } : null),
       missedAt: gd.missedAt, missingRaised: gd.missingRaised,
@@ -694,7 +698,7 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
     // the row he carries: game.ts re-deals it off tune.carbineGuards next frame anyway; seat what the file says it held if it is the same row
     if (S.weapon && S.weapon.id !== gd.weapon.def.id && WEAPONS[S.weapon.id]?.enabled) { gd.weapon = new Firearm(WEAPONS[S.weapon.id]); c.muzzleAhead = gd.weapon.def.muzzleAhead; }
     if (S.weapon && S.weapon.id === gd.weapon.def.id) firearmApply(gd.weapon, S.weapon);
-    gd.state = S.state; c.pos = c3(S.pos); c.vel = dead ? [0, 0, 0] : c3(S.vel); c.bodyYaw = fin(S.bodyYaw); c.aimYaw = fin(S.aimYaw); c.aimPitch = fin(S.aimPitch); c.anim.crouchTarget = dead ? 0 : fin(S.crouch); c.anim.phase = fin(S.animPhase);
+    gd.state = S.state; c.pos = c3(S.pos); c.vel = dead ? [0, 0, 0] : c3(S.vel); c.bodyYaw = fin(S.bodyYaw); c.aimYaw = fin(S.aimYaw); c.aimPitch = fin(S.aimPitch); c.anim.crouchTarget = dead ? 0 : fin(S.crouch); c.anim.phase = fin(S.animPhase); if (!dead) c.turnPut(S.turn);
     gd.wp = S.wp | 0; if (gd.wp >= gd.route.points.length) gd.wp = 0; gd.wait = fin(S.wait); gd.awareness = Math.max(0, Math.min(1, fin(S.awareness))); gd.lastKnown = c3n(S.lastKnown); gd.lastSeenT = fin(S.lastSeenT, -100);
     gd.found = !!S.found; gd.downKind = S.downKind ?? null; gd.downBy = S.downBy ?? null; gd.keys = new Set(S.keys ?? []);
     gd.missedAt = fin(S.missedAt, -1); gd.missingRaised = !!S.missingRaised;
