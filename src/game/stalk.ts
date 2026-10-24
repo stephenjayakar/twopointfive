@@ -115,8 +115,11 @@ const bearingOf = (gd: Guard, p: ArrayLike<number>): number => wrapAngle(Math.at
 /** are Sam's hands free for it at all (empty, and nothing else has him) */
 function free(g: Game): boolean {
   const pl = g.player;
-  return STALK.on && closeLive(g) && !g.puppet && pl.holstered && !pl.down && !pl.holding && !pl.takedown && !pl.dragging && !pl.kick && !pl.picking && !pl.wanding && !pl.wall && !pl.listOpen && able(g);
+  return STALK.on && closeLive(g) && !g.puppet && pl.holstered && !pl.down && !pl.holding && !pl.takedown && !pl.dragging && !pl.kick && !pl.picking && !pl.wanding && !pl.wall && !pl.listOpen && able(g) && !shut(g);
 }
+/** a tutorial mission's step has taken the stalk (rails.ts `shuts`, the frame's word `stalk`): no press begins one, from the floor or from a corner, and
+ *  nothing that asks whether he could — the row's hint, the pose that tells — says he can */
+const shut = (g: Game): boolean => !!g.rails?.shuts('stalk');
 /** the gate game.ts puts on a grab, so nothing is handed over that it would refuse: not folded by a blast, no hand on a breaker's lever */
 const able = (g: Game): boolean => !samStaggered(g) && !g.player.breakerMove;
 /** why this man cannot be stalked from `p` right now, or null when he can (`begin`: the stricter test a press must pass — the rear arc itself) */
@@ -151,7 +154,7 @@ function pressed(g: Game): Guard | null {
 /** STALK.corner: the man the wait at a corner takes this frame — the nearest who has come past him — or null (not on a wall with empty hands; nobody past) */
 function cornerGate(g: Game): boolean {
   const pl = g.player, w = pl.wall;
-  return !(!STALK.on || !STALK.corner || !w || w.kind === 'stack' || w.drawn || !closeLive(g) || g.puppet || !pl.holstered || pl.down || pl.holding || pl.takedown || pl.dragging || pl.kick || pl.picking || pl.wanding || pl.listOpen || !able(g) || (pl.crouch && !canStand(g)));   // (the last: startGrab would refuse it, with its line, every frame the button stayed down)
+  return !(!STALK.on || !STALK.corner || !w || w.kind === 'stack' || w.drawn || !closeLive(g) || g.puppet || !pl.holstered || pl.down || pl.holding || pl.takedown || pl.dragging || pl.kick || pl.picking || pl.wanding || pl.listOpen || !able(g) || shut(g) || (pl.crouch && !canStand(g)));   // (the last: startGrab would refuse it, with its line, every frame the button stayed down)
 }
 function cornerMan(g: Game): Guard | null {
   const pl = g.player;

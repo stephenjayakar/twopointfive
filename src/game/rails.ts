@@ -144,6 +144,10 @@ const ACTS: Record<string, Act> = {
   'slot:pistol': { keys: ['Digit1'] }, 'slot:rifle': { keys: ['Digit2'] }, 'slot:smoke': { keys: ['Digit3'] }, 'slot:flash': { keys: ['Digit4'] }, 'slot:frag': { keys: ['Digit5'] },
   // (codes, as everywhere here: the hands' own slot is 'Digit0' whatever key the board gives it — handslot.ts; the whistle's code has no key on the page
   //  while the player's own ring is on — handring.ts: there it is the ring's last wedge, and the ring is `use`'s, worked with its digits and a click)
+  // (`stalk` has no key: it is the held left click that walks him up behind a man — stalk.ts, the gate's own line for it. THE ONE ACTION THAT IS OPEN
+  //  UNLESS A STEP DENIES IT — `shuts`, below — because it rides with `use` wherever a mission names the grab's row, and a level that never says the
+  //  word plays as it did. A step denies it where a man must not be gone for by hand, and keeps the interaction key)
+  stalk: {},
   hands: { keys: ['KeyE', 'Digit0'] }, use: { keys: ['Space', 'ArrowUp', 'ArrowDown'] }, whistle: { keys: ['KeyV'] }, light: { keys: ['KeyL'] }, nvg: { keys: ['KeyN'] },
   order: { keys: ['KeyB'] }, ring: {}, menu: { keys: ['KeyX'], buttons: 4 }, who: { keys: ['KeyT'] }, word: { keys: ['KeyF'] }, tools: { keys: ['KeyG', 'KeyH'] }, plan: {},
   camera: {}, zoom: {},
@@ -186,6 +190,7 @@ export function railsFaults(L: LessonData): string[] {
   const out: string[] = [], R = L.rails; if (!R) { L.steps.forEach((T, i) => { if (T.allow || T.deny || T.cue || T.checkpoint || T.fog !== undefined || T.noTap || T.eye || T.onWay || T.explain || T.toward || T.after) out.push(`steps[${i}] '${T.id}' carries rails keys and the lesson has no rails record`); }); return out; }
   const bad = (w: string, a: unknown) => { if (a === undefined) return; if (!Array.isArray(a)) { out.push(`${w}: a list of actions`); return; } for (const x of a) if (!ACTS[x as string]) out.push(`${w}: no action '${String(x)}' (${RAILS_ACTIONS.join(', ')})`); };
   bad('rails.allow', R.allow);
+  if (Array.isArray(R.allow) && R.allow.includes('stalk')) out.push("rails.allow: 'stalk' is open unless a step denies it, so naming it in the frame's list means nothing (a step's deny takes it, a later step's allow gives it back)");
   const cues = new Set<string>();
   L.steps.forEach((T, i) => { const w = `steps[${i}] '${T.id}'`; bad(`${w}.allow`, T.allow); bad(`${w}.deny`, T.deny);
     if (T.explain && (T.explain.text.length > CARD_CHARS || (T.explain.title?.length ?? 0) > 40)) out.push(`${w}.explain: a card is a heading of at most 40 characters and at most ${CARD_CHARS} of text (it is ${T.explain.title?.length ?? 0} and ${T.explain.text.length}): a card nobody reads teaches nothing`);
@@ -264,6 +269,15 @@ export class Rails {
   }
   /** is this action locked right now (the host asks for `camera` and `zoom`, which it turns itself — host/loop.ts) */
   locks(action: string): boolean { const A = this.allowed(); return !!A && !A.has(action); }
+  /** HAS A STEP TAKEN THIS BACK (`stalk`, the one action that is open unless a step denies it): the last step up to this one that names the action
+   *  denies it. An action no step names is not shut — unlike `locks`, which shuts whatever nobody gave — so a level that never says the word plays
+   *  as it did. The set is derived here too, never kept. The gate below keeps the left button from the stalk on it, and stalk.ts asks it of its own
+   *  gate (`free`), so the click is shut whatever else owns the button and no hint offers it */
+  shuts(action: string): boolean {
+    const S = this.lesson(); if (!S || BREAK) return false; let off = false;
+    for (let k = 0; k <= S.i && k < S.L.steps.length; k++) { const T = S.L.steps[k]; if (T.allow?.includes(action)) off = false; if (T.deny?.includes(action)) off = true; }   // (a step's deny after its allow, as `allowed` folds them)
+    return off;
+  }
   /** IS THIS ACTION'S KEY KEPT OFF THE PICTURE (game/floorplan.ts waitsOnKey): the step that is up holds it shut, so the press does nothing and nothing on the
    *  floor names the key. One question for every reader that draws a key */
   hushes(action: string): boolean { return !BREAK && this.locks(action); }
@@ -344,7 +358,7 @@ export class Rails {
     const shift = input.keys.has('ShiftLeft') || input.keys.has('ShiftRight');
     const enter = input.keys.has('Enter') || input.pressed.has('Enter') || input.keys.has('NumpadEnter') || input.pressed.has('NumpadEnter');   // (Shift+Enter stages the mission again: Shift rides with it)
     const handUp = A.has('use') && !!g.player.sel?.open;   // (the player's own ring or list, up: its digits and its clicks are its own)
-    if (STALK.on && g.player.holstered && A.has('use') && this.offers('grab')) buttons |= 1;   // (stalk.ts: the held click is how a man is grabbed — where the mission teaches the grab and his hands are empty, the left button is that and nothing else)
+    if (STALK.on && g.player.holstered && A.has('use') && this.offers('grab') && !this.shuts('stalk')) buttons |= 1;   // (stalk.ts: the held click is how a man is grabbed — where the mission teaches the grab and his hands are empty, the left button is that and nothing else)
     if (menuUp || handUp) buttons |= 1; if (handUp) buttons |= 4;   // (a menu or a ring that is up is worked with its own keys: the digits, the wheel, a left click on a row, V)
     // PLAN MODE IS ITS OWN ACTION (`plan`; planmode.ts): the command key with Shift opens it whether or not the key's own order has been taught, and while it
     // is up its hands are its own — Shift (a stop added, a man added), the walk keys (they move the view: he is on a knee) and both buttons (the left
@@ -590,7 +604,7 @@ export class Rails {
   summary(): string {
     const S = this.lesson(); if (!S) return this.g.level.scenarios?.lesson?.rails ? (RAILS.on ? 'off · this level carries the record (start its mission)' : 'off · switched off') : 'off · this level carries none';
     const A = this.allowed()!;
-    return `step ${Math.min(S.i + 1, S.L.steps.length)}/${S.L.steps.length} · unlocked: ${[...A].join(' ') || '—'}${this.skyOn ? ' · sky seat' : ''}${this.spared.size ? ` · spared ${this.spared.size}` : ''}`;
+    return `step ${Math.min(S.i + 1, S.L.steps.length)}/${S.L.steps.length} · unlocked: ${[...A].filter(a => a !== 'stalk').join(' ') || '—'}${this.shuts('stalk') ? ' · stalk shut' : ''}${this.skyOn ? ' · sky seat' : ''}${this.spared.size ? ` · spared ${this.spared.size}` : ''}`;
   }
   private note(s: string) { this.log.push(`${this.g.time.toFixed(2)} ${s}`); if (this.log.length > 80) this.log.splice(0, 40); }
 }
