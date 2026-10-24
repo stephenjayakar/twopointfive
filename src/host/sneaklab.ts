@@ -13,74 +13,113 @@ import { STALK, STALK_STATS, stalkOn } from '../game/stalk';
 import { CLOSE, closeSeat, closeUnseat, closeSeated } from '../game/close';
 import { TWOGEARS, CROUCHRUN } from '../game/player';
 import { SAMLOOK } from '../game/samlook';
-import { WATCH, DASH } from '../game/character';
+import { WATCH, DASH, HOLD } from '../game/character';
 import { STALKVIZ } from '../ui/stalkviz';
 
 export const SNEAKLAB = { on: false, unseen: true, safe: true, clear: true };
 export const SNEAKLAB_SYSTEM = 'Sneak lab';
 type Table = Record<string, unknown>;
-interface Num { t: Table; name: string; key: string; label: string; min: number; max: number; step: number; tip: string }
-const deg = (cos: number) => Math.acos(Math.max(-1, Math.min(1, cos))) * 180 / Math.PI, cosOf = (d: number) => Math.cos(d * Math.PI / 180);
-const NUMS = (): Num[] => [
-  { t: STALK, name: 'STALK', key: 'pace', label: 'top speed m/s', min: 0.6, max: 2.6, step: 0.05, tip: 'the creep is never faster than this, however far ahead he is' },
-  { t: STALK, name: 'STALK', key: 'closeMin', label: 'closing speed at the grab m/s', min: 0.05, max: 1.2, step: 0.05, tip: 'how fast Sam is still gaining on him as the grab fires: low is a soft arrival, high is a pounce' },
-  { t: STALK, name: 'STALK', key: 'closeK', label: 'extra closing speed per metre out', min: 0, max: 2, step: 0.05, tip: 'each metre beyond the grab adds this to the closing speed: high closes the gap early and then eases, 0 is one steady speed all the way' },
-  { t: STALK, name: 'STALK', key: 'easeUp', label: 'how quickly he gets going 1/s', min: 1, max: 14, step: 0.5, tip: 'low starts the creep like a breath, high snaps to speed (his own walk uses 6)' },
-  { t: STALK, name: 'STALK', key: 'easeDown', label: 'how quickly he stops 1/s', min: 1, max: 20, step: 0.5, tip: 'how hard he brakes as he comes up on the man: low glides in, high stops short (letting go hands him back to his own walk, which stops at 12)' },
-  { t: STALK, name: 'STALK', key: 'stationM', label: 'aims for this far behind his back m', min: 0.2, max: 1.2, step: 0.05, tip: 'the point the game walks Sam toward, straight behind the man: nearer swings Sam in tighter behind him' },
-  { t: STALK, name: 'STALK', key: 'grabM', label: 'the grab fires inside m', min: 0.5, max: 1.05, step: 0.05, tip: 'the hold becomes the grab this close (the grab itself reaches 1.05)' },
-  { t: STALK, name: 'STALK', key: 'cursorM', label: 'how near him the cursor must be m', min: 0.3, max: 4, step: 0.1, tip: 'the press counts as on him when the cursor is this near his feet (or right on him)' },
-  { t: STALK, name: 'STALK', key: 'reachFrom', label: 'his arm starts to come up at m', min: 1.0, max: 3.5, step: 0.05, tip: 'from this far behind the man Sam\'s left arm begins to come up for his neck; it is all the way up as the grab fires' },
-  { t: STALK, name: 'STALK', key: 'reach', label: 'how far the arm is up at the grab', min: 0, max: 1, step: 0.05, tip: '1 = the whole reach held out as the grab fires, 0 = no arm before the grab at all' },
-  { t: STALK, name: 'STALK', key: 'riseFrom', label: 'he starts to come up out of the crouch at m', min: 1.0, max: 3.5, step: 0.05, tip: 'from this far behind a man on his feet Sam begins to stand up into him' },
-  { t: STALK, name: 'STALK', key: 'rise', label: 'how far up he is at the grab', min: 0, max: 1, step: 0.05, tip: '0 = still in the full crouch when the grab fires (the grab stands him up in one go), 1 = on his feet by then' },
-  { t: STALK, name: 'STALK', key: 'riseBy', label: 'he is that far up by m', min: 0.6, max: 2.5, step: 0.05, tip: 'the distance behind the man by which Sam is as far out of the crouch as the row above says' },
-  { t: STALK, name: 'STALK', key: 'catchSecs', label: 'the step into the grab, s', min: 0, max: 0.45, step: 0.01, tip: 'the grab closes the last of the gap in one eased step this long. 0 = the grab\'s own snap' },
-  { t: STALK, name: 'STALK', key: 'catchStride', label: 'his legs in that step, m/s', min: 0, max: 3, step: 0.1, tip: 'the most walking speed his legs are given for the step in' },
-  { t: STALK, name: 'STALK', key: 'yank', label: 'he is hauled back, m', min: 0, max: 0.6, step: 0.02, tip: 'once the step in has landed the man is pulled this far straight back, Sam going with him. 0 = held where he stood' },
-  { t: STALK, name: 'STALK', key: 'yankRoom', label: 'room kept behind the pair, m', min: 0.2, max: 1, step: 0.05, tip: 'the haul back stops this far short of anything solid behind Sam' },
-  { t: STALK, name: 'STALK', key: 'cornerM', label: 'at a corner he is taken inside m', min: 0.8, max: 2.5, step: 0.05, tip: 'waiting on a wall with the button held: how close the man must pass' },
-  { t: STALK, name: 'STALK', key: 'catchM', label: 'a step in longer than m takes longer', min: 0.3, max: 1.5, step: 0.05, tip: 'the step into the grab takes its own time up to this far; a longer one takes longer, in proportion' },
-  { t: STALK, name: 'STALK', key: 'catchLong', label: 'and at most this many times as long', min: 1, max: 1.3, step: 0.01, tip: '1 = every step in takes the same time. Much over 1.1 and the haul back has too little of the grab left' },
-  { t: STALK, name: 'STALK', key: 'cornerRise', label: 'at a corner he comes up over s', min: 0, max: 0.4, step: 0.01, tip: 'how long into the step in he is still coming up out of the wait. 0 = at once' },
-  { t: STALK, name: 'STALK', key: 'jolt', label: 'how hard he shrinks back when the man turns', min: 0, max: 1, step: 0.05, tip: 'the duck Sam gives when the man he is creeping up on turns off his back. 0 = none' },
-  { t: STALK, name: 'STALK', key: 'joltFace', label: 'he shrinks back once the man faces him within degrees', min: 20, max: 180, step: 5, tip: 'after the man turns off his back, Sam ducks only when he has come round this close to facing him. 180 = at any turn that ends the creep' },
-  { t: STALK, name: 'STALK', key: 'joltSecs', label: 'and only within s of the turn', min: 0.1, max: 1.5, step: 0.05, tip: 'how long after the creep is broken off the man still has to come round to face him' },
-  { t: STALK, name: 'STALK', key: 'cornerSee', label: 'at a corner his hand goes out from m', min: 1.5, max: 5, step: 0.1, tip: 'waiting on a wall with the button held: how far off the man is when the lead hand starts out toward him' },
-  { t: STALK, name: 'STALK', key: 'cornerCoil', label: 'at a corner, how low he waits', min: 0, max: 1, step: 0.05, tip: 'how far he sinks while he waits with the button held. 0 = stood as he was' },
-  { t: STALK, name: 'STALK', key: 'cornerDeg', label: 'at a corner, how far past you he must be, degrees', min: 30, max: 150, step: 5, tip: 'how far round from his nose Sam must be before the wait takes him: 90 = level with his shoulder, more = he has gone further past' },
-  { t: STALK, name: 'STALK', key: 'lowFrom', label: 'he starts to go lower from m', min: 1.2, max: 5, step: 0.05, tip: 'with "he goes lower, hands down" on: how far from the man he starts to sink' },
-  { t: STALK, name: 'STALK', key: 'lowBy', label: 'he is all the way down by m', min: 0.95, max: 3, step: 0.05, tip: 'how far from the man he is as low as he goes' },
-  { t: STALK, name: 'STALK', key: 'lowDrop', label: 'how much lower his hips go, m', min: 0, max: 0.25, step: 0.01, tip: 'all the way down, his hips are this much lower than the creep\'s own carriage' },
-  { t: STALK, name: 'STALK', key: 'lowLean', label: 'how much flatter his back goes, degrees', min: 0, max: 30, step: 1, tip: 'all the way down, his back is bowed this much more' },
-  { t: STALK, name: 'STALK', key: 'lowHands', label: 'how far his hands come down', min: 0, max: 1, step: 0.05, tip: '1 = his hands are low by his knees, as in a plain crouch. 0 = held up ahead of him, as the creep had them' },
-  { t: STALK, name: 'STALK', key: 'lowK', label: 'extra closing speed per metre, when lower', min: 0, max: 2, step: 0.05, tip: 'with "he goes lower, hands down" on, this replaces the extra closing speed per metre: less is a more deliberate creep' },
-  { t: STALK, name: 'STALK', key: 'lowBack', label: 'how much further back his hips sit, m', min: 0, max: 0.15, step: 0.01, tip: 'all the way down, his hips sit this much further back over his heels' },
-  { t: STALK, name: 'STALK', key: 'lowSpring', label: 'how fast he springs up into the grab', min: 6, max: 40, step: 1, tip: 'how fast he comes up out of the crouch once you press the key. 10 is how he stands up anywhere else' },
-  { t: STALK, name: 'STALK', key: 'lowBeginM', label: 'when lower, it can begin inside m', min: 3, max: 8, step: 0.1, tip: 'with "he goes lower, hands down" on, a press on a man begins the creep from this far off' },
-  { t: STALK, name: 'STALK', key: 'lowOutM', label: 'and it lets go past m', min: 3.6, max: 10, step: 0.1, tip: 'with "he goes lower, hands down" on, the creep ends when he is further off than this' },
-  { t: STALK, name: 'STALK', key: 'lowWind', label: 'and how long the spring takes to wind up, s', min: 0, max: 0.3, step: 0.01, tip: '0 = he jumps up at once. More = he leaves the floor slowly and arrives fast' },
-  { t: STALK, name: 'STALK', key: 'keyM', label: 'he waits for the key m behind him', min: 0.6, max: 0.94, step: 0.01, tip: 'with "you press the key to finish the grab" on: how far behind the man he stops and waits. It has to be inside the grab\'s reach' },
-  { t: CLOSE, name: 'CLOSE', key: 'modeM', label: 'it can begin inside m', min: 1.5, max: 7, step: 0.1, tip: 'the close-in range: inside it the sneak holds its pose and a press on a man begins the creep' },
-  { t: CLOSE, name: 'CLOSE', key: 'modeOutM', label: 'it lets go past m', min: 2, max: 9, step: 0.1, tip: 'he got too far away: the creep ends past this' },
-  { t: CLOSE, name: 'CLOSE', key: 'rmbTapSecs', label: 'right click: a tap is shorter than s', min: 0.08, max: 0.5, step: 0.01, tip: 'let go of the right button inside this and it is the knockout; keep it down past this behind a man and it is the choke' },
-  { t: CLOSE, name: 'CLOSE', key: 'rmbLoud', label: 'right click: how much louder the knockout is', min: 0, max: 0.5, step: 0.01, tip: 'added to how loud the knockout is to the room. Each 0.1 is about 0.7 m further that a guard hears it in open air. The choke stays as quiet as it was' },
-  { t: TWOGEARS, name: 'TWOGEARS', key: 'crouch', label: 'your own crouch walk m/s', min: 0.8, max: 2.2, step: 0.05, tip: 'the speed you arrive at before the creep takes over' },
-  { t: CROUCHRUN, name: 'CROUCHRUN', key: 'pace', label: 'Shift in a crouch: m/s', min: 1.6, max: 3.6, step: 0.05, tip: 'the fast crouch walk. Your walk is 1.55 and your sprint 4.7' },
-  { t: CROUCHRUN, name: 'CROUCHRUN', key: 'loud', label: 'Shift in a crouch: each footfall', min: 0.125, max: 0.7, step: 0.005, tip: 'the crouch walk is 0.125, the walk 0.26, a run 0.6. Each 0.1 is about 0.7 m further that a guard hears it' },
-  { t: DASH, name: 'DASH', key: 'stride', label: 'Shift in a crouch: how much longer the stride', min: 0, max: 0.6, step: 0.02, tip: 'longer steps and fewer of them. 0 = the crouch walk wound up fast' },
-  { t: DASH, name: 'DASH', key: 'lean', label: 'Shift in a crouch: lean °', min: 0, max: 16, step: 0.5, tip: 'how far over his knees he goes' },
-  { t: SAMLOOK, name: 'SAMLOOK', key: 'nearM', label: 'he looks at a man inside m', min: 3, max: 14, step: 0.5, tip: 'the head starts to go to a man here, and is fully on him a couple of metres nearer' },
-  { t: SAMLOOK, name: 'SAMLOOK', key: 'noticeM', label: 'a man noticing him counts as this much nearer m', min: 0, max: 8, step: 0.5, tip: 'so his head goes to the man who is starting to see him before a nearer one who is not' },
-  { t: WATCH, name: 'WATCH', key: 'yaw', label: 'how far his head turns °', min: 30, max: 90, step: 1, tip: 'off the line of his chest, to either side' },
-  { t: SAMLOOK, name: 'SAMLOOK', key: 'slipFrom', label: 'he gives a man room inside m', min: 1.4, max: 5, step: 0.1, tip: 'the lean away, the sink and the low arm begin here and are whole at arm\'s length' },
-  { t: WATCH, name: 'WATCH', key: 'lean', label: 'how far he tips away °', min: 0, max: 20, step: 0.5, tip: 'the trunk, away from the man he passes' },
-  { t: WATCH, name: 'WATCH', key: 'squeeze', label: 'how much lower he gets between two men', min: 0, max: 1.5, step: 0.05, tip: 'between two men he leans into neither and sinks this much more, as a share of the sink beside one man' },
+type Grp = 'start' | 'pace' | 'pose' | 'grab' | 'rmb' | 'pass' | 'run' | 'corner' | 'turn' | 'old';
+/** the lab's groups, in the order they are read: a short name, whether it is open on a first visit, and what the group is for (its header's hover) */
+const GROUPS: { id: Grp; name: string; open: boolean; title: string }[] = [
+  { id: 'start', name: 'Start and stop', open: false, title: 'when a press on a man begins the creep and when the creep lets go. Watch the rings and the arc drawn on the floor round the nearest man' },
+  { id: 'pace', name: 'Pace', open: true, title: 'how fast he closes on the man and how he starts and stops. Watch "you … m/s, he … m/s" in Right now' },
+  { id: 'pose', name: 'Pose', open: true, title: 'what his body does on the way in: how low he gets and where his arms are. Stop a metre and a half behind the man and look at him' },
+  { id: 'grab', name: 'The grab', open: true, title: 'the last metre: where he waits, the spring up, the step in, the haul back and the gun. Grab the rifleman and the man who stands' },
+  { id: 'rmb', name: 'Right click', open: false, title: 'the quick knockout and the held choke' },
+  { id: 'pass', name: 'Passing guards', open: false, title: 'his head going to a man and the room he gives a man he passes. Use "two men, a gap" and walk between them' },
+  { id: 'run', name: 'Fast crouch walk', open: false, title: 'Shift in a crouch' },
+  { id: 'corner', name: 'Corner wait', open: false, title: 'back on a wall with the click held: the man who walks past is taken' },
+  { id: 'turn', name: 'When he turns', open: false, title: 'the duck Sam gives when the man he is creeping up on turns round. Turn "they can\'t notice you" off to see it' },
+  { id: 'old', name: 'Old pose (lower off)', open: false, title: 'the arm coming up and the rise out of the crouch. These only act with "lower, hands down" off, in Pose' },
 ];
-/** the two arcs are kept as cosines; the lab shows them as degrees off his nose */
+interface Num { g: Grp; t: Table; name: string; key: string; label: string; min: number; max: number; step: number; tip: string }
+const deg = (cos: number) => Math.acos(Math.max(-1, Math.min(1, cos))) * 180 / Math.PI, cosOf = (d: number) => Math.cos(d * Math.PI / 180);
+/** every number: a name short enough for the row, and a hover that says what it is and what to look for or try when moving it */
+const NUMS = (): Num[] => [
+  { g: 'start', t: STALK, name: 'STALK', key: 'lowBeginM', label: 'start radius m', min: 3, max: 8, step: 0.1, tip: 'a press on a man begins the creep from this far off (with "lower, hands down" on). Look for: the outer dashed ring on the floor. Try: stand just outside it and press, then just inside' },
+  { g: 'start', t: STALK, name: 'STALK', key: 'lowOutM', label: 'let-go radius m', min: 3.6, max: 10, step: 0.1, tip: 'the creep ends when he gets further off than this (with "lower, hands down" on). Try: start on a walking man and stop. It should not drop while he is still close enough to catch' },
+  { g: 'start', t: STALK, name: 'STALK', key: 'cursorM', label: 'click this near m', min: 0.3, max: 4, step: 0.1, tip: 'the press counts as on him when the cursor is this near his feet, or right on him. Try: raise it if a press misses a walking man, lower it if a press picks the wrong man of two' },
+  { g: 'start', t: STALK, name: 'STALK', key: 'dragDead', label: 'stick dead zone px', min: 0, max: 60, step: 1, tip: 'with "drag to steer" on: the mouse can wander this far from where you pressed and Sam stays still. Try: raise it if he creeps when you meant to hold still' },
+  { g: 'start', t: STALK, name: 'STALK', key: 'dragFull', label: 'stick full at px', min: 40, max: 400, step: 5, tip: 'with "drag to steer" on: drag this far from where you pressed for the top speed. Less = a twitchy stick, more = finer control and a longer drag' },
+  { g: 'start', t: CLOSE, name: 'CLOSE', key: 'modeM', label: 'old start radius m', min: 1.5, max: 7, step: 0.1, tip: 'the close-in range: inside it the sneak holds its pose. With "lower, hands down" on the start radius above is used when it is larger' },
+  { g: 'start', t: CLOSE, name: 'CLOSE', key: 'modeOutM', label: 'old let-go m', min: 2, max: 9, step: 0.1, tip: 'with "lower, hands down" off, the creep ends past this' },
+  { g: 'pace', t: STALK, name: 'STALK', key: 'pace', label: 'top speed m/s', min: 0.6, max: 2.6, step: 0.05, tip: 'the creep is never faster than this, however far ahead he is. Look for: "you … m/s" in Right now. Try: chase the man on the long straight. Too low and you never catch a walker' },
+  { g: 'pace', t: STALK, name: 'STALK', key: 'closeMin', label: 'arrival speed m/s', min: 0.05, max: 1.2, step: 0.05, tip: 'how fast Sam is still gaining on him at the end. Low is a soft arrival, high is a pounce. Try: the man who stands, and watch the last half metre' },
+  { g: 'pace', t: STALK, name: 'STALK', key: 'lowK', label: 'far-off boost', min: 0, max: 2, step: 0.05, tip: 'each metre he is from the man adds this to the closing speed (with "lower, hands down" on). Less is a slower, more deliberate creep. Try: 0 for one steady speed all the way in' },
+  { g: 'pace', t: STALK, name: 'STALK', key: 'closeK', label: 'boost, lower off', min: 0, max: 2, step: 0.05, tip: 'the same boost per metre, used with "lower, hands down" off' },
+  { g: 'pace', t: STALK, name: 'STALK', key: 'easeUp', label: 'start-up rate', min: 1, max: 14, step: 0.5, tip: 'how quickly he gets going when you press. Low starts like a breath, high snaps to speed (his own walk uses 6). Try: tap the click in short presses and feel each start' },
+  { g: 'pace', t: STALK, name: 'STALK', key: 'easeDown', label: 'braking rate', min: 1, max: 20, step: 0.5, tip: 'how hard he brakes as he comes up on the man. Low glides in, high stops short. Look for: a slide or a lurch as he stops behind the man who stands' },
+  { g: 'pace', t: STALK, name: 'STALK', key: 'stationM', label: 'aim point m', min: 0.2, max: 1.2, step: 0.05, tip: 'the point the game walks Sam toward, this far straight behind the man (the dot on the floor). Nearer swings him in tighter behind. Try: come in from the side' },
+  { g: 'pace', t: STALK, name: 'STALK', key: 'keyM', label: 'waits at m', min: 0.6, max: 0.94, step: 0.01, tip: 'with "press the key to grab" on: how far behind the man he stops and waits for the key. It has to be inside the grab range. Look for: does he look close enough to reach him?' },
+  { g: 'pace', t: TWOGEARS, name: 'TWOGEARS', key: 'crouch', label: 'crouch walk m/s', min: 0.8, max: 2.2, step: 0.05, tip: 'your own crouch walk on the keys, the speed you arrive at before the creep takes over. Try: walk in on the keys, then press, and feel the change of speed' },
+  { g: 'pose', t: STALK, name: 'STALK', key: 'lowFrom', label: 'sink starts at m', min: 1.2, max: 5, step: 0.05, tip: 'how far from the man he starts to go lower. Look for: where on the way in his hips begin to drop. Try: creep in and stop every half metre' },
+  { g: 'pose', t: STALK, name: 'STALK', key: 'lowBy', label: 'fully down by m', min: 0.95, max: 3, step: 0.05, tip: 'how far from the man he is as low as he goes' },
+  { g: 'pose', t: STALK, name: 'STALK', key: 'lowDrop', label: 'hips lower m', min: 0, max: 0.25, step: 0.01, tip: 'all the way down, his hips are this much lower than the creep\'s own crouch. Look for: his knees. Too much and he sits on his heels' },
+  { g: 'pose', t: STALK, name: 'STALK', key: 'lowBack', label: 'hips back m', min: 0, max: 0.15, step: 0.01, tip: 'all the way down, his hips sit this much further back over his heels' },
+  { g: 'pose', t: STALK, name: 'STALK', key: 'lowLean', label: 'back flatter °', min: 0, max: 30, step: 1, tip: 'all the way down, his back is bowed this much more. Look for: his head against the man\'s back from the side' },
+  { g: 'pose', t: STALK, name: 'STALK', key: 'lowHands', label: 'hands down', min: 0, max: 1, step: 0.05, tip: '1 = his hands are let down out of the old raised carry. 0 = held up ahead of him, as the creep first had them. "arms out wide" only shows with this up' },
+  { g: 'pose', t: STALK, name: 'STALK', key: 'wideOut', label: 'arms out m', min: 0, max: 0.45, step: 0.01, tip: 'with "arms out wide" on: each hand is this far outside its own shoulder. Look for: from the game\'s camera, do his arms read as ready or as a scarecrow? Try 0.2 against 0.35' },
+  { g: 'pose', t: STALK, name: 'STALK', key: 'wideDown', label: 'arms down m', min: 0.1, max: 0.55, step: 0.01, tip: 'how far under his shoulders his hands hang. More = nearer the floor. Look for: hands by his knees read as picking something up, hands at his ribs read as hands up' },
+  { g: 'pose', t: STALK, name: 'STALK', key: 'wideFwd', label: 'arms ahead m', min: -0.1, max: 0.4, step: 0.01, tip: 'how far ahead of his shoulders his hands are. More = his hands lead him toward the man' },
+  { g: 'pose', t: STALK, name: 'STALK', key: 'wideBy', label: 'arms out by', min: 0.05, max: 1, step: 0.05, tip: 'how far into the sink his arms are all the way out. Small = out as soon as he starts to go lower. 1 = they come out only as fast as he sinks' },
+  { g: 'grab', t: STALK, name: 'STALK', key: 'grabM', label: 'grab range m', min: 0.5, max: 1.05, step: 0.05, tip: 'with "press the key to grab" off, the hold becomes the grab this close (the grab itself reaches 1.05). Look for: the inner ring on the floor' },
+  { g: 'grab', t: STALK, name: 'STALK', key: 'lowSpring', label: 'spring-up speed', min: 6, max: 40, step: 1, tip: 'how fast he comes up out of the low creep once you press the key. 10 is how he stands up anywhere else. Look for: does the grab feel like a pounce? Try 10 against 30' },
+  { g: 'grab', t: STALK, name: 'STALK', key: 'lowWind', label: 'spring wind-up s', min: 0, max: 0.3, step: 0.01, tip: '0 = he jumps up at once. More = he leaves the floor slowly and arrives fast. Look for: the delay between your key and his arm' },
+  { g: 'grab', t: STALK, name: 'STALK', key: 'catchSecs', label: 'step-in time s', min: 0, max: 0.45, step: 0.01, tip: 'the grab closes the last of the gap in one eased step this long. 0 = the grab\'s own snap. Look for: his feet. Too long and he floats in' },
+  { g: 'grab', t: STALK, name: 'STALK', key: 'catchStride', label: 'step-in legs m/s', min: 0, max: 3, step: 0.1, tip: 'the most walking speed his legs are given for the step in. Look for: sliding feet (too low) or a scurry (too high)' },
+  { g: 'grab', t: STALK, name: 'STALK', key: 'catchM', label: 'long step from m', min: 0.3, max: 1.5, step: 0.05, tip: 'a step in longer than this takes longer, in proportion. Try: grab from as far off as the key lets you' },
+  { g: 'grab', t: STALK, name: 'STALK', key: 'catchLong', label: 'long step, times', min: 1, max: 1.3, step: 0.01, tip: 'the most a long step in is stretched. 1 = every step in takes the same time. Much over 1.1 and the haul back has too little of the grab left' },
+  { g: 'grab', t: STALK, name: 'STALK', key: 'yank', label: 'haul back m', min: 0, max: 0.6, step: 0.02, tip: 'once the step in has landed the man is pulled this far straight back, Sam going with him. 0 = held where he stood. Look for: the man going off his feet' },
+  { g: 'grab', t: STALK, name: 'STALK', key: 'yankRoom', label: 'room behind m', min: 0.2, max: 1, step: 0.05, tip: 'the haul back stops this far short of anything solid behind Sam. Try: grab a man with your back near a wall' },
+  { g: 'grab', t: HOLD.first, name: 'HOLD.first', key: 'take', label: 'gun out at s', min: 0.08, max: 0.2, step: 0.01, tip: 'with "gun out before the arm" on: his gun is out of his hands this long after the grab begins. The arm is at his neck at about 0.27. Try: the rifleman. Look for: Sam\'s right hand reaching the gun before it moves' },
+  { g: 'grab', t: HOLD.first, name: 'HOLD.first', key: 'drop', label: 'gun let go at s', min: 0.2, max: 0.42, step: 0.01, tip: 'Sam lets the gun fly this long after the grab begins. Look for: where it lands, and that it has left his hand before the arm closes' },
+  { g: 'rmb', t: CLOSE, name: 'CLOSE', key: 'rmbTapSecs', label: 'tap shorter than s', min: 0.08, max: 0.5, step: 0.01, tip: 'let go of the right button inside this and it is the knockout. Keep it down past this behind a man and it is the choke. Try: raise it if your quick clicks turn into chokes' },
+  { g: 'rmb', t: CLOSE, name: 'CLOSE', key: 'rmbLoud', label: 'knockout louder', min: 0, max: 0.5, step: 0.01, tip: 'added to how loud the knockout is to the room. Each 0.1 is about 0.7 m further that a guard hears it. The choke stays as quiet as it was. Try: turn "they can\'t notice you" off and knock one out near another' },
+  { g: 'pass', t: SAMLOOK, name: 'SAMLOOK', key: 'nearM', label: 'looks inside m', min: 3, max: 14, step: 0.5, tip: 'his head starts to go to a man here, and is fully on him a couple of metres nearer. Look for: his head as you walk past the men' },
+  { g: 'pass', t: SAMLOOK, name: 'SAMLOOK', key: 'noticeM', label: 'noticing bonus m', min: 0, max: 8, step: 0.5, tip: 'a man who is starting to notice him counts as this much nearer, so his head goes to that man first. Try: "they can\'t notice you" off, between two men' },
+  { g: 'pass', t: WATCH, name: 'WATCH', key: 'yaw', label: 'head turn °', min: 30, max: 90, step: 1, tip: 'how far his head turns off the line of his chest, to either side. Look for: an owl (too much) or a stiff neck (too little)' },
+  { g: 'pass', t: SAMLOOK, name: 'SAMLOOK', key: 'slipFrom', label: 'room starts at m', min: 1.4, max: 5, step: 0.1, tip: 'the lean away, the sink and the low arm begin this far from a man beside him and are whole at arm\'s length. Try: walk past a man\'s shoulder' },
+  { g: 'pass', t: WATCH, name: 'WATCH', key: 'lean', label: 'tip away °', min: 0, max: 20, step: 0.5, tip: 'how far his trunk tips away from the man he passes' },
+  { g: 'pass', t: WATCH, name: 'WATCH', key: 'squeeze', label: 'lower between two', min: 0, max: 1.5, step: 0.05, tip: 'between two men he leans into neither and sinks this much more, as a share of the sink beside one man. Try: "two men, a gap" in Right now' },
+  { g: 'run', t: CROUCHRUN, name: 'CROUCHRUN', key: 'pace', label: 'speed m/s', min: 1.6, max: 3.6, step: 0.05, tip: 'the fast crouch walk on Shift. Your walk is 1.55 and your sprint 4.7. Try: cross the yard behind the men and see if you can pass a walker' },
+  { g: 'run', t: CROUCHRUN, name: 'CROUCHRUN', key: 'loud', label: 'footfall loudness', min: 0.125, max: 0.7, step: 0.005, tip: 'each footfall. The crouch walk is 0.125, the walk 0.26, a run 0.6. Each 0.1 is about 0.7 m further that a guard hears it. Try: "they can\'t notice you" off' },
+  { g: 'run', t: DASH, name: 'DASH', key: 'stride', label: 'longer stride', min: 0, max: 0.6, step: 0.02, tip: 'longer steps and fewer of them. 0 = the crouch walk wound up fast. Look for: his feet' },
+  { g: 'run', t: DASH, name: 'DASH', key: 'lean', label: 'lean °', min: 0, max: 16, step: 0.5, tip: 'how far over his knees he goes' },
+  { g: 'corner', t: STALK, name: 'STALK', key: 'cornerM', label: 'takes him inside m', min: 0.8, max: 2.5, step: 0.05, tip: 'waiting on a wall with the click held: how close the man must pass to be taken' },
+  { g: 'corner', t: STALK, name: 'STALK', key: 'cornerDeg', label: 'how far past °', min: 30, max: 150, step: 5, tip: 'how far round from his nose Sam must be before the wait takes him. 90 = level with his shoulder, more = he has gone further past' },
+  { g: 'corner', t: STALK, name: 'STALK', key: 'cornerSee', label: 'hand goes out at m', min: 1.5, max: 5, step: 0.1, tip: 'how far off the man is when Sam\'s lead hand starts out toward him' },
+  { g: 'corner', t: STALK, name: 'STALK', key: 'cornerCoil', label: 'how low he waits', min: 0, max: 1, step: 0.05, tip: 'how far he sinks while he waits with the click held. 0 = stood as he was' },
+  { g: 'corner', t: STALK, name: 'STALK', key: 'cornerRise', label: 'comes up over s', min: 0, max: 0.4, step: 0.01, tip: 'how long into the step in he is still coming up out of the wait. 0 = at once' },
+  { g: 'turn', t: STALK, name: 'STALK', key: 'jolt', label: 'duck size', min: 0, max: 1, step: 0.05, tip: 'how hard Sam shrinks back when the man he is creeping up on turns off his back. 0 = none' },
+  { g: 'turn', t: STALK, name: 'STALK', key: 'joltFace', label: 'ducks if facing °', min: 20, max: 180, step: 5, tip: 'Sam ducks only when the man has come round this close to facing him. 180 = at any turn that ends the creep' },
+  { g: 'turn', t: STALK, name: 'STALK', key: 'joltSecs', label: 'duck window s', min: 0.1, max: 1.5, step: 0.05, tip: 'how long after the creep is broken off the man still has to come round to face him' },
+  { g: 'old', t: STALK, name: 'STALK', key: 'reachFrom', label: 'arm starts at m', min: 1.0, max: 3.5, step: 0.05, tip: 'from this far behind the man Sam\'s left arm begins to come up for his neck' },
+  { g: 'old', t: STALK, name: 'STALK', key: 'reach', label: 'arm up at grab', min: 0, max: 1, step: 0.05, tip: '1 = the whole reach held out as the grab fires, 0 = no arm before the grab at all' },
+  { g: 'old', t: STALK, name: 'STALK', key: 'riseFrom', label: 'rise starts at m', min: 1.0, max: 3.5, step: 0.05, tip: 'from this far behind a man on his feet Sam begins to stand up into him' },
+  { g: 'old', t: STALK, name: 'STALK', key: 'rise', label: 'risen at grab', min: 0, max: 1, step: 0.05, tip: '0 = still in the full crouch when the grab fires, 1 = on his feet by then' },
+  { g: 'old', t: STALK, name: 'STALK', key: 'riseBy', label: 'risen by m', min: 0.6, max: 2.5, step: 0.05, tip: 'the distance behind the man by which Sam is as far out of the crouch as the row above says' },
+];
+/** the two arcs are kept as cosines; the lab shows them as degrees off his nose (Start and stop) */
 const ARCS: { key: 'beginCos' | 'outCos'; label: string; tip: string }[] = [
-  { key: 'beginCos', label: 'it can begin this far round from his nose °', tip: '180 is dead behind him. A press begins the creep only when Sam is at least this far round (the grab itself needs 104.5)' },
-  { key: 'outCos', label: 'it ends when he has turned to °', tip: 'he turned around: the creep ends once Sam is less than this far round from his nose' },
+  { key: 'beginCos', label: 'start arc °', tip: 'a press begins the creep only when Sam is at least this far round from the man\'s nose. 180 is dead behind him (the grab itself needs 104.5). Look for: the two arc edges on the floor' },
+  { key: 'outCos', label: 'ends if he turns °', tip: 'he turned around: the creep ends once Sam is less than this far round from his nose' },
+];
+/** the switches, each in its group: a short name and a hover that says what on and off are and what to try */
+const TOGS = (): { g: Grp; label: string; get: () => boolean; set: (v: boolean) => void; tip: string }[] => [
+  { g: 'start', label: 'hold click to creep', get: () => STALK.on, set: v => { STALK.on = v; }, tip: 'on: hold the left button on a man from behind and Sam creeps up on him, let go and he stops. Off = the build before it: your own keys all the way in, and the grab on its key' },
+  { g: 'start', label: 'drag to steer', get: () => STALK.drag, set: v => { STALK.drag = v; }, tip: 'on: press on a man from behind, keep the button down and drag the mouse the way you want Sam to creep, like a stick centred where you pressed. Further = faster. Back to where you pressed = he holds still. He always faces the man and stops just behind him. Off = the hold walks him in by itself' },
+  { g: 'start', label: 'click is the only way in', get: () => STALK.only, set: v => { STALK.only = v; }, tip: 'off = the grab\'s row is back beside the held click. It only matters with "press the key to grab" off' },
+  { g: 'pose', label: 'lower, hands down', get: () => STALK.low, set: v => { STALK.low = v; }, tip: 'on: no arm comes up and he sinks lower and slower as he closes, then springs up into the grab. Off = the old pose: the arm comes up and he rises as he closes' },
+  { g: 'pose', label: 'arms out wide', get: () => STALK.wide, set: v => { STALK.wide = v; }, tip: 'on: as he closes on a man in his crouch his arms come out to each side, low, with open hands, and stay out while he waits behind him. Off = his hands hang by his knees. Needs "lower, hands down". Try: flip it while stopped a metre and a half behind a man' },
+  { g: 'pose', label: 'body shows distance', get: () => STALK.tell, set: v => { STALK.tell = v; }, tip: 'on: his pose changes as he closes on the man\'s back, by distance, so a pause holds the pose. Off = the pose in reach alone' },
+  { g: 'grab', label: 'press the key to grab', get: () => STALK.key, set: v => { STALK.key = v; }, tip: 'on: holding the click only sneaks you up behind him, and you press the action key to grab. Off = the hold ends in the grab by itself' },
+  { g: 'grab', label: 'gun out before the arm', get: () => HOLD.stripFirst, set: v => { HOLD.stripFirst = v; }, tip: 'grabbing a man with a gun in his hands: on = Sam strips the gun first and the arm lands a beat later, with the strip heard before the catch. Off = both at once. Try: the rifleman, with sound on' },
+  { g: 'rmb', label: 'tap knocks out, hold chokes', get: () => CLOSE.rmbHold, set: v => { CLOSE.rmbHold = v; }, tip: 'on: a quick right click behind him is the knockout (fast, a little louder), and the right button kept down takes him into your arm and chokes him while you hold it (quiet, slow). Off = the right click is the knockout alone' },
+  { g: 'pass', label: 'head goes to the man', get: () => SAMLOOK.on, set: v => { SAMLOOK.on = v; }, tip: 'on: he looks at the nearest man in front of him, and at a man who is starting to notice him before a nearer one. The cursor still aims. Off = his head stays where his body faces' },
+  { g: 'pass', label: 'gives a man room', get: () => SAMLOOK.slip, set: v => { SAMLOOK.slip = v; }, tip: 'on: crouched beside a man he tips away, sinks, and the arm on that side goes out low. Off = the plain crouch' },
+  { g: 'run', label: 'Shift is a fast crouch walk', get: () => CROUCHRUN.on, set: v => { CROUCHRUN.on = v; }, tip: 'on: Shift in a crouch keeps you down and moves you quickly, and you stand up to sprint. Off = Shift stands you up into the sprint' },
+  { g: 'corner', label: 'click on a wall waits', get: () => STALK.corner, set: v => { STALK.corner = v; }, tip: 'on: with your back on a wall and empty hands, hold the left button and the man who walks past the corner is grabbed as he passes. Off = the button on a wall does nothing' },
 ];
 const WHY: Record<string, string> = { '': 'nothing yet', grab: 'the grab', let: 'you let go', far: 'he got too far away', turned: 'he turned around', wall: 'a wall or a door came between you', him: 'he noticed you, or he is out of it', hands: 'your hands were busy or not empty', keys: 'you moved by yourself' };
 
@@ -120,31 +159,29 @@ export function sneakLabBoot(game: Game, panel: Panel) {
   const dark = new Set<Game['targets'][number]>();   // (the lamps the 'lights out' box put out: only those come back on)
   panel.buttons(now, 'the men', [
     { text: 'put everyone back', run: () => { dark.clear(); game.restart(); hands(game); }, title: 'every man back on his beat, you back at the gate with empty hands (also Shift+Enter)' },
-    { text: 'sit one down / stand him up', run: () => { const gd = stander(game); if (!gd) return; if (closeSeated(game, gd)) closeUnseat(game, gd, true); else closeSeat(game, gd); }, title: 'the man who stands by the wall sits where he is, to try the creep on a seated man' },
-    { text: 'stand two men a gap apart', run: () => gap(game), title: 'two of the walkers stop side by side, a little over two metres apart and facing the same way, so you can slip between them ("put everyone back" sends them walking again)' },
+    { text: 'sit / stand one', run: () => { const gd = stander(game); if (!gd) return; if (closeSeated(game, gd)) closeUnseat(game, gd, true); else closeSeat(game, gd); }, title: 'the man who stands by the wall sits where he is, to try the creep on a seated man' },
+    { text: 'two men, a gap', run: () => gap(game), title: 'two of the walkers stop side by side, a little over two metres apart and facing the same way, so you can slip between them ("put everyone back" sends them walking again)' },
   ]);
   panel.toggleBox(now, 'they can\'t notice you', () => SNEAKLAB.unseen, v => { SNEAKLAB.unseen = v; }, 'on: nobody sees or hears you, so you can work on the motion. Off: the real guards, and the creep ends when one is onto you');
   panel.toggleBox(now, 'nothing hurts you', () => SNEAKLAB.safe, v => { SNEAKLAB.safe = v; }, 'god mode while the lab is open');
   panel.toggleBox(now, 'lights out', () => dark.size > 0, v => { if (v) { for (const t of game.targets) if (t.on && !t.broken) { t.on = false; dark.add(t); } } else { for (const t of dark) if (!t.broken) t.on = true; dark.clear(); } }, 'every lamp that is lit goes off, to try all of this in the dark (the moon stays). Off = those lamps come back on');
   panel.toggleBox(now, 'keep Sam clear of this panel', () => SNEAKLAB.clear, v => { SNEAKLAB.clear = v; }, 'the view slides over so Sam stands in the middle of what this panel leaves; off = the middle of the page, as the game has him');
   panel.toggleBox(now, 'draw the geometry on the floor', () => STALKVIZ.on, v => { STALKVIZ.on = v; }, 'round the nearest man: the ring it can begin inside and the one it lets go past, the edges of his rear arc, the point Sam is walked to, the ring the grab fires inside');
-  const cr = panel.section('The creep', { open: true, reset: () => { nums.forEach((n, i) => { n.t[n.key] = was[i]; }); ARCS.forEach((a, i) => { STALK[a.key] = wasArc[i]; }); }, resetTitle: 'every number back to the build\'s' });
-  panel.toggleBox(cr, 'holding the click creeps in', () => STALK.on, v => { STALK.on = v; }, 'off = the build before it: your own keys all the way, and the grab on its key');
-  panel.toggleBox(cr, 'his body shows how close he is', () => STALK.tell, v => { STALK.tell = v; }, 'the arm comes up and he comes out of the crouch as he closes on the man\'s back, by distance, so a pause holds the pose. Off = the pose in reach alone');
-  panel.toggleBox(cr, 'on a wall, holding the click waits for him', () => STALK.corner, v => { STALK.corner = v; }, 'with your back on a wall [Q] and empty hands, hold the left button: the man who walks past the corner is grabbed as he passes. Off = the button on a wall does nothing');
-  panel.toggleBox(cr, 'you press the key to finish the grab', () => STALK.key, v => { STALK.key = v; }, 'on: holding the click only sneaks you up behind him, and you press the action key to grab. Off = the hold ends in the grab by itself');
-  panel.toggleBox(cr, 'he goes lower, hands down', () => STALK.low, v => { STALK.low = v; }, 'on: no arm comes up and he sinks lower and slower as he closes, then springs up into the grab. Off = the arm comes up and he rises as he closes');
-  panel.toggleBox(cr, 'the click is the only way to grab', () => STALK.only, v => { STALK.only = v; }, 'off = the grab\'s row is back beside the held click. It only matters with "you press the key to finish the grab" off: with that on the row is there and its key grabs');
-  panel.toggleBox(cr, 'right click: tap to knock out, hold to choke', () => CLOSE.rmbHold, v => { CLOSE.rmbHold = v; }, 'on: a quick right click behind him is the knockout (fast, a little louder), and the right button kept down takes him into your arm and chokes him while you hold it (quiet, slow). Off = the right click is the knockout the moment you press');
-  panel.toggleBox(cr, 'his head goes to the man who matters', () => SAMLOOK.on, v => { SAMLOOK.on = v; }, 'he looks at the nearest man in front of him, and at a man who is starting to notice him before a nearer one. The cursor still aims. Off = his head stays where his body faces');
-  panel.toggleBox(cr, 'he gives a man room as he passes', () => SAMLOOK.slip, v => { SAMLOOK.slip = v; }, 'crouched beside a man: he tips away, sinks, and the arm on that side goes out low. Off = the plain crouch');
-  panel.toggleBox(cr, 'Shift in a crouch is a fast crouch walk', () => CROUCHRUN.on, v => { CROUCHRUN.on = v; }, 'on: Shift keeps you down and moves you quickly, and you stand up to sprint. Off = Shift stands you up into the sprint');
-  for (const n of nums) panel.slider(cr, n.label, n.min, n.max, n.step, () => n.t[n.key] as number, v => { n.t[n.key] = v; }, n.tip);
-  for (const a of ARCS) panel.slider(cr, a.label, 60, 180, 1, () => deg(STALK[a.key]), v => { STALK[a.key] = cosOf(v); }, a.tip);
+  // (the knobs in named groups that fold, each with its own '↺' and a count of what has been moved; every row has a dot that puts its own number back)
+  const togs = TOGS(), wasTog = togs.map(t => t.get()), moved = (n: Num, i: number) => Math.abs((n.t[n.key] as number) - was[i]) > n.step * 0.5;
+  for (const G of GROUPS) {
+    const mine = nums.map((n, i) => ({ n, i })).filter(x => x.n.g === G.id), arcs = G.id === 'start' ? ARCS.map((a, i) => ({ a, i })) : [];
+    const sec = panel.section(G.name, { open: G.open, title: G.title, resetTitle: 'this group\'s numbers back to the build\'s',
+      reset: () => { for (const { n, i } of mine) n.t[n.key] = was[i]; for (const { a, i } of arcs) STALK[a.key] = wasArc[i]; },
+      summary: () => { const c = mine.filter(x => moved(x.n, x.i)).length + arcs.filter(x => Math.abs(STALK[x.a.key] - wasArc[x.i]) > 1e-4).length; return c ? `${c} moved` : ''; } });
+    togs.forEach((t, i) => { if (t.g === G.id) panel.toggleBox(sec, t.label, t.get, t.set, t.tip, wasTog[i]); });
+    for (const { n, i } of mine) panel.slider(sec, n.label, n.min, n.max, n.step, () => n.t[n.key] as number, v => { n.t[n.key] = v; }, n.tip, was[i]);
+    for (const { a, i } of arcs) panel.slider(sec, a.label, 60, 180, 1, () => deg(STALK[a.key]), v => { STALK[a.key] = cosOf(v); }, a.tip, deg(wasArc[i]));
+  }
   const out = panel.section('Hand the numbers back', { open: true });
   panel.buttons(out, 'numbers', [{ text: 'copy them', run: () => { copied = asText(); try { void navigator.clipboard?.writeText(copied); } catch { /* no clipboard here: the line below shows them */ } }, title: 'the numbers as they stand, as one line of text on the clipboard (and shown below)' }]);
   panel.text(out, () => copied || 'Move the sliders until it feels right, then copy the numbers and paste them where you send notes.');
-  game.objectiveText = () => STALK.on && STALK.key ? 'sneak lab ▸ hold left click behind a man to sneak up, then press [Space] to grab him' : 'sneak lab ▸ hold left click on a man from behind';   // (the level has no mission of its own: the HUD's line says what the floor is for)
+  game.objectiveText = () => STALK.on && STALK.drag ? 'sneak lab ▸ press left click on a man from behind and drag the way you want to sneak, then press [Space] to grab him' : STALK.on && STALK.key ? 'sneak lab ▸ hold left click behind a man to sneak up, then press [Space] to grab him' : 'sneak lab ▸ hold left click on a man from behind';   // (the level has no mission of its own: the HUD's line says what the floor is for)
   hands(game); sneakLabFrame(game);
   panel.show(SNEAKLAB_SYSTEM);
 }
