@@ -26,7 +26,7 @@ export async function grabVoiceCheck(): Promise<boolean> {
   const take = async (who: 'rifle' | 'pistol', rule: boolean, o: { gunHold?: boolean; ear?: number; seed?: number; cancelAfter?: number; drop?: boolean } = {}) => {
     console.log = () => { };
     try {
-      const W: any = await standUp({ seed: o.seed ?? SEED }); HOLD.dropGun = o.drop !== false; HOLD.disarm = rule; const g = W.game; g.godMode = true; g.player.visibility = 0.02; g.tune.carbineGuards = who === 'rifle' ? 'reyes' : 'none';
+      const W: any = await standUp({ seed: o.seed ?? SEED }); HOLD.dropGun = o.drop !== false; HOLD.disarm = rule; HOLD.stripFirst = false; const g = W.game; g.godMode = true; g.player.visibility = 0.02; g.tune.carbineGuards = who === 'rifle' ? 'reyes' : 'none';
       for (let i = 0; i < 5; i++) W.step(DT);
       const A = g.guards.find((x: any) => x.callsign === 'Reyes'), B = o.ear ? g.guards.find((x: any) => x !== A) : null, at = o.ear ? LOBBY : AT;
       g.guards.forEach((x: any, i: number) => { if (x !== A && x !== B) park(x, i); });
