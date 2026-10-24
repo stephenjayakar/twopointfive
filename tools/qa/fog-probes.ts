@@ -567,8 +567,8 @@ export async function fogLit(): Promise<boolean> {
     // … and that walk is common.wgsl's occludedTBoxes line for line, but for its head, the capsule cap and the owner rule (a fix to the one must reach the other)
     const lines = (t: string) => t.split('\n').map(l => l.trim()).filter(l => l.length > 0).slice(1);
     const A = lines(fnBody(common, 'occludedTBoxes')), B = lines(hit); const onlyA = A.filter(l => !B.includes(l)), onlyB = B.filter(l => !A.includes(l));
-    const okA = ['if (tb.x > tb.y || tb.y < 0.0) { return tCap; }', 'let tmax = select(min(tmaxIn, tb.y), tCap, tCap >= 0.0);', 'if (skipsOwner(boxOwner(b), skipOwner)) { continue; }', 'return tCap;'];
-    const okB = ['if (tb.x > tb.y || tb.y < 0.0) { return -1.0; }', 'let tmax = min(tmaxIn, tb.y);', 'if (boxOwner(boxGeo[bi]) != 0u) { continue; }', 'if (boxOwner(b) != 0u) { continue; }', 'return -1.0;'];
+    const okA = ['if (tb.x > tb.y || tb.y < 0.0) { return tCap; }', 'let tmax = select(min(tmaxIn, tb.y), tCap, tCap >= 0.0);', 'if (skipsOwner(boxOwner(b), skipOwner)) { continue; }', 'if (r.x >= 0.0 && (bestInCell < 0.0 || r.x < bestInCell) && !fogThinBox(b, bi)) { bestInCell = r.x; }', 'return tCap;'];   // (… and a box a fog eye passes: FOG.thin — the lit fog's walk is a lamp's shadow, never an eye's)
+    const okB = ['if (tb.x > tb.y || tb.y < 0.0) { return -1.0; }', 'let tmax = min(tmaxIn, tb.y);', 'if (boxOwner(boxGeo[bi]) != 0u) { continue; }', 'if (boxOwner(b) != 0u) { continue; }', 'if (r.x >= 0.0 && (bestInCell < 0.0 || r.x < bestInCell)) { bestInCell = r.x; }', 'return -1.0;'];
     const same = A.length > 30 && onlyA.every(l => okA.includes(l)) && onlyB.every(l => okB.includes(l)) && okB.every(l => B.includes(l));
     verdict(same, 'the lit fog\'s shadow walk (fowLitHit) is occludedTBoxes line for line, but for the capsule cap it does not take and the owned boxes it passes',
       `${A.length} lines there, ${B.length} here · only there: ${onlyA.length} (${onlyA.filter(l => !okA.includes(l)).length} not on the list) · only here: ${onlyB.length} (${onlyB.filter(l => !okB.includes(l)).length} not on the list)`);
@@ -1046,13 +1046,14 @@ export async function fogAir(): Promise<boolean> {
     FOG.full = true; FOG.air = !brk; R.step(20); const on1 = F.air, fogOn = F.on && F.count > 0 && !!F.full;
     FOG.air = false; R.step(2); const off = F.air; FOG.air = !brk; R.step(2); const back = F.air;
     FOG.full = false; R.step(2); const plain = F.air, fullOff = !F.full; FOG.full = true; R.step(2);
-    const up = rd('fogofwar.ts'), head = /U\[o \+ 7\] = F!\.air \? 1 : 0;/.test(up) && /air: false/.test(/export function makeFogFrame\(\)[^\n]*/.exec(up)?.[0] ?? '');
+    const up = rd('fogofwar.ts'), head = /U\[o \+ 7\] = \(F!\.air \? 1 : 0\) \+ \(thin \? 2 : 0\);/.test(up) && /air: false/.test(/export function makeFogFrame\(\)[^\n]*/.exec(up)?.[0] ?? '');
     verdict(fogOn && on1 === true && off === false && back === true && fullOff && head, 'the fog\'s block carries the row every frame — on while the knob is, off as soon as it is not — and the sight table\'s head takes it as its last float (a frame with no fog block says off)',
       `fog on with the full picture: ${fogOn} · the row in the block: ${on1} · the knob off → ${off} · on again → ${back} · without the full picture the block still says ${plain} (no sight table is written: nothing reads it) · the head's write and the empty frame's row as written: ${head}`);
   }
   { // the shaders
     const common = strip(rd('shaders/common.wgsl')), a = common.indexOf('fn fogSmoke('), body = a < 0 ? '' : common.slice(a, common.indexOf('\n', a));
-    const rule = /fn fogSmoke\(dens: f32, X: vec3f\) -> f32 \{ if \(dens <= 0\.002 \|\| fogSight\.soft\.w > 0\.5\) \{ return dens; \} return dens \* fogSeenAt\(X, vec3f\(0\.0\)\); \}/.test(body);
+    const rule = /fn fogSmoke\(dens: f32, X: vec3f\) -> f32 \{ if \(dens <= 0\.002 \|\| fogSmokeOn\(\)\) \{ return dens; \} return dens \* fogSeenAt\(X, vec3f\(0\.0\)\); \}/.test(body)
+      && /fn fogSmokeOn\(\) -> bool \{ return \(u32\(fogSight\.soft\.w \+ 0\.5\) & 1u\) != 0u; \}/.test(common);   // (the head's last float is a whole number of two bits since FOG.thin rides it too: bit 0 is the air's)
     const vol = strip(rd('shaders/volumetrics.wgsl')), marches = (vol.match(/let dens = [^;]*;/g) ?? []), through = marches.filter(m => /fogSmoke\(/.test(m)).length;
     const twin: string = rd('dustLookVol.ts'), twinThrough = (twin.match(/'let d[^']*let dens = fogSmoke\(|'let dens = fogSmoke\(smokeDensityAt\(X\), X\); let dTint/g) ?? []).length;
     const dir = `${ROOT}/src/render/shaders`, others = (fsrc.readdirSync(dir) as string[]).filter(f => f.endsWith('.wgsl') && f !== 'common.wgsl' && /fogSight\.soft\.w/.test(strip(fsrc.readFileSync(`${dir}/${f}`, 'utf8'))));
@@ -1110,6 +1111,180 @@ export async function fogAir(): Promise<boolean> {
     for (const seed of [21, 22]) { const a = await fight(seed, false), b = await fight(seed, true); same &&= a.d === b.d && a.draws === b.draws && a.air === false && b.air === true; fought &&= a.state !== 'staged' && b.state !== 'staged'; gated &&= a.hid && b.hid && a.asked >= 1 && a.asked === b.asked && a.left === 0 && b.left >= 1;
       rows.push(`seed ${seed}: ${a.state} / ${b.state}, dice ${a.draws} / ${b.draws}, digest ${a.d === b.d ? 'same' : 'DIFFERENT'}, shots ${a.asked} / ${b.asked}, their gas left out ${a.left} / ${b.left}`); }
     verdict(same && fought && gated, 'the night breach under the fog\'s full picture, a hidden defender firing a round and the team then ordered in, two seeds, 21 s each: the same digest and the same dice with the smoke drawn under the fog as without — and only with it is the hidden man\'s gas left out', rows.join(' · '));
+  }
+  Object.assign(FOG, FOG_DEFAULTS);
+  return done();
+}
+
+// THIN THINGS THAT STAND FREE DO NOT CUT THE FOG'S SIGHT (game/fogofwar.ts FOG.thin; scene/thin.ts — the maintainer, 10-23, of a taken room on The Pass:
+// 'weird vertical striations due to fog of war + squad's vision'). Headless this asks (1) THE MARKS, on every level file: what scene/thin.ts marks, that no
+// marked box stands within 30 cm of a door's shut leaf (a jamb or a stop passed would open every shut door), and on The Pass what the marks are; (2) THE
+// SQUAD'S OWN LINES on The Pass stood up, through the game's real collision: from three spots outside the long room's windows and one inside it, a level line
+// a bearing — how many slivers of 'not seen' the row takes away, that it never shortens a line, and that the fog's own test (FogOfWar.sightBlocked) passes the
+// stovepipe with the row and not without, a wall never; the callers as written; (3) THE BLOCK: the row and the marked statics' bits reach the
+// renderer's frame, renewed only when they change, and the sight table's head and size as written; (4) THE SHADERS AS WRITTEN: the one test, asked of a box
+// already hit by the two walks an eye's ray takes and of the named box, raised only round the fog's own rays and put back; (5) the address; (6) the journal,
+// and that the replay page leaves the row to the tape; (7) the stands; (8) a fought breach with and without it, two seeds. FOGTHIN_BREAK=1 = the marks never
+// made: lines 1, 2 and 3 are red. NOT ASKED: the picture — no headless run executes a shader. NEVER SEEN ON A GPU.
+export async function fogThin(): Promise<boolean> {
+  const { verdict, done } = family('fog-thin: thin things that stand free do not cut the fog of war\'s sight');
+  const brk = process.env.FOGTHIN_BREAK === '1';
+  const stoodRow = await (async () => { const R0 = await rig(58, { fog: true }); void R0; return FOG.thin; })();   // (what standUp left: read below, with the stands — rig() has put the module's rows back and stood the game up)
+  const { fogFlags } = await import(`${ROOT}/src/game/fogofwar.ts`);
+  const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`); const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
+  const { BoxFlag, makeBox } = await import(`${ROOT}/src/scene/boxes.ts`); const { thinLevel, THIN_WIDTH } = await import(`${ROOT}/src/scene/thin.ts`); const { StaticCollision } = await import(`${ROOT}/src/scene/collision.ts`); const { levelToData } = await import(`${ROOT}/src/scene/levelLoad.ts`); const { roundLevel } = await import(`${ROOT}/src/scene/round.ts`);
+  const { makeFogFrame, FOG_THIN_WORDS, FOG_SIGHT_BYTES, FOG_BINS, FOG_EYES } = await import(`${ROOT}/src/render/fogofwar.ts`); const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
+  const fsrc = await import('node:fs'); const rd = (f: string): string => fsrc.readFileSync(`${ROOT}/src/render/${f}`, 'utf8');
+  const strip = (t: string) => t.split('\n').map(l => l.replace(/\/\/.*$/, '')).join('\n');
+  const quiet = async <T>(fn: () => T | Promise<T>): Promise<T> => { const l = console.log, e = console.error, w = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = l; console.error = e; console.warn = w; } };
+  const levelOf = (file: string) => quiet(() => loadLevel(parseLevelData(fsrc.readFileSync(`${ROOT}/levels/${file}`, 'utf8'))));
+  { // the marks, on every level
+    const files = (fsrc.readdirSync(`${ROOT}/levels`) as string[]).filter(f => f.endsWith('.json')).sort();
+    let levels = 0, marked = 0, withMarks = 0, atDoors = 0, wide = 0, beside = 0, doors = 0, doorLines = 0, doorLeaks = 0, bySize = 0, exported = 0; const bad: string[] = []; let pass = '';
+    for (const f of files) { let L: any; try { L = await levelOf(f); } catch { continue; }
+      if (!L?.boxes?.length) continue; levels++;
+      for (const on of [true, false]) {   // (a level's round things as one box each, and as the kit's slabs: the marks are made after either)
+        roundLevel(L.boxes, on, L.markTexel); const n = brk ? 0 : thinLevel(L.boxes, L.doors ?? []); if (brk) for (const b of L.boxes) b.flags &= ~BoxFlag.Thin;
+        const th = L.boxes.filter((b: any) => b.flags & BoxFlag.Thin);
+        if (on) {   // the level's own collision with every door's leaf stood in it SHUT (a plain box, hinge to latch), and short lines ACROSS each door's plane inside its frame's span (30 cm past either end), from either side, at three heights: none may be stopped without the marks and pass with them — that is a shut door leaking. The same lines with every narrow solid box marked BY SIZE ALONE (the first version's rule) do leak: the count's teeth.
+          const leaves = (L.doors ?? []).map((d: any) => makeBox({ c: [d.hinge[0] + Math.cos(d.closedDir) * d.width / 2, 1.02, d.hinge[1] + Math.sin(d.closedDir) * d.width / 2], h: [d.width / 2, 1.02, 0.022], yaw: -d.closedDir }));
+          const C = new StaticCollision([...L.boxes, ...leaves]);
+          const across = (): number => { let n = 0;
+            for (const d of (L.doors ?? [])) { const [hx, hz] = d.hinge, ux = Math.cos(d.closedDir), uz = Math.sin(d.closedDir), W = d.width;
+              for (const side of [-1, 1]) for (const te of [-0.3, -0.1, 0.1, W / 2, W - 0.1, W + 0.1, W + 0.3]) for (const out of [0.25, 0.6]) { const ex = hx + ux * te - uz * out * side, ez = hz + uz * te + ux * out * side;
+                for (const y of [0.3, 1.0, 1.9]) for (const deep of [0.2, 0.5]) for (let i = 0; i <= 12; i++) { const tt = -0.3 + (W + 0.6) * i / 12, far: number[] = [hx + ux * tt + uz * deep * side, y, hz + uz * tt - ux * deep * side]; doorLines++;
+                  if (C.segmentBlocked([ex, y, ez], far, 0.02, BoxFlag.Glass) && !C.segmentBlocked([ex, y, ez], far, 0.02, BoxFlag.Glass | BoxFlag.Thin)) { n++; if (bad.length < 4 && !sizing) bad.push(`${f}: a line across door ${d.name}'s frame passes with the marks`); } } } }
+            return n; };
+          doors += (L.doors ?? []).length; let sizing = false; doorLeaks += across();
+          const keep = L.boxes.map((b: any) => b.flags); sizing = true;
+          for (const b of L.boxes) if (!(b.flags & (BoxFlag.Glass | BoxFlag.NoShadow)) && !b.rot && !(b.cut && b.cut.length) && 2 * Math.max(b.h[0], b.h[2]) < THIN_WIDTH) b.flags |= BoxFlag.Thin;
+          bySize += across(); L.boxes.forEach((b: any, k: number) => { b.flags = keep[k]; });
+          try { await quiet(() => levelToData(L, {})); exported++; } catch (e: any) { if (bad.length < 4) bad.push(`${f}: the marked level does not export (${String(e?.message ?? e).slice(0, 60)})`); }   // (the mark is derived: the level's file never carries it)
+        }
+        if (on) { marked += th.length; if (th.length) withMarks++; if (f === 'pass.json') pass = `${n}: ` + th.map((b: any) => `${(2 * b.h[0]).toFixed(2)} × ${(2 * b.h[2]).toFixed(2)} at (${b.c[0].toFixed(1)}, ${b.c[2].toFixed(1)})`).join(', '); }
+        for (const b of th) {
+          if (2 * Math.max(b.h[0], b.h[2]) >= THIN_WIDTH || b.rot || (b.flags & (BoxFlag.Glass | BoxFlag.NoShadow))) wide++;
+          // nothing solid beside it, asked again here in the plainest way: no other solid box's plan AABB (as boxes.ts takes it) within 3 cm of its own over a quarter of its height — bar a box as narrow that shares its middle (a round thing's slabs)
+          const a0 = b.c[1] - b.h[1], a1 = b.c[1] + b.h[1];
+          for (const o of L.boxes) { if (o === b || (o.flags & (BoxFlag.Glass | BoxFlag.NoShadow)) || o.rot || Math.abs(o.yaw) > 1e-6 || Math.abs(b.yaw) > 1e-6) continue;
+            if (Math.min(a1, o.c[1] + o.h[1]) - Math.max(a0, o.c[1] - o.h[1]) <= Math.max(0.02, 0.25 * (a1 - a0))) continue;
+            if (Math.abs(o.c[0] - b.c[0]) > o.h[0] + b.h[0] + 0.03 || Math.abs(o.c[2] - b.c[2]) > o.h[2] + b.h[2] + 0.03) continue;
+            if (2 * Math.max(o.h[0], o.h[2]) < THIN_WIDTH && Math.abs(o.c[0] - b.c[0]) <= b.h[0] && Math.abs(o.c[2] - b.c[2]) <= b.h[2]) continue;
+            beside++; if (bad.length < 4) bad.push(`${f}: a marked box at (${b.c[0].toFixed(2)}, ${b.c[2].toFixed(2)}) has one beside it`); }
+          for (const d of (L.doors ?? [])) {   // within 30 cm of the shut leaf's line, hinge to latch
+            const ux = Math.cos(d.closedDir), uz = Math.sin(d.closedDir), px = b.c[0] - d.hinge[0], pz = b.c[2] - d.hinge[1], t = Math.max(-0.1, Math.min(d.width + 0.1, px * ux + pz * uz));
+            if (Math.hypot(px - ux * t, pz - uz * t) < 0.3 && a0 <= 2.2) { atDoors++; if (bad.length < 4) bad.push(`${f}: a marked box at door ${d.name}`); } }
+        }
+      }
+      roundLevel(L.boxes, false, L.markTexel);
+    }
+    verdict(levels >= 20 && marked >= 6 && withMarks >= 3 && atDoors === 0 && wide === 0 && beside === 0 && doors >= 100 && doorLines > 100000 && doorLeaks === 0 && bySize > 100 && exported === levels && /0\.10 × 0\.10/.test(pass) && /0\.08 × 0\.19|0\.19 × 0\.08/.test(pass),
+      'every level file, its round things as one box each and as slabs: what is marked thin and free is narrow, unrotated and solid, has nothing solid beside it (asked again here, plainly), and none stands at a door\'s shut leaf; through each level\'s own collision, its doors shut, no line across a door\'s frame passes with the marks that was stopped without (marked by size alone, the first version\'s way, they do); a marked level still exports — and The Pass\'s marks are its stovepipes and its windows\' bars',
+      `levels read: ${levels} · marked in all: ${marked}, on ${withMarks} levels · marked at a door: ${atDoors} · lines across ${doors} shut doors' frames: ${doorLines / 2} each way of marking, let through by the marks: ${doorLeaks}, by size alone: ${bySize} · levels that export marked: ${exported} · not narrow / rotated / not solid: ${wide} · with something beside: ${beside}${bad.length ? ' — ' + bad.join('; ') : ''} · The Pass: ${pass || 'none'}`);
+  }
+  // The Pass stood up: the game's own collision world and the fog's own test
+  const P: any = await quiet(async () => standUp({ level: await levelOf('pass.json'), seed: 7 })); const pg = P.game, PF = pg.fogOfWar, col = pg.col, statics: any[] = pg.engine.world.statics;
+  if (brk) for (const b of statics) b.flags &= ~BoxFlag.Thin;
+  { // the squad's own lines
+    const EYE = 1.62, BINS = 1024, FAR = 45;
+    /** how far a level line from (ex, ez) along bearing k goes before the game's sight test stops it (bisection on the segment's length: blocked is monotone in it) */
+    const reach = (ex: number, ez: number, k: number, through: number): number => { const a = (k + 0.5) / BINS * Math.PI * 2 - Math.PI, dx = Math.cos(a), dz = Math.sin(a);
+      if (!col.segmentBlocked([ex, EYE, ez], [ex + dx * FAR, EYE, ez + dz * FAR], 0.02, through)) return FAR;
+      let lo = 0, hi = FAR; for (let i = 0; i < 12; i++) { const m = (lo + hi) / 2; if (col.segmentBlocked([ex, EYE, ez], [ex + dx * m, EYE, ez + dz * m], 0.02, through)) hi = m; else lo = m; } return lo; };
+    const eyes: [number, number][] = [[14.9, 12.5], [19.3, 12.5], [27.6, 12.5], [17.5, 8.5]];
+    const rows: string[] = []; let slivers = 0, shorter = 0, each = true;
+    for (const [ex, ez] of eyes) { let n = 0, was = false, gained = 0;
+      for (let k = 0; k < BINS; k++) { const a = reach(ex, ez, k, BoxFlag.Glass), b = reach(ex, ez, k, BoxFlag.Glass | BoxFlag.Thin); if (b < a - 0.02) shorter++; const g = b > a + 0.3; if (g) gained++; if (g && !was) n++; was = g; }
+      slivers += n; each &&= n >= 1; rows.push(`eye (${ex}, ${ez}): ${n} slivers over ${gained} of ${BINS} bearings`); }
+    // the fog's own test, across a stovepipe, a wall and a door's jamb
+    const pipe = statics.find(b => Math.abs(b.c[0] - 15.7) < 0.01 && Math.abs(b.c[2] - 7.2) < 0.01 && Math.abs(b.h[0] - 0.05) < 0.01);
+    const sb = (a: number[], b: number[], on: boolean) => { FOG.thin = on; return PF.sightBlocked(a, b) as boolean; };
+    const pa = [15.7 - 1.0, EYE, 7.2], pb = [15.7 + 1.0, EYE, 7.2];
+    const pipeOff = !!pipe && sb(pa, pb, false), pipeOn = !!pipe && sb(pa, pb, true), plainOff = !!pipe && col.segmentBlocked(pa, pb);
+    const wallOn = sb([19.3, EYE, 12.5], [19.3, 0.2, 10.5], true) && sb([19.3, EYE, 12.5], [19.3, 0.2, 10.5], false);   // (down through the wall under the window)
+    // every door of the level, as it stands shut: from a step out on either side, by its hinge and by its latch, a fan of lines at the frame — none goes further with the row than without
+    let doorLines = 0, doorLeaks = 0;
+    for (const d of pg.doors.list as any[]) { const [hx, hz] = d.def.hinge, ux = Math.cos(d.def.closedDir), uz = Math.sin(d.def.closedDir), W = d.def.width;
+      for (const f of [0.02, 0.98]) for (const side of [-1, 1]) { const ex = hx + ux * W * f - uz * 0.6 * side, ez = hz + uz * W * f + ux * 0.6 * side;
+        for (let i = -12; i <= 12; i++) { const a = Math.atan2(-ux * side, uz * side) + i * 0.06, far: number[] = [ex + Math.cos(a) * 6, 1.0, ez + Math.sin(a) * 6]; doorLines++;
+          if (col.segmentBlocked([ex, 1.0, ez], far, 0.02, BoxFlag.Glass) && !col.segmentBlocked([ex, 1.0, ez], far, 0.02, BoxFlag.Glass | BoxFlag.Thin)) doorLeaks++; } } }
+    FOG.thin = FOG_DEFAULTS.thin;
+    const src = fsrc.readFileSync(`${ROOT}/src/game/fogofwar.ts`, 'utf8'), calls = (src.match(/this\.sightBlocked\(/g) ?? []).length, raw = (src.match(/col\.segmentBlocked\(/g) ?? []).length;
+    const helper = /private sightBlocked\(a: Vec3, b: Vec3\): boolean \{ return this\.g\.col\.segmentBlocked\(a, b, 0\.02, FOG\.thin \? BoxFlag\.Glass \| BoxFlag\.Thin : BoxFlag\.Glass\); \}/.test(src);
+    verdict(each && slivers >= 8 && shorter === 0 && !!pipe && pipeOff && !pipeOn && plainOff && wallOn && doorLines > 300 && doorLeaks === 0 && helper && calls === 8 && raw === 2,
+      'The Pass stood up, the game\'s own sight test: from outside each of the long room\'s three windows and from inside it the row takes slivers of \'not seen\' away and shortens no line; the fog\'s own test passes the stovepipe with the row and not without, and a wall neither way; at every door of the level, shut, no line at its frame from a step out goes further with the row; every eye\'s line in fogofwar.ts goes through that one test (the lamp\'s reach to its own floor, which is no eye\'s, does not)',
+      `${rows.join(' · ')} · lines made shorter: ${shorter} · across the stovepipe: blocked without ${pipeOff} (the plain test ${plainOff}), with ${pipeOn} · through the wall: ${wallOn} · lines at ${pg.doors.list.length} shut doors' frames: ${doorLines}, further with the row: ${doorLeaks} · the helper as written: ${helper} · its callers: ${calls - 1} · segmentBlocked left bare: ${raw - 1}`);
+  }
+  { // the block
+    const F = makeFogFrame(); const want = new Uint32Array(FOG_THIN_WORDS); let n = 0; statics.forEach((b, i) => { if (b.flags & BoxFlag.Thin) { want[i >> 5] |= 1 << (i & 31); n++; } });
+    const same = (a: Uint32Array, b: Uint32Array) => a.every((v, i) => v === b[i]);
+    FOG.thin = true; PF.thinBlock(F); const on1 = F.thin, bits1 = same(F.thinBits, want), stamped = F.thinCount === statics.length && F.thinSerial === (pg.engine.world.geomSerial ?? 0);
+    const guard = /const W = this\.world, thin = F!\.thin && \(!W \|\| \(W\.geomSerial === F!\.thinSerial && W\.statics\.length === F!\.thinCount\)\);/.test(rd('fogofwar.ts')) && /this\.fogSight\.world = this\.world;/.test(fsrc.readFileSync(`${ROOT}/src/engine.ts`, 'utf8'));
+    const one = statics.find(b => b.flags & BoxFlag.Thin), oi = statics.indexOf(one); if (one) one.flags &= ~BoxFlag.Thin; PF.thinBlock(F); const gone = oi >= 0 && ((F.thinBits[oi >> 5] >>> (oi & 31)) & 1) === 0 && !same(F.thinBits, want); if (one) one.flags |= BoxFlag.Thin; PF.thinBlock(F); const bits4 = same(F.thinBits, want);
+    // a bare stud in an opened wall is marked as it is made (wallbreak.ts), and the renderer's upload goes by what the bits ARE (a new encounter's frame starts from nothing: no count to fall behind)
+    const studMark = /p\.name = 'stud'; p\.flags \|= BoxFlag\.Thin;/.test(fsrc.readFileSync(`${ROOT}/src/game/wallbreak.ts`, 'utf8'));
+    FOG.thin = false; PF.thinBlock(F); const off = F.thin; FOG.thin = FOG_DEFAULTS.thin;
+    const up = rd('fogofwar.ts'), common = strip(rd('shaders/common.wgsl'));
+    const head = /U\[o \+ 7\] = \(F!\.air \? 1 : 0\) \+ \(thin \? 2 : 0\);/.test(up) && /this\.uwords\.set\(F!\.thinBits, SIGHT_FLOATS_BYTES \/ 4\);/.test(up) && /if \(this\.stand && thin\) \{ const T = F!\.thinBits, was = this\.standBits;/.test(up) && /if \(!same\) \{ this\.device\.queue\.writeBuffer\(this\.stand, SIGHT_HEAD \+ SIGHT_FLOATS_BYTES, T\); \(this\.standBits \?\?= new Uint32Array\(T\.length\)\)\.set\(T\); \}/.test(up)
+      && /thin: false, thinBits: new Uint32Array\(FOG_THIN_WORDS\), thinSerial: -1, thinCount: -1/.test(/export function makeFogFrame\(\)[^\n]*/.exec(up)?.[0] ?? '') && /this\.fogSight\.stand = this\.fogSightStand;/.test(fsrc.readFileSync(`${ROOT}/src/engine.ts`, 'utf8'));
+    const words = Number((common.match(/thin: array<vec4u, (\d+)>/) ?? [])[1]) * 4, reach = Number((common.match(/return bi < (\d+)u && \(\(fogSight\.thin\[/) ?? [])[1]), size = FOG_SIGHT_BYTES === FOG_BINS * FOG_EYES * 4 + FOG_EYES * 32 + 32 + FOG_THIN_WORDS * 4;
+    verdict(n >= 6 && on1 === true && bits1 && stamped && guard && gone && bits4 && off === false && head && studMark && words === FOG_THIN_WORDS && reach === FOG_THIN_WORDS * 32 && WORLD.maxBoxes <= FOG_THIN_WORDS * 32 && size,
+      'the fog\'s block carries the row and, a bit a box, exactly the statics marked this frame (a mark taken off is gone from them the next fill; a breached wall\'s stud is marked as it is made) — and the sight table takes both: the head\'s word, the bits behind it in the table and in the stand-in its own pass reads, uploaded when the bits differ, and only while the box list is the one they were read off (its serial and count ride the block: a frame drawn after a wall is rebuilt and before the next fill passes nothing); the struct\'s list as long as the renderer\'s, the shader\'s reach its bit count, and that no less than the box world holds',
+      `marked statics on The Pass: ${n} of ${statics.length} · the row: ${on1}, off → ${off} · the bits are the marks: ${bits1} · a mark off: its bit gone ${gone}, back on: the marks again ${bits4} · wallbreak.ts marks a stud: ${studMark} · the shader's reach: ${reach} boxes, the box world's ${WORLD.maxBoxes} · the block says which list: ${stamped} · the upload asks: ${guard} · the writes as written: ${head} · the shader's list: ${words} words, the renderer's ${FOG_THIN_WORDS} · the table's size: ${size}`);
+  }
+  { // the shaders
+    const common = strip(rd('shaders/common.wgsl')), fow = strip(rd('shaders/fogofwar.wgsl')), sight = strip(rd('shaders/fogsight.wgsl'));
+    const test = /fn fogThinBox\(b: BoxGeo, bi: u32\) -> bool \{\s*if \(!fogEyeThin\) \{ return false; \}\s*if \(boxOwner\(b\) != 0u\) \{ return true; \}\s*return bi < 4096u && \(\(fogSight\.thin\[bi >> 7u\]\[\(bi >> 5u\) & 3u\] >> \(bi & 31u\)\) & 1u\) != 0u;\s*\}/.test(common);
+    const on = /fn fogThinOn\(\) -> bool \{ return fogSight\.cfg\.y == 1\.0 && \(u32\(fogSight\.soft\.w \+ 0\.5\) & 2u\) != 0u; \}/.test(common);
+    const a = common.indexOf('fn occludedTBoxes('), walk = a < 0 ? '' : common.slice(a, common.indexOf('\n}', a));
+    const inWalk = (walk.match(/if \(r\.x >= 0\.0 && \(bestInCell < 0\.0 \|\| r\.x < bestInCell\) && !fogThinBox\(b, bi\)\) \{ bestInCell = r\.x; \}/g) ?? []).length;
+    const twin = (fow.match(/if \(r\.x >= 0\.0 && \(bestInCell < 0\.0 \|\| r\.x < bestInCell\) && !fogThinBox\(b, bi\)\) \{ bestInCell = r\.x; bestBox = f32\(bi\) \+ 1\.0; \}/g) ?? []).length, hint = /skipsOwner\(boxOwner\(b\), owner\) \|\| fogThinBox\(b, bi\)\) \{ return false; \}/.test(fow);
+    const s0 = common.indexOf('fn fogSeenAt('), seenAt = s0 < 0 ? '' : common.slice(s0, common.indexOf('\n}', s0));
+    const inSeen = /let thinWas = fogEyeThin; fogEyeThin = fogThinOn\(\);/.test(seenAt) && /fogEyeThin = thinWas;\s*fogSeenVal = best;\s*return best;/.test(seenAt) && (seenAt.match(/return /g) ?? []).length === 3;   // (its two early returns come before the raise)
+    const main = /fogEyeThin = fogThinOn\(\);\s*let seen = fowSeen\(P, N\);\s*fogEyeThin = false;/.test(fow), pre = /fogEyeThin = fogThinOn\(\);\s*let r = fowWalk\(/.test(fow);
+    const kern = /fogEyeThin = \(u32\(sight\.soft\.w \+ 0\.5\) & 2u\) != 0u;\s*let e = sight\.eyes\[k\];/.test(sight);
+    const writes = [common, fow, sight].map(t => (t.match(/fogEyeThin = /g) ?? []).length), dir = `${ROOT}/src/render/shaders`;
+    const elsewhere = (fsrc.readdirSync(dir) as string[]).filter(f => f.endsWith('.wgsl') && !['common.wgsl', 'fogofwar.wgsl', 'fogsight.wgsl'].includes(f) && /fogEyeThin|fogThinBox|fogThinOn/.test(strip(fsrc.readFileSync(`${dir}/${f}`, 'utf8'))));
+    verdict(test && on && inWalk === 1 && twin === 1 && hint && inSeen && main && pre && kern && writes.join() === '2,3,1' && elsewhere.length === 0,
+      'as written: one test (a box somebody carries, or one whose bit the table carries), asked of a box already hit by the two walks an eye\'s ray takes and of the fog pass\'s named box; raised only round the fog\'s own rays (fogSeenAt\'s walk, the fog pass\'s rays and its named-box table, the sight table\'s kernel) and put back where another ray could follow; the row is read only over a table written this frame; no other shader names it',
+      `the test: ${test} · the row's read: ${on} · occludedTBoxes asks it of a hit: ${inWalk} · the fog pass's twin: ${twin} · its named box: ${hint} · fogSeenAt raises and puts back: ${inSeen} · the fog pass's rays: ${main} · its table: ${pre} · the kernel: ${kern} · writes of the private in common / fogofwar / fogsight: ${writes.join(' / ')} · other shaders naming it: ${elsewhere.join(', ') || 'none'}`);
+  }
+  { // the address
+    const g = globalThis as any, had = 'location' in g, was = g.location;
+    const at = (search: string, from: boolean) => { FOG.thin = from; g.location = { search }; fogFlags(); return FOG.thin; };
+    const zero = at('?fogthin=0', true), bare = at('?fogthin', false), one = at('?fogthin=1', false), none = at('', true), noneOff = at('', false);
+    if (had) g.location = was; else delete g.location;
+    verdict(zero === false && bare === true && one === true && none === true && noneOff === false, '?fogthin=0 on the address puts the rule off; ?fogthin or ?fogthin=1 puts it on; nothing said leaves it as it stands',
+      `?fogthin=0 → ${zero} · ?fogthin → ${bare} · ?fogthin=1 → ${one} · no word, from on → ${none}, from off → ${noneOff}`);
+  }
+  { // an old recording
+    const { knobsSnapshot, applyKnobs } = await import(`${ROOT}/src/game/journal.ts`);
+    FOG.thin = true; const snap = knobsSnapshot(pg); const hasKey = typeof (snap.tables.FOG as any)?.thin === 'boolean';
+    const old = JSON.parse(JSON.stringify(snap)); delete old.tables.FOG.thin; FOG.thin = true; applyKnobs(pg, old); const fromOld = FOG.thin;
+    PF.pageLook(); for (let i = 0; i < 4; i++) P.step(1 / 60); const viewed = FOG.thin;   // (the engine replay's call, and the frames it works over: the row is the tape's — who the squad has seen goes by it)
+    const pageRows = /const FOG_PAGE = \{ desat: FOG\.desat, edge: FOG\.edge, air: FOG\.air \};/.test(fsrc.readFileSync(`${ROOT}/src/game/fogofwar.ts`, 'utf8'));
+    const visit = /VISIT_FLAGS = \[([^\]]*)\]/.exec(fsrc.readFileSync(`${ROOT}/src/ui/replaykey.ts`, 'utf8'))?.[1] ?? '', kept = /'fogthin'/.test(visit);
+    applyKnobs(pg, snap); const fromNew = FOG.thin;
+    verdict(hasKey && fromOld === false && viewed === false && pageRows && !kept && fromNew === true, 'the session journal carries the row: a recording from before the key replays with every static stopping the fog\'s eye, one from now as it says — and the replay page leaves the row to the tape (no visit word, nothing put back)',
+      `the snapshot has FOG.thin: ${hasKey} · a file without the key → ${fromOld} · after the replay page asked for its look: ${viewed} · the visit keeps ?fogthin: ${kept} · a file from now → ${fromNew}`);
+  }
+  { // the stands
+    const frozen = !process.env.TPS_PROFILE || process.env.TPS_PROFILE === 'frozen', word = process.env.TPS_FOGTHIN;
+    const want = frozen || word !== undefined ? word === '1' : (FOG_DEFAULTS as any).thin;
+    const row = (await import(`${ROOT}/src/host/profile.ts`)).FROZEN_HOLDS['FOG.thin'];
+    verdict(stoodRow === want && (FOG_DEFAULTS as any).thin === true && typeof row === 'string' && /TPS_FOGTHIN=1/.test(row), frozen ? 'standUp() on the frozen stand puts FOG.thin to what TPS_FOGTHIN says (unset: off, as every stored run was recorded), the module ships it on, and FROZEN_HOLDS names the row' : 'standUp() on the shipped stand leaves FOG.thin as the page has it (a word said: that), and FROZEN_HOLDS names the row',
+      `after standUp: ${stoodRow} · the module's: ${(FOG_DEFAULTS as any).thin} · TPS_FOGTHIN ${word ?? 'unset'} · TPS_PROFILE ${process.env.TPS_PROFILE ?? 'unset'} · FROZEN_HOLDS ${row ?? '—'}`);
+  }
+  { // a fight with it and without
+    const fight = async (seed: number, thin: boolean) => { const Q = await rig(seed, { fog: true, chaos: 0.5 }); FOG.full = true; FOG.thin = thin; const marks = (Q.game.engine.world.statics as any[]).filter(b => b.flags & BoxFlag.Thin).length;
+      Q.step(40); Q.NB.order(); Q.step(60 * 7); Q.NB.order(); Q.step(60 * 14);
+      return { d: JSON.stringify(digestGame(Q.game)), draws: (Q.dice as any).draws(), state: Q.NB.state as string, thin: Q.FW.frame.thin, marks }; };
+    const rows: string[] = []; let fought = true, told = true, moved = 0, marks = 0;
+    for (const seed of [23, 24]) { const a = await fight(seed, false), b = await fight(seed, true); const same = a.d === b.d && a.draws === b.draws; if (!same) moved++; marks = b.marks;
+      fought &&= a.state !== 'staged' && b.state !== 'staged'; told &&= a.thin === false && b.thin === true;
+      rows.push(`seed ${seed}: ${a.state} / ${b.state}, dice ${a.draws} / ${b.draws}, digest ${same ? 'same' : 'different'}`); }
+    verdict(fought && told && marks > 0 && moved === 0, 'the night breach under the fog\'s full picture, the team ordered in, two seeds, 21 s each, without the row and with it, on a level with marked boxes: both are fought, the frame says which, and here the row moves nothing — the same digest and dice (it MAY move a run: who the squad has seen can go by a marked box. Red here = it has begun to on this level: look at why, then say so in the area file)',
+      `${rows.join(' · ')} · marked statics on this level: ${marks} · runs the row moved: ${moved} of 2`);
   }
   Object.assign(FOG, FOG_DEFAULTS);
   return done();

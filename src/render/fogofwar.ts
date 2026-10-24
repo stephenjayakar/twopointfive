@@ -58,13 +58,20 @@ export interface FogFrame {
   /** THE AIR IS THE PLACE (game/fogofwar.ts FOG.air; under the full picture alone — it rides the sight table's head): true = the picture's march draws smoke and
    *  dust over floor the team does not see too (the fog pass then dims it with the ground under it); false = no plume there, as it was */
   air: boolean;
+  /** THIN THINGS THAT STAND FREE DO NOT CUT THE SIGHT (game/fogofwar.ts FOG.thin; under the full picture alone — it rides the sight table): the picture's
+   *  fog eye passes the statics whose bit is set in `thinBits` (bit i = box i; 4096 boxes), and what a man carries. false = every box stops it, as it was */
+  thin: boolean;
+  /** which statics are thin and free, a bit a box index (game/fogofwar.ts thinBlock, off scene/thin.ts's marks), and the box list they were read off: its
+   *  geometry serial and its count of statics. A frame drawn after the list changed and before the next fill (a wall rebuilt, a restart: an index is another
+   *  box's by then — a leaf's, should the statics have shrunk) is drawn with the row off (FogSight.encode) */
+  thinBits: Uint32Array; thinSerial: number; thinCount: number;
   /** the renderer's own (the engine writes it each frame, the game never): this frame's sight table is written — FogSight.live. While it is not (its program
    *  still compiling, or failed), no class cuts anything, so the full picture is NOT drawn: the fog is `flat` / `lit`'s, which shows nothing live */
   sight: boolean;
   /** the renderer's own switch (the game never writes it): which program draws the pass — the picture is the same either way (FogPassMode) */
   pass: FogPassMode;
 }
-export function makeFogFrame(): FogFrame { const lights = new Float32Array(FOG_LIGHTS * 16); return { on: false, count: 0, eyes: new Float32Array(FOG_EYES * 4), looks: new Float32Array(FOG_EYES * 4), dim: 0.4, desat: 0.75, topPad: 0.3, edge: 0, softIn: 0, softOut: 0, nearSoft: 0, full: false, fullFlat: 0, air: false, sight: false, flat: 0, lit: 0, litFill: 0, litCut: 0, litAo: 0, litAoM: 0, lightCount: 0, lights, lightsU: new Uint32Array(lights.buffer), pass: fogPassFlag() }; }
+export function makeFogFrame(): FogFrame { const lights = new Float32Array(FOG_LIGHTS * 16); return { on: false, count: 0, eyes: new Float32Array(FOG_EYES * 4), looks: new Float32Array(FOG_EYES * 4), dim: 0.4, desat: 0.75, topPad: 0.3, edge: 0, softIn: 0, softOut: 0, nearSoft: 0, full: false, fullFlat: 0, air: false, thin: false, thinBits: new Uint32Array(FOG_THIN_WORDS), thinSerial: -1, thinCount: -1, sight: false, flat: 0, lit: 0, litFill: 0, litCut: 0, litAo: 0, litAoM: 0, lightCount: 0, lights, lightsU: new Uint32Array(lights.buffer), pass: fogPassFlag() }; }
 
 const U_BYTES = FOG_EYES * 16 * 2 + 64;
 
@@ -244,13 +251,20 @@ export class FogPass {
 //      fogSeenAt, the scene group's binding 11 — a 41 KB UNIFORM: FOG_BINS × FOG_EYES distances, then the eyes, their looks, the count and the soft edges). One
 //      32 × 5-group dispatch at the head of the frame while the full-picture fog is on writes the distances (the same buffer, as storage); the CPU writes the
 //      head. Nothing while it is off: the head's 'written' word is put back to 0 the frame the rule goes off, so a stale table is never asked.
-const SIGHT_HEAD = FOG_BINS * FOG_EYES * 4, SIGHT_HEAD_BYTES = FOG_EYES * 32 + 32;
+/** the sight table's list of thin statics: this many u32 (a bit a box index — common.wgsl FogSightT.thin, an array<vec4u, FOG_THIN_WORDS / 4>) */
+export const FOG_THIN_WORDS = 128;
+const SIGHT_HEAD = FOG_BINS * FOG_EYES * 4, SIGHT_FLOATS_BYTES = FOG_EYES * 32 + 32, SIGHT_HEAD_BYTES = SIGHT_FLOATS_BYTES + FOG_THIN_WORDS * 4;
 /** the table's size in bytes (common.wgsl FogSightT) — the engine's stand-in for the pass that writes it is as large */
 export const FOG_SIGHT_BYTES = SIGHT_HEAD + SIGHT_HEAD_BYTES;
 export class FogSight implements CutSwappable {
   readonly buf: GPUBuffer;
   private pipe: GPUComputePipeline | null = null; private building = false; private bad = false;
-  private layout: GPUBindGroupLayout; private ubuf: GPUBuffer; private bg: GPUBindGroup; private udata = new Float32Array(SIGHT_HEAD_BYTES / 4);
+  private layout: GPUBindGroupLayout; private ubuf: GPUBuffer; private bg: GPUBindGroup; private udata = new Float32Array(SIGHT_HEAD_BYTES / 4); private uwords = new Uint32Array(this.udata.buffer);
+  /** the scene group's STAND-IN for the table (engine.ts fogSightStand: what this pass itself reads at binding 11, zeros but for this): the thin statics' bits are
+   *  written there too, so the kernel's own rays find them (common.wgsl fogThinBox reads fogSight.thin whichever buffer is bound) */
+  stand: GPUBuffer | null = null; /** the bits as last written there (null: never) */ private standBits: Uint32Array | null = null;
+  /** the box world the frame is drawn from (engine.ts): the thin bits count only while they were read off its list as it now is */
+  world: { statics: unknown[]; geomSerial: number } | null = null;
   private cutSet = new ProgramSet();
   /** the table holds this frame's answer (false = its 'written' word is 0: fogSeenAt answers 'seen' everywhere, and the fog pass does not draw the full picture) */
   live = false;
@@ -263,7 +277,7 @@ export class FogSight implements CutSwappable {
       { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } },
       { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
     ] });
-    this.ubuf = d.createBuffer({ label: 'fogSightU', size: SIGHT_HEAD_BYTES, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    this.ubuf = d.createBuffer({ label: 'fogSightU', size: SIGHT_FLOATS_BYTES, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     this.bg = d.createBindGroup({ layout: this.layout, entries: [{ binding: 0, resource: { buffer: this.ubuf } }, { binding: 1, resource: { buffer: this.buf } }] });
   }
   /** the program's text as compiled (the compile check reads the same string) */
@@ -290,9 +304,13 @@ export class FogSight implements CutSwappable {
       return;
     }
     const U = this.udata, count = Math.min(F!.count, FOG_EYES); U.set(F!.eyes, 0); U.set(F!.looks, FOG_EYES * 4);
+    const W = this.world, thin = F!.thin && (!W || (W.geomSerial === F!.thinSerial && W.statics.length === F!.thinCount));   // (FOG.thin, and its bits still this box list's)
     for (let k = count; k < FOG_EYES; k++) U[k * 4 + 3] = 0;   // (a row past the count is no eye)
-    const o = FOG_EYES * 8; U[o] = count; U[o + 1] = 1; U[o + 2] = F!.topPad; U[o + 3] = Math.max(0, F!.edge); U[o + 4] = F!.softIn; U[o + 5] = F!.softOut; U[o + 6] = F!.nearSoft; U[o + 7] = F!.air ? 1 : 0;
-    this.device.queue.writeBuffer(this.ubuf, 0, U); this.device.queue.writeBuffer(this.buf, SIGHT_HEAD, U);
+    const o = FOG_EYES * 8; U[o] = count; U[o + 1] = 1; U[o + 2] = F!.topPad; U[o + 3] = Math.max(0, F!.edge); U[o + 4] = F!.softIn; U[o + 5] = F!.softOut; U[o + 6] = F!.nearSoft; U[o + 7] = (F!.air ? 1 : 0) + (thin ? 2 : 0);   // (one whole number, two bits: common.wgsl fogSmokeOn / fogThinOn)
+    this.uwords.set(F!.thinBits, SIGHT_FLOATS_BYTES / 4);
+    this.device.queue.writeBuffer(this.ubuf, 0, U, 0, SIGHT_FLOATS_BYTES / 4); this.device.queue.writeBuffer(this.buf, SIGHT_HEAD, U);   // (this pass's own block is the floats alone: fogsight.wgsl SightU)
+    if (this.stand && thin) { const T = F!.thinBits, was = this.standBits; let same = !!was; if (was) for (let i = 0; i < T.length; i++) if (T[i] !== was[i]) { same = false; break; }
+      if (!same) { this.device.queue.writeBuffer(this.stand, SIGHT_HEAD + SIGHT_FLOATS_BYTES, T); (this.standBits ??= new Uint32Array(T.length)).set(T); } }
     const p = enc.beginComputePass({ label: 'fogSight' });
     p.setPipeline(this.pipe); p.setBindGroup(0, sceneBGPlain); p.setBindGroup(1, this.bg); p.dispatchWorkgroups(FOG_BINS / 64, FOG_EYES); p.end();
     this.live = true; this.dispatched++;

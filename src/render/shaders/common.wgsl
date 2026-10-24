@@ -125,7 +125,8 @@ struct FogSightT {            // THE FOG OF WAR'S SIGHT TABLE (render/fogofwar.t
   eyes: array<vec4f, 5>,      // FowU's head (shaders/fogofwar.wgsl), field for field: the eye and its man, …
   looks: array<vec4f, 5>,     // … where he looks, his cone and near field
   cfg: vec4f,                 // x = eyes, y = 1 while this frame's table is written (0: no table — every spot answers 'seen'), z = topPad (m), w = the fog's soft edge: its band (m; 0 = the hard line — shaders/fogofwar.wgsl fowEdge, the fog pass alone reads it)
-  soft: vec4f,                // xyz = the cone's soft edges, as FowU.soft · w = 1 while smoke and dust are drawn under the fog too (fogSmoke below; 0 = cut there, as it was)
+  soft: vec4f,                // xyz = the cone's soft edges, as FowU.soft · w = one whole number, two bits: 1 = smoke and dust are drawn under the fog too (fogSmokeOn below; 0 = cut there, as it was), 2 = thin things that stand free do not stop a fog eye (fogThinOn)
+  thin: array<vec4u, 32>,     // WHICH statics are thin and free (game/fogofwar.ts FOG.thin; scene/thin.ts): a bit a box index, 4096 boxes (fogThinBox below). In the buffer the sight table's own pass reads here too (the stand-in: render/fogofwar.ts FogSight.stand)
 };
 @group(0) @binding(11) var<uniform> fogSight: FogSightT;   // (a UNIFORM, 41 KB: the fragment stage's sampled textures are all spoken for — passes.ts lComp)
 // binding 12 — the per-light reach rows (render/reach.ts, lights.ts reachBuf) — is declared by the scene prelude (frame.ts scenePrelude) as either a read-only
@@ -414,6 +415,16 @@ const CAPSULE_HIT: i32 = 0x7ffffff0;   // Hit.idx of a character-proxy hit (a ro
 fn capsuleOwner(c: Capsule) -> u32 { return c.misc & 0xffu; }
 /** `skip` packs up to two character ids (bits 0-7: usually the receiving pixel's owner; bits 8-15: the light's owner) whose boxes / proxies a ray ignores. */
 fn skipsOwner(owner: u32, skip: u32) -> bool { return owner != 0u && (owner == (skip & 0xffu) || owner == ((skip >> 8u) & 0xffu)); }
+// THIN THINGS THAT STAND FREE DO NOT CUT THE FOG'S SIGHT (game/fogofwar.ts FOG.thin). While a FOG EYE's ray is walked (fogEyeThin raised by the fog's own
+// callers and put back: fogSeenAt below, shaders/fogofwar.wgsl main / pre, shaders/fogsight.wgsl) a box the ray MEETS is passed when somebody carries it (any
+// owner: another man's gun, a tracer's streak — the squad's own lines never met those) or when the level marked it thin and free (its bit in fogSight.thin:
+// a stovepipe, a window's bar, a lone post — never a door's jamb). Asked only of a box already hit, so a shadow ray pays one false bool per hit.
+var<private> fogEyeThin: bool = false;
+fn fogThinBox(b: BoxGeo, bi: u32) -> bool {
+  if (!fogEyeThin) { return false; }
+  if (boxOwner(b) != 0u) { return true; }
+  return bi < 4096u && ((fogSight.thin[bi >> 7u][(bi >> 5u) & 3u] >> (bi & 31u)) & 1u) != 0u;
+}
 fn capsuleAlbedo(c: Capsule) -> vec3f { let p = c.misc >> 8u; return vec3f(f32((p >> 11u) & 31u) / 31.0, f32((p >> 5u) & 63u) / 63.0, f32(p & 31u) / 31.0); }
 
 fn raySphere(ro: vec3f, rd: vec3f, ce: vec3f, ra: f32, tmax: f32) -> bool {
@@ -988,7 +999,7 @@ fn occludedTBoxes(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32, tCap: f32) 
       let b = boxGeo[bi];
       if (skipsOwner(boxOwner(b), skipOwner)) { continue; }
       let r = isectBox(ro, rd, b, tmax, bi, invRd, axisFast);
-      if (r.x >= 0.0 && (bestInCell < 0.0 || r.x < bestInCell)) { bestInCell = r.x; }
+      if (r.x >= 0.0 && (bestInCell < 0.0 || r.x < bestInCell) && !fogThinBox(b, bi)) { bestInCell = r.x; }
     }
     if (bestInCell >= 0.0) { return bestInCell; }
     if (tNext.x < tNext.y) { tCell = tNext.x; tNext.x += tDelta.x; cell.x += stp.x; tBack = tDelta.x * slack; }
@@ -1043,6 +1054,9 @@ fn fogEyeSay(k: i32, e: vec4f, q: vec2f, pad: f32) -> vec4f {
 /// that far, or neither) that is the answer, and only where they differ — a sight edge, a wall seen along its length — is the fog pass's own ray walked. So the
 /// light a class cuts ends on the line the fog is drawn to. 1 while no table is written (the fog is not drawn either). Compute and fragment stages (the walk
 /// reads the grid); the vertex stage has fogSeenBins.
+/// the head's last float, a whole number of two bits (render/fogofwar.ts FogSight.encode): the air's, and thin things' (only over a table written this frame)
+fn fogSmokeOn() -> bool { return (u32(fogSight.soft.w + 0.5) & 1u) != 0u; }
+fn fogThinOn() -> bool { return fogSight.cfg.y == 1.0 && (u32(fogSight.soft.w + 0.5) & 2u) != 0u; }
 fn fogSeenAt(P: vec3f, N: vec3f) -> f32 {
   if (all(P == fogSeenKeyP) && all(N == fogSeenKeyN)) { return fogSeenVal; }
   fogSeenKeyP = P; fogSeenKeyN = N; fogSeenVal = 1.0;
@@ -1050,6 +1064,7 @@ fn fogSeenAt(P: vec3f, N: vec3f) -> f32 {
   if (cfg.y != 1.0) { return 1.0; }
   let q = vec2f(P.x + N.x * 0.06, P.z + N.z * 0.06);
   var best = 0.0;
+  let thinWas = fogEyeThin; fogEyeThin = fogThinOn();   // (FOG.thin: the walks below are fog eyes' — put back before this returns)
   for (var k = 0; k < i32(cfg.x); k++) {
     let e = fogSight.eyes[k]; if (e.w < 0.5) { continue; }
     let top = N.y > 0.5 && P.y > e.y - 0.05;
@@ -1060,6 +1075,7 @@ fn fogSeenAt(P: vec3f, N: vec3f) -> f32 {
     if (say.z != say.w) { let to = q - e.xz; clear = occludedTBoxes(e.xyz, vec3f(to.x, 0.0, to.y) / max(length(to), 1e-6), say.y, u32(e.w + 0.5), -1.0) < 0.0; }
     if (clear) { best = say.x; if (best >= 1.0) { break; } }
   }
+  fogEyeThin = thinWas;
   fogSeenVal = best;
   return best;
 }
@@ -1077,11 +1093,11 @@ fn fogSeenBins(P: vec3f) -> f32 {
   return best;
 }
 /// what is left of light `li` at the spot P under the fog's light classes: 1 for a light with no fog bit (every light while the rule is off)
-// (the picture's own march of the smoke — volumetrics.wgsl — takes a plume's density through this. soft.w = 1, as the page has it: the air is the place
+// (the picture's own march of the smoke — volumetrics.wgsl — takes a plume's density through this. fogSmokeOn(), as the page has it: the air is the place
 // — game/fogofwar.ts FOG.air — and a plume is drawn wherever it stands; the fog pass then dims each pixel by the SURFACE behind it, so a plume over unseen
-// floor is dimmed where the ground behind it on the screen is unseen and not where that ground is seen. soft.w = 0: smoke over floor nobody on the team
+// floor is dimmed where the ground behind it on the screen is unseen and not where that ground is seen. Off: smoke over floor nobody on the team
 // sees is not in the picture, as it was. Shadow rays and the game's readings take the smoke as it is either way.)
-fn fogSmoke(dens: f32, X: vec3f) -> f32 { if (dens <= 0.002 || fogSight.soft.w > 0.5) { return dens; } return dens * fogSeenAt(X, vec3f(0.0)); }
+fn fogSmoke(dens: f32, X: vec3f) -> f32 { if (dens <= 0.002 || fogSmokeOn()) { return dens; } return dens * fogSeenAt(X, vec3f(0.0)); }
 fn lightFogK(li: Light, P: vec3f, N: vec3f) -> f32 {
   let fc = li.kind & (LIGHT_FOG_SEEN | LIGHT_FOG_UNSEEN);
   if (fc == 0u) { return 1.0; }

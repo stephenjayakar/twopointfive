@@ -178,7 +178,10 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   'CROUCHRUN', 'SAMLOOK',
   // …and their poses' numbers (character.ts): DASH's stride sets the crouch cycle's cadence and so when a footfall is filed, WATCH's turn and lean move the
   // head and chest joints the eyes that look for him read. The sneak lab moves both, so a recording carries them
-  'DASH', 'WATCH'];
+  'DASH', 'WATCH',
+  // a wall hold counts as sneaking once his back has been on it a beat (unseen.ts UNSEEN.wallBeat): when the squad drops into its sneak, so a recording made with it on
+  // replays its squad loud through a brushed wall, and one from before the table was carried sneaks from the hold's first step
+  'UNSEEN'];
 import { GUNWALL } from './gunwall';
 import { CLOSE } from './close';
 import { PLAN } from './floorplan';

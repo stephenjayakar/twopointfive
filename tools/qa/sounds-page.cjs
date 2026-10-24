@@ -68,8 +68,9 @@ const check = (ok, what, got) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${
   check(kept.lit === 'before' && kept.voted && kept.note === 'the old one had more body', 'after a reload the row shows its vote and its note', kept);
   // the new takes: each of the fourteen sounds marked a toy carries 'new 1' (and more) beside before and after; each plays, and each can be voted for
   const TOYS = ['rifleSuppressed', 'magOut', 'magIn', 'rack', 'footHard', 'doorBang', 'doorLatch', 'doorRattle', 'stairDoor', 'chokeLimp', 'lightBreak', 'wallDebris', 'murmur', 'heldProtest'];
-  // (10-13) the four he flagged have one take each; his three picks are the game's voices now and their buttons are gone
-  const WITH = [...TOYS, 'propScrape', 'propThud', 'lockBreak', 'magDrop', 'grabCatch', 'gunStrip', 'gunDown'], PICKED = [['footHard', 'new 1'], ['magIn', 'new 2'], ['rack', 'new 2']];
+  // (10-13) the four he flagged have one take each; his three picks are the game's voices now and their buttons are gone — and so, since 10-24, are the
+  // grab's catch 'new 1' and strip 'new 2'
+  const WITH = [...TOYS, 'propScrape', 'propThud', 'lockBreak', 'magDrop', 'grabCatch', 'gunStrip', 'gunDown'], PICKED = [['footHard', 'new 1'], ['magIn', 'new 2'], ['rack', 'new 2'], ['grabCatch', 'new 1'], ['gunStrip', 'new 2']];
   const takes = await page.evaluate(async ({ TOYS, WITH, PICKED }) => { const S = window.__sounds, wait = ms => new Promise(r => setTimeout(r, ms)), rows = S.rows(), row = i => document.querySelectorAll('.row')[i];
     const none = [], dumb = []; let buttons = 0; const e0 = S.errors.length;
     for (const n of WITH) { const i = rows.indexOf(n), bs = i < 0 ? [] : [...row(i).querySelectorAll('.also .altb')]; if (!bs.length || bs.length !== S.takes(i)) none.push(n);
@@ -81,7 +82,7 @@ const check = (ok, what, got) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${
     S.vote(j, 'new 2'); S.vote(k, 'new 1'); const text = S.marks(), kept = (S.mark(k)?.pick ?? null) === k0, status = parseInt(document.getElementById('marks').textContent) - n0;
     S.vote(i, 'new 1'); S.vote(j, 'new 2');
     return { none, dumb, buttons, others, gone, click, lit, text, kept, status, errors: S.errors.slice(e0), keptPicks: S.picks(j) }; }, { TOYS, WITH, PICKED });
-  check(!takes.none.length && !takes.dumb.length && takes.buttons >= 18 && !takes.others && takes.gone === 3 && !takes.errors.length, `each of the fourteen toys, the four flagged and the grab's three beats has a new take that plays, his three picks are offered no more (${takes.buttons} buttons)`, takes);
+  check(!takes.none.length && !takes.dumb.length && takes.buttons >= 18 && !takes.others && takes.gone === PICKED.length && !takes.errors.length, `each of the fourteen toys, the four flagged and the grab's three beats has a new take that plays, his five picks are offered no more (${takes.buttons} buttons)`, takes);
   check(takes.click === 'new 1' && takes.lit === 'new 1' && takes.text.includes('better new 1: magOut') && takes.text.includes('better new 2: wallDebris') && takes.kept && takes.status === 2, 'a new take takes the vote and comes out in the marks text; a row without one refuses it', takes);
   const cleared = await page.evaluate(() => { const S = window.__sounds; S.rows().forEach((_, i) => { const m = S.mark(i); if (!m) return; const { toy, pick, note } = m; if (toy) S.toy(i); if (pick) S.vote(i, pick); if (note) S.note(i, ''); }); return [S.marks(), localStorage.getItem('twopointsix.sounds.marks'), document.querySelectorAll('.row.toy, .row.voted, .vote button[aria-pressed="true"]').length]; });
   check(cleared[0] === 'nothing marked' && cleared[1] === '{}' && cleared[2] === 0, 'un-marking clears them', cleared);

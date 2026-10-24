@@ -289,7 +289,9 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   //#H if (depth >= 1.0) { return; }                              // the sky: hdr holds it already (the copy was made from hdr)
   let P = worldFromDepth(vec2f(p) + 0.5, depth);
   let N = normalize(textureLoad(fowNormal, p, 0).xyz * 2.0 - 1.0);
+  fogEyeThin = fogThinOn();   // (FOG.thin: every ray fowSeen walks is a fog eye's; nothing after it in this pass meets a thin box as anything else)
   let seen = fowSeen(P, N);
+  fogEyeThin = false;
   //#C if (true) { textureStore(fowOut, p, fowCount); return; }
   if (seen >= 1.0) { textureStore(fowOut, p, c); return; }   //#OLD
   //#H if (seen >= 1.0) { return; }                               // seen: likewise
@@ -329,7 +331,7 @@ const FOW_WALK_WHOLE: bool = GRID_W + GRID_H <= 96;   // the walk's 96-cell cap 
 /// (its footprint is not its yaw's) and anything the eye's own man carries (the walk skips those in the grid). false = no answer: the caller walks.
 fn fowHintBox(bi: u32, e: vec3f, rd: vec3f, tmax: f32, invRd: vec3f, axisFast: bool, owner: u32) -> bool {
   var b = boxGeo[bi];
-  if ((b.flags & BOX_ROT) != 0u || skipsOwner(boxOwner(b), owner)) { return false; }
+  if ((b.flags & BOX_ROT) != 0u || skipsOwner(boxOwner(b), owner) || fogThinBox(b, bi)) { return false; }   // (… nor one a fog eye passes: FOG.thin)
   let s = scene.grid.x + 0.001;
   if (b.h.x <= s || b.h.z <= s) { return false; }
   b.h = vec3f(b.h.x - s, b.h.y, b.h.z - s);
@@ -402,7 +404,7 @@ fn fowWalk(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32) -> vec2f {
       if (skipsOwner(boxOwner(b), skipOwner)) { continue; }
       //#C fowCount.z += 1.0;
       let r = isectBox(ro, rd, b, tmax, bi, invRd, axisFast);
-      if (r.x >= 0.0 && (bestInCell < 0.0 || r.x < bestInCell)) { bestInCell = r.x; bestBox = f32(bi) + 1.0; }
+      if (r.x >= 0.0 && (bestInCell < 0.0 || r.x < bestInCell) && !fogThinBox(b, bi)) { bestInCell = r.x; bestBox = f32(bi) + 1.0; }
     }
     if (bestInCell >= 0.0) { return vec2f(bestInCell, bestBox); }
     if (tNext.x < tNext.y) { tCell = tNext.x; tNext.x += tDelta.x; cell.x += stp.x; tBack = tDelta.x * slack; }
@@ -422,6 +424,7 @@ fn pre(@builtin(global_invocation_id) gid: vec3u) {
   var h = 0u;
   if (e.w >= 0.5) {
     let a = (f32(gid.x) + 0.5) / f32(FOW_BINS) * FOW_TAU - 0.5 * FOW_TAU;   // the bin's own bearing (fowHintBlocked's map, the other way)
+    fogEyeThin = fogThinOn();   // (FOG.thin: the table names the box a fog eye's ray would meet)
     let r = fowWalk(e.xyz, vec3f(cos(a), 0.0, sin(a)), 1e9, u32(e.w + 0.5));
     if (r.y > 0.5 && r.y < 65535.5) { h = u32(r.y) | (min(u32(r.x * 100.0), 0xffffu) << 16u); }   // (a box past the 16 bits is simply not named: the walk is taken)
   }

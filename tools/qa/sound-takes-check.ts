@@ -34,16 +34,16 @@ const shipped = gameSfx(sfxContext(SR)) as Record<string, SfxBuffer>; const ship
 const TOYS = ['rifleSuppressed', 'magOut', 'magIn', 'rack', 'footHard', 'doorBang', 'doorLatch', 'doorRattle', 'stairDoor', 'chokeLimp', 'lightBreak', 'wallDebris', 'murmur', 'heldProtest'];
 /** the four he flagged on 10-13 (redone in the game's table): one other take each, to hear beside the redone voice */
 const FLAGGED = ['propScrape', 'propThud', 'lockBreak', 'magDrop'];
-/** his picks of 10-13, as [name, place in its list]: moved into the game's table, their places kept so 'new 2' stays 'new 2' */
-const PICKS: [string, number][] = [['footHard', 0], ['magIn', 1], ['rack', 1]];
-/** the grab's three beats (new voices, nobody has heard one): two other ideas of each to choose from */
+/** his picks of 10-13 and, for the grab's catch and strip, of 10-24, as [name, place in its list]: moved into the game's table, their places kept so 'new 2' stays 'new 2' */
+const PICKS: [string, number][] = [['footHard', 0], ['magIn', 1], ['rack', 1], ['grabCatch', 0], ['gunStrip', 1]];
+/** the grab's three beats: two other ideas of each, written blind; he chose by ear on 10-24 (PICKS above) and the takes he passed over are still offered */
 const GRAB = ['grabCatch', 'gunStrip', 'gunDown'];
 const WITH = [...TOYS, ...FLAGGED, ...GRAB];
 const asked = process.argv.slice(2), names = asked.length ? asked : WITH;
 line(WITH.every(n => altTakes(n) >= 1) && GRAB.every(n => altTakes(n) === 2) && altNames().every(n => WITH.includes(n)) && altTakes('pistolLoud') === 0, `his fourteen toys and the four he flagged have another take, the grab's three beats have two each, and no other voice has (${altNames().length} voices)`);
 { const got: string[] = []; for (const n of WITH) for (let k = 0; k < altTakes(n); k++) if (altPicked(n, k)) got.push(`${n} new ${k + 1}`);
   const want = PICKS.map(([n, k]) => `${n} new ${k + 1}`);
-  line(got.slice().sort().join() === want.sort().join() && PICKS.every(([n, k]) => altTake(ctx, n, k) === null), `his three picks keep their places and are offered no more: ${got.join(', ') || 'none'}`); }
+  line(got.slice().sort().join() === want.sort().join() && PICKS.every(([n, k]) => altTake(ctx, n, k) === null), `his five picks keep their places and are offered no more: ${got.join(', ') || 'none'}`); }
 
 for (const name of names) {
   console.log(`  ${name}`);

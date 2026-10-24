@@ -11,6 +11,7 @@ import type { GameAudioLike } from '../game/audio_iface';
 import { buildLevel } from '../scene/level';
 import { UNDERFOOT } from '../scene/collision';
 import { ROUND, roundLevel } from '../scene/round';
+import { thinClear, thinLevel } from '../scene/thin';
 import { lightFromDef } from '../render/lights';
 import { loadGltfCharacter } from '../anim/gltf';
 import { Game } from '../game/game';
@@ -198,7 +199,9 @@ export function nullSmoke(): SmokeSystemLike & { params?: Record<string, unknown
 
 /** the level's statics into the host's box world and its lights into the light set — the two loops main.ts and headless.ts ran before `new Game` */
 export function populateHost(host: HostApi, level: Level): void {
+  thinClear(level.boxes);   // (a level stood up a second time: last time's thin marks off before the round things are looked for)
   roundLevel(level.boxes, ROUND.on, level.markTexel);   // ROUND THINGS (scene/round.ts): the kit's octagons as one round box each, or every box put back as its file has it — before a box goes to the world and before the Game's collision is built from the list
+  thinLevel(level.boxes, level.doors);   // THIN THINGS THAT STAND FREE (scene/thin.ts): marked for the fog of war's own eyes (FOG.thin), on the list as it now is
   for (const b of level.boxes) host.world.addStatic(b);
   for (const ld of level.lights) host.lights.add(lightFromDef(ld));
 }
@@ -262,6 +265,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_FOGEDGE')) FOG.edge = String((globalThis as any).process?.env?.TPS_FOGEDGE ?? '') === '1' ? FOG_EDGE_ON : 0;   // the fog's soft edge (src/game/fogofwar.ts FOG.edge; the picture only): off, so the fog block handed to the renderer is the one every stored frame was drawn with
     if (pinned('TPS_FOGAIR')) FOG.air = String((globalThis as any).process?.env?.TPS_FOGAIR ?? '') === '1';   // smoke and dust drawn under the fog too (src/game/fogofwar.ts FOG.air; the picture only): off, so the fog block handed to the renderer is the one every stored frame was drawn with
     if (pinned('TPS_FOGOURS')) FOG.ours = String((globalThis as any).process?.env?.TPS_FOGOURS ?? '') === '1';   // what the team does is always shown (src/game/fogofwar.ts FOG.ours; the picture only): off, so every light's class and the list of loose boxes handed to the renderer are the ones every stored frame was drawn with
+    if (pinned('TPS_FOGTHIN')) FOG.thin = String((globalThis as any).process?.env?.TPS_FOGTHIN ?? '') === '1';   // thin things that stand free do not cut the fog's sight (src/game/fogofwar.ts FOG.thin: what the squad's eyes have and the picture's): off, so every stored run and frame has the sight it was recorded with
     if (pinned('TPS_FOGCOLOUR')) FOG.desat = String((globalThis as any).process?.env?.TPS_FOGCOLOUR ?? '') === '1' ? 0 : FOG_DESAT_WAS;   // the fog keeps its colour (src/game/fogofwar.ts FOG.desat 0; the picture only): greyed as it was, so the fog block handed to the renderer is the one every stored frame was drawn with
     if (pinned('TPS_SQUADDOORS')) FOG.squadDoors = String((globalThis as any).process?.env?.TPS_SQUADDOORS ?? '') === '1';   // a door the squad works is seen (src/game/fogofwar.ts doorSeen): off, so a leaf out of the eyes' sight is drawn — and met by the cursor's ray — where every stored run had it
     if (pinned('TPS_SQUADFIRE')) FOG.squadFire = String((globalThis as any).process?.env?.TPS_SQUADFIRE ?? '') === '1';   // a man the squad is shooting at is in the picture (src/game/fogofwar.ts firedOn): off, so the reticle takes only the men every stored run had in the picture
@@ -402,6 +406,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_SAMEWAY')) ORDERS.sameWay = String((globalThis as any).process?.env?.TPS_SAMEWAY ?? '') === '1';   // a pair goes round a building by one side (src/game/orders.ts sameWays): off, so every frozen probe's men walk each his own short way as they did; TPS_SAMEWAY=1 raises it
     if (pinned('TPS_TRAILDOORS')) ORDERS.trailDoors = String((globalThis as any).process?.env?.TPS_TRAILDOORS ?? '') === '1';   // a follower goes by the doors Sam took (src/game/orders.ts trailWay): off, so every frozen probe's followers walk each his own short way as they did; TPS_TRAILDOORS=1 raises it
     if (pinned('TPS_COVERKEEP')) ROOMFIGHT.coverKeep = String((globalThis as any).process?.env?.TPS_COVERKEEP ?? '') === '1';   // a man told to cover keeps his angle (src/game/roomfight.ts)
+    if (pinned('TPS_DOORSHOTS')) ROOMFIGHT.doorShots = String((globalThis as any).process?.env?.TPS_DOORSHOTS ?? '') === '1';   // rounds through a doorway keep his gun on it (src/game/roomfight.ts)
     if (pinned('TPS_PAIRSTEADY')) PAIR.steady = String((globalThis as any).process?.env?.TPS_PAIRSTEADY ?? '') === '1';   // a partner on his way to a man does not turn about (src/game/pairorders.ts takeTick): off, so every frozen pair probe's partner walks and waits as he did; TPS_PAIRSTEADY=1 raises it
     if (pinned('TPS_ROUNDCAP')) ORDERS.roundCap = String((globalThis as any).process?.env?.TPS_ROUNDCAP ?? '') === '1' ? ROUND_CAP : 0;   // the way round an uncleared room only when it is worth it (src/game/orders.ts ORDERS.roundCap): 0, so every frozen probe's men walk the ways round they walked; TPS_ROUNDCAP=1 raises it to the page's value
     if (pinned('TPS_REARREAD')) COVER.rearRead = String((globalThis as any).process?.env?.TPS_REARREAD ?? '') === '1';   // a rear man on a door-less mark reads the ground for what to watch (src/game/cover.ts readRear): off, his rear is the way he came, as every frozen digest was recorded
@@ -516,6 +521,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_CAMMARK')) STICKY.mark = String((globalThis as any).process?.env?.TPS_CAMMARK ?? '') === '1';   // his own stuck cameras shown in the fog of war (stickycam.ts stickyMarks): off, so a camera on floor nobody sees is not in the picture
     if (pinned('TPS_WORKTHINGS')) WORK.on = String((globalThis as any).process?.env?.TPS_WORKTHINGS ?? '') === '1';   // a teammate works a thing (src/game/workthings.ts): off, so the menu on the breaker is the floor's and lighting.ts deals the breaker errand as every frozen probe read it; `TPS_WORKTHINGS=1` turns it on
     if (pinned('TPS_UNSEEN')) UNSEEN.on = String((globalThis as any).process?.env?.TPS_UNSEEN ?? '') === '1';   // a squad nobody has found sneaks when Sam sneaks (src/game/unseen.ts): off, so teammates beside a crouched, slow or wall-hugging Sam stand, walk and shoot as in every frozen probe and digest; `TPS_UNSEEN=1` runs any tool with it on, tools/qa/unseen-probes.ts raises it itself
+    if (pinned('TPS_WALLBEAT')) UNSEEN.wallBeat = String((globalThis as any).process?.env?.TPS_WALLBEAT ?? '') === '1';   // a wall hold counts as sneaking after a beat (src/game/unseen.ts)
     if (pinned('TPS_HOLDFIRE')) HOLDFIRE.on = String((globalThis as any).process?.env?.TPS_HOLDFIRE ?? '') === '1';   // an unfound squad never fires first (src/game/holdfire.ts): off, so a loud teammate shoots the first man he has a line to, as in every frozen probe, tally and digest; `TPS_HOLDFIRE=1` runs any tool with it on, tools/qa/holdfire-check.ts raises it itself
     if (pinned('TPS_SILENTSET')) SILENT.stackSet = String((globalThis as any).process?.env?.TPS_SILENTSET ?? '') === '1';   // a silent man held on a man, on his stack mark, is stacked (src/game/silent.ts silentOnMan): off, so a silent stack beside unaware men reads 'stacking' and never says 'set.', as in every frozen probe; `TPS_SILENTSET=1` runs any tool with it on, `probes.ts silent-set` raises it itself
     if (pinned('TPS_STACKROOM')) STACKROOM.on = String((globalThis as any).process?.env?.TPS_STACKROOM ?? '') === '1';   // a door stack keeps every man inside the room (src/game/stackroom.ts): off, so every door order deals the marks every frozen probe and digest was recorded on; `TPS_STACKROOM=1` turns it on (the shipped default)
