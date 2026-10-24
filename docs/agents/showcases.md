@@ -52,7 +52,7 @@ its scene, plays three real floors instead (docs/agents/qa.md 'THE BENCHMARK'). 
   `c.wait / frames / until / on / done / all / any`, flows with `start / cancel / signal / flag / note / finish`, reads ONLY `c.query` (t, escalation, unit alive / arrived / state /
   room / pos, door, groupOn, inside, plan data, flag — never Guard fields) and `c.rand()` (its own mulberry32), commands `spawn` (= spawnUnit) / `order` (= squad.ts) / `release` /
   `drill.breach` (= BreachDrill) / `drill.clear` (= RoomClear) / `drill.hold` / `drill.exchange` / `say` / `radio` / `control` / `lights.*` / `doors.*` / `stimulus.charge|burst`
-  (a CAUSE: an item on its fuse, real fireWeapon rounds) / `objective`; ONLY in `showcase: true` programs `stage / puppet / press / click / camera.pin|release / caption / chapters /
+  (a CAUSE: an item on its fuse, real fireWeapon rounds; `charge`'s `toss: true` = the thrower plays the animator's quick toss, off = a still hand as before the word) / `objective`; ONLY in `showcase: true` programs `stage / puppet / press / click / camera.pin|release / caption / chapters /
   fade / variant / shift` (`scanShowcaseVerbs` = a lint error in a play program, and they throw at run time). `director.start(name)` is synchronous (a showcase: flags saved, quiet
   + touring + god + invisible, aftermath cleared, doors reset, input locked to P); `stop()` / `c.finish()` tear down (cast despawned, night back, `restartEncounter` under the veil,
   camera and flags restored; play programs hand their units to the AI). A throwing beat is `failed`, logged with its step, its men released (`strict` — headless.ts — rethrows).
