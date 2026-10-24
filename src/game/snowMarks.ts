@@ -13,7 +13,7 @@
 // weight and how fast it is shoved; a thrown thing's and a chunk's by how fast it came down and how big it is. Harder = it forms faster, throws its lumps
 // further and kicks more loose snow up. Only where snow lies (the field's cover, as a boot's print), only on the ground (not a thing lying on a desk or a roof).
 //
-// NOTHING LIVE SHOWS IN THE FOG (fogofwar.ts rule 4d; a boot's print keeps the same rule, snowTracks.ts updateSnowTracks): a thing on floor the team does not
+// NOTHING LIVE SHOWS IN THE FOG (fogofwar.ts rule 4d; a boot's print is kept off the map and found later — snowTracks.ts FOG.tracks — which these are not): a thing on floor the team does not
 // see marks nothing while it is there — a furrow growing across unseen ground is the chair somebody over there just knocked. It is not caught up afterwards.
 import { SideMap, rollbackVar } from '../math/side';
 import type { Game } from './game';

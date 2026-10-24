@@ -125,7 +125,7 @@ export async function snowTracksCheck(o: { verbose?: boolean; fast?: boolean } =
           ST.updateSnowTracks(G as any, T, F, DT); const early = T.hollows - h0;
           for (let i = 0; i < 60; i++) ST.updateSnowTracks(G as any, T, F, DT); const once = T.hollows; for (let i = 0; i < 60; i++) ST.updateSnowTracks(G as any, T, F, DT);
           const body = near(T, [[hx, hz]], 1.2) - b0, fog = near(T, [[fx, fz]], 1.2) - f0;
-          verdict(early === 0 && once === h0 + 1 && T.hollows === once && body > 250 && fog === 0, 'fog — a man lying in view leaves his hollow once he has come to rest, once; a man the fog hides presses nothing',
+          verdict(early === 0 && once === h0 + 1 && T.hollows === once && body > 250 && fog === 0, 'fog — a man lying in view leaves his hollow once he has come to rest, once; a man the fog hides presses nothing (the fog\'s stand-in here has no fog up, so this is the rule with FOG.tracks off; with it his marks are kept and found: probes.ts fog-tracks)',
             `a man down at (${hx}, ${hz}): ${early} hollows on the first frame, ${once - h0} after a second, ${body} texels pressed (a trunk and two legs: some ${Math.round((0.62 * 0.38 + 2 * 0.8 * 0.21) * R * R)}), none again in the next second: ${T.hollows === once} · one down in the fog at (${fx}, ${fz}): ${fog} texels`); }
         // ---- restart
         { const had = pressed(T), pr = T.prints; A.up.length = 0; g.resetLevelState(); const left = pressed(T); W.step(DT);

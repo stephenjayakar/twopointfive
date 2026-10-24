@@ -252,6 +252,13 @@ export const FOG = {
    *  what the cursor's ray meets, as before the save), so it is no row of the replay page's look. ON in the page since 10-24 (?fogfiled=0 puts it off; the
    *  frozen stand pins it off — src/host/standup.ts, `TPS_FOGFILED=1`) */
   filed: true,
+  /** A MAN NOBODY SEES LEAVES HIS TRACKS (principle 3 on snow; the maintainer, 10-23: 'I won't see tracks forming in fog of war, right? but if an enemy off
+   *  screen makes tracks and then I see snow, I'll see the tracks?'). true = what a hidden man presses into lying snow (boot prints, the hollow he falls in) is
+   *  kept off the prints' map and is there, whole, when the team next sees that snow after having had it out of sight — never shown forming, no snow kicked up
+   *  (snowTracks.ts SnowTracks.unseen, by half-metre square; snow the team is LOOKING at while a man it cannot see crosses it stays clean until they look away
+   *  and back: his steps one by one would be him). false = a hidden man presses nothing at all, as it was: a guard who crossed a yard unseen left it clean. The picture only. ON in the
+   *  page since 10-24 (?fogtracks=0 puts it off; the frozen stand pins it off — src/host/standup.ts, `TPS_FOGTRACKS=1`). Never seen on a GPU */
+  tracks: true,
   /** WHAT THE TEAM DOES IS ALWAYS SHOWN (the picture — and, with it, what the cursor's ray meets: the boxes handed to the renderer; under `full` alone; the maintainer, of the tutorial's wall charge: 'still can't see the wall shot detonate' — the
    *  fog was taken off that mission for it): the flash of a blast one of the team set or threw lights the fog's picture too (lights.ts RtLight.fogBy: its
    *  class is the doer's, as a carried light's is its carrier's), the streak of a teammate's round is drawn its whole length, the rubble the team throws is drawn
@@ -321,7 +328,7 @@ export function fogEyeCount(v: number): number { return Number.isNaN(v) ? FOG_EY
 /** ?fogown / ?fogown=0 · ?fogcalls=0 — the two options for a visit, over the kept rows (the Game's constructor, right after teamfeel.ts has read those back;
  *  no page — the harness — nothing) */
 export function fogFlags() { try { const q = new URLSearchParams(location.search); if (q.has('fogown')) FOG.own = q.get('fogown') !== '0'; if (q.has('fogcalls')) FOG.calls = q.get('fogcalls') !== '0';
-  if (q.has('fogflat')) { const v = parseFloat(q.get('fogflat') ?? ''); FOG.flat = Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : FOG_FLAT_ON; } if (q.has('foglit')) { const v = parseFloat(q.get('foglit') ?? ''); FOG.lit = Number.isFinite(v) ? Math.min(4, Math.max(0, v)) : FOG_LIT_ON; } if (q.has('fogfull')) FOG.full = q.get('fogfull') !== '0'; if (q.has('fogair')) FOG.air = q.get('fogair') !== '0'; if (q.has('fogours')) FOG.ours = q.get('fogours') !== '0'; if (q.has('fogthin')) FOG.thin = q.get('fogthin') !== '0'; if (q.has('fogkept')) FOG.kept = q.get('fogkept') !== '0'; if (q.has('fogfiled')) FOG.filed = q.get('fogfiled') !== '0'; if (q.has('fogeyes')) { const v = parseInt(q.get('fogeyes') ?? '', 10); FOG.eyes = v === 0 ? FOG_EYES_WAS : !Number.isFinite(v) || v === 1 ? FOG_EYES_ON : fogEyeCount(v); } if (q.has('fogdesat')) { const v = parseFloat(q.get('fogdesat') ?? ''); FOG.desat = Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : FOG_DESAT_WAS; } if (q.has('fogedge')) { const v = parseFloat(q.get('fogedge') ?? ''); FOG.edge = Number.isFinite(v) ? Math.min(1.5, Math.max(0, v)) : FOG_EDGE_ON; } if (q.has('fogthings')) FOG.things = q.get('fogthings') !== '0'; if (q.has('squaddoors')) FOG.squadDoors = q.get('squaddoors') !== '0'; if (q.has('squadfire')) FOG.squadFire = q.get('squadfire') !== '0'; if (q.has('fogdesat')) FOG_PAGE.desat = FOG.desat; if (q.has('fogedge')) FOG_PAGE.edge = FOG.edge; if (q.has('fogair')) FOG_PAGE.air = FOG.air; if (q.has('fogkept')) FOG_PAGE.kept = FOG.kept; } catch { /* no page */ } }
+  if (q.has('fogflat')) { const v = parseFloat(q.get('fogflat') ?? ''); FOG.flat = Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : FOG_FLAT_ON; } if (q.has('foglit')) { const v = parseFloat(q.get('foglit') ?? ''); FOG.lit = Number.isFinite(v) ? Math.min(4, Math.max(0, v)) : FOG_LIT_ON; } if (q.has('fogfull')) FOG.full = q.get('fogfull') !== '0'; if (q.has('fogair')) FOG.air = q.get('fogair') !== '0'; if (q.has('fogours')) FOG.ours = q.get('fogours') !== '0'; if (q.has('fogthin')) FOG.thin = q.get('fogthin') !== '0'; if (q.has('fogkept')) FOG.kept = q.get('fogkept') !== '0'; if (q.has('fogfiled')) FOG.filed = q.get('fogfiled') !== '0'; if (q.has('fogtracks')) FOG.tracks = q.get('fogtracks') !== '0'; if (q.has('fogeyes')) { const v = parseInt(q.get('fogeyes') ?? '', 10); FOG.eyes = v === 0 ? FOG_EYES_WAS : !Number.isFinite(v) || v === 1 ? FOG_EYES_ON : fogEyeCount(v); } if (q.has('fogdesat')) { const v = parseFloat(q.get('fogdesat') ?? ''); FOG.desat = Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : FOG_DESAT_WAS; } if (q.has('fogedge')) { const v = parseFloat(q.get('fogedge') ?? ''); FOG.edge = Number.isFinite(v) ? Math.min(1.5, Math.max(0, v)) : FOG_EDGE_ON; } if (q.has('fogthings')) FOG.things = q.get('fogthings') !== '0'; if (q.has('squaddoors')) FOG.squadDoors = q.get('squaddoors') !== '0'; if (q.has('squadfire')) FOG.squadFire = q.get('squadfire') !== '0'; if (q.has('fogdesat')) FOG_PAGE.desat = FOG.desat; if (q.has('fogedge')) FOG_PAGE.edge = FOG.edge; if (q.has('fogair')) FOG_PAGE.air = FOG.air; if (q.has('fogkept')) FOG_PAGE.kept = FOG.kept; } catch { /* no page */ } }
 /** THE FOG'S LOOK ON THIS PAGE (`desat`, `edge`, `air`: the picture alone — NOT `ours`: what it hands the renderer is what the cursor's ray meets, so a tape keeps its own), as the module ships it and the address words change it (fogFlags) — never what a tape's knob
  *  tables laid over FOG. THE ENGINE REPLAY SHOWS A TAPE UNDER THIS, not under the look the tape was recorded with (FogOfWar.pageLook, which it alone calls):
  *  the maintainer judged both on a replay, and a recording from before either would otherwise show the old fog for ever. The tape's own values still ride its
@@ -909,14 +916,18 @@ export class FogOfWar {
   // ---------------------------------------------------------------- 4d · nothing moves in the fog
   /** is the floor at (x, z) in the lit part of the picture: some eye has it in its field and a level line to it at the picture's own eye height — the mask's
    *  rule (shaders/fogofwar.wgsl), on the statics and leaves the CPU's sight test walks */
-  spotSeen(x: number, z: number): boolean {
-    this.thingStats.tests++;
+  spotSeen(x: number, z: number): boolean { this.thingStats.tests++; return this.groundLook(x, z) === 2; }
+  /** `spotSeen`'s walk, off the things' count, with what it found on the way: 2 = an eye has the spot (within its reach, or in its field with a clear line);
+   *  1 = in an eye's field and every such eye's line stopped; 0 = in no eye's field (no line was walked; with no cone every spot is in one). snowTracks.ts
+   *  FOG.tracks asks it for the snow a kept mark lies on. */
+  groundLook(x: number, z: number): 0 | 1 | 2 {
+    let r: 0 | 1 = 0;
     for (const e of this.eyes) {
-      const dx = x - e.at[0], dz = z - e.at[2], d = Math.hypot(dx, dz); if (d < 0.4) return true;
+      const dx = x - e.at[0], dz = z - e.at[2], d = Math.hypot(dx, dz); if (d < 0.4) return 2;
       const y = e.at[1]; if (!this.inField(e, [x, y, z])) continue;
-      const k = 1 - 0.12 / d; if (!this.sightBlocked(e.at, [e.at[0] + dx * k, y, e.at[2] + dz * k])) return true;
+      r = 1; const k = 1 - 0.12 / d; if (!this.sightBlocked(e.at, [e.at[0] + dx * k, y, e.at[2] + dz * k])) return 2;
     }
-    return false;
+    return r;
   }
   /** THE PICTURE'S LIST OF LOOSE THINGS (Game.drawCharacters, the ONE place the frame's dynamic boxes are handed to the renderer): the list itself while the fog
    *  is off or nothing is held or left out — else that list REWRITTEN, thing by thing (a keyed box, or the run of keyed parts of one prop / item): live where the team sees the floor it is on; out of sight, the

@@ -24,6 +24,7 @@ import { WORLD } from '../scene/world';
 import { snowFieldAt, type SnowField } from '../render/snowField';
 import { civiliansShown } from './civilians';
 import { SNOW_LOOK } from './weatherKinds';
+import { FOG } from './fogofwar';
 
 export const TRACK_RES = 32;     // texels per metre (a boot is ten texels long)
 /** rows of the map past the world's far edge that are not plan: the middle one's first texel carries `SNOWTRACKS.mess` to the shader (× 100; the rows either side
@@ -115,7 +116,26 @@ export interface SnowTracks {
   kicks: SnowKick[];
   /** kicks queued so far, never wound back by a restart: a kick's own number */
   kicked: number;
+  /** THE MARKS OF MEN NOBODY SAW (FOG.tracks): what a man the fog of war hides pressed, kept off the map BY THE HALF-METRE SQUARE it is in until the team sees
+   *  that square after having had it out of sight (findUnseen) — then it is there, whole, with no forming and no kicked snow: a trail found, never one seen
+   *  growing. The map's order is the look's: the square at its head is the one longest unasked. `kept` = marks held; `found` / `lost` = marks laid on being seen,
+   *  and marks dropped because their square or the whole list was full */
+  unseen: Map<number, UnseenSquare>; kept: number; found: number; lost: number;
 }
+/** a mark kept off the map: which press it is (0 a body's hollow, 1 a boot's messy print, 2 a boot's plain print), that press's own numbers, and `dark` = the
+ *  team has had its square out of sight since it was made. Only a dark mark is laid: one made on snow the team is looking at (its man behind smoke, or low
+ *  behind a crate) waits for them to look away, or each step would show as he takes it */
+interface Unseen { k: 0 | 1 | 2; a: number[]; dark: boolean }
+/** a half-metre square's kept marks, oldest first, and the ONE point they are all asked for, so they are seen or not together: where the first of them was
+ *  made (a place a boot stood — the square's middle can be inside a wall) */
+interface UnseenSquare { x: number; z: number; marks: Unseen[] }
+/** the most marks kept in one square (the oldest goes: a path walked over and over is its last few crossings) and in all (the square next in the look gives up
+ *  its oldest) · how many squares cost a sight line a tick (3 µs each with five eyes, measured headless 10-24) · about how many marks are laid a tick — a messy
+ *  print is a tenth of a millisecond to press, and a slow page runs four ticks a frame, so a long trail found at once comes in over a few frames (300 prints in
+ *  a third of a second), in about the order it was walked */
+const UNSEEN_SQUARE = 6, UNSEEN_MOST = 6000, UNSEEN_ASKS = 64, UNSEEN_LAYS = 16;
+/** a spot's half-metre square (the fog's own cell, fogofwar.ts cellSeenAt) */
+const squareOf = (x: number, z: number) => (Math.floor(x * 2) + 4096) * 16384 + Math.floor(z * 2) + 4096;
 /** what a stamp is pressed into: the map itself, or a blank sheet of its size (`stampMark`) */
 export type Stamp = Pick<SnowTracks, 'data' | 'w' | 'h' | 'dirty'>;
 /** a mark on its way into the map: `goal` = its bytes over the rectangle; `thrown` = it is the lumps a mark threw (they land `delay` s after, and settle over
@@ -147,12 +167,12 @@ rollbackVar('snowTracks.feetOf', () => feetOf, v => { feetOf = v; });
 
 export function makeSnowTracks(): SnowTracks {
   const w = Math.round(WORLD.gridW * WORLD.gridCell * TRACK_RES), h = Math.round(WORLD.gridH * WORLD.gridCell * TRACK_RES) + TRACK_PAD;
-  const T: SnowTracks = { data: new Uint8Array(w * h), w, h, dirty: null, prints: 0, hollows: 0, craters: 0, marks: 0, forming: [], kicks: [], kicked: 0, rects: [] };
+  const T: SnowTracks = { data: new Uint8Array(w * h), w, h, dirty: null, prints: 0, hollows: 0, craters: 0, marks: 0, forming: [], kicks: [], kicked: 0, rects: [], unseen: new Map(), kept: 0, found: 0, lost: 0 };
   tellMess(T); T.dirty = null; T.rects.length = 0;   // (a new map is handed over whole)
   return T;
 }
 /** a restart: the snow is unmarked again */
-export function clearSnowTracks(T: SnowTracks) { feetOf = new SideMap(); T.data.fill(0); tellMess(T); T.dirty = [0, 0, T.w - 1, T.h - 1]; T.rects.length = 0; T.rects.push([0, 0, T.w - 1, T.h - 1]); T.prints = 0; T.hollows = 0; T.craters = 0; T.marks = 0; T.forming.length = 0; T.kicks.length = 0; }
+export function clearSnowTracks(T: SnowTracks) { feetOf = new SideMap(); T.data.fill(0); tellMess(T); T.dirty = [0, 0, T.w - 1, T.h - 1]; T.rects.length = 0; T.rects.push([0, 0, T.w - 1, T.h - 1]); T.prints = 0; T.hollows = 0; T.craters = 0; T.marks = 0; T.forming.length = 0; T.kicks.length = 0; T.unseen.clear(); T.kept = 0; T.found = 0; T.lost = 0; }
 
 // ---- A MARK FORMS: the two blank sheets a mark is pressed into (one for the mark, one for what it threw), kept zero between stamps
 let sheets: [Stamp, Stamp] | null = null;
@@ -455,13 +475,51 @@ export function pressClods(T: Stamp, cx: number, cz: number, n: number, near: nu
 export function updateSnowTracks(g: Game, T: SnowTracks, field: SnowField, dt: number) {
   if (!(dt > 0)) return;
   tellMess(T);
-  // (a man the fog of war hides presses nothing while he is hidden: nothing live shows in the fog, and a trail growing across unseen ground is him)
-  const fog = g.fogOfWar;
-  pressOf(g.player.char, T, field, dt);
-  for (const gd of g.guards) if (!fog.hidden(gd)) pressOf(gd.char, T, field, dt);
-  for (const cv of civiliansShown(g)) if (!fog.hidden(cv)) pressOf(cv.char, T, field, dt);
+  // (a man the fog of war hides puts nothing on the map while he is hidden: nothing live shows in the fog, and a trail growing across unseen ground is him.
+  //  FOG.tracks: what he presses is kept off the map, and is there when the team next sees that snow; off = he presses nothing at all, as it was — and
+  //  what was kept when the row went off is dropped; the fog itself down with marks kept: they are laid, the map is the world's then)
+  const fog = g.fogOfWar, keep = FOG.tracks && fog.active === true;
+  pressOf(g.player.char, T, field, dt, null);
+  for (const gd of g.guards) { const hid = fog.hidden(gd); if (!hid || keep) pressOf(gd.char, T, field, dt, hid ? fog : null); }
+  for (const cv of civiliansShown(g)) { const hid = fog.hidden(cv); if (!hid || keep) pressOf(cv.char, T, field, dt, hid ? fog : null); }
+  if (T.kept) { if (FOG.tracks) findUnseen(g, T, keep); else { T.unseen.clear(); T.kept = 0; } }
 }
-function pressOf(c: Character, T: SnowTracks, field: SnowField, dt: number) {
+/** THE LOOK FOR KEPT MARKS, once a tick, from the head of the map, each square asked going to its tail, until `UNSEEN_ASKS` sight lines are walked or about
+ *  `UNSEEN_LAYS` marks laid. A square in no eye's field is out of sight for little; one in a field costs a sight line: out of sight, its marks go `dark`; seen,
+ *  its dark marks are laid. `fogUp` false = the fog is down with marks still kept: the map is the world's then, and they are laid as they come. */
+function findUnseen(g: Game, T: SnowTracks, fogUp: boolean) {
+  const U = T.unseen, fog = g.fogOfWar; let left = Math.min(U.size, UNSEEN_ASKS * 4), asks = UNSEEN_ASKS, lays = UNSEEN_LAYS;
+  for (const [sq, S] of U) {
+    if (left-- <= 0 || asks <= 0 || lays <= 0) break;   // (`left`: once round at most — a square put back at the tail is met again by this walk — and no more than four squares a sight line: one in no field costs little, not nothing)
+    U.delete(sq);
+    const look = fogUp ? fog.groundLook(S.x, S.z) : 2; if (fogUp && look) asks--;
+    const list = S.marks; let w = 0;
+    for (const u of list) { if (look === 2 && (u.dark || !fogUp)) { lay(T, u.k, u.a, false); T.found++; T.kept--; lays--; } else { if (look !== 2) u.dark = true; list[w++] = u; } }
+    list.length = w; if (w) U.set(sq, S);
+  }
+}
+/** a man's mark: on the map now, or — his own, the fog hiding him (`fog`) — kept off it, in its square */
+function mark(T: SnowTracks, fog: Game['fogOfWar'] | null, k: 0 | 1 | 2, a: number[]) {
+  if (!fog) { lay(T, k, a, true); return; }
+  const U = T.unseen, sq = squareOf(a[0], a[1]); let S = U.get(sq); if (!S) U.set(sq, S = { x: a[0], z: a[1], marks: [] });
+  S.marks.push({ k, a, dark: fog.groundLook(S.x, S.z) !== 2 }); T.kept++;
+  if (S.marks.length > UNSEEN_SQUARE) { S.marks.shift(); T.kept--; T.lost++; }
+  while (T.kept > UNSEEN_MOST) { const [first, old] = U.entries().next().value!; old.marks.shift(); T.kept--; T.lost++; if (!old.marks.length) U.delete(first); }
+}
+/** press one of a man's three marks into the map. `live` = it is being made in sight: it forms over its moment and kicks snow up; else it is found as it lies —
+ *  formed whole this frame, nothing kicked */
+function lay(T: SnowTracks, k: 0 | 1 | 2, a: number[], live: boolean) {
+  const K = SNOWTRACKS, n0 = T.forming.length;
+  if (k === 0) stampMark(T, 1.3, (S) => {   // a body's hollow: [mid x, mid z, hips x z, head x z, has a left foot, its x z, has a right foot, its x z]
+    press(S, a[2], a[3], a[4], a[5], K.body);
+    if (a[6]) press(S, a[2], a[3], a[7], a[8], K.body * 0.55);
+    if (a[9]) press(S, a[2], a[3], a[10], a[11], K.body * 0.55);
+  }, live ? { x: a[0], z: a[1], wide: 0.6 } : null);
+  else if (k === 1) stampMark(T, a[11], (S, SC) => pressMessy(S, SC, a[0], a[1], a[2], a[3], a[3] * a[4], -a[2] * a[4], a[5], a[6], a[7], a[8], a[9]), live ? { x: a[0] + a[2] * a[10] * 0.6, z: a[1] + a[3] * a[10] * 0.6, dx: a[2], dz: a[3], wide: 0.1 } : null);   // a messy print: [x, z, toe x z, side, from x z, mess, serial, run, boot length, force]
+  else stampMark(T, 0.45, (S) => press(S, a[0] - a[2] * a[4], a[1] - a[3] * a[4], a[0] + a[2] * a[4], a[1] + a[3] * a[4], a[5], a[6]), live ? { x: a[0], z: a[1], dx: a[2], dz: a[3], wide: 0.1 } : null);   // a plain print: [x, z, toe x z, half length, width, heel]
+  if (!live) for (let i = n0; i < T.forming.length; i++) { const m = T.forming[i]; m.age = m.delay + m.sink; }   // (found: this frame's forming lays it whole)
+}
+function pressOf(c: Character, T: SnowTracks, field: SnowField, dt: number, hid: Game['fogOfWar'] | null) {
   const K = SNOWTRACKS;
   {
     const b = c.bones; if (!b) return;
@@ -474,14 +532,15 @@ function pressOf(c: Character, T: SnowTracks, field: SnowField, dt: number) {
       st.lain = was && Math.hypot(hips[0] - was[0], hips[2] - was[1]) <= K.restV * dt ? st.lain + dt : 0;
       if (st.lain < K.rest) return;
       if (st.body && Math.hypot(hips[0] - st.body[0], hips[2] - st.body[1]) < 0.3) return;
+      const head = b.head ?? b.chest ?? hips, mx = (hips[0] + head[0]) * 0.5, mz = (hips[2] + head[2]) * 0.5;
+      // (a man the fog hides, down on snow the team is LOOKING at — behind smoke, or low behind a crate: his hollow waits. Kept, it would lie unlaid under the body
+      //  the fog then shows for as long as they looked. So nothing yet: it is pressed in the open the frame he is shown, or kept once they look away — and
+      //  never made if he is up again before either. A sight line a tick for each such man, beside the look's own)
+      const snow = snowFieldAt(field, hips[0], hips[2]).cover >= 0.5;
+      if (hid && snow) { const S = T.unseen.get(squareOf(mx, mz)); if (hid.groundLook(S ? S.x : mx, S ? S.z : mz) === 2) return; }
       st.body = [hips[0], hips[2]];
-      if (snowFieldAt(field, hips[0], hips[2]).cover < 0.5) return;
-      const head = b.head ?? b.chest ?? hips;
-      stampMark(T, 1.3, (S) => {
-        press(S, hips[0], hips[2], head[0], head[2], K.body);
-        if (b.footL) press(S, hips[0], hips[2], b.footL[0], b.footL[2], K.body * 0.55);
-        if (b.footR) press(S, hips[0], hips[2], b.footR[0], b.footR[2], K.body * 0.55);
-      }, { x: (hips[0] + head[0]) * 0.5, z: (hips[2] + head[2]) * 0.5, wide: 0.6 });
+      if (!snow) return;
+      mark(T, hid, 0, [mx, mz, hips[0], hips[2], head[0], head[2], b.footL ? 1 : 0, b.footL?.[0] ?? 0, b.footL?.[2] ?? 0, b.footR ? 1 : 0, b.footR?.[0] ?? 0, b.footR?.[2] ?? 0]);
       T.hollows++;
       return;
     }
@@ -511,10 +570,10 @@ function pressOf(c: Character, T: SnowTracks, field: SnowField, dt: number) {
         const rk = Math.max(0, Math.min(1, +K.runMess || 0)), ru = rk > 0 ? Math.max(0, Math.min(1, (Math.hypot(c.vel[0], c.vel[2]) - K.runLo) / Math.max(0.1, K.runHi - K.runLo))) : 0;
         const run = ru * ru * (3 - 2 * ru) * rk, serial = T.prints, sp = Math.hypot(c.vel[0], c.vel[2]);
         // (how hard the boot lands: a creep under a walk, a walk, a sprint well over it)
-        stampMark(T, 0.3 + 0.15 * Math.min(1, sp / 1.4) + 0.75 * run, (S, SC) => pressMessy(S, SC, cx, cz, ux, uz, uz * side, -ux * side, bx, bz, m, serial, run), { x: cx + ux * K.footLen * 0.6, z: cz + uz * K.footLen * 0.6, dx: ux, dz: uz, wide: 0.1 });
+        mark(T, hid, 1, [cx, cz, ux, uz, side, bx, bz, m, serial, run, K.footLen, 0.3 + 0.15 * Math.min(1, sp / 1.4) + 0.75 * run]);
       } else {
         const half = Math.max(0, K.footLen - K.footWide);
-        stampMark(T, 0.45, (S) => press(S, cx - ux * half, cz - uz * half, cx + ux * half, cz + uz * half, K.footWide, K.footWide * K.heel), { x: cx, z: cz, dx: ux, dz: uz, wide: 0.1 });
+        mark(T, hid, 2, [cx, cz, ux, uz, half, K.footWide, K.footWide * K.heel]);
       }
       T.prints++;
     }
