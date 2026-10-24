@@ -1072,15 +1072,15 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   send a trackpad pinch as a wheel that says Ctrl with no Ctrl key down, and `game/input.ts` tells the two apart by `ctrlDown`, the `ctrlKey` of the
   last key or mouse event on the window (first in line, behind no gate: a field with the focus, a lock, a Control he put on another key and a Ctrl
   pressed in another frame all say it; a lost focus keeps it and a plain wheel clears it). So zoom is Space and the wheel, or a pinch. Space pressed
-  UNDER a held Ctrl is the camera's too while the rule is on (it was no key of ours before: neither the turn nor, now, the zoom). With the camera on
+  UNDER a held Ctrl was never a key of ours (a system's own chord), so with Ctrl down first there is neither the turn nor, now, the zoom. With the camera on
   Ctrl (`?camspace=0`, or a row he put on Space) Ctrl and the wheel is the only zoom there is and stays. Like `camSpace` it is the page's own
   (`keysBoot`), off in the module, in no recording and on no stand: no run reads a wheel. CHECK: `camspace`, its line 'the wheel under a held Ctrl
-  key is nothing…' (left and right Ctrl, a pinch, a plain wheel, a Ctrl key whose coming up was never seen, Space and Ctrl in either order, Ctrl
+  key is nothing…' (left and right Ctrl, a pinch, a plain wheel, a Ctrl key whose coming up was never seen, both Ctrl keys and one let go, Space and Ctrl in either order, Ctrl
   pressed in a field, on Caps Lock, through a lost focus and in another frame, the camera on Ctrl, the rule off, the page's word);
   `PINCHONLY_BREAK=1` fails that line alone. KNOWN: (1) a Ctrl key-up the page never saw (a system shortcut) leaves a pinch dead until the mouse
   next moves or a plain wheel turns; (2) a device that makes its pinch or its zoom button out of a REAL Ctrl press and a wheel (some older Windows
   touchpad drivers, some mice) cannot be told from the chord and is nothing: `?pinchonly=0`, there is no Options row; (3) Ctrl held and the wheel
-  turned before the mouse has moved over a page that never saw the key go down (another frame has the keys) still zooms once; (4) Safari sends a
+  turned over a page that never saw the key go down (another frame, the address bar or devtools has the keys) still zooms until the mouse moves; (4) Safari sends a
   pinch as its own gesture events and no wheel, so a pinch there was never the zoom (not checked here). NOBODY HAS TRIED IT ON A TRACKPAD.
   TWICE (`host/findme.ts watchCtrlTaps(win, idle, key)`; main.ts hands it `camKey`): the "Double tap" option of Options, Game (off unless he turns
   it on) is two taps of the camera's key, wherever it is. findme.ts still imports nothing.

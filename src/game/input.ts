@@ -28,8 +28,8 @@ export class Input {
   /** the keys down on the board → the code each was filed under (host/keymap.ts: the player's own keys): a key let go lets go of what its press put down,
    *  whatever was rebound while it was held */
   private heldAs = new Map<string, string>();
-  /** the camera's key is down (host/keymap.ts camKey: the Space bar while it is no row's): the key on the board, '' = not. Ctrl needs no such note:
-   *  every mouse event says whether it is down */
+  /** the camera's key is down (host/keymap.ts camKey: the Space bar while it is no row's): the key on the board, '' = not. The turn under Ctrl needs no such note: every
+   *  mouse event says whether it is down; the wheel's own note of Ctrl is `ctrlDown` */
   camHeld = '';
   /** a Ctrl key is DOWN, by the last key or mouse event's own word: every one carries the modifiers as they ARE, whatever has the focus, whoever took the
    *  key and wherever Control sits on his board. The wheel asks it (KEYMAP.pinchOnly, below): a wheel that says Ctrl while no Ctrl key is down is a pinch */
@@ -50,7 +50,7 @@ export class Input {
     const typingTarget = (e: Event) => e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement || (e.target instanceof HTMLTextAreaElement && e.target !== this.sink) || (e.target instanceof HTMLElement && e.target.isContentEditable);
     // Capture phase on window = first in line: a game key is claimed here (stopPropagation) before any document-level shortcut handler the
     // embedding page may have installed sees it. Escape and anything with Cmd/Ctrl held stay shared (menus, browser and host shortcuts).
-    { const mods = (e: { ctrlKey: boolean }) => { this.ctrlDown = e.ctrlKey; };   // (first in line and behind no gate: a field with the focus, a lock and a repeat say it too. Focus lost keeps it: the next move of the mouse says how it is)
+    { const mods = (e: { ctrlKey: boolean }) => { this.ctrlDown = e.ctrlKey; };   // (ahead of this class's own listeners and behind none of their gates: a field with the focus, a lock and a repeat say it too. A screen whose listener is ahead of these and stops a BARE Ctrl key would hide it: none does. Focus lost keeps it: the next move of the mouse says how it is)
       for (const t of ['keydown', 'keyup', 'mousemove', 'mousedown', 'mouseup'] as const) window.addEventListener(t, mods, { capture: true }); }
     window.addEventListener('keydown', e => {
       if (e.code === 'F5' && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && this.saveKey?.()) e.preventDefault();   // (F5 is the save by hand while the page says so — main.ts: a bare press must not reload the page under the run, a slider of the Options that kept the focus included; with a modifier, on the start page or over a broken frame it is the browser's reload as ever)
@@ -62,7 +62,7 @@ export class Input {
       const ours = e.code !== 'Escape' && !e.metaKey && !(e.ctrlKey && !modifier) && !inMenu && !/^F\d+$/.test(e.code);   // (the Control key itself is ours: held, it is the camera's orbit / zoom modifier — host/loop.ts; no game key reads it, crouch is C; F-keys stay the browser's)
       const code = gameCode(e.code);   // (the key as the game knows it — host/keymap.ts: itself unless the player moved a key in Options ▸ Controls; '' = a key whose row he moved away)
       if (ours) { e.stopPropagation(); const typing = e.key.length === 1 || ['Backspace', 'Enter', 'Delete'].includes(e.key); if ((e.target === this.sink && typing) || ['Space', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code) || (code && code !== e.code)) e.preventDefault(); }   // (a key he gave a row is the game's whole: Backspace goes back a page nowhere, ' and / open no find bar)
-      if ((ours || (KEYMAP.pinchOnly && e.ctrlKey && !e.metaKey && !inMenu)) && !e.repeat && e.code === camKey()) this.camHeld = e.code;   // (held, it is the camera's: the mouse turns the view, the wheel zooms — below)
+      if (ours && !e.repeat && e.code === camKey()) this.camHeld = e.code;   // (held, it is the camera's: the mouse turns the view, the wheel zooms — below)
       if (!code) { this.heldAs.set(e.code, ''); return; }   // (…and let go, it lets go of nothing: the key his row moved TO may be down)
       if (this.lockExcept && !this.lockExcept.has(code)) { if (!inMenu && !e.repeat && e.code !== 'Escape' && !modifier && !e.metaKey && !e.ctrlKey) this.onLockedInput?.(); return; }   // hands off during the tour (menu keyboard nav still works)
       if (e.repeat) return;   // OS auto-repeat is never a fresh press (holding P must not strobe the tour on and off)
