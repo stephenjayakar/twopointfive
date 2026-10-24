@@ -68,6 +68,21 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
         await page.evaluate(() => { window.__knobs.registry().STALK.drag = false; });   // (the lines below are the hold's own)
       } else { say(NOKEY && dragUp, `?stalkkey=0&stalklow=0: the lab still has drag to steer up (${dragUp}); it is put down for the lines below`); await page.evaluate(() => { window.__knobs.registry().STALK.drag = false; }); }
     }
+    { // (stalk.ts STALK.orbit: the real button held on him and a real move key down — the one that takes him most round the man, of the four)
+      const orbitUp = await page.evaluate(() => !!window.__knobs.registry().STALK.orbit);
+      const pose = () => page.evaluate(() => { const g = window.__game, c = g.player.char, A = g.guards[0].char; const dx = c.pos[0] - A.pos[0], dz = c.pos[2] - A.pos[2], to = Math.atan2(-dx, -dz), f = Math.atan2(Math.sin(c.aimYaw - to), Math.cos(c.aimYaw - to));
+        return { gap: Math.hypot(dx, dz), round: Math.atan2(dx, dz), face: Math.abs(f) * 180 / Math.PI }; });
+      let best = null;
+      for (const code of ['KeyA', 'KeyD', 'KeyW', 'KeyS']) {
+        await behind(1.6); const [x, y] = await chest(); await page.mouse.move(x, y); await frames(2); await page.mouse.down(); await frames(20); const p0 = await pose();
+        await page.keyboard.down(code); let most = 0; for (let i = 0; i < 6; i++) { await frames(8); const q = await pose(); most = Math.max(most, Math.abs(q.gap - p0.gap)); }
+        const p1 = await pose(); await page.keyboard.up(code); await page.mouse.up(); await frames(10);
+        const turned = Math.abs(Math.atan2(Math.sin(p1.round - p0.round), Math.cos(p1.round - p0.round))) * 180 / Math.PI;
+        if (!best || turned > best.turned) best = { code, turned, most, face: p1.face, g0: p0.gap };
+      }
+      if (orbitUp) say(best.turned > 20 && best.most < 0.08 && best.face < 30, `a plain address has the keys go round him: the button held on him 1.6 m behind and ${best.code} down for 0.8 s takes Sam ${best.turned.toFixed(0)}° round him, the gap at most ${best.most.toFixed(2)} m off ${best.g0.toFixed(2)} m, facing him within ${best.face.toFixed(0)}°`);
+      else say(false, `the keys going round him is down on this address (${orbitUp})`);
+    }
     { const v = await page.evaluate(() => { const R = window.__knobs.registry(), S = R.STALK, H = R.HOLD; return { jolt: S.jolt, turnIn: S.turnIn, show: S.cornerShow, way: H.wayShape, dip: H.lunge.dip, apart: H.apart.side }; }), up = v.jolt > 0 && v.turnIn && v.show && v.way && v.dip > 0 && v.apart > 0, down = v.jolt === 0 && !v.turnIn && !v.show && !v.way && v.dip === 0 && v.apart === 0;
       say(POLISH ? down : up, `${POLISH ? '?stalkpolish=0: the polish is down' : 'a plain address: the polish is up'} (the duck ${v.jolt}, the turn through the step ${v.turnIn}, the wait's pose ${v.show}, the shaped way in ${v.way}, the dip ${v.dip}, the heads apart ${v.apart})`); }
     say(boot.key === !NOKEY && boot.low === !NOKEY, `${NOKEY ? '?stalkkey=0&stalklow=0: both are down' : 'a plain address: the key finishes the grab and he goes lower'} (the key ${boot.key}, lower ${boot.low})`);
