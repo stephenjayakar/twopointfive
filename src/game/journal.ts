@@ -113,7 +113,7 @@ import { STARTLE } from './startle';
 import { ROWSET } from './rowset';
 import { SMOKEBREAK } from './smokebreak';
 import { SHOWWHY } from './showwhy';
-import { FIRE, FIRE_LEAN_WAS } from './fire';
+import { FIRE, FIRE_LEAN_WAS, FIRE_STEPS } from './fire';
 import { FLINCH } from './flinch';
 import { DARKDOOR } from './darkdoor';
 import { DARKFOE } from './darkfoe';
@@ -389,7 +389,11 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
     if (T.key === undefined) STALK.key = false;   // (a file from before the row's key finished a stalk: the hold became the grab by itself)
     if (T.low === undefined) STALK.low = false;   // (…and from before he went lower with his hands down: the arm came up and he rose)
     if (T.drag === undefined) STALK.drag = false;   // (…and from before the mouse could steer the creep: the hold walks him in)
+    if (T.orbit === undefined) STALK.orbit = false;   // (…and from before his keys took him round the man: a move key ended the creep)
+    if (T.orbitSnap === undefined) STALK.orbitSnap = 0;   // (…and from before a key nearly across him was taken as across him)
     if (T.wide === undefined) STALK.wide = false;   // (…and from before his arms went out wide as he crept: his hands by his knees)
+    if (T.wideLead === undefined) STALK.wideLead = 0;   // (…and from before the left hand led the right: both as far ahead)
+    if (T.widePole === undefined) STALK.widePole = [0.75, 0.1, -0.65];   // (…and with the elbows out to the side, as the arms first went out)
     if (T.jolt === undefined) STALK.jolt = 0;   // (a file from before he shrank back off the man who turned round on him: the stalk ended and he sank back into the crouch)
     if (T.joltAtOnce === undefined) STALK.joltAtOnce = T.joltFace === undefined;   // (…and one from before the duck waited for him to face Sam — the fifth pass, a jolt and no joltFace: any turn that ended the stalk gave it, on that frame and with no test. A file of the sixth pass has joltFace and not this key: the wait, as it was)
     if (T.joltFace === undefined) STALK.joltFace = 180;
@@ -435,6 +439,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   { const R = k.tables.RAILS as Record<string, unknown> | undefined; if (R && R.cardBeat === undefined) RAILS.cardBeat = false; }   // (a tutorial run recorded before the step before a card settled: each of its steps came up the tick the deed before it was done, and its ticks are those)
   { const R = k.tables.RAILS as Record<string, unknown> | undefined; if (R && R.flatRing === undefined) RAILS.flatRing = false; }   // (a tutorial run recorded before a mission could take the flat ring: its digits were pressed on the menu's pages)
   { const R = k.tables.RAILS as Record<string, unknown> | undefined; if (R && R.markClear === undefined) RAILS.markClear = false; }   // (…and before a step's mark gave way to a ring over it: the mark was drawn under the ring)
+  { const R = k.tables.RAILS as Record<string, unknown> | undefined; if (R && R.spareDown === undefined) RAILS.spareDown = false; }   // (a tutorial run recorded before a spared teammate was a man down to the enemy: its defenders went on firing at him, and its rounds are those)
   if (!k.tables.NOSHOVE) NOSHOVE.on = false;   // (a file from before a man falling in went round the player: its followers shouldered him aside, and the squad read that as his walking)
   if (!k.tables.TEAMPACE) TEAMPACE.on = false;   // (a file from before teammates walked slower than the player and ran for a reason: its team walked every leg under the old cap)
   if (typeof (k.tables.SPRINTDOOR as { kick?: boolean } | undefined)?.kick !== 'boolean') SPRINTDOOR.kick = false;   // (… and one from the days the face a door opens toward was only ever the handle — its SPRINTDOOR row has no such key — replays with the handle)   // (a file from before a sprint into a door had weight: its runner went through every leaf at full speed, from either face)
@@ -489,7 +494,8 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
     if (F0?.bright === undefined) { FIRE.bright = 1; FIRE.warm = [1, 1, 1]; }
     if (F0?.reach === undefined) FIRE.reach = 1;
     if (F0?.hardy === undefined) FIRE.hardy = false;   // (… and from before a round or a blast left a fire burning: it went out like a bulb)
-    if (F0?.look?.react === undefined) { FIRE.look.react = 0; FIRE.look.lean = FIRE_LEAN_WAS; } }
+    if (F0?.look?.react === undefined) { FIRE.look.react = 0; FIRE.look.lean = FIRE_LEAN_WAS; }
+    if (F0?.look?.steps === undefined) FIRE.look.steps = FIRE_STEPS; }   // (… and from before the flame's sample count was a number of the table: the count it was, the picture only)
   if ((k.tables.FIRE as Partial<typeof FIRE> | undefined)?.gas === undefined) FIRE.gas.on = false;   // (… one from before a fire's flame could be the solver's gas: the flame of noise)
   if ((k.tables.FIRE as Partial<typeof FIRE> | undefined)?.look === undefined) { FIRE.look.shimmer = 0; FIRE.look.plume = 0; FIRE.embers = 0; }   // (… one from before the flame's look had numbers: no shimmer over it, no smoke drawn off its tips, no particle embers — the picture only)
   if ((k.tables.FIRE as Partial<typeof FIRE> | undefined)?.size === undefined) FIRE.size = 0;   // (… and one from before its lamp was made as big as the flame: the size the level gave it — a meter's shadow ray stops that much short of the lamp)

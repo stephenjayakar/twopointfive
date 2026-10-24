@@ -103,7 +103,7 @@ import { STARTLE } from '../game/startle';
 import { ROWSET } from '../game/rowset';
 import { SMOKEBREAK } from '../game/smokebreak';
 import { SHOWWHY } from '../game/showwhy';
-import { FIRE, FIRE_SIZE, FIRE_SHIMMER, FIRE_PLUME, FIRE_EMBERS, FIRE_BRIGHT, FIRE_REACH, FIRE_LIFT, FIRE_LIFT_WAS, FIRE_WARM, FIRE_WANDER, FIRE_WANDER_UP, FIRE_WANDER_WAS, FIRE_WANDER_UP_WAS, FIRE_REACT, FIRE_LEAN, FIRE_LEAN_WAS } from '../game/fire';
+import { FIRE, FIRE_SIZE, FIRE_SHIMMER, FIRE_PLUME, FIRE_EMBERS, FIRE_BRIGHT, FIRE_REACH, FIRE_LIFT, FIRE_LIFT_WAS, FIRE_WARM, FIRE_WANDER, FIRE_WANDER_UP, FIRE_WANDER_WAS, FIRE_WANDER_UP_WAS, FIRE_REACT, FIRE_LEAN, FIRE_LEAN_WAS, FIRE_STEPS } from '../game/fire';
 import { FLINCH } from '../game/flinch';
 import { VERDICT } from '../game/verdict';
 import { DARKDOOR } from '../game/darkdoor';
@@ -302,6 +302,7 @@ export function pageSwitches(q: URLSearchParams): void {
   RAILS.cardBeat = q.get('cardbeat') !== '0';   // …and the step before a card settles: its deed done, it stays up a beat (and, for a card marked quiet, until a fight of his has gone quiet) before the next step comes up with its card, its cue and its keys (rails.ts RAILS.cardBeat; this moves the tutorial missions' ticks) — ON in the page, off in the module and on the frozen stand (TPS_CARDBEAT=1 there); ?cardbeat=0 = the next step the tick the deed is done, its card over whatever is playing, as it was
   RAILS.flatRing = q.get('railflat') !== '0';   // …and a mission whose level says so takes the flat ring (rails.ts RAILS.flatRing: every order of the thing on one ring, its line the step's `flatLine`; today the first mission, for its wall charge) — ON in the page, off in the module and on the frozen stand (TPS_RAILFLAT=1)
   RAILS.markClear = q.get('markclear') !== '0';   // …and the step's mark is not drawn under the squad's ring while that is up on the step's place (picture only; a knob of the frame's table like lineClear: on in the module, the frame itself is off on the frozen stand)
+  RAILS.spareDown = q.get('sparedown') !== '0';   // …and a teammate the mission spares is a man down to the enemy while he is on his knee: the defender who shot him comes off him and nobody takes him for a new man (rails.ts RAILS.spareDown) — ON in the page; ?sparedown=0 = they go on firing at him
   NOSHOVE.on = q.get('noshove') !== '0';   // teammates falling in never shove the player (game/noshove.ts): a follower whose way lies through him goes round or stops short, and a shove from anybody is not read as his walking — ON in the page; ?noshove=0 = shouldered aside by his own file, as it was
   SPRINTDOOR.on = !q.has('nosprintdoor');   // a sprint into a door has weight (game/sprintdoor.ts): a shoulder through one that opens away costs a quarter of the run, one that opens toward him is booted off its hinges — ON in the page; ?nosprintdoor = every leaf flung at full speed from either face, as it was
   AIMWEIGHT.on = !q.has('noaimweight');   // the player's aim has weight (game/aimweight.ts): his gun turns at a limited rate and the aiming circle trails the cursor, shots going where the circle is — ON in the page; ?noaimweight = the gun eased onto the cursor as it was
@@ -359,6 +360,7 @@ export function pageSwitches(q: URLSearchParams): void {
   { const plain = q.get('firebright') === '0'; FIRE.bright = plain ? 1 : FIRE_BRIGHT; FIRE.reach = plain ? 1 : FIRE_REACH; FIRE.lift = plain ? FIRE_LIFT_WAS : FIRE_LIFT; FIRE.warm = plain ? [1, 1, 1] : [...FIRE_WARM]; }   // … its lamp a fire's: a quarter stronger than the level's, reaching further, a deeper orange, in the body of the flame (the light meter reads it): ?firebright=0 = the lamp as the level hung it
   { const still = q.get('firesway') === '0'; FIRE.wander = still ? FIRE_WANDER_WAS : FIRE_WANDER; FIRE.wanderUp = still ? FIRE_WANDER_UP_WAS : FIRE_WANDER_UP; }   // … its place shifting with the flames far enough to move a shadow's edge: ?firesway=0 = the few centimetres it was
   FIRE.hardy = q.get('firehardy') !== '0';   // … and a round or a blast stirs it and does not put it out: ?firehardy=0 = out like a bulb, as it was
+  { const n = Math.round(+(q.get('firesteps') ?? 0)); FIRE.look.steps = n >= 4 && n <= 64 ? n : FIRE_STEPS; }   // … how many samples of the flame a pixel's ray takes (the picture only, its price on a GPU): ?firesteps=N, 4 to 64, for a timing; 40 as it opens
   FIRE.look.react = q.get('firereact') === '0' ? 0 : FIRE_REACT; FIRE.look.lean = q.get('firelean') === '0' ? FIRE_LEAN_WAS : FIRE_LEAN;   // … its pixels taken from this frame by the temporal resolve (?firereact=0 = averaged over the picture's memory, as it was), and the wind leaning the flame (?firelean=0 = hardly, as it was)
   FIRE.gas.on = q.get('firegas') === '1';   // … its flame as gas in the smoke solver's fine cells (the picture, and the page's smoke): OFF in the page until it has been seen; ?firegas=1 = on (and a row in the fire lab)
   FIRE.smoke.on = q.get('firesmoke') !== '0';   // … and its smoke, which keeps the smoke solver awake near a fire (picture only): ?firesmoke=0 = the fire with no smoke, to weigh what the smoke costs
@@ -410,6 +412,7 @@ export function pageSwitches(q: URLSearchParams): void {
   STALK.key = q.get('stalkkey') !== '0';   // …and the row's key finishes it (the interaction's: E): the held click walks him in and waits in reach, nothing grabs by itself. ON in the page; ?stalkkey=0 = the hold becomes the grab, as it was
   STALK.low = q.get('stalklow') !== '0';   // …and he goes LOWER as he closes, hands down, slower: no arm comes up and he does not rise until the grab. ON in the page; ?stalklow=0 = the arm up and the rise, as it was
   STALK.drag = q.get('stalkdrag') === '1' || (q.has('sneaklab') && q.get('stalkdrag') !== '0');   // …and the mouse as a stick from where the press on him was made (a prototype: up in the sneak lab and with ?stalkdrag=1, down in the plain page and on the frozen stand, so no FROZEN_HOLDS row)
+  STALK.orbit = q.get('stalkorbit') !== '0';   // …and a move key with the button held on a man takes Sam round him (stalk.ts STALK.orbit, orbited) — ON in the page; ?stalkorbit=0 = a move key ends the creep, as it was
   STALK.wide = q.get('stalkwide') !== '0';   // …and creeping up on a man his arms are out wide and low with open hands (under STALK.low). ON in the page; ?stalkwide=0 = his hands by his knees, as it was
   CROUCHRUN.on = q.get('crouchrun') !== '0';   // Shift in a crouch is a fast crouch walk, and the sprint is the standing man's (game/player.ts CROUCHRUN). ON in the page; ?crouchrun=0 = Shift stands him up into the sprint
   SAMLOOK.on = q.get('samlook') !== '0';   // his head goes to the man who matters (game/samlook.ts). ON in the page; ?samlook=0 = it stays where his body faces
@@ -645,6 +648,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'STALK.key': 'TPS_STALKKEY=1 (acts only under STALK.on: with TPS_STALK=1)',
   'STALK.low': 'TPS_STALKLOW=1 (acts only under STALK.on: with TPS_STALK=1)',
   'STALK.wide': 'TPS_STALKWIDE=1 (acts only under STALK.low: with TPS_STALK=1 TPS_STALKLOW=1)',
+  'STALK.orbit': 'TPS_STALKORBIT=1 (acts only under STALK.on: with TPS_STALK=1)',
   'STALK.turnIn': 'TPS_STALKPOLISH=1 (acts only under STALK.on: with TPS_STALK=1)',
   'STALK.cornerShow': 'TPS_STALKPOLISH=1 (acts only under STALK.on: with TPS_STALK=1)',
   'STALK.catchLong': 'TPS_STALKPOLISH=1 (acts only under STALK.on: with TPS_STALK=1)',
@@ -716,6 +720,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'RAILS.on': 'TPS_RAILS=1',
   'RAILS.cardBeat': 'TPS_CARDBEAT=1 (acts only with the frame up: TPS_RAILS=1)',
   'RAILS.flatRing': 'TPS_RAILFLAT=1 (acts only with the frame and the flat tree up: TPS_RAILS=1 TPS_QRING=1 TPS_QONLY=1 TPS_RINGFLAT=1)',
+  'RAILS.spareDown': 'TPS_SPAREDOWN=1 (acts only with the frame up: TPS_RAILS=1)',
   'DOORFORCE.on': 'TPS_DOORFORCE=1',
   'SLOTSETUP.on': 'TPS_SLOTSETUP=1',
   'SLOTSETUP.pop': 'TPS_SLOTSETUP=1',

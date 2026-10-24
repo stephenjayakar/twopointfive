@@ -103,7 +103,7 @@ import type { SearchPlan, Pieing, Standoff } from './guards';
 import type { Clearing } from './squad';
 import { updatePlayer, startTakedown, updateAim, launchCancel } from './player';
 import { CLOSE, closeAt, closeRmb, closeSeatTick, closeReset, closeLethal, closeBare } from './close';
-import { stalkHas, stalkGrab, stalkKeyCan, stalkKeyTook, stalkReset } from './stalk';
+import { STALK, stalkHas, stalkGrab, stalkKeyCan, stalkKeyTook, stalkReset } from './stalk';
 import { samLookStep } from './samlook';
 import type { CloseKind } from './close';
 import { doorMoveBegin, doorMoveTick, haulSetDown, teamDoorHand } from './hands';
@@ -1595,6 +1595,7 @@ export class Game {
       if (cut && !cam.pin) { cam.target = v3.copy(cut); cam.desired = v3.copy(cam.target); cam.rebuild(); } }
     this.journal.frameStart(dt, input, cam, canvas);   // the session journal (journal.ts): idle, a return; asked for, it takes its checkpoint and re-enters it HERE, before anything of the frame has run; recording, it files this frame's dt / camera / input and opens the sensors' frame
     this.director?.injectInput(input);   // a showcase beat's synthetic key / click from LAST frame's tick (director.ts c.press / c.click) becomes this frame's input, ahead of everybody who reads it — a return on its first line otherwise
+    input.dragOff = STALK.on && STALK.drag;   // (the HOST's input, input.ts: a held press's cursor is followed off the view only while the creep reads the mouse as a stick — stalk.ts STALK.drag)
     this.director?.attach({ cam, input });   // (a showcase locks the HOST's keys and pins the HOST's camera: the director keeps those two, the step hands it neither)
     this.step(dt, this.cmdBuf = sampleCmd(this, input, cam, canvas, this.cmdBuf));
     cam.peekOffset = this.seat.cam.peekOffset; cam.kick = this.seat.cam.kick;

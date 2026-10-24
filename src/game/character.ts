@@ -1149,9 +1149,11 @@ const CREEP = {
   /** LOWER, HANDS DOWN (stalk.ts STALK.low feeds `low`, 0‥1 by the distance to the man's back, its shape as `lowShape` and `handsDown`): the shown share
    *  of it eases in and out at `rate` 1/s, and lets go at `up` when a grab springs him out of it. Nothing at 0, which is all the animator has unless fed. */
   low: { rate: 8, up: 24 },
-  /** ARMS OUT WIDE AND LOW (stalk.ts STALK.wide feeds `wide`, 0‥1, and its shape as `wideShape` [out, down, ahead of the shoulder, m]): in at `in` 1/s
-   *  (slowly, and only while he moves faster than `still` m/s: stopped, the pose is a held frame), out at `out` (fast). The elbow out and back (`pole`), fingers ahead and down (`fing`), the
-   *  back of the hand up (`back`), an open hand. Left arm; the right is its mirror. */
+  /** ARMS OUT AND LOW (stalk.ts STALK.wide feeds `wide`, 0‥1, and its shape as `wideShape` [out, down, ahead of the shoulder, the left's lead, m]): in at `in` 1/s
+   *  (slowly, and only while he moves faster than `still` m/s: stopped, the pose is a held frame), out at `out` (fast). The elbow out and back (`pole`, unless fed
+   *  `widePole`), fingers ahead and down (`fing`), the
+   *  back of the hand up (`back`), an open hand. Left arm, `lead` m further ahead; the right is its mirror, as far back. The footage's creep: elbows bent and
+   *  back, the upper arms hanging, the hands open by the knees with the left a little ahead (not flung out sideways: from above that read as wings). */
   wide: { in: 5, out: 14, still: 0.03, pole: [0.75, 0.1, -0.65] as Vec3, fing: [0.3, -0.5, 0.8] as Vec3, back: [0.15, 0.9, 0.35] as Vec3, curl: 0.1, thumb: 0.15, spread: 0.55 },
   L: { at: [-0.05, -0.27, 0.3] as Vec3, atC: [0.0, -0.17, 0.3] as Vec3, pole: [0.7, -0.6, -0.5] as Vec3, fing: [-0.2, 0.35, 1] as Vec3, back: [0.7, 0.7, 0] as Vec3, curl: 0.32, thumb: 0.25, spread: 0.2 },
   R: { at: [0.05, -0.33, 0.27] as Vec3, atC: [0.0, -0.21, 0.28] as Vec3, pole: [-0.7, -0.6, -0.5] as Vec3, fing: [0.2, 0.3, 1] as Vec3, back: [-0.7, 0.7, 0] as Vec3, curl: 0.38, thumb: 0.3, spread: 0.15 },
@@ -1682,7 +1684,7 @@ export class CharacterAnimator {
   /** sunk this far below the carriage for the man he is closing on, 0‥1 (0 unless fed — stalk.ts's tell under STALK.low; CREEP.low is its shape) */
   low = 0; private lowS = 0; /** its shape as fed: [drop m, back m, lean °] */ lowShape: [number, number, number] = [0, 0, 0];
   /** STALK.wide (fed by close.ts with the sink, closing on a man from behind): his arms out wide and low, 0‥1, and the shape as fed [out, down, ahead m] — the share shown is eased */
-  wide = 0; wideShape: [number, number, number] = [0, 0, 0]; private wideS = 0;
+  wide = 0; wideShape: [number, number, number, number] = [0, 0, 0, 0]; widePole: Vec3 | null = null; private wideS = 0;
   /** …and with it (STALK.low): this share of the carriage's raised hands is given up, at any distance — his hands stay down by his knees, the crouch's own (0 = the carriage as it was) */ handsDown = 0;
   /** …and the SPRING out of it (close.ts closeTick, through a stalk's grab): the rate he comes up out of the crouch at (0 = the animator's own 10) */ spring = 0;
   /** sunk this far into the crouch whatever his stance (0 unless fed — stalk.ts's wait at a corner: a man coiled on a wall) */
@@ -4197,7 +4199,7 @@ export class CharacterAnimator {
     const drift = (ph: number): Vec3 => ck < 0 ? [0, 0, 0] : [KC.drift * Math.sin(lt * 0.83 + ph), KC.drift * Math.sin(lt * 1.17 + ph * 1.7), KC.drift * 0.6 * Math.sin(lt * 0.61 + ph * 0.6)];
     if (wL > 0.003) { const H = C.L; let pole = H.pole, fing = H.fing, back = H.back, cu = H.curl, th = H.thumb, sp = H.spread;
       let at = v3.add(v3.mad(v3.lerp(H.at, H.atC, cr), KC.lead, cke), v3.scale(drift(0), ck < 0 ? 1 : 1 / Math.max(0.38, lerp(KC.left, 1, ws))));   // (the drift at its full size through the part of this arm the layer has)
-      if (ws > 0) { at = v3.lerp(at, [WS[0], -WS[1], WS[2]], ws); pole = v3.lerp(pole, WD.pole, ws); fing = v3.lerp(fing, WD.fing, ws); back = v3.lerp(back, WD.back, ws); cu = lerp(cu, WD.curl, ws); th = lerp(th, WD.thumb, ws); sp = lerp(sp, WD.spread, ws); }   // (CREEP.wide: out to its side, and still — the wide hand has no drift: a stop is a held frame)
+      if (ws > 0) { at = v3.lerp(at, [WS[0], -WS[1], WS[2] + WS[3]], ws); pole = v3.lerp(pole, this.widePole ?? WD.pole, ws); fing = v3.lerp(fing, WD.fing, ws); back = v3.lerp(back, WD.back, ws); cu = lerp(cu, WD.curl, ws); th = lerp(th, WD.thumb, ws); sp = lerp(sp, WD.spread, ws); }   // (CREEP.wide: out to its side, and still — the wide hand has no drift: a stop is a held frame)
       twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, v3.add(sl, sq(at)), sq(pole), 0.8, this.handRot(0, sq(fing), sq(back)));
       this.hand(pB, 0, [cu + flL, cu + 0.05 + flL * 0.9, cu + 0.1 + flL * 0.8, cu + 0.15 + flL * 0.7], th + flL * 0.5, sp);
       const lw = wL * (ck < 0 ? 1 : lerp(KC.left, 1, ws));   // (KIT.close: most of this arm is left to the crouch under it — it goes for the man only in reach, the tell's own reach)
@@ -4205,7 +4207,7 @@ export class CharacterAnimator {
     if (wR > 0.003) { const H = C.R;
       let a0 = v3.add(v3.lerp(H.at, H.atC, cr), drift(2.1)), p0 = H.pole, fing = H.fing, back = H.back, curl = H.curl, thb = H.thumb, spr = H.spread * (1 - cke);
       if (ws > 0) { const mir = (v: Vec3): Vec3 => [-v[0], v[1], v[2]];   // (CREEP.wide: the left's mirror)
-        a0 = v3.lerp(a0, [-WS[0], -WS[1], WS[2]], ws); p0 = v3.lerp(p0, mir(WD.pole), ws); fing = v3.lerp(fing, mir(WD.fing), ws); back = v3.lerp(back, mir(WD.back), ws); curl = lerp(curl, WD.curl, ws); thb = lerp(thb, WD.thumb, ws); spr = lerp(spr, WD.spread, ws); }
+        a0 = v3.lerp(a0, [-WS[0], -WS[1], WS[2] - WS[3]], ws); p0 = v3.lerp(p0, mir(this.widePole ?? WD.pole), ws); fing = v3.lerp(fing, mir(WD.fing), ws); back = v3.lerp(back, mir(WD.back), ws); curl = lerp(curl, WD.curl, ws); thb = lerp(thb, WD.thumb, ws); spr = lerp(spr, WD.spread, ws); }
       let at = v3.add(sr, sq(a0)), rot = this.handRot(1, sq(fing), sq(back)), pole = sq(p0);
       if (ck >= 0 && !this.grip[1] && !this.noKnife) {   // the knife hand by distance: from its guard up across the chest to hover off the hilt — where the reach (readyLayer) closes it on the handle
         const S = this.sheathFist(0, KC.hover);

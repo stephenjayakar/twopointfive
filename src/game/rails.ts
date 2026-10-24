@@ -122,6 +122,14 @@ export const RAILS = { on: false,
    *  move in that fight, a card held for his own rounds held its keys and its cue with it. OFF here and on the frozen stand, where the next step comes
    *  up the tick the deed is done, as it was (TPS_CARDBEAT=1 raises it there, with the frame); ON in the page (profile.ts; ?cardbeat=0) */
   cardBeat: false, cardBeatSecs: 1.2, cardQuiet: 2, cardMax: 9,
+  /** TO THE ENEMY A SPARED MAN IS A MAN DOWN (a recorded play of the first mission, 10-24: a teammate took the round that would have killed him, went on
+   *  his knee for the level's `respawn` seconds, and the defender who had shot him kept firing into him the whole time). While he is on his knee nobody
+   *  of theirs is on him: the man whose foe he was comes off him as off a man he has dropped (guards.ts acquireFoe: the next enemy in his sight, else
+   *  his wary look round), and nobody takes him for a new one (acquireFoe; a moving defender's stop to fight, roomfight.ts; the response's eye, qrf.ts;
+   *  a colleague's man, tactics.ts; the men a defender counts for a grenade, frag.ts). The defender says nothing of it and a burst he had begun ends.
+   *  Up again he is seen and fought like anybody. THIS MOVES FIGHTS on a mission with `respawn`. OFF here and on the
+   *  frozen stand (TPS_SPAREDOWN=1 raises it there, with the frame); ON in the page (profile.ts; ?sparedown=0) */
+  spareDown: false,
   /** A MISSION MAY TAKE THE FLAT RING (the maintainer, 10-23, of the first mission's wall charge — the ring, [5], and then a second ring of one row
    *  under a line that asked for [3]: "weird after hitting 5"). A tutorial mission's ring was the menu's pages, because its lines name their digits;
    *  one whose level says `rails.flatRing` has the ring the rest of the game has (cmdring.ts CMDRING.flat: every order of the thing on one ring, with
@@ -546,7 +554,7 @@ export class Rails {
     RAILS_STATS.spared++; this.note(`${gd.callsign} spared a down: up at ${t.toFixed(1)}`);
     return true;
   }
-  /** is this man on his knee right now, spared (nobody's target meanwhile) */
+  /** is this man on his knee right now, spared (nobody's target meanwhile: `railsDown`, RAILS.spareDown) */
   isSpared(gd: Guard): boolean { const t = this.spared.get(gd.char.id); return t !== undefined && this.g.time < t; }
 
   // ---------------------------------------------------------------- the sky seat
@@ -611,3 +619,5 @@ export class Rails {
 
 /** combat.ts killGuard's question, safe on a Game that has no frame yet */
 export function railsSpare(g: Game, gd: Guard): boolean { return !!g.rails && g.rails.spare(gd); }
+/** is this man down as far as an enemy's eye goes (RAILS.spareDown): a teammate on his knee, spared. Asked by whoever picks a man to fight */
+export function railsDown(g: Game, gd: Guard): boolean { return RAILS.spareDown && !BREAK && !!g.rails && g.rails.live && g.rails.isSpared(gd); }   // (live: the map is cleared at a run's start, not at a lesson's end — a man spawned under a spared man's number on a floor with no frame is nobody's)

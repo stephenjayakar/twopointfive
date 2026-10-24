@@ -59,6 +59,7 @@ import { tally, missionLive } from './mission';
 import { isBreathing } from './game';
 import { chronRadio, chronicle } from './chronicle';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
+import { railsDown } from './rails';   // (a spared teammate on his knee is nobody the response makes out: asked inside its sight loop only)
 
 // ================================================================ authored marks (TODO(level-format lane): these belong in LevelData beside routes / chokepoints / clearPlans)
 /** Everything the response needs from THIS level: the door it comes through, where the men stand on the landing behind it (in element order: #1 at the bar), the
@@ -646,7 +647,7 @@ function perceiveScripted(g: Game, Q: Qrf, m: Guard, dt: number): boolean {
   // RESPONSE: the enemy is whoever is against them on this level — a partner, a teammate — seen by the same eye at the same rate as Sam (the test the AI's
   // own men are seen by: guards.ts canSeeChar / sightGainOn); the one he makes out is the one he is after
   if (RESPONSE.on && !seen) for (const o of g.guards) {
-    if (o.state === 'dead' || o.civ || !hostileTo(m, o)) continue;
+    if (o.state === 'dead' || o.civ || !hostileTo(m, o) || railsDown(g, o)) continue;
     const vo = canSeeChar(g, m, o.char, false); if (!vo.visible) continue;
     const rate = sightGainOn(g, m, o, vo.dist); if (rate <= 0.05) continue;
     glimpse = true; m.awareness = clamp(m.awareness + rate * dt, 0, 1); m.lastKnown = v3.copy(o.char.pos); m.sightPos = v3.copy(o.char.pos); m.sightT = g.time; if (rate > 0.25) m.lastSeenT = g.time;

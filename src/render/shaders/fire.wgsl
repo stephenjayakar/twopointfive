@@ -13,7 +13,7 @@ struct FireRec { a: vec4f, b: vec4f, c: vec4f, d: vec4f };   // (c.w: how much o
 //   c = how dark and sooty its cool edge is 0‥1 · how hard it breathes 0‥2 · spare · spare
 struct FireLook { a: vec4f, b: vec4f, c: vec4f, d: vec4f };   // (d: x = how far the temporal resolve is told to take a fire's pixels from THIS frame (0‥1) · y = how far the wind leans the flame (m at one flame height, per m/s))
 
-const FIRE_STEPS = 40.0;        // samples of the flame along a pixel's ray
+const FIRE_STEPS = 40.0;        // samples of the flame along a pixel's ray when the look row names none (K.d.z = game/fire.ts FIRE.look.steps, 4‥64)
 const FIRE_SMOKE_STEPS = 10.0;  // … and of the smoke over it
 const FIRE_GAS_STEPS = 16.0;    // … and more of a flame that is the solver's gas: the wind carries it wider than the flame of noise ever stands
 const FIRE_FLAME_TOP = 2.3;     // × its height: over this there is no flame, whatever its tongues do
@@ -194,7 +194,7 @@ fn fireAir(F: FireRec, K: FireLook, ro: vec3f, rd: vec3f, tMax: f32, cpix: f32, 
       }
     } else {
       if (!inF) { continue; }
-      let steps = FIRE_STEPS + FIRE_GAS_STEPS * step(0.001, F.c.w); let ds = (t1 - t0) / steps;
+      let steps = select(FIRE_STEPS, clamp(floor(K.d.z), 4.0, 64.0), K.d.z >= 1.0) + FIRE_GAS_STEPS * step(0.001, F.c.w); let ds = (t1 - t0) / steps;
       for (var i = 0.0; i < steps; i += 1.0) {
         let P = ro + rd * (t0 + (i + jit) * ds);
         let fl = fireFlame(F, K, P);

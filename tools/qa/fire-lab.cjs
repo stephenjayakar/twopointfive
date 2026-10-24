@@ -23,7 +23,7 @@ const BED = +(process.env.BED ?? 0.27);   // the bed of coals' radius (0 = the b
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const fire = fs.readFileSync(process.env.SRC || path.join(__dirname, '../../src/render/shaders/fire.wgsl'), 'utf8');
 // THE LOOK'S NUMBERS (game/fire.ts FIRE.look, kept in step by hand): LOOK='gain=1,core=1,…' moves one
-const LOOK = { gain: 3, core: 4, sigma: 2.5, speed: 0.7, tall: 0.95, torn: 1.1, plume: 1, shimmer: 0.019, soot: 0.5, breathe: 1, ref: 3.2, lo: 0.2, react: 1, lean: 0.2 };
+const LOOK = { gain: 3, core: 4, sigma: 2.5, speed: 0.7, tall: 0.95, torn: 1.1, plume: 1, shimmer: 0.019, soot: 0.5, breathe: 1, ref: 3.2, lo: 0.2, react: 1, lean: 0.2, steps: 40 };
 for (const kv of (process.env.LOOK || '').split(',').filter(Boolean)) { const [k, v] = kv.split('='); if (!(k in LOOK)) { console.log('FAIL unknown look key', k); process.exit(1); } LOOK[k] = +v; }
 const SUB = +(process.env.SUB ?? 4), FH = +(process.env.FH ?? 1.15), BLOOM = +(process.env.BLOOM ?? 0.06);
 const stage = /* wgsl */`
@@ -111,7 +111,7 @@ const html = `<!doctype html><body style="margin:0;background:#000"><canvas id="
   if (ok !== 'ok') { console.log('FAIL', ok, errs.join('\n')); await browser.close(); process.exit(1); }
   // the light's flicker and the cracks, as game/fire.ts makes them (kept in step with it by hand: this page is for looking)
   const flick = t => 1 + 0.29 * (0.9 * Math.sin(6.283 * 1.3 * t + 1) + 0.7 * Math.sin(6.283 * 2.7 * t + 2) + 0.45 * Math.sin(6.283 * 4.9 * t + 3) + 0.2 * Math.sin(6.283 * 8.3 * t + 4)) / 2.25;
-  const L = LOOK, look = [L.gain, L.core, L.sigma, L.speed, L.tall, L.torn, L.plume, L.shimmer, L.soot, L.breathe, L.ref, L.lo, L.react, L.lean, 0, 0];
+  const L = LOOK, look = [L.gain, L.core, L.sigma, L.speed, L.tall, L.torn, L.plume, L.shimmer, L.soot, L.breathe, L.ref, L.lo, L.react, L.lean, L.steps, 0];
   const rec = (t, popAge) => [0, 0.89, 0, 0.22, FH, HEAT, 0.37, t, WIND[0], WIND[1], flick(t) + 0.6 * Math.exp(-Math.max(popAge, 0) / 0.12) * (popAge >= 0 ? 1 : 0), 0, BED, 0, 0, 0, ...look];
   const cam = (dist, pitch, look, frame) => { const p = pitch * Math.PI / 180, yaw = 0.5; const f = [-Math.sin(yaw) * Math.cos(p), -Math.sin(p), -Math.cos(yaw) * Math.cos(p)];
     const eye = [look[0] - f[0] * dist, look[1] - f[1] * dist, look[2] - f[2] * dist]; const r = [Math.cos(yaw), 0, -Math.sin(yaw)]; const u = [r[1] * f[2] - r[2] * f[1], r[2] * f[0] - r[0] * f[2], r[0] * f[1] - r[1] * f[0]];
