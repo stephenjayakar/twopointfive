@@ -339,11 +339,22 @@ export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean>
         const twin = { ...t, pos: [t.pos[0] + 3, t.pos[1], t.pos[2]] }; A.g.targets.push(twin); fireStir(A.g, twin); const both = fireShown(A.g)?.stir?.join() ?? ''; A.g.targets.pop(); { const st = fireShown(A.g)?.stir; if (st) st.length = queued; }   // (a second fire, stood in for the one call: each fire has its own gap)
         A.step(60);
         const burning = (A.g.engine.fires ?? []).length, stirred = log.slice(n0).filter(c => c.name === 'fireCrack' && c.opts?.rate === 0.7).length, counted = D.fixtureCount - fx0, left = fireShown(A.g)?.stir?.length ?? 0;
+        // (a real round into the drum, by the newer lamp search and by the older one: each stirs it and neither puts it out)
+        const shots = await (async () => {
+          const { fireWeapon } = await import('../../src/game/combat.ts'); const { AIMCOST } = await import('../../src/game/aimcost.ts'); const g = A.g, c = g.player.char, lamp0 = AIMCOST.lamp;
+          const bx = g.engine.world.statics[t.boxes[0]], at: [number, number, number] = [bx.c[0], bx.c[1] * 0.5, bx.c[2]]; let spot: number[] | null = null;   // (the middle of the drum, under the lid)
+          for (let k = 0; k < 48 && !spot; k++) { const a = k / 48 * Math.PI * 2, q = [at[0] + Math.sin(a) * 3, 0, at[2] + Math.cos(a) * 3], e = [q[0], 1.35, q[2]], d = [at[0] - e[0], at[1] - e[1], at[2] - e[2]], n = Math.hypot(d[0], d[1], d[2]);
+            const h = g.col.raycast(e, [d[0] / n, d[1] / n, d[2] / n], 60); if (!h || h.t < n - 0.45) continue;   // (clear to the drum: the fire's own box is its lid, the drum is the level's)
+            g.teleportPlayer(q); A.step(4); g.player.aim?.clear?.(); if (Math.hypot(c.pos[0] - q[0], c.pos[2] - q[2]) < 0.1) spot = q; }
+          if (!spot) return { spot: false, on: 0, off: 0, lit: !t.broken };
+          const one = (rule: boolean) => { AIMCOST.lamp = rule; const m0 = log.length; for (let i = 0; i < 3; i++) { A.W.cursorAt(at); A.step(1); } fireWeapon(g, c, at, true, { spread: 0 }); A.step(30); return log.slice(m0).filter(x => x.name === 'fireCrack' && x.opts?.rate === 0.7).length; };
+          try { const on = one(true), off = one(false); return { spot: true, on, off, lit: !t.broken && (g.engine.fires ?? []).length === 1 }; } finally { AIMCOST.lamp = lamp0; }
+        })();
         B.g.destr.breakFixtureBox(B.t.boxes[0]); B.step(30); const boxGone = B.t.broken && (B.g.engine.fires ?? []).length === 0;
         FIRE.hardy = false; const fixture2 = D.fixtureLive(t), went2 = D.killFixture(t, by, 'blast', true); A.step(30); const out = t.broken && (A.g.engine.fires ?? []).length === 0;
-        verdict(A.sw && fixture === false && holds && lit && burning === 1 && stirred === 2 && queued === 1 && both === '0,1' && left === 0 && counted === 0 && boxGone && fixture2 === true && went2 === true && out,
+        verdict(A.sw && fixture === false && holds && lit && burning === 1 && stirred === 2 && queued === 1 && both === '0,1' && left === 0 && counted === 0 && shots.spot && shots.on === 1 && shots.off === 1 && shots.lit && boxGone && fixture2 === true && went2 === true && out,
           'hardy — a burning fire is no fixture to a round or a blast: a bang beside it leaves it burning, three hits in a frame stir it once; its own box blown away takes it; with the rule off it goes out like a bulb',
-          `the rule on: a fixture to the blast rule ${fixture ? 'YES' : 'no'}, ${lit ? 'burning' : 'OUT'} after a bang a metre off, ${burning} fire handed on a second later, ${stirred - 1} stirring crack for three hits (${queued} throw of embers queued, ${left} left a second later), a second fire hit in the same frame stirred too (queued for fires ${both}), ${counted} counted against the encounter's fixtures · its own box broken: ${boxGone ? 'out' : 'STILL burning'} · the rule off: a fixture ${fixture2 ? 'yes' : 'NO'}, ${went2 ? 'put out' : 'LEFT'}, ${out ? 'nothing handed on' : 'STILL burning'}`);
+          `the rule on: a fixture to the blast rule ${fixture ? 'YES' : 'no'}, ${lit ? 'burning' : 'OUT'} after a bang a metre off, ${burning} fire handed on a second later, ${stirred - 1} stirring crack for three hits (${queued} throw of embers queued, ${left} left a second later), a second fire hit in the same frame stirred too (queued for fires ${both}), ${counted} counted against the encounter's fixtures · a round into the drum from three metres${shots.spot ? '' : ' (NO clear spot)'}: ${shots.on} stir by the newer lamp search, ${shots.off} by the older, ${shots.lit ? 'still burning' : 'OUT'} · its own box broken: ${boxGone ? 'out' : 'STILL burning'} · the rule off: a fixture ${fixture2 ? 'yes' : 'NO'}, ${went2 ? 'put out' : 'LEFT'}, ${out ? 'nothing handed on' : 'STILL burning'}`);
       } finally { FIRE.hardy = hardy0; }
     }
     // ---- off

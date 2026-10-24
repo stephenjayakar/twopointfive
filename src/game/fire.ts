@@ -227,6 +227,14 @@ function lookRow(): number[] { const L = FIRE.look; return [L.gain, L.core, L.si
 export function fireHolds(t: LightTarget): boolean { return FIRE.on && FIRE.hardy && isFire(t); }
 /** … and what the hit does to it instead: a crack now, and a throw of embers on the fire's next frame — the mixer and the host's book: nothing kept, nothing the
  *  game reads; one a fire in `stirGap` s, however many rounds of a burst go into it */
+/** did a round that stopped at `p`, in static `ix`, stop in this fire? Its own box — or the drum under its mouth: the fire's own box is the glowing lid, a
+ *  finger thick, and the drum it burns in is boxes of the level's that name no fire, so a round into the drum says nothing by its index. */
+export function fireStruck(g: Game, t: LightTarget, p: Vec3, ix: number): boolean {
+  if (t.boxes.includes(ix)) return true;
+  const M = mouthOf(g, t), b = g.engine.world.statics[ix], r = Math.max(M.lid * 1.7, 0.3);   // (a drum's wall stands a little outside its lid)
+  if (!b || Math.hypot(b.c[0] - M.pos[0], b.c[2] - M.pos[2]) > 0.05 || b.c[1] > M.pos[1]) return false;   // (a box that stands on the fire's own axis, under its mouth: not the wall behind it, not the ground)
+  return p[1] <= M.pos[1] + 0.05 && Math.hypot(p[0] - M.pos[0], p[2] - M.pos[2]) <= r;
+}
 export function fireStir(g: Game, t: LightTarget) {
   const P = g.engine.hostBooks?.fire; if (!P || !burns(t)) return;
   let ix = 0; for (const x of g.targets) { if (x === t) break; if (isFire(x)) ix++; }
