@@ -24,7 +24,7 @@ const ROWS: readonly [keyof typeof lookAmounts, string, string, number][] = [
   ['size', 'Map size', '× the 2 m a map covers', 2],
 ];
 
-export function buildLookPanel(engine: Engine, fps: () => number, shapes?: { on: boolean; flip: () => void }, hills?: { on: boolean; flip: () => void }, front?: { on: boolean; flip: () => void }): void {
+export function buildLookPanel(engine: Engine, fps: () => number, shapes?: { on: boolean; flip: () => void }, hills?: { on: boolean; flip: () => void }, front?: { on: boolean; flip: () => void }, lorry?: { on: boolean; flip: () => void }): void {
   const el = document.createElement('div');
   el.style.cssText = 'position:fixed;right:10px;top:10px;z-index:50;width:232px;padding:10px 12px;background:rgba(12,14,16,.86);color:#cfd6d2;font:11px/1.35 ui-monospace,Menlo,monospace;border:1px solid #2c3432;border-radius:4px;user-select:none';
   for (const ev of ['mousedown', 'click', 'pointerdown', 'wheel', 'contextmenu', 'dblclick']) el.addEventListener(ev, e => e.stopPropagation());   // (never the releases: the game clears a held button on the window's mouseup)
@@ -79,6 +79,7 @@ export function buildLookPanel(engine: Engine, fps: () => number, shapes?: { on:
   const skySync = () => { for (const [get, s, v, digits] of skyRows) { const x = get(); s.disabled = x === null; if (x === null) v.textContent = '·'; else if (document.activeElement !== s) { s.value = String(x); v.textContent = x.toFixed(digits); } } };
   const qual = line('Quality'); for (const p of ['low', 'medium', 'high', 'ultra']) { const b = btn(p); b.addEventListener('click', () => { if (w.__quality) { w.__quality.auto = false; w.__quality.apply(p); } }); qual.append(b); }   // (auto off for the visit: the ladder would move the preset again)
   if (front) { const fr = line('House front (a trial)'); const b = btn(front.on ? 'Dressed by hand: on' : 'Dressed by hand: off', 'the tea house’s yard wall on the pass: its openings, paint and mends differ, and things were left against it. The page loads again to change it'); b.addEventListener('click', front.flip); fr.append(b); }   // A HOUSE FRONT DRESSED BY HAND (scene/frontTry.ts)
+  if (lorry) { const lr = line('Lorry (a trial)'); const b = btn(lorry.on ? 'Curved: on' : 'Curved: off', 'the lorry on the pass with a bowed tilt, an arched cab roof, a round bonnet between fenders and round wheels. The page loads again to change it'); b.addEventListener('click', lorry.flip); lr.append(b); }   // A LORRY WITH CURVES (scene/lorryTry.ts)
   if (shapes) { const sh = line('Shapes (a trial)'); const b = btn(shapes.on ? 'Round and broken: on' : 'Round and broken: off', 'round drums and tyres, a bite out of the yard wall’s top. The page loads again to change it'); b.addEventListener('click', shapes.flip); sh.append(b); }   // A GEOMETRY TRIAL (scene/geoTry.ts): made when the level loads, so the button loads the page again
   if (hills) { const hl = line('Ground (a trial)'); const b = btn(hills.on ? 'Hills cast shadows: on' : 'Hills cast shadows: off', 'the snow’s hills stand in the light’s way as their own round shape. The page loads again to change it'); b.addEventListener('click', hills.flip); hl.append(b); }   // GROUND THAT RAYS CAN SEE, A TRIAL (scene/groundField.ts): a const of the ray programs, so the button loads the page again
   document.body.append(el);

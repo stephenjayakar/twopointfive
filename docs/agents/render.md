@@ -616,6 +616,27 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   programs in from boot as the geometry trial does. Not a rule of the game: no knob, no journal key; the men's routes and sight along that wall change
   on that page. If the look goes to the build this belongs in the level's file or its kit, not in code. Checked: 98 pieces placed, none malformed,
   none in the level's own solids or by a door (a script over the loaded level); drawn on the software adapter only.
+- **A LORRY WITH CURVES, A TRIAL** (`src/scene/lorryTry.ts dressLorry`; the look page only, with cut boxes on; `?lorry=0` = the lorry as its file has
+  it, or the look panel's 'Curved' button, kept on the machine as `twopointsix.lorrytry`; the page loads again). The maintainer, 10-24, on a GPU picture of the pass's yard: "some curved surfaces on the truck would go a long way". The
+  pass's lorry (twenty boxes under four flat slabs of snow) is gone over by hand after the level loads, as the house front is; `levels/pass.json` is not
+  touched and the pieces are found by where the generator put them (`tools/levels/pass.ts LORRY`): any one missing = nothing is touched. The tilt is bowed
+  over four hoops with its snow on the bow; the cab's roof is an arch from a leaned windscreen back; the bonnet is a narrow engine cover with a round top
+  between two fenders that arch over the front wheels; wheels, hubs, lamp pods and a tank under the bed each side are round. 21 boxes added, 16 changed.
+  AN ARC (`Box.cutArc`, new): a round prism (`cutRound`) turns its normal about the box's own middle, which makes a drum but not a roof. With `cutArc` =
+  k metres the axis lies k UNDER the box's centre, so a box whose top is cut to seven facets of a wide circle (its top face + six planes) is shaded as
+  that circle. It rides in the record's unused LAST row (`cut.ts packCut`: `CUT_PAD`'s w + k; every reader of a plane stops at the first zero normal),
+  so an arc carries seven planes at most (an eighth plane drops the arc without a word); about x or z only. In `gbuffer_cut.wgsl` its facets and top
+  turn (the box's own upright faces and underside stay flat), the look's paint is read straight down each quarter (no unrolling), its ends get no drum's
+  rim, and an arc in the snow paint that is a box of the level file gets `snowBox`'s snow (grain, glow, the wandering edge) asked as the box's top face.
+  Picture only: every ray meets the facets. A round's rolled rim is now on both end faces (a wheel shows one to each side).
+  WHAT A RAY AND A BODY MEET CHANGES on that page: the bonnet (1.5 m high, 0.98 m a side) is a hump 0.56 m a side that tops out at 1.46 m, with a
+  fender of at most 1.08 m beside it and, for 0.63 m in front of each fender, only the 0.78 m bumper; the tilt's eaves come down from 1.95 m to 1.6 m;
+  a tank closes a metre of the gap under the bed each side. No knob and no journal key, as the geometry trial.
+  KNOWN: no clinging snow from the look on an arc (the round's snow hook is about y only), so the authored caps are all the snow there is, and the two
+  fender caps (new boxes, not the level file's) are flat paint; the level's banks against the lorry are as they were; the lorry is found by twenty
+  numbers copied from the generator, and the console says so when one misses.
+  Checked: `dressLorry` on `levels/pass.json` under bun (21 added, 16 changed, every record seven planes or fewer where it is an arc); the page booted
+  on the software adapter with 0 console errors; four pictures (play camera, the nose, from above, dusk). Never seen on a GPU.
 - **THE MEN ON THE LOOK PAGE, A FIRST ROUND** (`shaders/look.wgsl lookMan`, called from `gbuffer.wgsl fsSkin`; the maintainer, 10-23: "we need to spend a
   LOT of time using these layers to make the characters look awesome. I think that's the next big frontier"). A man was one flat colour a material
   slot with the mesh's creases; here each slot is drawn as the stuff it is, in his BIND pose (nothing swims as he moves), by his side and a number of

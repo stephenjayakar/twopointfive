@@ -89,7 +89,7 @@ ordinary debris boxes and do take a record. A `NoShadow` box is drawn cut and no
 - A cut box raises **bit 16 of its GPU flags word** (`GEO_CUT` in common.wgsl, 65536; the CPU's own bit 16, `SoundSeal`, is never uploaded, so the bit was free on the GPU).
   Only under the switch.
 - The planes live in a **cut table in the tail of `boxMat`**, after the marking table and the glass cell table: 9 vec4 rows per box INDEX,
-  row `CUT_BASE + 9·bi + k = (n.xyz, d)` of plane `k` < 8; an unused row is `(0, 0, 0, 1)` and a zero normal ends the record; row 8 = `(cutCore.rgb, 1)`, or
+  row `CUT_BASE + 9·bi + k = (n.xyz, d)` of plane `k` < 8; an unused row is `(0, 0, 0, 1)` (the LAST row's w may be `1 + Box.cutArc` on a round: a trial, `scene/lorryTry.ts`) and a zero normal ends the record; row 8 = `(cutCore.rgb, 1)`, or
   zeros without a core colour. No new binding, no slot allocation, no
   dedup; a box can carry markings and a cut at once. 4096 boxes × 9 rows × 16 B = 590 KB, uploaded only over the index ranges packed that frame (the statics
   whose record changed, and the dynamics, a range each).

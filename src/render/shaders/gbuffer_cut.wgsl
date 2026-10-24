@@ -126,16 +126,21 @@ fn cutEdgeTake(s0: f32, g: vec2f, best: ptr<function, f32>, d: ptr<function, vec
   // point (the silhouette and every ray keep the flat faces); marks and the look's paint read them as the box face that normal leans to (flatN: a rule that
   // runs ALONG a face is asked a quarter of the round at a time, and what it leans the normal by is turned back onto the round), the look with the distance
   // round the box unrolled; the end face gets the rolled rim of a drum's lid. Picture only. (The snow hook below knows a round about y only.)
-  let rax = cutRoundAxis(bi); var side = false; var lcS = v.lc; var hfS = v.hf; var flatN = n;
+  let rax = cutRoundAxis(bi); var side = false; var lcS = v.lc; var hfS = v.hf; var flatN = n; var arc = 0.0;
   if (rax >= 0 && !cap) {
     let q = boxRot(bi); let ln = quatRotate(vec4f(-q.xyz, q.w), n);
-    var r = v.lc; r[rax] = 0.0; let rl = length(r);
-    if (abs(ln[rax]) < 0.5 && rl > 1e-4) {
+    // AN ARC (Box.cutArc; a trial, scene/lorryTry.ts): the round's axis lies `arc` metres under the box's centre (it rides in the record's unused last row: cut.ts
+    // packCut), so a box cut to a few facets of a wide circle turns its normal about THAT axis: a bowed roof, a fender. Its paint is read straight down each
+    // quarter (no unrolling: the arc is shallow); only its facets and its top turn (the box's own upright faces and its underside stay flat) and its ends get no
+    // drum's rim.
+    let last = cutPlaneRow(bi, CUT_ROWS - 1u); arc = select(0.0, max(last.w - 1.0, 0.0), rax != 1 && dot(last.xyz, last.xyz) < 0.25);
+    var r = v.lc; r[rax] = 0.0; r.y += arc; let rl = length(r);
+    if (abs(ln[rax]) < 0.5 && rl > 1e-4 && !(arc > 0.0 && own < 0 && ln.y < 0.5)) {
       side = true; r = r / rl; n = quatRotate(q, r);
       let f = markFaceOf(r); let fa = i32(f / 2u); let ta = 3 - rax - fa;
-      lcS[ta] = h[fa] * atan2(v.lc[ta], abs(v.lc[fa])); lcS[fa] = sign(v.lc[fa]) * h[fa]; hfS.w = f32(f);
-      var e = vec3f(0.0); e[fa] = sign(v.lc[fa]); flatN = quatRotate(q, e);
-    } else if (ln[rax] > 0.5 && own < 0) {
+      lcS[ta] = select(h[fa] * atan2(v.lc[ta], abs(v.lc[fa])), v.lc[ta], arc > 0.0); lcS[fa] = sign(r[fa]) * h[fa]; hfS.w = f32(f);
+      var e = vec3f(0.0); e[fa] = sign(r[fa]); flatN = quatRotate(q, e);
+    } else if (abs(ln[rax]) > 0.5 && own < 0 && arc <= 0.0) {             // (both ends: a wheel shows one to each side of the lorry)
       let d = h[(rax + 1) % 3] - rl;                         // metres in from the round's edge
       albedo *= 1.0 - 0.45 * smoothstep(0.012, 0.02, d) * (1.0 - smoothstep(0.03, 0.042, d));
     }
@@ -189,6 +194,11 @@ fn cutEdgeTake(s0: f32, g: vec2f, best: ptr<function, f32>, d: ptr<function, vec
   }
   var snowA = 0.0;
   if (LOOK && SNOW_SURF && rax == 1 && !cap && snowCfg.p[1].z > 0.5 && f32(bi) < snowCfg.p[1].w) { let rr = v.lc.xz * (length(v.lc.xz) / max(max(abs(v.lc.x), abs(v.lc.z)), 1e-4)); let sn = select(gn, flatN, side); let ls = lookSnow(lookClass(v.albedo), v.wp, sn, bi, select(vec3f(rr.x, v.lc.y, rr.y), lcS, side), hfS, v.albedo, albedo, rough, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y); if (ls.amt > 0.0) { albedo = ls.albedo; rough = ls.rough; metal = metal * (1.0 - ls.amt); if (ls.bank) { n = normalize(ls.n + gn - sn); lookTilt = false; if (SNOW_GLOW || SNOW_SPARKLE) { snowA = ls.amt * 0.6667; } } } }   // THE LOOK PROTOTYPE on a snow level (look.wgsl lookSnow, as fsBox; only a ROUND cut box, a trial: scene/geoTry.ts): the snow on its lid keeps a margin from the round edge, and the bank stands against its foot (the rule runs along a flat face, so it is asked a quarter of the round at a time and the bank's lean is turned back onto the round)
+  if (LOOK && SNOW_SURF && side && arc > 0.0 && hfS.w == 2.0 && snowCfg.p[1].z > 0.5 && f32(bi) < snowCfg.p[1].w && snowIsPaint(v.albedo)) {   // AN ARC IN THE SNOW PAINT (the lorry's caps, scene/lorryTry.ts): fsBox's snow, asked as the box's top face, its relief turned onto the arc
+    let sb = snowBox(v.wp, flatN, bi, lcS, hfS, false, true, snowIsLay(v.albedo), albedo, rough, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y);
+    if (sb.gone) { gone = true; }
+    else if (sb.amt > 0.0) { albedo = sb.albedo; rough = sb.rough; n = normalize(gn + sb.n - flatN); lookTilt = false; if (SNOW_GLOW || SNOW_SPARKLE) { snowA = sb.amt * 0.6667; } }
+  }
   if (LOOK && SNOW_SURF && oldCut && gn.y > 0.7 && snowCfg.p[1].z > 0.5) { let ls = lookSnow(lookClass(v.albedo), v.wp, vec3f(0.0, 1.0, 0.0), bi, vec3f(0.0, v.lc.y, 0.0), vec4f(0.3, v.hf.y, 0.3, 2.0), v.albedo, albedo, rough, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y); if (ls.amt > 0.0) { albedo = ls.albedo; rough = ls.rough; n = normalize(gn + ls.n - vec3f(0.0, 1.0, 0.0)); lookTilt = false; if (SNOW_GLOW || SNOW_SPARKLE) { snowA = ls.amt * 0.6667; } } }   // THE LOOK PROTOTYPE on a snow level: snow lies on an old break's faces that look up (lookSnow's top, asked as a wide flat top; the break keeps its own slope under the snow's grain)
   if ((frame.flags & FLAG_DECALS) != 0u) {
     let fp = distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y;
