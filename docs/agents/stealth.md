@@ -867,6 +867,38 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   whether a blast under the fog reads as the team's own doing or as a hole in the fog, and how bright the flash should be there (it is dimmed with
   the frame, `FOG.dim`), are the maintainer's to judge. The tutorial's first mission still has its fog off: whether it wants it back is that
   mission's owner's call.
+- **Thin things that stand free do not cut the fog's sight (`FOG.thin`, 10-24; the maintainer, of a taken room on The Pass: "weird vertical striations
+  due to fog of war + squad's vision").** Every static stopped the fog's eye, on both sides of the one model: the squad's own lines (`segmentBlocked`)
+  and the picture's ray (`occludedTBoxes`). So a stovepipe 10 cm across, a window's bar or a lone post each threw a sliver of "not seen" across the room
+  behind it, and with men outside looking in through barred windows the floor, rug and back wall were fans of seen and unseen (on The Pass, 3 to 5
+  slivers from one eye by a window of the long room, by the game's own sight test). THE RULE (`src/scene/thin.ts thinLevel`, run by
+  `host/standup.ts populateHost` after `roundLevel`, on both stands): a static is marked `BoxFlag.Thin` when it is NARROW (under `THIN_WIDTH` 0.25 m
+  across in plan both ways), FREE (no solid box beside it over a quarter of its height, counted over all its neighbours; what it stands on or under,
+  a pane of glass and the other slabs of the same round thing are not beside it) and NOT A DOOR'S (nothing within `DOOR_NEAR` 0.3 m of a door's shut
+  leaf: a jamb or a stop passed would open every shut door — the first version of this did exactly that, by size alone, and a review caught it). A
+  breached partition's bare studs are marked as they are made (`wallbreak.ts`). The mark is inert until read: (a) THE SQUAD'S LINES, every eye's line
+  in `game/fogofwar.ts` through `sightBlocked` (to a man, a body, a spot, a door, a lamp), pass marked statics; (b) THE PICTURE's fog eye passes them
+  too — which boxes, as a bit a box index in the sight table (`FogFrame.thinBits` → `FogSightT.thin`, written to the table and to the stand-in the
+  table's own pass reads) — and passes what a man CARRIES (any owned box: another man's gun, a tracer's streak; the squad's lines never met those).
+  One test, `common.wgsl fogThinBox`, asked only of a box a ray has already hit, live only while the private `fogEyeThin` is raised by the fog's own
+  rays (`fogSeenAt`, the fog pass's `main` and `pre`, the table's kernel). The lines go by the row alone (`FOG.full` stays a
+  switch of the picture only); the picture's half rides the sight table, so it is under the FULL picture alone. NOT the picture alone: who the squad has seen can differ behind a pipe, so a digest can. It is
+  the FOG's sight only: a guard's eye, a teammate's own `eyeContact`, a round, a sound and a shadow meet those boxes as ever. SWITCH: ON in the module
+  and the page; `?fogthin=0` = every static stops the eye, as it was; the debugger's fog page has the row; frozen stand: off, `TPS_FOGTHIN=1` raises
+  it (`FROZEN_HOLDS['FOG.thin']`); the journal carries it (a recording without the key replays with it off); not part of the replay page's look (the
+  tape's row decides who was seen). CHECK: `probes.ts fog-thin` (family `fog`; 8 lines; `FOGTHIN_BREAK=1` red on the marks', the lines' and the
+  block's) on both stands — the marks on all 53 level files, rounded and as slabs (narrow, free, none at a door; The Pass's are its stovepipes and
+  window bars), and through each level's own collision no line across a door's frame goes further with the marks passed; The Pass stood up: slivers
+  taken away from four eyes, no line shortened, the fog's test across a stovepipe, a wall, every shut door's frame; the block, its bits and the box list they were read off (a frame drawn after a wall is rebuilt and before the
+  next fill passes nothing: `FogSight.encode`);
+  the shaders as written; the address; the journal; the stands; the night breach with and without, two seeds (92 marked statics on that level: the
+  same digest and dice both ways, on both stands — held: red if the row begins to move that run). The fog, replay and journal gates on both stands. NOT HELD: (a) a teammate can call a contact the
+  fog's line gave him through a window bar while his own `eyeContact` is still blocked by it — whether thin things should stop hiding anyone from
+  anyone is a game rule, the maintainer's call, not made here; (b) loose props at eye height (a shelf, a locker) still stop the PICTURE's eye and
+  never stopped the squad's lines, and a carried box too large for the grid's cells (asked in the walk's own first loop) is not passed; (c) a host that stands boxes up another way (the viewer, the editor's stage) makes no marks: the fog there cuts on thin things as before; (d) while the sight table's program compiles (the first frames), if it fails, or under `?fogfull=0`, the picture is an older fog that does not pass
+  them while the squad's lines do (a man behind a pipe is drawn on a sliver the picture still fogs); (e) the rule's numbers are code, not knobs: retuning `THIN_WIDTH` changes what an old recording's level marks; (f) the fans a window's own
+  frame and wall thickness cast on Hard (each man a cone) are real sight edges and stay. **Never seen on a GPU**: the page boots with it on the
+  software adapter (every pipeline, no error); whether the room now reads clean is the maintainer's to judge.
 - **A held man drops his gun** (`HOLD.dropGun`, the table in `src/game/character.ts`; the rule is `player.ts startGrab`; ON in the page, `?nogundrop` puts it
   off; OFF in the module and on the frozen stand, `TPS_HOLDDROP=1`; a `FROZEN_HOLDS` row; a recording from before the key replays with it off). The maintainer,
   10-15, of a rifleman in his arm with the rifle up in his fist: "held enemies should drop their gun". As the arm goes round, the weapon in his hand (rifle or
