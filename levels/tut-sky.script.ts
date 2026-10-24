@@ -42,6 +42,8 @@ const WEST: Vec3 = [4.5, 1.1, 23.6];
 /** the two of the bunkhouse who come out to the mains box when the lights go, the door they come by, and where each is walked to: short of the box (a
  *  hand of theirs on its lever would put the lights back), in the open yard, one behind the other */
 const BUNK_MEN = ['Tango 5', 'Tango 6', 'Tango 7'], BUNK_DOOR: Vec3 = [28.6, 1.1, 16.25];
+/** seconds the run back inside is given */
+const TORCH_BACK = 12;
 const TORCH_MEN = ['Tango 5', 'Tango 6'], TORCH_TO: Vec3[] = [[23.2, 0, 13.4], [25.6, 0, 13.5]], TORCH_LOOK: Vec3 = [27.9, 1.2, 13.2];   // (round the lorry's tail and up the lane between it and the store's wall: their lights go before them)
 
 const script: LevelScriptFn = D => {
@@ -108,7 +110,7 @@ const script: LevelScriptFn = D => {
       for (const u of held) c.order(u, { goal: null, aimAt: BUNK_DOOR, upper: 'aim', hot: false });
       yield c.frames(1);
       yield c.until(q => squad(c).some(u => atBunk(q, u)));
-      for (const u of held) if (c.query.alive(u)) c.release(u, 'alert');
+      for (const u of held) if (c.query.alive(u) && inBunk(c.query, u)) c.release(u, 'alert');   // (still inside: one of the two with flashlights, out in the yard or on his run back, is that beat's)
     });
 
     // THE ROAD: the roadblock opens up on the two trucks and keeps it up, its rounds walked over the noses and screens, the road, the wall and the bank
@@ -211,26 +213,51 @@ const script: LevelScriptFn = D => {
     // THE TORCHES (the goggles are on): the bunkhouse, which has just lost its lamps, says on its own net what men in the dark do, its door opens and the
     // two come out behind their weapon lights at a walk, for the mains box. THE PLOUGH LORRY STANDS BETWEEN THEIR DOOR AND THE YARD (the level's own
     // placement): from the box and from most of the yard the first thing seen of them is their light on the snow round its tail, then the men. Nothing is
-    // done to anybody's eyes or trigger: a lit torch in a dark yard is seen by everybody, and the men with goggles on see it first. The two are the game's
-    // own again the moment one of them is hit, or they are where they were going. A squad already at the bunkhouse's door has made that room a fight:
+    // done to anybody's eyes or trigger: a lit torch in a dark yard is seen by everybody, and the men with goggles on see it first. Out there they are the
+    // script's until they are where they were going or one of them is hit, then the game's own — but for the one whose mate is down: THE WAY BACK below. A squad already at the bunkhouse's door has made that room a fight:
     // nothing is staged then, and the step goes by
+    // THE WAY BACK (a recorded play of the maintainer's: one of the two was shot, the other was let go where he stood and stood there for the rest of the
+    // mission — alert, pinned to a post he was not on, on no roster, behind the lorry where nobody had him). The one left when his mate goes down RUNS BACK
+    // IN, whenever that is — on the way out, or later at the corner — and is let go inside his own room, as the men who never left it are (the 'hold'
+    // beat); the door is shut behind him, never on a squad that has come to it. That is the 'inside' beat's, so the lesson's step is not kept waiting.
+    // Nobody down, the two are let go at the corner as they always were: the game's own men there, who fight what their lights show them
     P.beat('torches', function* (c) {
       c.flag.broke = true;
       const men = torchMen(c).filter(u => inBunk(c.query, u));
       if (men.length && !squad(c).some(u => atBunk(c.query, u) || inBunk(c.query, u))) {
+        const down = () => men.some(u => !c.query.alive(u)), gone = () => men.every(u => !c.query.alive(u));
+        c.flag.torchHome = men.map(u => { const p = c.query.pos(u); return [u.callsign, p[0], p[1], p[2]]; });
         c.say(men[0], men.length > 1 ? 'Power\'s out! Two of us are going to the breaker box!' : 'Power\'s out! I\'m going to the breaker box!', { radio: true });
         for (const u of men) c.order(u, { goal: null, aimAt: BUNK_DOOR, upper: 'aim', light: true, hot: false });
         yield c.wait(1.3);
         c.doors.open(bunkDoor, undefined, { hold: true });
         for (const [i, u] of men.entries()) { c.order(u, { goal: TORCH_TO[i], speed: 1.6, aimAt: TORCH_LOOK, upper: 'aim', light: true, crouch: false, hot: false, flinch: true }); yield c.wait(0.9); }
+        c.start('inside');
         yield c.any(c.wait(12), c.until(q => men.some(u => !q.alive(u)) || men.every(u => q.arrived(u))));
-        for (const u of men) if (c.query.alive(u)) c.release(u, 'alert');
-        if (!men.some(u => c.query.alive(u) && inBunk(c.query, u))) c.doors.shut(bunkDoor);   // (the last room is a shut door again, and its third man is not left standing in an open one)
-        yield c.any(c.wait(7), c.until(q => men.every(u => !q.alive(u))));
+        if (!down()) for (const u of men) c.release(u, 'alert');   // (one down already: the other is the 'inside' beat's, on his way back)
+        yield c.any(c.wait(7), c.until(gone));
         yield c.wait(0.8);
-        const by = c.unit('Blue One') ?? squad(c)[0]; if (by && men.every(u => !c.query.alive(u))) c.say(by, men.length > 1 ? 'Two down. They never saw us.' : 'He never saw us.', { radio: true });
+        const by = c.unit('Blue One') ?? squad(c)[0]; if (by && gone()) c.say(by, men.length > 1 ? 'Two down. They never saw us.' : 'He never saw us.', { radio: true });
       }
       c.signal('done:torches');
+    });
+    P.beat('inside', function* (c) {
+      const men = ((c.flag.torchHome ?? []) as [string, number, number, number][]).map(([n, x, y, z]) => ({ u: c.unit(n), to: [x, y, z] as Vec3 })).filter((m): m is { u: UnitRef; to: Vec3 } => !!m.u);
+      const taken = () => squad(c).some(u => atBunk(c.query, u) || inBunk(c.query, u));
+      const shut = () => { if (men.every(m => !c.query.alive(m.u) || inBunk(c.query, m.u)) && !taken()) c.doors.shut(bunkDoor); };   // (the last room is a shut door again, and its third man is not left standing in an open one)
+      yield c.until(q => men.some(m => !q.alive(m.u)));
+      const left = men.filter(m => c.query.alive(m.u));
+      if (!left.length || left.every(m => inBunk(c.query, m.u))) { shut(); return; }
+      if (taken()) { c.note('the bunkhouse is a fight already: the man left in the yard is the game\'s own where he stands'); return; }
+      c.say(left[0].u, left.length > 1 ? 'Man down! Get back inside!' : 'Man down! I\'m going back inside!', { radio: true });
+      for (const m of left) c.order(m.u, { goal: m.to, speed: 3.4, aimAt: null, upper: 'aim', light: true, crouch: false, hot: false, flinch: true });
+      const pending = new Set(left);
+      for (let t = 0; t < TORCH_BACK && pending.size; t += 0.2) {
+        yield c.wait(0.2);
+        for (const m of pending) if (!c.query.alive(m.u)) pending.delete(m); else if (c.query.arrived(m.u)) { pending.delete(m); c.release(m.u, 'alert'); }
+      }
+      for (const m of pending) { c.release(m.u, 'alert'); c.note(`${m.u.callsign} was not back inside in ${TORCH_BACK} s: let go where he is`); }
+      shut();
     });
     P.beat('out', function* (c) {
       c.flag.broke = true;

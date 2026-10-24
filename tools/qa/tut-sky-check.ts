@@ -14,8 +14,11 @@
 //      'smoke' in it up over him from at least a third of a second before the can leaves his hand and a row under his name on the HUD's radio strip, his arm
 //      throws it (where the stand has the toss: the frozen one holds that move off), and each of the two throwers calls his own
 //      (the maintainer, playing: "guys should announce that they're throwing out a smoke grenade").
+//   8. NOBODY IS LEFT STANDING IN THE YARD FOR GOOD: of the two who come out with flashlights, one is shot on the way. Inside twelve seconds the other is
+//      back inside the bunkhouse's walls and let go there, the door is shut behind him and the mains are still out (he was let go where he stood, pinned to
+//      a post he was not on and on no roster, and stood behind the lorry, alert, for the rest of the mission: a recorded play of the maintainer's).
 //   bun run tools/qa/tut-sky-check.ts          and again with TPS_PROFILE=shipped in front (the stand the page opens on)
-//   TUT_SKY_BREAK=1 …   the mains are never put out, the fog of war is put on as the mission had it and the squad's lines are taken off the men as they are said: lines 4 and 7 must be RED
+//   TUT_SKY_BREAK=1 …   the mains are never put out, the fog of war is put on as the mission had it and the squad's lines are taken off the men as they are said, the flashlight man is let go where he stands when his mate is shot: lines 4, 7 and 8 must be RED
 //                       (LINE 6's BREAK NO LONGER BITES, and did not on the build before line 7 was written: the fog is put on, but the 'blow' step has since been
 //                        given a lookout of its own (`eye`) that has the wall's face, so the line stays green under it. Not mended: taking the lookouts away
 //                        as well read 'fog of war off'. On the frame's book)
@@ -60,15 +63,21 @@ const L = JSON.parse(readFileSync(resolve(ROOT, 'levels/tut-sky.json'), 'utf8'))
   line(L.beacons.length >= 4 && owned && emergency.every((s: any) => s.on === false && s.mains === false), 'at least four emergency beacons, each a dome of group \'emergency\' off the mains and dark as authored', `${L.beacons.length} beacons, ${emergency.length} domes`);
 }
 
-// 4 ---- live
-{ const { standUp } = await import('./headless');
-  const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-  const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
-  const log = console.log, warn = console.warn, err = console.error; console.log = console.warn = console.error = () => { };
-  let why = '', before = -1, after = -1, mainsLit = -1, mainsWere = -1, othersLit = -1, n = 0, fogOn = true, wallSeen = false, eyes = 0; const cut: string[] = [];
-  try { const W: any = await standUp({ level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels/tut-sky.json'), 'utf8'))), seed: 1 }), g = W.game;
-    const r = startFromQuery(g, '?levelFile=tut-sky.json&roomclear=1&squad4'); why = r.why ?? '';
+/** the mission stood up as the page stages it and run thirty frames, then `fn` on it, the console muted meanwhile. Answers the fault ('' = none) */
+const live = async (fn: (W: any, g: any) => void): Promise<string> => {
+  const { standUp } = await import('./headless');
+  const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`), { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
+  const log = console.log, warn = console.warn, err = console.error;
+  try { console.log = console.warn = console.error = () => { };
+    const W: any = await standUp({ level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels/tut-sky.json'), 'utf8'))), seed: 1 }), g = W.game;
+    const r = startFromQuery(g, '?levelFile=tut-sky.json&roomclear=1&squad4'); if (r.why) return String(r.why);
     for (let i = 0; i < 30; i++) W.step(1 / 60);
+    fn(W, g); return '';
+  } catch (x) { return String((x as Error).message); } finally { console.log = log; console.warn = warn; console.error = err; }
+};
+// 4 ---- live
+{ let before = -1, after = -1, mainsLit = -1, mainsWere = -1, othersLit = -1, n = 0, fogOn = true, wallSeen = false, eyes = 0; const cut: string[] = [];
+  const why = await live((W, g) => {
     n = g.beacons.length;
     const fed = g.targets.filter((t: any) => t.mains !== false && t.group !== 'emergency'), lit = (l: any[]) => l.filter(t => t.factor > 0.05).length;
     const others = () => lit(g.targets.filter((t: any) => t.mains === false && t.group !== 'emergency'));
@@ -84,7 +93,7 @@ const L = JSON.parse(readFileSync(resolve(ROOT, 'levels/tut-sky.json'), 'utf8'))
     // 6: the step that blows the charge, and the floor at the foot of the wall's kitchen face (the step's own mark is on that wall)
     const steps: any[] = L.scenarios.lesson.steps, k = steps.findIndex(s => s.id === 'blow'), wm: number[] = steps[k].at; if (BROKEN) g.level.scenarios.lesson.rails.fog = true; g.lesson.i = k; for (let i = 0; i < 12; i++) W.step(1 / 60);
     fogOn = !!g.fogOfWar.active; eyes = g.fogOfWar.eyes.length; wallSeen = !fogOn || g.fogOfWar.spotSeen(wm[0] - 0.4, wm[2]);
-  } catch (x) { why = String((x as Error).message); } finally { console.log = log; console.warn = warn; console.error = err; }
+  });
   line(!why && n >= 4 && before === 0 && after === n && mainsWere > 0 && mainsLit === 0 && othersLit > 0,
     'with the mains in no beacon is lit; a second and a half after they go out every beacon is, nothing the mains feed is, and the lamps that are not the mains\' still burn',
     why || `beacons lit ${before} → ${after} of ${n} · mains fixtures lit ${mainsWere} → ${mainsLit} · other lamps still burning ${othersLit}`);
@@ -92,17 +101,9 @@ const L = JSON.parse(readFileSync(resolve(ROOT, 'levels/tut-sky.json'), 'utf8'))
   line(!why && wallSeen, 'on the step that blows the wall charge the wall\'s face is in the live picture', why || `fog of war ${fogOn ? `on, ${eyes} eyes` : 'off'} · the wall's face ${wallSeen ? 'shown live' : 'HIDDEN'}`);
 }
 // 7 ---- every smoke can is called by the man who throws it
-{ const { standUp } = await import('./headless');
-  const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-  const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
-  const log = console.log, warn = console.warn, err = console.error;
-  const { MOVES } = await import(`${ROOT}/src/game/character.ts`);
-  const { stripRows } = await import(`${ROOT}/src/game/cues.ts`);
-  let why = '', arms = false; const cans: { t: number; who: string; said: string; lead: number; arm: boolean; drawn: boolean }[] = [];
-  try { console.log = console.warn = console.error = () => { };
-    const W: any = await standUp({ level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels/tut-sky.json'), 'utf8'))), seed: 1 }), g = W.game;
-    const r = startFromQuery(g, '?levelFile=tut-sky.json&roomclear=1&squad4'); why = r.why ?? '';
-    for (let i = 0; i < 30; i++) W.step(1 / 60);
+{ const { MOVES } = await import(`${ROOT}/src/game/character.ts`), { stripRows } = await import(`${ROOT}/src/game/cues.ts`);
+  let arms = false; const cans: { t: number; who: string; said: string; lead: number; arm: boolean; drawn: boolean }[] = [];
+  const why = await live((W, g) => {
     g.director.signal('lesson:ambush'); for (let i = 0; i < 240; i++) W.step(1 / 60);
     const seen = new Set<number>(); arms = MOVES.on > 0.5 && MOVES.toss > 0.5;   // (the toss is a move of the page's stand: held off on the frozen one, where the arm is not asked)
     const frame = () => { W.step(1 / 60);
@@ -112,11 +113,29 @@ const L = JSON.parse(readFileSync(resolve(ROOT, 'levels/tut-sky.json'), 'utf8'))
         cans.push({ t: g.time, who: gd?.callsign ?? '?', said: up ? b.text : '', lead: up ? g.time - b.t : 0, arm: !!gd?.char.anim.tossing, drawn: up && g.cues.bubbleOf(gd) === b && stripRows(g).some((r: any) => r.text.includes(gd.callsign) && r.text.includes(b.text)) }); } };   // (bubbleOf: the line the page draws over him; stripRows: the HUD's radio strip)
     g.director.signal('lesson:smoke'); for (let i = 0; i < 180; i++) frame();
     const first = cans.length; for (let i = 0; i < 60 * 30 && cans.length < first + 2; i++) frame();
-  } catch (x) { why = String((x as Error).message); } finally { console.log = log; console.warn = warn; console.error = err; }
+  });
   const bad = cans.filter(c => !c.said || c.lead < 0.33 || (arms && !c.arm) || !c.drawn), who = new Set(cans.map(c => c.who));
   line(!why && cans.length >= 4 && bad.length === 0 && who.size >= 2,
     'every smoke can, the first two and the two that go out after them, is called on the net by its thrower before it leaves his hand, and his arm throws it',
     why || (cans.length ? cans.map(c => `${c.who} ${c.said ? `"${c.said}" ${c.lead.toFixed(2)} s before` : 'SAID NOTHING'}${c.arm ? '' : arms ? ' (NO ARM THROWS IT)' : ' (the toss is held off on this stand)'}${c.said && !c.drawn ? ' (NOT DRAWN: another line is over him, or no row under his name on the radio strip)' : ''}`).join(' · ') : 'no can went out'));
+}
+// 8 ---- the flashlights' beat leaves nobody standing in the yard for good
+{ const { killGuard } = await import(`${ROOT}/src/game/combat.ts`), { endGuardScript } = await import(`${ROOT}/src/game/squad.ts`);
+  let at = [0, 0], free = false, door = 9, dark = false, state = '';
+  const why = await live((W, g) => {
+    const a = g.guards.find((x: any) => x.callsign === 'Tango 5'), b = g.guards.find((x: any) => x.callsign === 'Tango 6'); if (!a || !b) throw new Error('no Tango 5 / Tango 6 on the floor');
+    for (const x of g.guards) if (x.team === 'hostile' && x.state !== 'dead' && !['Tango 5', 'Tango 6', 'Tango 7'].includes(x.callsign)) killGuard(g, x, [1, 0, 0], true);   // (the floor as the mission has it by this beat: every room before the bunkhouse taken — a party of theirs left alive goes and puts the mains back itself)
+    for (let i = 0; i < 30; i++) W.step(1 / 60);
+    g.setBlackout(86400, 'hand'); g.director.signal('lesson:torches');
+    for (let i = 0; i < 360; i++) W.step(1 / 60);   // (six seconds: both are out of their door and on the way)
+    if (!b.script) throw new Error('Tango 6 is not the beat\'s man six seconds into it');
+    killGuard(g, a, [1, 0, 0]);
+    for (let i = 0; i < 60 * 12; i++) { W.step(1 / 60); if (BROKEN && b.script) endGuardScript(b, 'alert'); }   // (the break: let go where he stands, as the beat let him go)
+    at = [b.char.pos[0], b.char.pos[2]]; free = !b.script; door = Math.abs(g.doors.byName('bunk').angle); dark = !!g.blackout.active; state = b.state;
+  });
+  const B = L.scenarios.roomClear.rooms.find((r: any) => r.id === 'bunk')?.bounds, inside = !!B && at[0] > B.x0 && at[0] < B.x1 && at[1] > B.z0 && at[1] < B.z1;   // (the bunkhouse's own floor, by the level file)
+  line(!why && inside && free && door < 0.1 && dark, 'with one of the two flashlight men shot on the way, the other is back inside his room and let go there inside twelve seconds, the door shut behind him and the mains still out',
+    why || `twelve seconds after his mate was shot: at ${at[0].toFixed(1)}, ${at[1].toFixed(1)} (${inside ? 'inside' : 'OUT IN THE YARD'}) · ${free ? 'let go' : 'STILL THE SCRIPT\'S'} · ${state} · the door ${door < 0.1 ? 'shut' : `OPEN ${door.toFixed(2)} rad`} · the mains ${dark ? 'out' : 'BACK IN'}`);
 }
 console.log(faults.length ? `=== tut-sky-check: FAIL (${faults.length}) ===\n${faults.map(f => '  ' + f).join('\n')}` : '=== tut-sky-check: ALL PASS ===');
 process.exit(faults.length ? 1 : 0);

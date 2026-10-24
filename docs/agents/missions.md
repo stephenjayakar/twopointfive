@@ -401,7 +401,23 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     'pan' step on the software adapter, one picture looked at. NOT DONE: the squad's other scripted lines here are still `say`s (a bubble alone, no row, no
     sound); the click is at the caller's head, so it is faint with the view panned far off him; the caller's hand is still on the handset when the can
     leaves it; at the sky seat's first zoom the men are about 25 pixels tall and the arm is not what tells you: the bubbles and the strip are. Nobody has
-    heard the click under the roadblock's fire. Never seen on a GPU. (3) 'WATCH
+    heard the click under the roadblock's fire. Never seen on a GPU. (2b) THE FLASHLIGHT MAN WHOSE MATE IS SHOT RUNS BACK IN (the `torches` beat, 10-24;
+    from a recorded play of the maintainer's, traced by the thread that owns the startle): the beat let its two go with `c.release(u, 'alert')` in the
+    yard, still `pinned` as the level stood them in their room and on no roster (the room fight never had them: the script has them from the first frame),
+    so the one left when his mate was shot stood alert behind the lorry for the rest of the mission (rerun here: 0.0 m in 36 s). Now a beat of its own,
+    `inside`, waits for one of the two to go down, whenever that is (on the way out, or later at the corner), and takes the other back under the script:
+    'Man down! I'm going back inside!', a run (3.4) to the mark he started on, let go 'alert' the moment he is on it (pinned there, as the men the `hold`
+    beat lets go in that room are), the door shut behind him — never on a squad that has come to it. With nobody down the two are let go at the corner as
+    they always were. The `hold` beat no longer lets go a man who is out in the yard (it let a runner go mid-run). TRIED AND DROPPED: (a) letting him go
+    un-pinned to search: he can walk to the breaker box, where a hand of their side puts the mains back, he re-opens the bunk door, and a roaming man
+    makes a cleared room 'held again'; (b) walking both back in after 7 s with nobody down: two men in a firefight nobody had died in yet would have
+    turned their backs on it. No switch: the level's script. CHECK: `tut-sky-check` line 8 on both stands (the rooms before the bunkhouse emptied, the
+    mate shot on the way: twelve seconds later the other is inside, let go, the door shut, the mains out; its break lets him go where he stands and is
+    red). MEASURED, seed 1, the squad still at the trucks: shot on the way, home and let go 3.6 s later; shot during the stay, home about 5 s later;
+    nobody shot, both stand at the corner as before. lesson-gate tut-sky 6 of 6. NOT DONE: with the squad already at the bunkhouse's door he is NOT
+    taken back (that room is a fight; he is then where the fault left him, and the beat's log says so); a run that takes more than 12 s lets him go where
+    he is (logged); the run was never watched with the squad in the yard (a man the script has does not fight: he is shot in the back or gets in); two
+    alive at the corner whom nobody ever shoots still stand there, pinned, for good. Never seen on a GPU. (3) 'WATCH
     IT' IS GONE: the gate's line is 'No order needed: they hold the gate', and Red One says so on the radio. (4) NO TEAMMATE'S LASER: `rails.lasers: false`
     (`Rails.noLasers`, one clause in `irlaser.ts laserOn`); the lasers anywhere else are untouched. (5) THE HOLD IS ITS OWN LINE. Step keys `noTap` (a tap of the
     command key gives no order while the step is up and these words come up under the line for 2.6 s, the line shaken once; only on a stand where the hold puts
