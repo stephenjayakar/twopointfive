@@ -32,7 +32,8 @@ const RESET = () => { const b = document.querySelector('#options button[data-act
   const page = await (await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 })).newPage();
   const errs = []; page.on('pageerror', e => errs.push('pageerror ' + String(e).slice(0, 300))); page.on('console', m => { if ((m.type() === 'error' && !/Failed to load resource/.test(m.text())) || /Invalid|error:/.test(m.text())) errs.push('console ' + m.text().slice(0, 300)); });
   const run = n => page.evaluate(n => { window.__runFrames(n, 1 / 60, [], false); }, n);
-  const boot = async () => { await page.goto(URL, { waitUntil: 'commit', timeout: 300000 }); await page.waitForFunction(() => !!window.__ready, null, { timeout: 120000 }); await page.evaluate(async () => { await window.__ready; });
+  page.setDefaultNavigationTimeout(900000);   // (a boot on the software adapter is minutes, and the reload is a second one)
+  const boot = async (again) => { if (again) await page.reload(); else await page.goto(URL); await page.evaluate(async () => { await window.__ready; });
     await page.evaluate(() => { window.__pauseLoop = true; window.__testVisible = true; window.__game.godMode = true; window.__runFrames(90, 1 / 60, [], false); }); };
   /** plan mode put up the player's own way: Shift held, the squad's key pressed */
   const planUp = async () => { await page.mouse.move(420, 250); await page.keyboard.down('ShiftLeft'); await run(2); await page.keyboard.down('KeyQ'); await run(2); await page.keyboard.up('KeyQ'); await run(2); await page.keyboard.up('ShiftLeft'); await run(6); };
@@ -59,7 +60,7 @@ const RESET = () => { const b = document.querySelector('#options button[data-act
   check(all(c, 1), 'as built — the strength put to 1 draws them as they were built (0.95 a picked man\'s, 0.6 another\'s)', `circles ${JSON.stringify(c.men)}`);
 
   await page.evaluate(() => window.__planlook.set(0.35));
-  await boot(); await planUp();
+  await boot(true); log('reloaded'); await planUp();
   const d = await page.evaluate(READ, LS);
   e = await page.evaluate(OPEN); if (e) throw new Error(e);
   const v2 = await page.evaluate(ROWV, ROW);
