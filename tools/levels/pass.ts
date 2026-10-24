@@ -201,6 +201,17 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
     lay(x0 - ring, z0 - ring, x1 + ring, z1 + ring, S.snowOld, 0.004); lay(x0, z0, x1, z1, M.dust, 0.006);
     zones.push({ id, mat: 'asphalt', x0: x0 - ring, z0: z0 - ring, x1: x1 + ring, z1: z1 + ring });
   };
+  /** GROUND MELTED ROUND A FIRE: the same two paints as `cleared`, each laid ROUND — a square of slush about a round drum read as a tile once the fire lit it from
+   *  its middle. Each is a regular ten-sided patch: five slabs through one centre, 36° apart, each tan 18° as deep as it is long (their union is the decagon
+   *  exactly), the earth turned half a side from the slush. Tops stepped 0.7 mm so no two lie in one plane; the earth's lowest is 2 mm over the slush's highest.
+   *  NOT the kit's octagon on purpose: four slabs 45° apart is how a round THING is written (scene/round.ts takes it for a cylinder and draws a drum's rim on
+   *  its lid). `r` = the earth's inner radius, `ring` = the slush past it. Its footsteps are earth's over the square the slush fits in */
+  const melted = (id: string, x: number, z: number, r: number, ring = 0.3) => {
+    const r5 = (v: number) => Math.round(v * 1e5) / 1e5;
+    const disc = (a: number, y: number, yaw0: number, m: Mat) => { for (let k = 0; k < 5; k++) { const hy = r5((y - k * 0.0007) / 2); add({ c: [x, hy, z], h: [a, hy, r5(a * Math.tan(Math.PI / 10))], yaw: r5(yaw0 + k * Math.PI / 5), ...m }); } };
+    disc(r + ring, 0.004, 0, S.snowOld); disc(r, 0.0088, Math.PI / 10, M.dust);
+    const e = r + ring + 0.05; zones.push({ id, mat: 'asphalt', x0: x - e, z0: z - e, x1: x + e, z1: z + e });   // (a corner of the slush reaches 4 cm past its flats)
+  };
   /** DECAL: a flat mark at the floor, w along local x, d along local z */
   const flat = (x: number, z: number, w: number, d: number, m: Mat, yaw = 0) => add({ c: [x, 0.012, z], h: [w / 2, 0.003, d / 2], yaw, ...m, flags: DECAL });
   let pathN = 0;
@@ -343,7 +354,7 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
   cleared('gateway', 18.15, 20.7, 20.85, 23.3, 0.45);
   cleared('tea_door', 16.15, 11.14, 18.35, 12.5, 0.4);
   cleared('generator', 9.75, 5.7, 11.2, 8.7, 0.35);
-  cleared('brazier', 19.1, 13.1, 20.1, 14.1, 0.35);
+  melted('brazier', 19.6, 13.6, 0.5, 0.3);                                                     // (round, as the drum is: tools/qa/pass-check.ts holds it)
   cleared('kitchen_door', 24.75, 11.14, 25.75, 11.9, 0.3);
   cleared('back_door', 24.75, 4.1, 25.75, 4.86, 0.3);
   // ---- trodden paths: from the gate to each door, between the doors, to the generator and the bay; the cook's path to the refuse heap ----

@@ -180,7 +180,7 @@ export const CMDRING = {
    *  posture row (go silent / go loud) closes every second ring, and is on the first where the ring is the squad's own (fall in stays on wedge 3 and
    *  hold position on 4 there, as fingers have them; a row that says what wedge 1 says has no wedge of its own, and its digit is wedge 1's:
    *  orders.ts seats `same`). Not on a tutorial mission (rails live: its lines name the digits of the tree as it was, "[X], then press [3]"; the tutorial's own
-   *  to move). false: the menu's pages, as built. Off here and on the frozen
+   *  to move) unless its level takes it (`rails.flatRing`, rails.ts RAILS.flatRing: the first mission does). false: the menu's pages, as built. Off here and on the frozen
    *  stand (`TPS_RINGFLAT=1` beside `TPS_QRING=1 TPS_QONLY=1`); the page raises it with `only` (`?ringflat=0` off) */
   flat: false,
   /** NO GLYPH AT THE CURSOR (the maintainer, 10-23: "let's remove the icons on mouse position from squad orders entirely"): the mark of what the

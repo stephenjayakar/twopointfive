@@ -62,7 +62,7 @@ function lessonTexts(name: string, L: any): Text[] {
   const out: Text[] = [], S = L?.scenarios?.lesson; if (!S?.steps) return out;
   const put = (where: string, kind: Kind, text: unknown) => { if (typeof text === 'string' && text.trim()) out.push({ where: `${name} ${where}`, kind, text, lesson: true }); };
   for (const s of S.steps) { const id = s.id ?? '?';
-    for (const k of ['line', 'menuLine', 'pageLine', 'noTap', 'ringLine', 'planLine', 'setupLine', 'blowLine']) put(`'${id}'.${k}`, 'line', s[k]);
+    for (const k of ['line', 'menuLine', 'pageLine', 'flatLine', 'noTap', 'ringLine', 'planLine', 'setupLine', 'blowLine']) put(`'${id}'.${k}`, 'line', s[k]);
     put(`'${id}'.after.line`, 'line', s.after?.line); put(`'${id}'.after.word`, 'line', s.after?.word);
     put(`'${id}'.card title`, 'title', s.explain?.title); put(`'${id}'.card`, 'card', s.explain?.text); }
   return out;

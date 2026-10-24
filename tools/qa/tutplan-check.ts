@@ -173,7 +173,7 @@ export async function tutplanCheck(): Promise<boolean> {
         `stacked and waiting ${stacked} (${QP.chains.map((C: any) => C.phase).join(',') || 'no chain'}) · word locked ${locked} · after a second right click: waiting ${held1} · the button held: ring ${ring}, waiting ${held2} · door shut ${shut()} · step '${qg.lesson.step?.id}'`); }
     // ---- 8: nothing in the lesson asks for his feet or for a key that opens or closes the mode (the file's own words and tests)
     { const steps = L.steps as any[], has = (t: any, is: string): boolean => !!t && (t.is === is || (t.of ?? []).some((x: any) => has(x, is)));
-      const words = (T: any): string[] => [T.line, T.planLine, T.noTap, T.menuLine, T.pageLine, T.explain?.title, T.explain?.text, T.after?.line, T.after?.word].filter((s: unknown) => typeof s === 'string');
+      const words = (T: any): string[] => [T.line, T.planLine, T.noTap, T.menuLine, T.pageLine, T.flatLine, T.explain?.title, T.explain?.text, T.after?.line, T.after?.word].filter((s: unknown) => typeof s === 'string');
       const NAMES = /\[Tab\]|\[Shift\]|\[B\]|\[Escape\]|walk to|walk into the|yourself|(open|close) plan mode/i;
       const feet = steps.filter(T => has(T.done, 'in') || has(T.done, 'following') || (has(T.done, 'flag') && JSON.stringify(T.done).includes('"plan"'))).map(T => T.id);
       const gives = [...(L.rails.allow ?? []), ...steps.flatMap(T => T.allow ?? [])].filter((a: string) => a === 'move' || a === 'sprint');

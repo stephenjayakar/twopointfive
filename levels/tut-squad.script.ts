@@ -50,6 +50,9 @@ const script: LevelScriptFn = D => {
   // hut's wall across the lane (tools/levels/tut-squad.ts SHOP_FIRE / SHOP_AIM: the level's volumes are laid along the same line)
   const SHOP_FIRE = D.mark('shop.fire', [19.3, 0, 8.52]), SHOP_AIM: Vec3 = [13.0, 1.0, 8.9], IN_STORE: Vec3 = [10.75, 1.1, 17.0], IN_HALL: Vec3 = [31.4, 1.1, 19.75], HALL_WINDOW: Vec3 = [31.775, 1.4, 17.0];   // (… and the hall's doorway from inside, which its two men watch, and its street window: the generator's WIN)
   const shopLane = D.volume('shop_lane'), shopLine = D.volume('shop_line'), shopIn = D.volume('shop_in');
+  // the hall's two: their places in the corners of the door's wall (the level's own marks for them), and where each waits until the window's line is up,
+  // against the street wall west of the window (measured: no free cell outside the hall has a line to a man standing on either)
+  const HALL_POST = [D.mark('hall.post0', [31.75, 0, 17.9]), D.mark('hall.post1', [31.75, 0, 21.4])], HALL_BACK = [D.mark('hall.back0', [29.4, 0, 17.4]), D.mark('hall.back1', [28.3, 0, 17.7])];
   const LANE = D.mark('nest.lane', [23.7, 0, 13.0]);                                               // the wall's own face, mid street: the first burst lands on concrete, well up the street from whoever is about to step round its end
   const CAMP = [D.mark('picket.camp0', [38.4, 0, 11.6]), D.mark('picket.camp1', [38.8, 0, 9.8]), D.mark('picket.camp2', [38.4, 0, 8.0])];
   const GATE_POST = D.mark('picket.gate', [35.9, 0, 14.0]), BAGS = D.mark('picket.bags', [31.0, 0, 13.8]);
@@ -191,27 +194,44 @@ const script: LevelScriptFn = D => {
       ends(end);
     });
 
-    // TWO WAIT EITHER SIDE OF THE HALL'S DOOR, AND THEY WATCH THE DOOR. Both are this beat's from the first tick, on their marks in the corners of the
-    // door's wall, rifles on the doorway: that is the ambush the window's line shows, and it is why the window is the answer. One of them hit, the
-    // other turns his rifle to the window and stays where he is, still this beat's: a man let go there went to the room's far corner, out of the
-    // window's sight, and the line 'Shoot through the window' had nobody left to shoot (a slow reader's run, twice, after the first had been shot
-    // through the glass from far off). They are the game's own when their door gives or the player is in their room.
+    // TWO WAIT EITHER SIDE OF THE HALL'S DOOR, AND THEY WATCH THE DOOR — FROM THE MOMENT THE WINDOW'S LINE IS UP. Both are this beat's from the first
+    // tick, rifles on the doorway: that is the ambush the window's line shows, and it is why the window is the answer. One of them hit, the other turns
+    // his rifle to the window on his own place, still this beat's: a man let go there went to the room's far corner, out of the window's sight, and the
+    // line 'Shoot through the window' had nobody left to shoot (a slow reader's run, twice, after the first had been shot through the glass from far
+    // off). They are the game's own when their door gives or the player is in their room.
     // (Before, they were the game's own from the first shot of the first room, one of them stands a step from the window, and the way round to the
     //  nest's open side passes that window a metre off: an unprotected scripted player walking it was shot through the glass on one die of eight.)
     P.onStart('hall');
     P.beat('hall', function* (c) {
       const men = HALL_MEN.map(n => c.unit(n)).filter((u): u is UnitRef => alive(c, u));
-      const up = () => men.filter(u => c.query.alive(u));
+      const up = () => men.filter(u => c.query.alive(u)), mine = () => up().filter(u => !c.query.routed(u));   // (a man runner.ts has is alive and nobody's to order)
       const ends = (k: number) => c.any(open(c, hallDoor), c.until(q => q.room('sam') === 'hall', 'the player is in the hall'), c.until(q => men.filter(u => q.alive(u)).length < k, 'one of the hall is down'));
       // (both STAND. The one by the window knelt while that window could be looked through from the street: standing, he was shot through it from the
       //  alley, twelve metres off, before the player had come near. On a knee under a sill a metre high he showed the window a head and no more, and
       //  it was the squad's rifles up the street that took him, not the player the line asks. The window is at the corner now, behind the nest's
       //  back wall of bags (tools/levels/tut-squad.ts WIN), and is seen through from the strip in front of it alone: he stands, a chest over the sill
       //  for the player who walks up to the glass)
-      const hold = (u: UnitRef, aimAt: Vec3) => c.order(u, { goal: null, aimAt, upper: 'aim', crouch: false });
-      for (const u of men) hold(u, IN_HALL);
-      while (up().length && (yield ends(up().length)).index === 2) for (const u of up()) hold(u, HALL_WINDOW);
-      for (const u of up()) c.release(u, 'alert');
+      // UNTIL THE WINDOW'S LINE IS UP THEY WAIT OUT OF THE WINDOW'S LINE, against the street wall west of the glass (HALL_BACK: no ground outside the
+      // hall has a line to a man standing on either mark), and walk to their places by the door on that step's cue (`window`, sent with its card). A
+      // frag that leaves the gunner alive under his bags sends the player round the nest by the strip in front of this window, his four behind him,
+      // while the line still says 'Take the gun nest': with the two already in their places a teammate shot the near one through the glass from that
+      // strip, the other was then the last of his room and ran, the hall counted as taken, and the window's, the door's and the lock's lines all went
+      // by with nobody having read them (the default die, once the frag was thrown a second and a half later; two dice of sixteen before that).
+      // (Sent to their places as the nest fell, they were there before a slow reader's line was: a teammate at the glass had both, three seconds early)
+      const post = (u: UnitRef, at: (typeof HALL_POST)[number], aimAt: Vec3 = IN_HALL) => c.order(u, { goal: at, aimAt, upper: 'aim', crouch: false, direct: true });
+      const slot = (u: UnitRef) => Math.max(0, HALL_MEN.indexOf(u.callsign));
+      // (his mate hit: the other turns his rifle to the window ON HIS OWN PLACE — where he is, once there. Told to stand where he stood, a man still on
+      //  his way across the room stopped short of the window's line, in nobody's sight, and the line 'Shoot them through the window' had nobody to shoot)
+      const turn = () => { for (const u of mine()) post(u, HALL_POST[slot(u)], HALL_WINDOW); };
+      const cued = (q: Query) => q.signalled('lesson:window');
+      if (!cued(c.query)) {
+        for (const u of men) post(u, HALL_BACK[slot(u)]);
+        yield c.any(c.until(cued, "the cue 'window'"), ends(men.length));
+      }
+      // (…and from wherever they are: the program starts over when the window's own checkpoint is put back, its cue sent again, as they walk)
+      if (up().length === men.length) for (const u of mine()) post(u, HALL_POST[slot(u)]); else turn();
+      while (up().length && (yield ends(up().length)).index === 2) turn();
+      for (const u of mine()) c.release(u, 'alert');
     });
 
     // A GUN ON THE STREET, AND IT IS THE SCRIPT'S UNTIL THE FRAG IS THROWN. Its first burst chips the wall's face, up the street from whoever is about
