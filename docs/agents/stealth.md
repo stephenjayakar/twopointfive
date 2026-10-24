@@ -5,6 +5,22 @@ One of the area files CLAUDE.md indexes. Everything below was moved here word fo
 title may now live in another file of this folder: `grep -l '<title>' docs/agents/*.md`. New bullets for this area go at the foot of this file.
 
 <!-- was CLAUDE.md lines 1541–1610 -->
+- **THE FOG'S FOUR PRINCIPLES, AND WHERE EACH IS ASKED (agreed by the maintainer 10-23; read this before adding anything the fog touches).** "The
+  fog hides other people. It never hides the place, and it never hides your own team." A new effect asks ONE question, whose is it, and takes
+  that kind's rule; it does not get a fog exception of its own. (1) THE PLACE is always alive: walls, floors, weather, lying snow, every
+  light's glow on the room, and all smoke and dust (`FOG.air`). (2) WHAT YOUR OWN TEAM DOES always shows: its flashes, tracers, rubble and
+  particles (`FOG.ours`: a box's `owner` in the team's set, in `FogOfWar.things`); a blast adds no eye and shows nobody hidden. (3) EVERYONE
+  ELSE IS WHERE YOUR TEAM LAST SAW THEM, and what they changed stays as last seen until the team looks: men (`hidden` / `seen`, a body kept
+  for good), doors (`doorShown`), lamps (`lampSeen`, and the bulb's own face: `FOG.kept`), furniture (`things` / `thingSeen`), one-frame
+  boxes such as another man's muzzle flash (`cellSeenAt`: never shown unseen, even a shot at the team), resting litter (`FOG.kept`), marks
+  in snow (`FOG.tracks`, `groundLook`), and all of it through a file load (`FOG.filed`). (4) TO SEE MORE, GET MORE EYES ON IT (`FOG.eyes`,
+  `fogEyeCount`; a sticky camera, a peek round a wall's end, a thin thing that does not cut the sight: `FOG.thin`). BESIDE THEM: you hear
+  everything; the enemy never reads the fog; there is one fog picture. KEPT ON PURPOSE: a blown wall or broken glass shows at once (it is
+  loud); a living man's last-seen mark fades in seconds. NOT YET UNDER THE PRINCIPLES: a furrow, a dent or a crater in snow made by a thing
+  nobody sees (`snowMarks.ts`); broken pieces and items after a file load. THE OLDER LOOKS STAY (`FOG.full` off, `FOG.lit` 0, `FOG.flat`
+  off and the rest of the fog's `FROZEN_HOLDS` rows): the frozen stand is every frozen digest's ground, so they are not retired; the page
+  runs none of them. Each principle's own bullet, with its switch and check, is below (`FOG.air`, `FOG.ours`, `FOG.thin`, `FOG.eyes`,
+  `FOG.kept`, `FOG.filed`, `FOG.tracks`).
 - **Fog of war as a cone, on hard** (`src/game/fogofwar.ts`, 10-10; the maintainer: "fog of war being 360 degrees around the players isn't quite realistic. it really should just be the
   cone they're looking at" — "the status quo is fine for normal difficulty"; page rebuild/fog-cone/read-first.md): `FOG.cone` (off = the fog all round every eye, the base by
   run digest) makes each of the fog's eyes a wedge of `FOG.coneDeg` 120 about his GAZE (`gazeOf(c)`: the head, eased onto the aim with a long gun in the shoulder) plus `coneNearM` 1.5 m all round;
