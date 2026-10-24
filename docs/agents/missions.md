@@ -1710,7 +1710,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   Space at the lock DRAG him; the `door` step's reach is 0.8 m so it does not pass from where he was taken. WORDS: the grab line is "When he lights a
   smoke, sneak up behind him and press [Space] to grab him"; the card keeps the maintainer's sentence ("He'll check out the sound and then stop for a
   smoke, with his back to you."). CHECKS: `lesson-run tut-quiet` on both stands (`TPS_RAILS=1` in front on the frozen one; `--pace 6` on the shipped)
-  finishes 19 of 19 and prints where he looked from and how far his light was off the mark (it fails under 4 m or past 16 degrees), and that his torch is still in his hand, lit, and under his shoulder at his smoke (0.48 m under; it fails above 0.2); its BREAK PATHS,
+  finishes 19 of 19 and prints where he looked from and how far his light was off the mark (it fails under 4 m or past 16 degrees), and that his torch is still in his hand and under his shoulder at his smoke (0.48 m under; it fails above 0.2; and, since 2026-10-24, switched off: the bullet after this one); its BREAK PATHS,
   each of which must fail the run: `TQSMOKE_BREAK=front` (the player stands on the walk), `=beam` (he stays on the whistle's mark), `=upright` (he
   walks up behind the smoking man on his feet). All three fail on the frozen stand, seed 1. `lesson-gate`, `level-needs --run` on both stands,
   `rails-check` on both, `second-way-check`, `ownroofs-check`, `rowset-check`: green. `quiet-light`: its three red lines by design, no fourth.
@@ -1722,6 +1722,23 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   A SMALL FLAW IT TURNED UP, not this change's and not mended: creeping up behind the hall's man the scripted player's footfall was filed on seven
   frames running (0.1 s) at 1.1 m, and seven crouched steps on stone at that range take a calm man to suspicious; the same approach six seconds
   earlier in the same run files one. It looks like the walk cycle's phase crossing its half back and forth (`player.ts`, the footstep's edge test).
+- **The ledger's smoking man clicks his torch off** (2026-10-24; `levels/tut-quiet.script.ts` beat `night`; a level script only, no switch, the level
+  file and its fingerprint untouched). The maintainer, on a GPU, of the man at his chair with his beam on the wall: "guy taking a smoke would have
+  turned his flashlight off". WHAT HE DOES NOW: his torch burns on the way to the gap, through the look and on the walk back up the strip; the tick
+  he is at his chair the script orders `light: false` (`squad.ts runGuardScript` puts a scripted man's own light out) and he smokes in the dark, the
+  torch still in his hand at his side. It burns again when he moves off: a second whistle's look order asks for `light: true`, and let go (the smoke
+  done, or handed back `alert`) he is the game's own man with the game's own light. If something turns him before he reaches the chair the light was
+  never put out. WHAT THAT DOES TO LIGHT AND SIGHT: nothing in the rules (a scripted man is blind and deaf either way, and the script's own eyes and
+  ears are the same volumes and footfall levels as before); the scripted player's light on the walk reads 0.02 with it off (the headless meter: no moon, no bounce); what is
+  gone is the beam on the strip's end wall, so the man himself is lit by his lighter's flame, the lit end and whatever the back court's own light
+  gives. CHECKS: `lesson-run tut-quiet` on both stands (frozen with `TPS_RAILS=1`, 2:33; shipped at `--pace 6`, 4:44; all steps pass, seed 1) now
+  fails unless the torch is in his hand, under his shoulder and OUT at his smoke; a fifth break path, `TQSMOKE_BREAK=wait` (the player hides and
+  never comes), must fail and says in its failure that the man finished, was let go and has his light on again (it does, on the frozen stand);
+  the four older paths (`front`, `beam`, `upright`, `hands`) still fail; `smokebreak-check` 10 of 10 on both stands. NEVER SEEN ON A GPU and never
+  played by a hand: whether a man with no beam reads from the gap, and whether the flame and the lit end (first numbers, `SMOKEBREAK`) are enough to
+  find him by, are the maintainer's to see. NOT DONE HERE, the tutorial frame's: the lock's row ("pick the lock") shows from the whistle's step on
+  whenever the player is in reach of the back door, so it is on screen while the line says to grab the man; `rails.rows` is one list for the whole
+  mission and the frame's own check asks for the pick at that door on the whistle's step.
 - **The ledger teaches the sponge round and the swap of the launcher's load** (2026-10-23; `tools/levels/tut-quiet.ts`, THE SPONGE ROUND at its head;
   level data, a level's own card and one new card key, no switch of its own). The maintainer, taking both out of the solo loud mission: "we can introduce
   sponge rounds + swapping secondaries later when we have a stealth tutorial". The store's old `strike` step (the hall's man taken by hand) is gone; in its
