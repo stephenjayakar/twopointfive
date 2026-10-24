@@ -2351,8 +2351,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   MEASURED: that line on seed 1, both stands (31 of 31). lesson-gate over the six missions ALL PASS (36 checks; each mission by script on four
   dice as the page ships, the rule on). Mission 1 by script on dice 1 to 4 with the rule on and with `TPS_SPAREDOWN=0`: 15 of 15 steps both
   ways, lengths within a second of each other; how many men were spared in those runs was not counted.
+  THE REAL PAGE (headless Chromium, software adapter, mission 1's own page, stepped, nothing drawn): a teammate stood in Tango 1's eye is put
+  down by Tango 1's own rounds in under three seconds; while he is on his knee Tango 1 is on him 0 frames and fires 0 rounds, and has him
+  again as he stands. The same page with `?sparedown=0`: on him all 300 frames, 8 rounds. No console error on either.
   NOT DONE: he is fought again the moment he is up (in the check, at arm's length, the defender has him back the same tick he stands, and with
   the switch off he was simply shot down again): a beat of grace on his feet is not built. `guards.ts armForFight` (the engagement tool) can
   still hand a spared man out as a foe; `acquireFoe` drops him the next frame. The
   same level opened as a plain room clear still reads its rails record (so its men are spared there too): left as it is, no player's way in
-  opens it like that. Seen in a staged check only: nobody has played it, never seen on a GPU.
+  opens it like that. Staged only, in the harness and on the page: nobody has played it, no picture was looked at, never seen on a GPU.
