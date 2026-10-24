@@ -2329,3 +2329,30 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   and not under it (18 lines pass, and the picture shows both digits clear); with `?markclear=0` the mark is drawn under the ring and that line
   fails. `rails-check` 30 of 30 on both stands with the change in.
   NOT DONE: his own ring over a mark was not played (the same code path); never seen on a GPU; nobody has played it.
+- **To the enemy a spared teammate is a man down (2026-10-24, from a recorded play of mission 1: Red Two took the round that would have killed
+  him, the level's `rails.respawn` put him on his knee for five seconds, and the defender who had shot him fired into him the whole time)**.
+  `rails.ts isSpared` said "nobody's target meanwhile" and only the wall charge asked it. Now `railsDown(g, gd)` is asked by whoever picks a man
+  to fight: `guards.ts acquireFoe` (the man whose foe he was comes off him as off a man he has dropped: the next enemy in his sight, else off
+  the alert to his wary look round; nobody takes him for a new foe), a moving defender's stop to fight (`roomfight.ts tickMove`), the response's
+  eye (`qrf.ts`), a colleague's man handed on (`tactics.ts`) and the men a defender counts before his grenade (`frag.ts`). A burst he had in
+  hand ends, and he calls no kill ("that's all of them." is not said over a kneeling man). Up again he is seen and fought like anybody.
+  WHAT COMING OFF THE ALERT MEANS IN A FIREFIGHT: it is the game's own step for a man whose foe has dropped, so the squad's next shot puts him
+  back up as it does after a real kill, a beat of reaction and his alarm call ("shots fired! on me!") with it; with the switch off he said
+  nothing and kept firing. Only on a live frame: `railsDown` asks `rails.live`, so a man spawned under a spared man's number after the lesson
+  has ended is not skipped.
+  SWITCH `RAILS.spareDown`: on in the page (`?sparedown=0` = they go on firing at him), off in the module and on the frozen stand
+  (`TPS_SPAREDOWN=1`, which acts only with the frame up: `TPS_RAILS=1`; its FROZEN_HOLDS row), off for a recording from before the key.
+  CHECK `rails-check`'s line "to the enemy a spared man is a man down", both stands: a teammate is stood in a defender's eye on tut-sky until
+  the defender is firing at him, then takes the killing round. With the rule the defender is on him 0 frames and fires 0 rounds at him while
+  he is down (and with nobody else in sight fires nothing at all), comes off the alert, takes the man beside him where one stands there, and
+  is on him again once he is up; with the switch off he is on him throughout (480 frames, 11 rounds on the shipped stand, 15 on the frozen).
+  `RAILS_BREAK=1` makes the line fail; the line reads the stand's own word, so it also passes under `TPS_SPAREDOWN=1` on the frozen stand.
+  THE LINE STANDS ON `acquireFoe` ALONE: the other four places that ask `railsDown` are read, not staged.
+  MEASURED: that line on seed 1, both stands (31 of 31). lesson-gate over the six missions ALL PASS (36 checks; each mission by script on four
+  dice as the page ships, the rule on). Mission 1 by script on dice 1 to 4 with the rule on and with `TPS_SPAREDOWN=0`: 15 of 15 steps both
+  ways, lengths within a second of each other; how many men were spared in those runs was not counted.
+  NOT DONE: he is fought again the moment he is up (in the check, at arm's length, the defender has him back the same tick he stands, and with
+  the switch off he was simply shot down again): a beat of grace on his feet is not built. `guards.ts armForFight` (the engagement tool) can
+  still hand a spared man out as a foe; `acquireFoe` drops him the next frame. The
+  same level opened as a plain room clear still reads its rails record (so its men are spared there too): left as it is, no player's way in
+  opens it like that. Seen in a staged check only: nobody has played it, never seen on a GPU.

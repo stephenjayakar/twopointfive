@@ -62,6 +62,7 @@ import { moraleBlast } from './morale';   // (called inside blast only: src/game
 import { chaosOf } from './destruction';   // (called inside blast only: src/game is one import cycle)
 import { PICTURE, PICTURE_STATS, exposureAsker } from './picture';   // (asked inside fleeSpot only)
 import type { Box } from '../scene/boxes';
+import { railsDown } from './rails';   // (a spared teammate on his knee is not one of the men a defender counts for his grenade)
 
 /** Every number of the grenade. fuse: seconds from leaving the hand (the player's); orderFuse: a teammate's on an order — cooked a beat, it has less far to go.
  *  lethalM / woundM: the two radii of the model above; woundKill: the chance of a kill at the very edge of lethalM for an exposed man, falling to 0 at woundM;
@@ -872,7 +873,7 @@ export function fragThrowTick(g: Game, dt: number) {
       // … or along his own gun line (within 45° of his aim, a line to the man, his eyes not full of magnesium): the eye test's look sits well off a shouldered gun's bore — the 'eyes on the sights' note in guards.ts
       const sights = (p: Vec3, hd: Vec3 | undefined) => { let off = Math.atan2(p[0] - c.pos[0], p[2] - c.pos[2]) - c.aimYaw; off = Math.atan2(Math.sin(off), Math.cos(off)); return Math.abs(off) < 0.785 && g.time >= gd.dazzledUntil && flat(p, c.pos) < 16 && !g.col.segmentBlocked(head, hd ?? v3.add(p, [0, 1.5, 0])); };
       const pl = g.player; if (!pl.down && !g.playerInvisible && flat(pl.char.pos, fix) <= F.defBunch && (gd.foe === 'player' || pl.visibility > 0.2) && (canSee(g, gd).visible || (gd.smokeTrans >= 0.3 && sights(pl.char.pos, pl.char.bones.head)))) bunch++;
-      for (const o of g.guards) if (o.team === 'operative' && o.state !== 'dead' && flat(o.char.pos, fix) <= F.defBunch && (gd.foe === o || o.visibility > 0.2) && (canSeeChar(g, gd, o.char, false).visible || sights(o.char.pos, o.char.bones.head))) bunch++;
+      for (const o of g.guards) if (o.team === 'operative' && o.state !== 'dead' && !railsDown(g, o) && flat(o.char.pos, fix) <= F.defBunch && (gd.foe === o || o.visibility > 0.2) && (canSeeChar(g, gd, o.char, false).visible || sights(o.char.pos, o.char.bones.head))) bunch++;
     }
     C.bunchT = bunch >= 2 ? C.bunchT + dt : 0;
     if (C.blockedT < F.defBlocked && C.bunchT < F.defBunchSecs) { no('line'); continue; }

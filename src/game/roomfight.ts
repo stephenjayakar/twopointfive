@@ -80,6 +80,7 @@ import { AIMCOST, feetHold } from './aimcost';
 import { friendInCone, ffHeld } from './friendlyfire';
 import { wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
+import { railsDown } from './rails';   // (a spared teammate on his knee stops no defender on the move: asked inside tickMove only)
 
 /** The module's switches and the few numbers that are not a side's. */
 /** the check's own break word (tools/qa coverkeep-probes.ts): the cover rule's switch reads on and the rule does nothing */
@@ -843,7 +844,7 @@ export class RoomFight {
     if (g.time >= gd.dazzledUntil) {
       const from = g.time < D.boltUntil ? D.boltFrom : null;   // (startle.ts's bolt: the one he ran from does not stop him for its first strides; null for every other man)
       if (from !== 'player' && isHostile(gd.team, 'player') && !g.player.down && !g.playerInvisible) { const vis = canSee(g, gd); if (vis.visible && vis.dist < ROOMFIGHT.moveEngageM && sightGain(g, gd, vis.dist) > 0.25) contact = 'player'; }
-      for (const o of g.guards) { if (contact) break; if (o === from || o.state === 'dead' || !isHostile(gd.team, o.team)) continue; const vis = canSeeChar(g, gd, o.char, false); if (vis.visible && vis.dist < ROOMFIGHT.moveEngageM && sightGainOn(g, gd, o, vis.dist) > 0.25) contact = o; }
+      for (const o of g.guards) { if (contact) break; if (o === from || o.state === 'dead' || !isHostile(gd.team, o.team) || railsDown(g, o)) continue; const vis = canSeeChar(g, gd, o.char, false); if (vis.visible && vis.dist < ROOMFIGHT.moveEngageM && sightGainOn(g, gd, o, vis.dist) > 0.25) contact = o; }
     }
     if (contact) {
       const fc = contact === 'player' ? g.player.char : contact.char;
