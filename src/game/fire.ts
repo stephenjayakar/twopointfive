@@ -2,7 +2,7 @@
 // barrels with fire on them … great fire with smoke and crackles and dynamic lighting would look sick.' Until now such a drum was a glowing lid and a steady lamp.
 //   WHICH     a level's light whose name starts with one of FIRE.names ('brazier'), with the glowing box the level hung on it (its mouth: where, and how wide).
 //             TODO(LevelData): a `fire` key on the light; today the name says it, as a street lamp's height says it to the moths.
-//   THE LIGHT the level's own lamp, as authored, FLICKERED: its strength about the authored one (the mean is the authored number), its place wandering a hand's
+//   THE LIGHT the level's own lamp, as authored, FLICKERED: its strength about the authored one (the noise's mean is the authored number; the cracks' kick puts about a twentieth on it), its place wandering a hand's
 //             width, a kick when the wood cracks. An engine light like any other, so the picture, the bounce, the men lit by it and the LIGHT METER all have the
 //             same thing: near a fire a man's reading now moves with the flames (docs/agents/render.md has what was measured).
 //   THE COALS the glowing box the level hung on the lamp, dimmed to a share of its authored glow under the flame and breathing with the light (FIRE.coals).
@@ -31,7 +31,7 @@
 // THE SWITCH: FIRE.on — ON in the page (`?fire=0` puts it off), OFF in the module and on the frozen stand (FROZEN_HOLDS; TPS_FIRE=1 raises it there). Off = the
 // glowing lid and the steady lamp, the build as it was. tools/qa/fire-check.ts (FIRE_BREAK=1 fails it). The look was set on the software adapter's stills
 // (tools/qa/fire-lab.cjs, fire-page.cjs). SEEN ON A GPU ONCE, the first cut, in one still: docs/agents/render.md says what it showed and what was changed for it;
-// the second in two ("still very ugly"); the third cut has not been seen on one.
+// the second in two ("still very ugly"); the third he played, and set the look's numbers himself in the fire lab (FIRE.look, below).
 import { SideMap } from '../math/side';
 import { Vec3 } from '../math/vec';
 import type { Game, LightTarget } from './game';
@@ -41,7 +41,7 @@ import { gpuFx } from './particleFx';
 /** FIRE.size as the page opens (host/profile.ts puts it back when `?firesize=0` is not on the address) */
 export const FIRE_SIZE = 1.1;
 /** FIRE.look.shimmer and .plume and FIRE.embers as the page opens (`?fireheat=0`, `?fireplume=0`, `?fireembers=0` put them at 0) */
-export const FIRE_SHIMMER = 0.012, FIRE_PLUME = 1, FIRE_EMBERS = 24;
+export const FIRE_SHIMMER = 0.019, FIRE_PLUME = 1, FIRE_EMBERS = 60;
 /** … and the lamp's and the look's newer numbers as the page opens: FIRE.bright, .warm, .reach, .lift (`?firebright=0` = 1, no tint, 1 and 0.25: the level's lamp as
  *  it was hung), FIRE.wander / .wanderUp (`?firesway=0` = the 6 and 4 cm they were), FIRE.look.react (`?firereact=0`) and FIRE.look.lean (`?firelean=0` = the 0.07 it was) */
 export const FIRE_BRIGHT = 1.25, FIRE_REACH = 1.4, FIRE_LIFT = 0.5, FIRE_LIFT_WAS = 0.25, FIRE_WARM: readonly number[] = [1, 0.72, 0.51], FIRE_WANDER = 0.14, FIRE_WANDER_UP = 0.1, FIRE_WANDER_WAS = 0.06, FIRE_WANDER_UP_WAS = 0.04,
@@ -52,18 +52,18 @@ export const FIRE = {
   names: ['brazier'] as string[],
   /** THE FLAME: its height over the coals (m, a calm flame's tallest tongue is about twice this) and its radius as a share of the glowing box's half-width (the box is a
    *  plate in the middle of a drum's lid: the fire fills the drum's mouth) */
-  height: 0.75, mouth: 1.15,
+  height: 1.15, mouth: 1.15,
   /** THE COALS: the glowing box the level hung on the lamp keeps this share of its authored glow while a flame stands on it (the lid alone was authored bright
    *  enough to be the whole fire: under a flame it clips to white and the flame is lost on it), and breathes with the light by `coalSwing` of the swing */
-  coals: 0.42, coalSwing: 0.6,
+  coals: 0.26, coalSwing: 0.6,
   /** … and THE BED OF COALS the picture lays over that box (render/shaders/fire.wgsl fireCoals): its radius as a share of the box's half-width (0.27 m on a
    *  0.29 m drum: all of its lid but the rim — the lid is lit white by its own lamp, and the bed is what hides that) */
   bedR: 1.42,
-  /** THE LIGHT: how far its strength swings either side of the authored one (the noise's weight: at 0.3 about a seventh of it most of the time, a third now and then, never past `least` and `most`), the rates it swings at (Hz; firelight on a yard is slower than
+  /** THE LIGHT: how far its strength swings either side of the authored one (the noise's weight: at 0.4 about a fifth of it most of the time, two fifths now and then, never past `least` and `most`; with the cracks' kick on top the mean runs a twentieth over the authored), the rates it swings at (Hz; firelight on a yard is slower than
    *  the flames that make it: their flutter is the picture's own, render/shaders/fire.wgsl), how far its place wanders (m, across and up) about a point `lift` m over where the level hung it
    *  (a level hangs the lamp a hand over the lid; the light of a fire comes from the body of its flame, and from there the drum's own shadow on the ground is
    *  half as wide), and what a crack adds for `kickSecs` */
-  depth: 0.3, rates: [0.43, 1.3, 2.7, 4.9, 8.3] as number[], weights: [0.8, 0.9, 0.7, 0.45, 0.2] as number[], least: 0.6, most: 1.6, wander: FIRE_WANDER, wanderUp: FIRE_WANDER_UP, lift: FIRE_LIFT, kick: 0.25, kickSecs: 0.12,
+  depth: 0.4, rates: [0.43, 1.3, 2.7, 4.9, 8.3] as number[], weights: [0.8, 0.9, 0.7, 0.45, 0.2] as number[], least: 0.6, most: 1.6, wander: FIRE_WANDER, wanderUp: FIRE_WANDER_UP, lift: FIRE_LIFT, kick: 0.6, kickSecs: 0.12,
   /** A FIRE THROWS A FIRE'S LIGHT (the maintainer's third look, on his GPU beside the gate's flood: "still seems way too dark, especially relative to the other lights
    *  in the scene"; "i'd also expect the color from the fire to be more warm"): the level hung a 9 on the pass's brazier where a room's bulb is 26 and the gate's flood 70,
    *  in a lantern's colour, a hand over the lid. While it burns the lamp stands `lift` 0.5 m over the lid, in the body of the flame (at 0.25 the drum's own rim
@@ -91,14 +91,19 @@ export const FIRE = {
    *  feed the bloom; the maintainer: "embers can be GPU particles though"): about `embers` in the air at once off a fire within `emberR` m of what the view looks
    *  at, each alight `emberLife` s and leaving the flame at `emberSpeed` m/s; `emberSize` its streak's thickness (m), `emberGain` its light as a share of a
    *  spark's; a crack throws `emberCrack` more, harder. `embers` 0 = none (`?fireembers=0`) */
-  embers: FIRE_EMBERS, emberLife: 2.4, emberSpeed: 1.1, emberSize: 0.005, emberGain: 0.45, emberCrack: 10, emberR: 30,
+  embers: FIRE_EMBERS, emberLife: 1.7, emberSpeed: 1.1, emberSize: 0.004, emberGain: 0.45, emberCrack: 10, emberR: 30,
   /** THE LOOK OF THE FLAME (render/shaders/fire.wgsl FireLook; the picture only; live in the page's fire lab, `/firelab`): × its light, × its white heart (the
    *  bloom spreads it), how soon it hides what is behind it (1/m), × how fast its shapes climb, × its height, how torn it is (0‥2), the smoke drawn off its
    *  tips (0‥2; `?fireplume=0` = none), the shimmer of the hot air over it (m the picture behind is pushed aside; `?fireheat=0` = none), how dark its cool
    *  edge is (0‥1) and how hard it breathes (0‥2). Set on the software adapter's stills against the maintainer's reference (a fluid-simulated camp fire: a white
    *  heart, orange body, dark red tips, smoke off them), after his second look on a GPU: "still very ugly. needs more dynamic range, smoke, embers, movement,
    *  could we do heat distortion?" NEVER SEEN ON A GPU. */
-  look: { gain: 2, core: 1.4, sigma: 12, speed: 1, tall: 1.25, torn: 1, plume: FIRE_PLUME, shimmer: FIRE_SHIMMER, soot: 0.6, breathe: 1,
+  // THESE NUMBERS ARE NOW THE MAINTAINER'S OWN (and the JSDoc above is how they came to be first), set by eye on his GPU with the fire lab's sliders (/firelab,
+  // its "copy them" line, 2026-10-24) and taken as he sent them: the look's first ten here, and in this table `height`, `coals`, `depth`, `kick`, the embers'
+  // and the smoke's density, temp and speed. He set them on the build BEFORE the newer rules (the flame marked for the temporal resolve, the lifted and tinted
+  // lamp, the lean, the lamp's wider shift, twice the cracks), so with those on the picture is not the one he tuned: the nearest to that is
+  // `?firereact=0&firelean=0&firebright=0&firesway=0`. `wander` is not his 0.07: his note asking for shadows that move came with it (FIRE_WANDER).
+  look: { gain: 3, core: 4, sigma: 2.5, speed: 0.7, tall: 0.95, torn: 1.1, plume: FIRE_PLUME, shimmer: FIRE_SHIMMER, soot: 0.5, breathe: 1,
     /** THE PICTURE'S MEMORY LETS A FLAME GO (0‥1; `?firereact=0`): the temporal resolve (taau.wgsl) keeps about ten frames of every pixel, forty where the picture
      *  is all contrast, and a flame is a new shape every frame: on a GPU it was the average of forty flames, soft, dim, see-through and nearly still ("pale blob",
      *  "feels very static", "way too dark" — three looks, one cause, and the software adapter's stills, a frame at a time with no history, never showed it). The
@@ -108,7 +113,7 @@ export const FIRE = {
   /** THE SMOKE (the solver's units: 6 /m of extinction a unit of density, +1.6 m/s² a unit of heat): how high over the coals the source's middle is as a share of the
    *  flame's height (its foot, a radius lower, stays over a standing man's head on a drum: tools/qa/fire-check.ts holds it), the source's radius (m) and its least width in cells, what it lets out a second, how hot, how fast it leaves, and how hard the air is dragged along;
    *  filed afresh every `every` s for that long; only for a fire within `viewR` m of what the view looks at; `on` false = a fire with no smoke (`?firesmoke=0`) */
-  smoke: { on: true, up: 1.9, radius: 0.26, cells: 4, density: 2.2, temp: 30, speed: 1.5, push: 6, jitter: 0.5, every: 1, viewR: 18, lean: 0.12 },
+  smoke: { on: true, up: 1.9, radius: 0.26, cells: 4, density: 1, temp: 21, speed: 0.9, push: 6, jitter: 0.5, every: 1, viewR: 18, lean: 0.12 },
   /** THE FLAME AS GAS (the maintainer's pick, 10-23: "Drive it from our 3D smoke solver"; "i'm curious how far we can push our existing smoke solver … if we can
    *  make the finer cells work well with our existing brick stuff"): a second LOOK source, on the solver's FINE lattice (2.2 cm cells, the breath's), filed at
    *  the coals of a fire within `viewR` m of what the view looks at while the solver draws — HEAT, with next to no smoke in it (`density`: thin enough that a
@@ -263,7 +268,7 @@ export function updateFire(g: Game, dt: number) {
     l.intensity = l.steady.intensity * fl;
     l.pos[0] = t.pos[0] + K.wander * Math.sin(TAU * (0.83 * time + h01(si + 5))) * Math.sin(TAU * (2.9 * time + h01(si + 6)));
     l.pos[2] = t.pos[2] + K.wander * Math.sin(TAU * (0.71 * time + h01(si + 7))) * Math.sin(TAU * (3.3 * time + h01(si + 8)));
-    l.pos[1] = t.pos[1] + K.lift + K.wanderUp * (fl - 1) / Math.max(K.depth, 1e-6);
+    l.pos[1] = t.pos[1] + K.lift + K.wanderUp * Math.max(-1, Math.min(1, (fl - 1) / Math.max(K.depth, 1e-6)));   // (up with the flicker, by no more than the table says: a crack's kick is past the swing and would snap the lamp half as far again in a frame)
     { const ck = t.factor * K.coals * (1 + K.coalSwing * (fl - 1)); for (const bi of t.boxes) { const bx = g.engine.world.statics[bi]; if (bx) bx.emissive = [t.baseEmissive[0] * ck, t.baseEmissive[1] * ck, t.baseEmissive[2] * ck]; } }   // (updateTargets painted it at its authored glow a moment ago, and does again the frame the switch goes off)
     if (moved) { T.lo = Math.min(T.lo, fl); T.hi = Math.max(T.hi, fl); T.sum += fl; T.n++; }
     const { wv, wl } = windAt(g, M.pos), d = Math.hypot(M.pos[0] - focus[0], M.pos[2] - focus[2]);
