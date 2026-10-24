@@ -700,3 +700,18 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   patches let the surface through. An emissive entry keeps its cells (a lamp's face must not lose light), and past about 1.75 cells a pixel it is the
   plain coverage again (nothing to draw). Panel row Painted marks (`look=marks:0` = square cells). The bitmaps themselves are still the level's: a
   mark that is a coarse picture stays a coarse picture with soft edges, so authored marks at a finer cell are the round after. Never seen on a GPU.
+  THE SOFT READ IS ITS OWN (`markSoftRead`, 10-24), one read of the four cells around the pixel. (1) A PLAIN BILINEAR RAMP between cell centres.
+  The first try read `markTaps` at a one-cell footprint, which is already a quarter into its minified mean: 0.75 of the ramp + 0.25 of the nearest
+  cell, a step on every cell edge, so the cut sat on the cell edges and a staircase stayed a staircase with round corners. (2) A STROKE THAT RUNS
+  CORNER TO CORNER IS JOINED: where two cells of one paint meet only at a corner and the other two of the block are bare, the ramp is exactly half
+  cover at the corner (a stepped diagonal was a string of beads). The bridge adds cover there for that paint (a neck about 0.8 of a cell, as wide as
+  the stroke), so the pass gate's diamond is one painted line. NOT joined: two solid blocks meeting at a corner (the rugs' chequers of 2 by 2 squares;
+  the same rule leaves two bare cells meeting inside a painted field alone), a chequer of single cells, a paint that burns. Counted over
+  `levels/*.json`: 6,903 such corners in 8,075 marks; 4,608 are block corners and 36 a single-cell chequer (bazaar.json), left as they were; 2,259
+  are joined, in 748 marks. Among those are specks that touch at a corner (the dots of writing on a paper, rust speckle), which now fuse. KNOWN: it
+  reads its own record, so a corner on the seam between two records of one face is not joined (347 of them, most on rugs laid as four records, where
+  the block rule skips them anyway); the bridge is paint the far read (the plain coverage past 1.75 cells a pixel) and a reflection (`markHit`) do
+  not have, so a joined stroke is about a tenth heavier up close than far off. A wider smooth read (a B-spline over the cells, cut at 0.4) was tried
+  first and DROPPED: it filled one-cell holes (the police post's lattice), washed out a lone cell of one paint inside another, and did not keep the
+  cover. Seen so far: the bridge alone, on the software adapter at the pass gate (the diamond joins); the plain ramp has compiled in a page boot and
+  has not been looked at yet. Never on a GPU.

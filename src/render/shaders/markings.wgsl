@@ -106,15 +106,46 @@ fn markNear(m: MarkRec, x: f32, y: f32, wT: vec2f) -> bool { let r = max(wT, vec
 
 fn mkHash(p: vec2f) -> f32 { let q = fract(p * vec2f(0.1031, 0.1030)); let r = q + dot(q, q.yx + 33.33); return fract((r.x + r.y) * r.x); }
 fn mkNoise(p: vec2f) -> f32 { let i = floor(p); let f = p - i; let u = f * f * (3.0 - 2.0 * f); return mix(mix(mkHash(i), mkHash(i + vec2f(1.0, 0.0)), u.x), mix(mkHash(i + vec2f(0.0, 1.0)), mkHash(i + vec2f(1.0, 1.0)), u.x), u.y); }
+/** THE LOOK PROTOTYPE, the soft read of a marking: ONE read of the block of four cells around (x, y), blended as a plain bilinear ramp between their
+ *  centres (markTaps at a one-cell footprint is not that: it is already a quarter into its minified mean, which puts a step back on every cell edge and
+ *  keeps a staircase a staircase), plus THE BRIDGE of a stroke that runs CORNER TO CORNER: where two cells of one paint meet only at a corner and the other
+ *  two of the block are bare (a stepped diagonal: a gate's diamond) the ramp is exactly half cover at the corner, so the half-cover cut leaves two beads
+ *  that just touch. The bridge adds 0.31 of cover there for that paint and nothing at the block's edges: a neck about 0.8 of a cell wide, as wide as the
+ *  stroke. It is NOT added where both cells are the corners of solid blocks (two squares of a chequer of blocks, or two bare cells meeting inside a painted
+ *  field, stay as ambiguous as they were), nor where the same paint sits on both outer ends of the other diagonal (a chequer of single cells), nor for a
+ *  paint that BURNS. It reads its own record only: a corner on the seam between two records of one face is not joined. */
+fn markSoftRead(m: MarkRec, x: f32, y: f32) -> vec3f {
+  let i0 = i32(floor(x - 0.5)); let j0 = i32(floor(y - 0.5));
+  let u = x - 0.5 - f32(i0); let v = y - 0.5 - f32(j0);
+  let a = markCell(m, i0, j0); let b = markCell(m, i0 + 1, j0); let c = markCell(m, i0, j0 + 1); let d = markCell(m, i0 + 1, j0 + 1);
+  var o = vec3f(0.0);
+  if (a != 0u) { o[a - 1u] += (1.0 - u) * (1.0 - v); }
+  if (b != 0u) { o[b - 1u] += u * (1.0 - v); }
+  if (c != 0u) { o[c - 1u] += (1.0 - u) * v; }
+  if (d != 0u) { o[d - 1u] += u * v; }
+  var e = 0u; var blocks = false; var lattice = false;
+  if (a != 0u && a == d && b == 0u && c == 0u) {
+    e = a;
+    blocks = markCell(m, i0 - 1, j0) == e && markCell(m, i0, j0 - 1) == e && markCell(m, i0 + 2, j0 + 1) == e && markCell(m, i0 + 1, j0 + 2) == e;
+    lattice = markCell(m, i0 + 2, j0) == e && markCell(m, i0, j0 + 2) == e;
+  } else if (b != 0u && b == c && a == 0u && d == 0u) {
+    e = b;
+    blocks = markCell(m, i0 + 2, j0) == e && markCell(m, i0 + 1, j0 - 1) == e && markCell(m, i0 - 1, j0 + 1) == e && markCell(m, i0, j0 + 2) == e;
+    lattice = markCell(m, i0 - 1, j0) == e && markCell(m, i0 + 1, j0 + 2) == e;
+  }
+  if (e != 0u && !blocks && !lattice && ((m.emask >> (e - 1u)) & 1u) == 0u) { o[e - 1u] += 5.0 * u * (1.0 - u) * v * (1.0 - v); }
+  return o;
+}
 /** THE LOOK PROTOTYPE (soft > 0 only on that page: gbuffer.wgsl hands lookMarkSoft()): a marking drawn as PAINT, not as cells. The bitmap is read as a soft
- *  picture a cell wide (markTaps at a one-cell footprint: a bilinear ramp between cell centres) and cut back at half cover along a line the brush left ragged,
+ *  picture a cell wide (markSoftRead above: a bilinear ramp between cell centres, with its corner bridge) and cut back at half cover along a line the brush left ragged,
  *  so a staircase of cells is a slanted stroke, a lone cell a dab, a corner round; between two colours the stronger takes the pixel; the paint is thin in
  *  patches where it was rubbed. An entry that BURNS keeps its cells (an LED is a square). `w` = the crisp weights; returns the weights to use. */
 fn markSoft(m: MarkRec, x: f32, y: f32, wT: vec2f, w: vec3f, soft: f32, salt: f32) -> vec3f {
-  let ws = markTaps(m, x, y, max(wT, vec2f(1.0)));
-  let s = ws.x + ws.y + ws.z;
   let foot = max(wT.x, wT.y); let near = 1.0 - smoothstep(0.75, 1.75, foot);      // (far off it is the plain coverage again: a tint, never noise)
   let amt = min(soft, 1.0) * near;
+  if (amt <= 0.0) { return w; }
+  let ws = markSoftRead(m, x, y);
+  let s = ws.x + ws.y + ws.z;
   if (s <= 0.0) { return w * (1.0 - amt); }
   let eg = clamp(0.5 * foot, 0.07, 0.5);
   let rag = (mkNoise(vec2f(x, y) * 2.3 + vec2f(salt, 1.7)) - 0.5) * 0.3 + (mkNoise(vec2f(x, y) * 0.45 + vec2f(7.0, salt)) - 0.5) * 0.18;
