@@ -2169,6 +2169,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   of 36, with each mission's four dice (two at six seconds a line). On the real page (headless Chromium, the software adapter, real keys,
   `tut-page.cjs tut-sky`): mission 1 played to its end, its three cards up and closed, 24 lines and no fault — on the tree before the last mends
   (the deeds carried forward then, and the rule was on in the module), not run again after them.
+  A CUE IS A BEAT LATE BY DESIGN: a step's cue comes with its card, 1.2 s or more after the deed before it. That is the right time for men a script
+  moves WHEN the step comes up; men who must be out of sight BEFORE the player can see them are placed from the first tick (or the card says `now`).
+  The squad mission's hall men stood in the window's line until their step's cue and were shot through the glass a step early (mended there).
+  ON THE RUNNER'S BOOK: `lesson-run` exits 0 when a `fightOk` step goes by with the fight before it ever came up; three such in a row were three
+  lessons nobody read. A runner-wide bar (a NOTE, or a fail unless the script says it may) is not built.
   NOT DONE: Tab's objectives card and the small objective row still read the done step's ask while it settles; an order given in the beat still snaps
   to the done step's mark. The other missions' cards are plain (the beat): which of them follow a fight he only watches is their parts' to mark.
   Never seen on a GPU; nobody has played it.
@@ -2215,8 +2220,16 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `rails-check` 29 of 29 on shipped, on frozen, and on frozen raised by its own words (no destruction there, so no charge row: the ring and its
   line are what is asked); `ringflat-check` 14 on both; mission 1 played to the breaker step on the real page with real keys on the software
   adapter: one ring, one key cap in the line, [2] gives the charge and no second ring comes up.
-  THE STEP'S MARK GIVES WAY TO THE RING (`RAILS.markClear`, `?markclear=0`; picture only, a knob of the frame's table like `lineClear`, so on every
-  tutorial mission and for the pages too): the mark sits on the spot the ring opens on, and in the first picture of this ring its orange circle
-  lay over the second wedge's digit. `Rails.prompt()` says `ringUp` while the step's ring is up and `ui/overlay.ts` draws no mark then; the
-  first play's line of `rails-check` asks it (no ring: no; ring up: yes; knob off: no) and `tools/qa/tut-page.cjs` asks the page's own element.
   NOT DONE: the digit in a `flatLine` is hand-written, and only tut-sky's is held by a check. Never seen on a GPU; nobody has played it.
+- **A tutorial step's mark gives way to a ring over it (2026-10-23, from the first picture of mission 1's one ring, where the mark's orange
+  circle lay over the second wedge's digit; his own 19:46Z shot of that step shows the same, "the line and circle are weird")**. `ui/cmdring.ts`
+  keeps the rings it draws as discs (`covers(x, y)`, the squad's ring and his own), and `ui/overlay.ts` draws no step mark that lies under one.
+  Picture only, asked of where the rings are DRAWN, so a ring opened elsewhere, a ring left on the screen while the view pans, or the old list
+  under `?qring=0` hides nothing. SWITCH `RAILS.markClear`: a knob of the frame's table like `lineClear` (on in the module and the page,
+  `?markclear=0` off; no FROZEN_HOLDS row, the frame itself being off on the frozen stand), off for a recording from before the key.
+  CHECK `tools/qa/tut-page.cjs` on mission 1's wall step, real keys: the mark is drawn before the ring and not with the ring up;
+  `MARKCLEAR_BREAK=1` loads the page with `?markclear=0` and that line fails. No headless line: the harness draws no overlay.
+  MEASURED: mission 1 played to the wall step with real keys on the software adapter, twice: with the knob on the mark is drawn before the ring
+  and not under it (18 lines pass, and the picture shows both digits clear); with `?markclear=0` the mark is drawn under the ring and that line
+  fails. `rails-check` 30 of 30 on both stands with the change in.
+  NOT DONE: his own ring over a mark was not played (the same code path); never seen on a GPU; nobody has played it.
