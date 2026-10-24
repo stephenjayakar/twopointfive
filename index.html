@@ -643,6 +643,8 @@
     body.attract .plan, body.blinded .plan { display: none; }
     /* closer than ever (game/close.ts → ui/overlay.ts drawClose): the windows round a man near Sam, on the floor — open = a thin outline, the one he stands in
        filled and bright, a shut one amber and broken; each with what it gives in a few words just outside its arc */
+    /* game/throwreach.ts: what the thing he is aiming will reach, flat on the floor — a frag's kill ring (solid, alarm red-orange) and the ring it hurts to (dotted), a stun canister's ring (the HUD's own bright, dashed) */
+    .reach { fill: none; stroke-linejoin: round; stroke-linecap: round; } .reach.cut { fill: none !important; } .reach.kill { stroke: rgba(255,112,72,0.95); stroke-width: 2; fill: rgba(255,96,56,0.10); } .reach.hurt { stroke: rgba(255,112,72,0.6); stroke-width: 1.5; stroke-dasharray: 1 7; } .reach.stun { stroke: rgba(var(--h-hi-rgb),0.85); stroke-width: 1.5; stroke-dasharray: 8 6; fill: rgba(var(--h-hi-rgb),0.06); }
     .trajpath { stroke: rgba(var(--h-hi-rgb),0.85); } .trajland { fill: rgba(var(--h-hi-rgb),0.12); stroke: rgba(var(--h-hi-rgb),0.9); } .trajroll { stroke: rgba(var(--h-hi-rgb),0.6); } .trajtick { fill: none; stroke: rgba(var(--h-hi-rgb),0.7); }   /* player.ts throwRest: the ring is where the can comes to rest; the tick is its first touch, the dots the floor it rolls over */
     .closewin path { fill: rgba(var(--h-edge),0.06); stroke: rgba(var(--h-edge),0.55); stroke-width: 1.2; stroke-linejoin: round; }
     .closewin path.cw-in { fill: rgba(var(--h-edge),0.2); stroke: rgba(var(--h-hi-rgb),0.98); stroke-width: 2; }
