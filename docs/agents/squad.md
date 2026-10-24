@@ -390,6 +390,29 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   both). `qonly-check` holds `flat` off in its rig (its lines ask the ring by the menu's pages). Neighbours' files touched for it:
   `wallcharge.ts`, `doortools.ts` (the `gone` rows), `squadthrow.ts` (the throw's arc on a flat ring), `ui/cmdring.ts` (one line, the glyph),
   `ui/options.ts` (the hint's words). Nobody has played it; never seen on a GPU.
+- **Plan mode's circles are fainter, and a slider sets them** (2026-10-24; `src/ui/planlook.ts`, `ui/cmdring.ts updatePlan`, index.html
+  `.planmode .pm` / `.pself`; picture only: no stand, no knob table, no recording knows of it; the maintainer, 10-24: "plan mode circles should be
+  fainter -- can you add a slider in the settings and remind me to tweak?"). The circle at each man's feet with plan mode up, and the player's own, is
+  its built strength (0.6 a man's, 0.95 a picked man's and his own) times `--pm-k`, which the layer writes from `planRings()`. THE PAGE OPENS AT 0.5
+  (`PLANLOOK_PAGE`; with nobody picked by hand every man is picked, so what he sees is 0.95 going to about 0.48). THE SLIDER is Options > Game >
+  "Plan mode circles", 0 to 100 %, kept on this machine (`twopointsix.planlook`), put back by Reset to defaults; the debugger has the same value
+  ('plan mode ▸ circles, strength'). `?planrings=<0..1>` is a visit's own word and is never kept; `?planrings=1` = as it was built. `window.__planlook`
+  moves it from a page check. CHECK `probes.ts planlook` (family ui; 5 lines, no game stood up, the same on both stands; `PLANLOOK_BREAK=1` asks them
+  of a `?planrings=1` visit: lines 1 and 2 fail) and, on the real page, `PORT=<port> node tools/qa/planlook-page.cjs` (the circles' own computed
+  opacity; the software adapter). NOT SEEN: the right default is the maintainer's to find on his GPU; 0.5 is a first guess.
+- **Plan mode: the digits pick the men** (2026-10-24; `CMDRING.planDigits`, `planmode.ts planInput` / `pickDigit` / `planGroundAll`; the maintainer,
+  10-24: "1 2 3 4 in plan mode should select the appropriate squad members, and 5 selects all of them? and then we should remove clicking on the
+  ground selects all"). With the mode up and no ring or menu up: 1 to 4 pick that man alone in the squad's own order (Red One, Red Two, Blue One,
+  Blue Two; a man keeps his digit when another is down, and a digit with no living man is nothing), Shift + the digit puts him in the picked set or
+  takes him out as a Shift click does, 5 picks everyone, and his digit is drawn up and to the right of each man's circle (`PlanView.men[].n`,
+  `.planmode .pn`). A LEFT CLICK ON BARE GROUND THEN PICKS NOBODY NEW: who was picked stays picked; a click on a man and a box still pick. A digit
+  with the ring's key down is left for the ring (`stayDigit`). A TUTORIAL MISSION (rails live) KEEPS THE GROUND CLICK: mission 2's lines say
+  "Left-click on empty ground to pick your whole squad again" and its scripted player does it, the plan tutorial's own to move (told); the digits
+  work there too. ON in the page with the mode (`?plandigits=0` off), OFF in the module and on the frozen stand (`TPS_PLANDIGITS=1`, beside
+  `TPS_QPLAN=1`); a `FROZEN_HOLDS` row; the journal (a recording from before the key replays with it off); a tick ('Tab ▸ plan mode ▸ the digits
+  pick the men'). CHECK `probes.ts plandigits` (family squadorders; 8 lines on plan mode's own rig, both stands, one deal seed 3: the rule has no die
+  in it; `PLANDIGITS_BREAK=1` fails lines 1 to 5). `planmode-check`'s rig holds the switch off: its lines pick by the mouse and ask that a click on
+  nothing is everyone, as the mode was built. NOT PLAYED: whether the drawn digits read as clutter beside the fainter circles; never seen on a GPU.
 - **A held door's key lights when the men say so** (2026-10-23; `PLAN.thrTold`, `floorplan.ts waitsOnKey` / `PlanDoor.ready`; picture only, on on
   both stands like `PLAN.keyLit`, `?thrtold=0`, a tick in the debugger). Found by the squad's own behaviour work: on a door held from outside the
   word pressed before the men's "holding · on your word" call cuts their slice of the room short, and the key's cap was lit from the moment their

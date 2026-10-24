@@ -37,6 +37,7 @@ import { lookTidy, lookDoors } from './scene/lookTidy';
 import { stepFrame, showCaption, FIXEDSTEP, type LoopCtx } from './host/loop';
 import { bindFindMe, watchCtrlTaps, FINDME, setFindMe } from './host/findme';
 import { findMeOutline } from './ui/findme';
+import { planRings, setPlanRings } from './ui/planlook';
 import { makeOutlineFrame } from './render/outline';
 import { TWEEN, Tween } from './host/tween';
 import { v3, Vec3, quat } from './math/vec';
@@ -308,6 +309,7 @@ async function main() {
   worldHooks(engine, game, audio);
   const input = new Input(canvas);
   (window as any).__findme = { table: FINDME, set: setFindMe };   // (host/findme.ts: the Options rows for finding your own man, for a page check to move without the screen)
+  (window as any).__planlook = { get: planRings, set: setPlanRings };   // (ui/planlook.ts: how strongly plan mode's circles are drawn, for a page check to move without the screen)
   bindFindMe(cam); const ctrlTwice = watchCtrlTaps(window, () => !!input.lockExcept, keymap.camKey);   // (host/findme.ts: the player's kept aim pan onto the follow camera; the camera key tapped twice)
   window.__cam = cam;   // (the follow camera standGame put on the spawn)
   const overlay = new Overlay(); if (tape || q.get('cards') === '0') overlay.cards = false;   // (a replay's tape shows no tutorial card, nor does `?cards=0`: ui/railcard.ts)
