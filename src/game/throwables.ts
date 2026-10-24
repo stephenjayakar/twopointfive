@@ -92,7 +92,7 @@ export interface Item {
   side?: Team;
   /** called on a bounce with the Game the item is in and the item itself: what it does it does to THOSE (a callback that kept a Game or a count of its own in its
    *  closure could not be rolled back, nor go into another game with the item — rollback.ts) */
-  onBounce?: (speed: number, p: Vec3, g: Game, it: Item) => void;
+  onBounce?: (speed: number, p: Vec3, g: Game, it: Item, n: Vec3) => void;   // (n: the face it struck, out of the surface — up for a floor or a table's top)
   /** onBounce's own count, where it keeps one (combat.ts dropFromHand: the first two clatters are heard) */
   clatters?: number;
   /** in a hand (disarm.ts: the gun Sam has taken out of a man's, until he lets it go): it is placed by whoever carries it, every frame — no gravity, no bounce,
@@ -206,7 +206,7 @@ export class Throwables {
             it.vel = v3.add(v3.scale(vT, Math.max(0, 1 - it.friction * (0.5 + 0.5 * Math.abs(n[1])))), v3.scale(vN, -it.restitution));
             if (bog > 0) { const up = v3.dot(it.vel, n), b = bogBounce(bog), s = bogSlide(bog); it.vel = v3.add(v3.scale(v3.sub(it.vel, v3.scale(n, up)), s), v3.scale(n, up * b)); }   // … it keeps little of its slide and of its bounce
             it.spin *= 0.6; it.tumbleRate *= 0.45; it.bounces++; if (Math.hypot(it.vel[0], it.vel[2]) > 0.3) it.heading = v3.yawOf(it.vel);
-            if (speed > 0.6) it.onBounce?.(speed, it.pos, g!, it);
+            if (speed > 0.6) it.onBounce?.(speed, it.pos, g!, it, n);
             // settle when slow on an upward-facing surface
             if (n[1] > 0.6 && Math.abs(it.vel[1]) < 0.5 && Math.hypot(it.vel[0], it.vel[2]) < 0.35 + (bog > 0 ? bogStick(bog) : 0)) { it.settled = true; it.on = hit.prop; it.onPose = hit.prop ? poseKey(hit.prop) : 0; it.vel = [0, 0, 0]; it.spin = 0; it.pos[1] = it.pos[1] + 0.001; }
           }
@@ -216,7 +216,7 @@ export class Throwables {
         }
         if (it.pos[1] < it.radius) { // safety floor
           const bog = this.bog ? this.bog(it.pos[0], 0, it.pos[2]) : 0;
-          it.pos[1] = it.radius; if (it.vel[1] < 0) { const sp = -it.vel[1]; it.vel[1] *= -it.restitution; it.vel[0] *= 0.7; it.vel[2] *= 0.7; if (bog > 0) { it.vel[1] *= bogBounce(bog); it.vel[0] *= bogSlide(bog); it.vel[2] *= bogSlide(bog); } it.bounces++; if (sp > 0.6) it.onBounce?.(sp, it.pos, g!, it); }
+          it.pos[1] = it.radius; if (it.vel[1] < 0) { const sp = -it.vel[1]; it.vel[1] *= -it.restitution; it.vel[0] *= 0.7; it.vel[2] *= 0.7; if (bog > 0) { it.vel[1] *= bogBounce(bog); it.vel[0] *= bogSlide(bog); it.vel[2] *= bogSlide(bog); } it.bounces++; if (sp > 0.6) it.onBounce?.(sp, it.pos, g!, it, [0, 1, 0]); }
           if (Math.abs(it.vel[1]) < 0.5 && Math.hypot(it.vel[0], it.vel[2]) < 0.35 + (bog > 0 ? bogStick(bog) : 0)) { it.settled = true; it.vel = [0, 0, 0]; }
         }
         it.yaw += it.spin * h; it.tumble += it.tumbleRate * h;

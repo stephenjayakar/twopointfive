@@ -215,7 +215,7 @@ export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
   }
   // bits the runtime derives and may have OR'd into a Level it was handed (game.ts sets AreaLit on lit fixtures; Emissive / Rot / Dynamic live in the GPU word
   // or on prop boxes) are not authored data: masked here so 'export the level the game is running' works off game.level too. Anything else unknown still throws.
-  const DERIVED = BoxFlag.AreaLit | BoxFlag.Emissive | BoxFlag.Rot | BoxFlag.Dynamic;
+  const DERIVED = BoxFlag.AreaLit | BoxFlag.Emissive | BoxFlag.Rot | BoxFlag.Dynamic | BoxFlag.Thin;
   const boxes: BoxData[] = level.boxes.map((b, i) => {
     if (b.owner) throw new Error(`box ${i}: owner ${b.owner} — level boxes belong to the world`);
     const pt = paint(b.albedo);

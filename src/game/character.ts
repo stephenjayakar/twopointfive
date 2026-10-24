@@ -179,11 +179,22 @@ export const HOLD = {
    *  from a low hand at his thigh and fell straight down — it read as SET down, slid down his leg like a cane and lay under his right foot. He now tears it
    *  out to a straight arm at his right (`low`), his chest going with it (`yaw`), and lets it fly from there: it lands most of a metre clear of the pair at
    *  the same moment as before (the sounds' beats are the fall's time, which is unchanged). THIRD PASS: let go from a thigh-high hand with the muzzle down it
-   *  still read as a drop behind him — he lets it go earlier (`drop`) from a LEVEL arm, the gun level, and the arm stays out `follow` s after it. */
-  strip: { take: 0.2, out: 0.34, drop: 0.42, follow: 0.1, knife: 0.7, home: 0.95, free: 0.3, up: 0.68,
+   *  still read as a drop behind him — he lets it go earlier (`drop`) from a LEVEL arm, the gun level, and the arm stays out `follow` s after it. FOURTH PASS
+   *  (10-24, the maintainer's own beats, set by ear on the listening page: "strip: new 2 at 0.25 s · gun down: in the game at 0.70 s"): the take later
+   *  (`take` 0.2 → 0.26), the tear in two thirds of the time (`out` 0.34 → 0.35, `drop` 0.42 → 0.41: the strip's own click is 0.13 s into it, just before he
+   *  lets go), and THE FALL IS TIMED: `fall` s from the hand to what lies under the landing place (disarm.ts letGo: he throws it down as hard as that takes,
+   *  about 1.9 m/s from a level arm where the fixed push was 1.05), so the knock is on one frame for a pistol or a carbine, Sam crouched or standing, on
+   *  either stand's poses (a fixed down push landed a frame early on the frozen stand's). COUNTED IN FRAMES OF THE PAGE, where the grab begins inside an
+   *  update (the catch is heard on that frame and this move's clock already reads one step at its end): the strip is 15 frames after the catch (0.25 s) and
+   *  the knock 42 (0.70 s; it was 0.80). `take` and `drop` sit in the middle of the frame they must fall in, and 0.311 is the middle of the falls that land
+   *  18 frames after the let-go (0.303 to 0.318). `fall` 0 or absent = the fixed push, as a recording from before it has it (journal.ts). With `stripFirst`
+   *  up he lets go sooner and the fall is longer by that many whole frames, so the knock is on the same frame from the grab's start in either order. `push`
+   *  down is still what a gun rapped out, stopped at a wall or let fall with no hold leaves at. `free` follows `take` (the man's hand is held torn until
+   *  it). The sounds' page rows hold the same times (sounds/catalog.ts; grabvoice-check takes him by the key, as the page does, and ties them to the frame). */
+  strip: { take: 0.26, out: 0.35, drop: 0.41, follow: 0.1, knife: 0.7, home: 0.95, free: 0.36, up: 0.68,
            meet: [-0.36, 1.15, 0.05] as Vec3, torn: [-0.47, 1.06, -0.05] as Vec3,
            over: [0, 0.035, -0.05] as Vec3, wrench: [-0.15, -0.1, -0.2] as Vec3, low: [-0.66, 1.2, -0.08] as Vec3, yaw: -16,
-           rap: [0.02, 0.08, -0.03] as Vec3, hold: [0.08, 0.02] as [number, number], pitch: [12, 25, 15] as Vec3, rest: 0.05, push: [1.3, 1.05] as [number, number], spin: 5 },
+           rap: [0.02, 0.08, -0.03] as Vec3, hold: [0.08, 0.02] as [number, number], pitch: [12, 25, 15] as Vec3, rest: 0.05, push: [1.3, 1.05] as [number, number], fall: 0.311, spin: 5 },
   /** A held man faces where the hold faces him, whoever else has a say in his facing (game rule): the night showcase's calm defenders are turned to their marks
    *  every frame while the room fight does not own them (nightbreach.ts) — and that turned a man in Sam's arm too, after the hold had placed him, so through a
    *  turn his chest twisted away from Sam's by up to half a circle. On = a held man is skipped there. Off = as before. ON in the page (?holdyaw=0), off here and

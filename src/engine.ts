@@ -133,8 +133,9 @@ export class Engine {
     this.timer = new GpuTimer(device, gpu.hasTimestamps);
     this.sceneLayout = createSceneLayout(device);
     this.fogSight = new FogSight(device, this.sceneLayout);
-    this.fogSightStand = device.createBuffer({ label: 'fogSightStand', size: FOG_SIGHT_BYTES, usage: GPUBufferUsage.UNIFORM });   // (zeros: 'no table written')
-    this.world = new BoxWorld(device);
+    this.fogSightStand = device.createBuffer({ label: 'fogSightStand', size: FOG_SIGHT_BYTES, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });   // (zeros: 'no table written' — but for the list of thin statics, which the sight table's own pass reads here: render/fogofwar.ts FogSight.stand)
+    this.fogSight.stand = this.fogSightStand;
+    this.world = new BoxWorld(device); this.fogSight.world = this.world;
     this.lights = new LightSet(device);
     this.frameBuf = makeBuffer(device, FRAME_BYTES, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'frame');
     this.frameBufOut = makeBuffer(device, FRAME_BYTES, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'frameOut');
