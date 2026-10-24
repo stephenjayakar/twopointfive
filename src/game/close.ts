@@ -344,7 +344,7 @@ export function closeTick(g: Game) {
     if (H && H.from && H.phase === 'grab' && an.coil > 0) { H.coil0 ??= an.coil; an.coil = STALK.cornerRise > 0 ? H.coil0 * (1 - smoothstep(0, STALK.cornerRise, H.t)) : 0; } else an.coil = 0; }
   // (stalk.ts STALK.low: his hands are down wherever the carriage would raise them, and a stalk's grab is the spring up out of the low creep)
   { const H = pl.holding, low = STALK.on && STALK.low; an.handsDown = low && closeBare(g) ? STALK.lowHands : 0;
-    an.wide = low && STALK.wide && closeBare(g) && !H ? Math.min(1, an.low / Math.max(0.05, STALK.wideBy)) : 0; if (an.wide) { const Ws = an.wideShape; Ws[0] = STALK.wideOut; Ws[1] = STALK.wideDown; Ws[2] = STALK.wideFwd; }   // (STALK.wide: closing on a man, his arms come out wide and low with the sink — `an.low` is 0 where the tell was stood down for another man)
+    an.wide = low && STALK.wide && closeBare(g) && !H ? Math.min(1, an.low / Math.max(0.05, STALK.wideBy)) : 0; if (an.wide) { const Ws = an.wideShape; Ws[0] = STALK.wideOut; Ws[1] = STALK.wideDown; Ws[2] = STALK.wideFwd; Ws[3] = STALK.wideLead; }   // (STALK.wide: closing on a man, his arms come out wide and low with the sink — `an.low` is 0 where the tell was stood down for another man)
       // (bare hands: with a knife the right hand's hover by the hilt is the carriage's own)
     an.spring = low && H && H.from && H.phase === 'grab' && H.coil0 === undefined ? Math.max(1, STALK.lowSpring * (STALK.lowWind > 0 ? smoothstep(0, STALK.lowWind, H.t) : 1)) : 0; }   // (…a rate that winds up over `lowWind` s: he leaves the floor slowly and arrives fast, where a plain ease would jump in its first frame)
   if (r) CLOSE_STATS.readyFrames++;

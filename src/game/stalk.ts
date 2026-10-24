@@ -96,11 +96,12 @@ export const STALK = {
   /** …its shape, all the way down (fed to the animator, whose CREEP.low has the same numbers until it is): the pelvis this much lower (m) and further back
    *  (m) and the spine bowed this many degrees more; the share of the carriage's raised hands given up; the spring's rate, and the seconds of the grab it winds up to it over */
   lowDrop: 0.06, lowBack: 0.03, lowLean: 6, lowHands: 1, lowSpring: 18, lowWind: 0.12,
-  /** ARMS OUT (under `low`, bare hands, in his crouch). Closing on a man from behind, his hands are not by his knees: each is out `wideOut` m to its own
-   *  side of its shoulder, `wideDown` m under it and `wideFwd` m ahead of it, open, palm to the floor. It comes with the sink (all of it once he is `wideBy`
+  /** ARMS OUT (under `low`, bare hands, in his crouch). Closing on a man from behind, his hands are not tucked by his knees: each is out `wideOut` m to its own
+   *  side of its shoulder, `wideDown` m under it and `wideFwd` m ahead of it (the left `wideLead` m further, the right as far back), open, palm to the floor,
+   *  the elbows bent and back: the Chaos Theory creep's, read frame by frame (the first numbers flung them out like wings). It comes with the sink (all of it once he is `wideBy`
    *  of the way down), slowly, and lets go fast (the animator's CREEP.wide rates); it holds for as long as he waits behind the man ("that's where stopping
    *  just pauses the animation"), and goes with the carriage when there is no man in front of him. OFF HERE and on the frozen stand: his hands by his knees, as it was. The page: ?stalkwide=0. */
-  wide: false, wideOut: 0.3, wideDown: 0.2, wideFwd: 0.16, wideBy: 0.35,
+  wide: false, wideOut: 0.1, wideDown: 0.32, wideFwd: 0.24, wideLead: 0.07, wideBy: 0.35,
   /** THE STICK (the maintainer: "you click on the guy and then you can drag towards him to move in that direction. like a joystick centered on the guy.
    *  that would make things feel more controlled than right now which feels automatic"). With `drag` up, the press on a man still begins the creep, and the
    *  point on the screen it was made at is the stick's middle: while the button is held, the mouse's way from there is the way Sam creeps (screen up = the

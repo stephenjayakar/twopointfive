@@ -107,8 +107,8 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
     }
     { const sf = await page.evaluate(() => { const H = window.__knobs.registry().HOLD, b = /gun out before the arm/.test(document.getElementById('panel').textContent); return { on: !!H.stripFirst, dis: !!H.disarm, take: H.first?.take, row: b }; });   // (disarm.ts HOLD.stripFirst)
       say(sf.on && sf.dis && sf.take < 0.2 && sf.row, `a plain address: the disarm leads the grab (the key ${sf.on}, under the disarm ${sf.dis}, the gun out at ${sf.take} s) and the lab has its row (${sf.row})`); }
-    { const sw = await page.evaluate(() => { const T = window.__knobs.registry().STALK, b = /arms out wide/.test(document.getElementById('panel').textContent); return { on: !!T.wide, low: !!T.low, out: T.wideOut, row: b }; });   // (stalk.ts STALK.wide)
-      say(sw.on && sw.low === !NOKEY && sw.out > 0 && sw.row, `${NOKEY ? '?stalklow=0' : 'a plain address'}: his arms are out wide as he creeps (the key ${sw.on}, under the low creep ${sw.low}, ${sw.out} m out) and the lab has its row (${sw.row})`); }
+    { const sw = await page.evaluate(() => { const T = window.__knobs.registry().STALK, b = /arms out/.test(document.getElementById('panel').textContent); return { on: !!T.wide, low: !!T.low, out: T.wideOut, lead: T.wideLead, row: b }; });   // (stalk.ts STALK.wide)
+      say(sw.on && sw.low === !NOKEY && sw.out > 0 && sw.out < 0.2 && sw.lead > 0 && sw.row, `${NOKEY ? '?stalklow=0' : 'a plain address'}: his arms are out as he creeps (the key ${sw.on}, under the low creep ${sw.low}, ${sw.out} m out, the left ${sw.lead} m ahead) and the lab has its row (${sw.row})`); }
     { // (player.ts CROUCHRUN, samlook.ts SAMLOOK: Shift in a crouch is a fast crouch walk; his head goes to the man; beside a man he gives him room)
       const K = await page.evaluate(() => { const R = window.__knobs.registry(); return { run: !!R.CROUCHRUN.on, look: !!R.SAMLOOK.on, slip: !!R.SAMLOOK.slip, pace: R.CROUCHRUN.pace }; });
       if (K.run) {
