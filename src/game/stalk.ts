@@ -127,12 +127,16 @@ function end(S: St, why: Why) { if (S.on) { S.armed = false; S.on = null; STALK_
 /** his bearing to a point, off his facing (0 = dead ahead of him) */
 const bearingOf = (gd: Guard, p: ArrayLike<number>): number => wrapAngle(Math.atan2(p[0] - gd.char.pos[0], p[2] - gd.char.pos[2]) - gd.char.bodyYaw);
 /** are Sam's hands free for it at all (empty, and nothing else has him) */
-function free(g: Game): boolean {
+function hands(g: Game): boolean {
   const pl = g.player;
-  return STALK.on && closeLive(g) && !g.puppet && pl.holstered && !pl.down && !pl.holding && !pl.takedown && !pl.dragging && !pl.kick && !pl.picking && !pl.wanding && !pl.wall && !pl.listOpen && able(g) && !shut(g);
+  return STALK.on && closeLive(g) && !g.puppet && pl.holstered && !pl.down && !pl.holding && !pl.takedown && !pl.dragging && !pl.kick && !pl.picking && !pl.wanding && !pl.wall && !pl.listOpen && able(g);
 }
+/** …and is the held click his to begin one with (no step of a tutorial mission has taken it) */
+const free = (g: Game): boolean => hands(g) && !shut(g);
 /** a tutorial mission's step has taken the stalk (rails.ts `shuts`, the frame's word `stalk`): no press begins one, from the floor or from a corner, and
- *  nothing that asks whether he could — the row's hint, the pose that tells — says he can */
+ *  nothing that asks whether he could — the row's hint, the pose that tells — says he can. IT IS THE CLICK THAT IS TAKEN, NOT THE GRAB: the row's key
+ *  still grabs a man he has walked up behind, with the stalk's own step in (`stalkKeyCan` asks `hands`), and where the click was the one way to a man
+ *  the row is back (`stalkClickOnly`) */
 const shut = (g: Game): boolean => !!g.rails?.shuts('stalk');
 /** the gate game.ts puts on a grab, so nothing is handed over that it would refuse: not folded by a blast, no hand on a breaker's lever */
 const able = (g: Game): boolean => !samStaggered(g) && !g.player.breakerMove;
@@ -145,7 +149,7 @@ export function stalkBeginM(): number { return beginM(); }
 export function stalkOutM(): number { return outM(); }
 /** is the held click the ONE way to grab a man from behind (no row grabs him)? `only`, until the key finishes the grab (STALK.key) — and still on a wall,
  *  where the wait at the corner is the click's and no stalk can be the key's */
-export function stalkClickOnly(g?: Game): boolean { return STALK.on && STALK.only && (!STALK.key || !!g?.player.wall); }
+export function stalkClickOnly(g?: Game): boolean { return STALK.on && STALK.only && (!STALK.key || !!g?.player.wall) && !(g && shut(g)); }   // (a step that takes the click gives the row back: a line that named the click would name a dead button)
 function outOf(g: Game, gd: Guard, p: ArrayLike<number>, begin: boolean): Why | null {
   if (gd.civ || !closeSubject(g, gd) || gd.state === 'alert') return 'him';
   const d = Math.hypot(p[0] - gd.char.pos[0], p[2] - gd.char.pos[2]);
@@ -281,7 +285,7 @@ export function stalkGrab(g: Game): Guard | null { const S = STATE.get(g); retur
  *  room to come up it is, whether the held click walked him in or his own keys did. A question only: `stalkKeyTook` once the grab has him. */
 export function stalkKeyCan(g: Game, gd: Guard): boolean {
   const pl = g.player;
-  return STALK.on && STALK.key && !gd.civ && free(g) && !(pl.crouch && !canStand(g)) && outOf(g, gd, pl.char.pos, false) === null;
+  return STALK.on && STALK.key && !gd.civ && hands(g) && !(pl.crouch && !canStand(g)) && outOf(g, gd, pl.char.pos, false) === null;   // (`hands`, not `free`: a step that takes the held click leaves the key's grab as it is)
 }
 /** …and the grab took him: the stalk on him (if any) is over, counted as a grab */
 export function stalkKeyTook(g: Game) { const S = stateOf(g); S.on = null; S.armed = false; STALK_STATS.grabs++; STALK_STATS.last = 'grab'; }

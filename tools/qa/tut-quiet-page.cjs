@@ -98,6 +98,11 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
   const moved = Math.hypot(L0.at[0] - at0[0], L0.at[1] - at0[1]);
   check(L0.rings === R.rings && L0.shells === R.shells && L0.hall?.state === R.hall?.state && L0.id === 'rifle' && moved < 0.1 && !L0.holding && L0.trips === R.trips && !/LMB|sneak/i.test(L0.hints), 'from the doorway\'s line, hands empty: the left button held on the man stalks nobody, no row offers that click, and the right button does nothing',
     `${s(L0)} · moved ${moved.toFixed(2)} m · holding ${L0.holding} · beams broken ${L0.trips - R.trips} · the man's rows say: "${L0.hints || 'nothing'}" · him ${JSON.stringify(L0.hall)}`);
+  // …and put right behind him on that line (0.6 m, low: under the beam), where the row that grabs is his: its line names no mouse button, because both are shut
+  const BEHIND = await page.evaluate(() => { const H = window.__game.guards.find(x => !x.unit && x.route?.name === 'hall'); return H ? [H.char.pos[0] - Math.sin(H.char.bodyYaw) * 0.6, 0, H.char.pos[2] - Math.cos(H.char.bodyYaw) * 0.6] : null; });
+  if (BEHIND) { await stand(BEHIND); await point(await head()); await run(12); } const B0 = await read();
+  check(!!BEHIND && /grab him/.test(B0.hints) && !/LMB|RMB/.test(B0.hints) && !B0.holding && B0.trips === R.trips && B0.hall?.state === R.hall?.state, 'right behind him on that line the row that grabs is his and its line names no mouse button',
+    `the man's rows say: "${B0.hints || 'nothing'}" · holding ${B0.holding} · beams broken ${B0.trips - R.trips} · ${s(B0)} · him ${JSON.stringify(B0.hall)}`);
   await stand(NOOK);
 
   // ---- the rifle, and the card
