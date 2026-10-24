@@ -585,12 +585,13 @@ fn refractedRead(pixf: vec2f, P0: vec3f, N0: vec3f, gp: GlassPath) -> GlassRead 
   r.pix = rp; r.depth = rd; r.P = Pr; r.ok = true; return r;
 }
 
-@fragment fn fs(v: VOut) -> @location(0) vec4f { return vec4f(compositePixel(v.pos.xy), 1.0); }
+@fragment fn fs(v: VOut) -> @location(0) vec4f { let px = compositePixel(v.pos.xy); return vec4f(px, 1.0 - fireReact); }
 /** SHARP DIRECT: the composite per OUTPUT pixel (dispatched only from the SHARP = true module, one thread per output pixel, hdrOut = the output-size HDR target) */
 @compute @workgroup_size(8, 8) fn cs(@builtin(global_invocation_id) gid: vec3u) {
   let od = textureDimensions(hdrOut);
   if (gid.x >= od.x || gid.y >= od.y) { return; }
-  textureStore(hdrOut, gid.xy, vec4f(compositePixel(vec2f(gid.xy) + 0.5), 1.0));
+  let px = compositePixel(vec2f(gid.xy) + 0.5);
+  textureStore(hdrOut, gid.xy, vec4f(px, 1.0 - fireReact));   // (alpha: 1 but where an open fire burns — fireReact; nobody else reads it)
 }
 
 /** the composite at pixel centre `pixf` of the raster this module runs at → scene-referred colour; post.wgsl takes it from here (debug views 1/2/6/9 are passed through untouched there) */
@@ -657,6 +658,8 @@ fn beamAir(ro: vec3f, D: vec3f, tMax: f32, cpix: f32) -> vec3f {
  *  one this ray meets last drawn first (by where the ray enters each one's bound: right for this pixel, whatever order the list came in). UNDER THE FOG OF WAR a fire is part of the
  *  place and is drawn as the team last saw it (game/fire.ts FIRE.fog says which, a record at a time: wherever it stands, only where the team sees its coals, or
  *  only where it does not; the fog pass then dims it with the ground it stands on). `c` in, `c` with the fires out. */
+/** how much of this pixel is an open fire's flame or drawn smoke (0‥1; fireOver writes it, the picture's alpha carries 1 − it to the temporal resolve) */
+var<private> fireReact: f32 = 0.0;
 fn fireOver(c: vec3f, pixf: vec2f, rd: vec3f, tMax: f32) -> vec3f {
   var col = c;
   let n = min(beams.fireN.x, 4u);
@@ -677,11 +680,12 @@ fn fireOver(c: vec3f, pixf: vec2f, rd: vec3f, tMax: f32) -> vec3f {
     if (F.d.y > 0.5) { let seen = fogSeenAt(F.a.xyz, vec3f(0.0)) >= 0.5; if (seen != (F.d.y < 1.5)) { continue; } }
     let fa = fireAir(F, beams.fireLook, frame.camPos, rd, tMax, beamPix(), jit);
     col = col * fa.a + fa.rgb;
+    fireReact = max(fireReact, fireVeil * beams.fireLook.d.x);   // (a flame is new every frame and has nothing to be reprojected by: taau.wgsl takes these pixels from this frame)
   }
   return col;
 }
-/** the hot gas of a fire the smoke solver carries (fire.wgsl fireFlameG): the fine lattice's density */
-fn fireGas(p: vec3f) -> f32 { return spgFine(p); }
+/** the hot gas of a fire the smoke solver carries (fire.wgsl fireFlameG): the fine lattice's heat there */
+fn fireGas(p: vec3f) -> f32 { return spgFineHot(p).y; }
 /** THE SHIMMER OF THE HOT AIR OVER A FIRE (fire.wgsl fireShimmer; game/fire.ts FIRE.look.shimmer, `?fireheat=0`): how far, in pixels, this pixel reads the
  *  picture aside — the whole composite is a function of the pixel, so the picture behind a fire's column is that function a little off. Nothing nearer than
  *  the column is moved, and nothing nearer is read in its place (the depth here and the depth where it would read both say), and a fire the fog of war
