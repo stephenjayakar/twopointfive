@@ -43,7 +43,7 @@ import { loadCharacterSet, castUrlFor } from './anim/gltf';
 import * as charMatsMod from './render/charMaterials';
 import * as charLookMod from './game/charLook';
 import { buildLookPanel } from './ui/lookpanel';
-import { lookAmounts } from './render/gbuffer';
+import { lookAmounts, lookParts } from './render/gbuffer';
 import { scenePrelude, traceConfig, commonSource, glassBreakConfig, weatherKindConfig, weatherEdgeConfig, weatherVolConfig, rainShadowConfig, rainScaleConfig, rainWallsConfig, bounceWallsConfig, reflWallsConfig, surfTryConfig, lookConfig, snowConfig, snowLookConfig } from './render/frame';
 import { smokeGridConfig } from './smoke/smokeGrid';
 import * as cutMod from './scene/cut';
@@ -278,6 +278,7 @@ async function main() {
 
   await tick();
   const ch = await chP;
+  if (lookConfig.on && ch.cast) { lookParts.suit = ch.cast.parts.indexOf('op_suit') + 1; lookParts.rig = ch.cast.parts.indexOf('chest_rig') + 1; engine.gbuffer.setLook(); }   // (THE LOOK PROTOTYPE's men: which part is the plate carrier's and which the chest rig, look.wgsl manWeb)
   const smoke = new SmokeSystem(engine);
   engine.setSmoke(smoke.binding);
   const smokeInit = timed('smoke', smoke.init())!; smokeInit.catch(() => { /* awaited below */ });   // (its kernels join the ones in flight)

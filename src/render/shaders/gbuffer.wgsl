@@ -279,7 +279,7 @@ fn slotAlbedo(slot: u32, tint: vec3f, tint2: vec3f) -> vec3f {
     let sr = mb + 2u + 2u * min(u32(slotGeo.x + 0.5), 10u);
     let A = charMats[sr]; let B = charMats[sr + 1u]; let H1 = charMats[mb + 1u];
     o.albedo = A.xyz; o.fin = vec4f(A.w, B.x, B.y, 1.0);
-    if (LOOK) { o.fin.w = 1.0 + f32(min(u32(slotGeo.x + 0.5), 10u) + 16u * min(u32(H0.x - 0.5), 4u)); }   // THE LOOK PROTOTYPE (look.wgsl lookMan): which slot this is and whose side he is on, for the fragment
+    if (LOOK) { o.fin.w = 1.0 + f32(min(u32(slotGeo.x + 0.5), 10u) + 16u * min(u32(H0.x - 0.5), 4u) + 128u * (u32(matSel + 0.5) >> 4u)); }   // THE LOOK PROTOTYPE (look.wgsl lookMan): which slot this is, whose side he is on and which part of the cast it belongs to, for the fragment
     o.mvar = vec4f(B.z, B.w, H0.w, H1.w); o.grime = vec4f(H1.xyz, H0.y); o.geo = vec2f(slotGeo.y, H0.z);
   }
   o.id = 0xFFFFFu | (ch.owner << 20u) | (1u << 28u);

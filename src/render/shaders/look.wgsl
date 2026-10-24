@@ -20,7 +20,7 @@
 @group(1) @binding(11) var lookA: texture_2d_array<f32>;
 @group(1) @binding(12) var lookB: texture_2d_array<f32>;
 @group(1) @binding(13) var lookSamp: sampler;
-struct LookCfg { a: vec4f, b: vec4f, c: vec4f, d: vec4f, e: vec4f, f: vec4f, g: vec4f };   // a = paint, relief, shine, weather · b = untile, edges, cavity, map size × · c, d, e.xyz = the eleven layers' base roughness · e.w = the snow that clings · f.x = × the lying snow's relief, f.y = its crust, f.z = the men, f.w = the masonry · g.x = markings as paint (markings.wgsl markSoft), g.y = the men's tailoring, g.z = the men's print (manCamo2) · g.w free
+struct LookCfg { a: vec4f, b: vec4f, c: vec4f, d: vec4f, e: vec4f, f: vec4f, g: vec4f };   // a = paint, relief, shine, weather · b = untile, edges, cavity, map size × · c, d, e.xyz = the eleven layers' base roughness · e.w = the snow that clings · f.x = × the lying snow's relief, f.y = its crust, f.z = the men, f.w = the masonry · g.x = markings as paint (markings.wgsl markSoft), g.y = the men's tailoring, g.z = the men's print (manCamo2) · g.w = the cast's part ids the men's webbing is told apart by (manWeb: 1 + the suit's + 64 × (1 + the chest rig's))
 @group(1) @binding(14) var<uniform> lookCfg: LookCfg;
 
 const LOOK_TILE: f32 = 2.0;        // metres a map covers (render/lookTex.ts LOOK_TILE)
@@ -426,7 +426,79 @@ fn manWorn(side: u32, p: vec3f, seed: f32, own: f32, own2: f32, fp: f32) -> vec2
   if (own2 > 0.45 && side != 2u) { k = max(k, 0.13 * smoothstep(0.55, 0.9, 0.5 + 0.5 * select(sin(p.x * (6.2831853 / 0.011)), sin(atan2(p.y - 1.435, p.z + 0.068) * 34.0), arm)) * (1.0 - smoothstep(0.003, 0.008, fp))); }
   return vec2f(min(d, 0.85) * select(1.0, 0.45, side == 2u), k);
 }
-fn manHeight(slot: u32, side: u32, p: vec3f, fp: f32) -> f32 {
+/** WHAT A PIECE OF WEBBING IS (round four; `code`'s part bits against the cast's part ids in lookCfg.g.w): 0 = taped all over, as rounds one and two drew every
+ *  piece · 1 = an operator's plate carrier (manVest) · 2 = an operator's other kit, a pack or a strap: plain cloth · 3 = a defender's canvas chest rig */
+fn manWeb(code: u32) -> u32 {
+  let ids = u32(lookCfg.g.w + 0.5); let part = (code >> 7u) + 1u; let side = (code >> 4u) & 7u;
+  if ((code & 15u) != 3u || lookCfg.g.y <= 0.0) { return 0u; }
+  if (side == 0u && (ids & 63u) != 0u) { return select(2u, 1u, part == (ids & 63u)); }
+  if (side == 1u && part == (ids >> 6u)) { return 3u; }
+  return 0u;
+}
+/** a row of tape across a piece of webbing: 0 in the gap, 1 on the tape (rows every 45 mm, the tape an inch of it) */
+fn manTapeRow(y: f32) -> f32 { let f = fract(y / 0.045); return smoothstep(0.0, 0.12, f) * (1.0 - smoothstep(0.56, 0.68, f)); }
+/** something sewn on: inside a rectangle (half sizes h), its edge soft to the pixel and CENTRED on the rectangle's own, so a patch keeps its size however far off */
+fn manPatch(d: vec2f, h: vec2f, fp: f32) -> f32 { let aa = 0.5 * max(fp, 0.0012); return (1.0 - smoothstep(h.x - aa, h.x + aa, abs(d.x))) * (1.0 - smoothstep(h.y - aa, h.y + aa, abs(d.y))); }
+const MAN_FLAP = 1.185;   // where a canvas rig's flap ends on its pouch (m, the bind pose)
+/** where a canvas chest rig's pouches hang (0‥1): the front of him, between the belt's lower edge and the lids' tops */
+fn manRigPouch(p: vec3f) -> f32 { return smoothstep(0.035, 0.045, p.z) * smoothstep(1.085, 1.09, p.y) * (1.0 - smoothstep(1.262, 1.27, p.y)); }
+/** an operator's plate carrier at a bind-pose point, MADE and not gridded (round four: tape over the whole of it read as a wall of bricks). Tape rows only where a
+ *  carrier has them (the front panel, the back panel, the cummerbund); above them the plate bag is plain cloth with its seam and the plate's clipped corners
+ *  stitched through; a loop field on the chest with a name tape and a small flag; on the back a drag handle under the collar and a loop field with a call-sign
+ *  tape and a glint square; padded shoulder straps with a buckle; a bound hem. No noise in here: the relief asks three times a pixel.
+ *  k = the cloth's own colour times this · nap = a loop field's cover · sewn = what is sewn on (colour times cover, cover) · h = metres · hard = plastic or tight nylon */
+struct ManVest { k: f32, nap: f32, sewn: vec4f, h: f32, hard: f32 };
+fn manVest(p: vec3f, fp: f32) -> ManVest {
+  var o: ManVest; o.k = 1.0; o.nap = 0.0; o.sewn = vec4f(0.0); o.h = 0.0; o.hard = 0.0;
+  if (manArm(p)) { return o; }
+  let ax = abs(p.x); let y = p.y; let near = 1.0 - smoothstep(0.004, 0.012, fp); let front = step(0.0, p.z); let back = 1.0 - front;
+  let khaki = vec3f(0.25, 0.225, 0.165);
+  // the loop fields (chest, upper back)
+  o.nap = max(manBox(vec2f(p.x - 0.115, y - 1.399), vec2f(0.031, 0.029), fp) * front, manBox(vec2f(p.x, y - 1.415), vec2f(0.075, 0.03), fp) * back);
+  // the tape field: rows an inch wide (the rows rounds one and two drew, where a carrier has them), sewn down every inch and a half
+  let top = mix(1.385, 1.345, front); let girth = smoothstep(0.145, 0.155, ax);
+  let field = smoothstep(1.083, 1.088, y) * (1.0 - smoothstep(top - 0.004, top, y)) * (1.0 - girth * smoothstep(1.3, 1.305, y)) * (1.0 - o.nap);
+  let tape = manTapeRow(y) * field * near;
+  let ft = fract(select(p.x, p.z, ax > 0.15) / 0.038); let tack = (1.0 - smoothstep(0.03, 0.06, min(ft, 1.0 - ft))) * tape;
+  o.k = mix(1.0, 1.16, tape) * (1.0 - 0.1 * field * near * (1.0 - tape)) * (1.0 - 0.42 * tack);
+  o.h = 0.0011 * tape * (1.0 - 0.7 * tack); o.hard = 0.25 * tape; var hs = 0.0;   // (hs: the relief of what is sewn on, gone with `near` like the tape)
+  // the plate bag: a seam over the tape field, the plate's clipped corners, a bound hem
+  var seam = manLine(y - (top + 0.006), 0.0011, fp) * step(ax, 0.16);
+  seam = max(seam, manLine((ax + y - 1.575) * 0.7071, 0.0011, fp) * step(1.385, y) * step(y, 1.44));
+  seam *= 1.0 - o.nap;
+  o.k *= 1.0 - 0.45 * seam; hs -= 0.0005 * seam;
+  o.k = mix(o.k, 0.6, (1.0 - smoothstep(1.066, 1.072, y)) * smoothstep(1.055, 1.058, y));
+  o.k = mix(o.k, 0.62, o.nap); hs -= 0.0004 * o.nap;
+  // sewn on the chest: a name tape (its letters only as marks) and a flag in two drab tones
+  let nt = manPatch(vec2f(p.x - 0.115, y - 1.414), vec2f(0.026, 0.009), fp) * front;
+  let glyph = step(fract((p.x - 0.094) / 0.0075), 0.62) * step(abs(y - 1.414), 0.005) * step(abs(p.x - 0.115), 0.021) * (1.0 - smoothstep(0.0025, 0.006, fp));
+  o.sewn += vec4f(khaki * (1.0 - 0.72 * glyph), 1.0) * nt;
+  let fd = vec2f(p.x - 0.103, y - 1.386); let fl = manPatch(fd, vec2f(0.016, 0.0105), fp) * front;
+  var fc = mix(vec3f(0.15, 0.15, 0.11), mix(vec3f(0.1, 0.11, 0.08), vec3f(0.2, 0.19, 0.14), step(fract((y - 1.3755) / 0.0042), 0.5)), 1.0 - smoothstep(0.0015, 0.004, fp));
+  fc = mix(fc, vec3f(0.06, 0.07, 0.065), manPatch(fd - vec2f(-0.0085, 0.005), vec2f(0.0075, 0.0055), fp));
+  o.sewn += vec4f(fc, 1.0) * fl;
+  // on the back: the drag handle (a doubled strap, boxed and crossed at each end, standing off the bag between them), a call-sign tape, a glint square
+  let hd = vec2f(p.x, y - 1.466); let he = vec2f(ax - 0.041, y - 1.466);
+  let dh = manBox(hd, vec2f(0.05, 0.0105), fp) * back; let ends = manBox(he, vec2f(0.007, 0.0085), fp) * back;
+  let xs = max(manLine(he.x + he.y, 0.0009, fp), manLine(he.x - he.y, 0.0009, fp)) * ends;
+  o.k = mix(o.k, 0.74, dh) * (1.0 - 0.3 * manFrame(hd, vec2f(0.05, 0.0105), 0.0009, fp) * back) * (1.0 - 0.5 * xs);
+  hs += 0.0028 * dh * (1.0 - 0.6 * ends) * (0.6 + 0.4 * cos(clamp(p.x / 0.034, -1.0, 1.0) * 1.5708)); o.hard = max(o.hard, 0.4 * dh);
+  let ct = manPatch(vec2f(p.x + 0.02, y - 1.415), vec2f(0.042, 0.014), fp) * back;
+  let cg = step(fract((p.x + 0.058) / 0.011), 0.6) * step(abs(y - 1.415), 0.008) * step(abs(p.x + 0.02), 0.034) * (1.0 - smoothstep(0.004, 0.009, fp));
+  o.sewn += vec4f(khaki * (1.0 - 0.72 * cg), 1.0) * ct;
+  let ir = manPatch(vec2f(p.x - 0.05, y - 1.415), vec2f(0.013, 0.013), fp) * back;
+  o.sewn += vec4f(0.035, 0.04, 0.035, 1.0) * ir; o.hard = max(o.hard, ir);
+  hs += 0.0007 * (nt + fl + ct + ir);
+  // the shoulder straps: padded between two rows of stitching, a buckle where each meets the front
+  let sh = smoothstep(1.44, 1.45, y);
+  let pad = smoothstep(0.082, 0.09, ax) * (1.0 - smoothstep(0.144, 0.152, ax)) * sh;
+  o.k *= (1.0 - 0.4 * max(manLine(ax - 0.082, 0.001, fp), manLine(ax - 0.152, 0.001, fp)) * sh) * (1.0 - 0.096 * pad); hs += 0.0012 * pad;
+  let bk = manPatch(vec2f(ax - 0.117, y - 1.452), vec2f(0.021, 0.011), fp) * smoothstep(0.03, 0.04, p.z);
+  o.sewn += vec4f(vec3f(0.028, 0.028, 0.03) * (1.0 - 0.5 * manLine(ax - 0.117, 0.0012, fp)), 1.0) * bk; hs += 0.002 * bk; o.hard = max(o.hard, 0.9 * bk);
+  o.h += hs * near;
+  return o;
+}
+fn manHeight(slot: u32, side: u32, web: u32, p: vec3f, fp: f32) -> f32 {
   let T = min(lookCfg.g.y, 1.0);
   if (slot == 1u || slot == 2u) {
     let arm = manArm(p);
@@ -443,22 +515,28 @@ fn manHeight(slot: u32, side: u32, p: vec3f, fp: f32) -> f32 {
     return mix(0.011 * big * (0.5 + 0.5 * j) * abs(a - 0.5) * 2.0 + 0.004 * fine * (0.35 + 0.65 * j) * abs(b - 0.5) * 2.0, hang, hung);
   }
   if (slot == 3u) {
-    let f = fract(p.y / 0.045); let on = 1.0 - smoothstep(0.004, 0.012, fp); let band = smoothstep(0.0, 0.12, f) * (1.0 - smoothstep(0.56, 0.68, f));
-    var h = 0.0022 * on * band;
-    if (T > 0.0) {                                                                          // the tape is sewn down every inch and a half: flat at the bar tack, proud between
-      let ft = fract(select(p.x, p.z, abs(p.x) > 0.15) / 0.038); let sn = sin(3.14159265 * ft);
-      h = h * (1.0 - 0.75 * T * (1.0 - smoothstep(0.035, 0.075, min(ft, 1.0 - ft)))) + 0.0006 * T * on * band * sn * sn;
+    var h = 0.0; let Tw = T * min(lookCfg.f.z, 1.0); let on = 1.0 - smoothstep(0.004, 0.012, fp);   // (Tw: lookMan's own T, so a piece's colour and relief change hands together)
+    if (web == 0u || Tw < 1.0) {
+      let band = manTapeRow(p.y);
+      h = 0.0022 * on * band;
+      if (T > 0.0) {                                                                          // the tape is sewn down every inch and a half: flat at the bar tack, proud between
+        let ft = fract(select(p.x, p.z, abs(p.x) > 0.15) / 0.038); let sn = sin(3.14159265 * ft);
+        h = h * (1.0 - 0.75 * T * (1.0 - smoothstep(0.035, 0.075, min(ft, 1.0 - ft)))) + 0.0006 * T * on * band * sn * sn;
+      }
     }
+    if (web == 1u) { h = mix(h, manVest(p, fp).h, Tw); }
+    if (web == 2u) { h = mix(h, 0.0, Tw); }
+    if (web == 3u) { h = mix(h, 0.0016 * on * manRigPouch(p) * smoothstep(MAN_FLAP - 0.002, MAN_FLAP + 0.002, p.y), Tw); }   // a flap over each pouch
     return h;
   }
   return 0.0;
 }
-/** `code` = the slot + 16 × the side (0 operator, 1 defender, 2 responder, 3 civilian, 4 an operator in the dark suit) · mp, dmx, dmy = the bind-pose point and its
+/** `code` = the slot + 16 × the side (0 operator, 1 defender, 2 responder, 3 civilian, 4 an operator in the dark suit) + 128 × his cast part · mp, dmx, dmy = the bind-pose point and its
  *  step a pixel across and down · wp's steps likewise · cavity −1 ridge ‥ +1 crease · dust = the ground's colour on him and how much stands here · owner = his id */
 fn lookMan(code: u32, mp: vec3f, dmx: vec3f, dmy: vec3f, dwx: vec3f, dwy: vec3f, nIn: vec3f, albedoIn: vec3f, roughIn: f32, gainIn: f32, cavity: f32, dust: vec4f, owner: u32, fp: f32) -> LookMan {
   var o: LookMan; o.albedo = albedoIn; o.n = nIn; o.rough = roughIn; o.gain = gainIn;
   let K = min(lookCfg.f.z, 1.5); if (K <= 0.0) { return o; }
-  let slot = code & 15u; let side = code >> 4u;
+  let slot = code & 15u; let side = (code >> 4u) & 7u; let web = manWeb(code);
   let T = min(lookCfg.g.y, 1.0) * min(K, 1.0); let op = side == 0u || side == 4u;
   let seed = f32(owner) * 0.618; let own = fract(seed); let own2 = fract(f32(owner) * 0.3819 + 0.27);
   let ridge = max(-cavity, 0.0);
@@ -470,10 +548,30 @@ fn lookMan(code: u32, mp: vec3f, dmx: vec3f, dmy: vec3f, dwx: vec3f, dwy: vec3f,
     let tp = lookTap(8, vec2f(S.u, S.v) / tile, (vec2f(Sx.u, Sx.v) - vec2f(S.u, S.v)) / tile, (vec2f(Sy.u, Sy.v) - vec2f(S.u, S.v)) / tile);   // (across a seam the steps are huge: the map's coarsest level, a flat tone)
     alb *= mix(vec3f(1.0), tp.a.rgb * 2.0, 0.55 * K) * mix(1.0, 0.6 + 0.4 * tp.b.a, 0.6 * K);
     if (slot == 3u) {
-      let f = fract(mp.y / 0.045); let rows = (1.0 - smoothstep(0.004, 0.012, fp)) * (1.0 - smoothstep(0.0, 0.12, f) * (1.0 - smoothstep(0.56, 0.68, f)));
-      alb *= 1.0 - 0.32 * K * rows;
-      if (T > 0.0) { let ft = fract(select(mp.x, mp.z, abs(mp.x) > 0.15) / 0.038); alb *= 1.0 - 0.3 * T * (1.0 - smoothstep(0.035, 0.075, min(ft, 1.0 - ft))) * (1.0 - smoothstep(0.004, 0.012, fp)) * smoothstep(0.0, 0.12, f) * (1.0 - smoothstep(0.56, 0.68, f)); }
-      alb = mix(alb, alb * 1.35 + vec3f(0.01), 0.5 * K * ridge);
+      let cord = alb;
+      if (web == 0u || T < 1.0) {
+        let band = manTapeRow(mp.y); let rows = (1.0 - smoothstep(0.004, 0.012, fp)) * (1.0 - band);
+        alb *= 1.0 - 0.32 * K * rows;
+        if (T > 0.0) { let ft = fract(select(mp.x, mp.z, abs(mp.x) > 0.15) / 0.038); alb *= 1.0 - 0.3 * T * (1.0 - smoothstep(0.035, 0.075, min(ft, 1.0 - ft))) * (1.0 - smoothstep(0.004, 0.012, fp)) * band; }
+        alb = mix(alb, alb * 1.35 + vec3f(0.01), 0.5 * K * ridge);
+      }
+      if (web == 1u || web == 2u) {                                                           // an operator's plate carrier (manVest), or his other kit: plain cloth
+        var w = cord * (0.93 + 0.14 * manNoise(mp * 9.0 + vec3f(seed)));
+        if (web == 1u) {
+          let v = manVest(mp, fp);
+          w *= v.k; if (v.nap > 0.0) { w *= mix(1.0, 0.82 + 0.36 * manNoise(mp * 900.0), v.nap * (1.0 - smoothstep(0.001, 0.003, fp))); }
+          w = w * (1.0 - min(v.sewn.a, 1.0)) + v.sewn.rgb / max(v.sewn.a, 1.0);
+          rough = mix(mix(rough, 0.97, T * v.nap), 0.3, T * v.hard); gain = max(gain, 1.4 * T * v.hard);
+        }
+        alb = mix(alb, mix(w, w * 1.3 + vec3f(0.012), 0.5 * K * ridge), T);
+      }
+      if (web == 3u) {                                                                        // a canvas chest rig: no tape on it; a twill, each pouch under a flap stitched across at its toggle
+        let pouch = manRigPouch(mp); let tw = 0.5 + 0.5 * sin((mp.x - mp.y + mp.z) * (6.2831853 / 0.005)); let aa = max(fp, 0.0012);
+        var w = cord * (1.0 + 0.2 * (tw - 0.5) * (1.0 - smoothstep(0.0015, 0.004, fp))) * (0.9 + 0.2 * manNoise(mp * 11.0 + vec3f(seed)));
+        w *= (1.0 - 0.45 * manLine(mp.y - MAN_FLAP - 0.005, 0.0011, fp) * pouch) * (1.0 - 0.3 * manLine(mp.y - 1.1, 0.001, fp) * pouch) * (1.0 + 0.1 * smoothstep(MAN_FLAP - 0.002, MAN_FLAP + 0.002, mp.y) * pouch);
+        w *= 1.0 - 0.25 * smoothstep(MAN_FLAP - 0.014, MAN_FLAP - 0.002, mp.y) * (1.0 - smoothstep(MAN_FLAP - 0.002 - aa, MAN_FLAP - 0.002, mp.y)) * pouch;   // the flap's shadow on the pouch under it
+        alb = mix(alb, mix(w, w * 1.35 + vec3f(0.01), 0.5 * K * ridge), T);
+      }
     } else {
       if (side == 0u && slot == 1u) {
         var print = manPrint(mp, alb, seed, fp);
@@ -497,7 +595,7 @@ fn lookMan(code: u32, mp: vec3f, dmx: vec3f, dmy: vec3f, dwx: vec3f, dwy: vec3f,
       alb = mix(alb, dust.xyz, 0.4 * K * knee * (0.4 + 0.6 * manNoise(mp * 30.0 + vec3f(seed))));
     }
     // the relief, stood on the skinned normal by the steps of the bind-pose point and of the world point across this pixel
-    let h0 = manHeight(slot, side, mp, fp); let dBs = manHeight(slot, side, mp + dmx, fp) - h0; let dBt = manHeight(slot, side, mp + dmy, fp) - h0;
+    let h0 = manHeight(slot, side, web, mp, fp); let dBs = manHeight(slot, side, web, mp + dmx, fp) - h0; let dBt = manHeight(slot, side, web, mp + dmy, fp) - h0;
     let R1 = cross(dwy, nIn); let R2 = cross(nIn, dwx); let det = dot(dwx, R1);
     let skirt = side == 1u && slot == 2u && ((mp.y < 0.97) != (mp.y + dmx.y < 0.97) || (mp.y < 0.97) != (mp.y + dmy.y < 0.97));   // (the long folds start at the waist: the same)
     let seam = skirt || manArm(mp) != manArm(mp + dmx) || manArm(mp) != manArm(mp + dmy);          // (the folds turn where the sleeve starts: a step across that line is no slope)

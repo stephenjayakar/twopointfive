@@ -642,7 +642,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   slot with the mesh's creases; here each slot is drawn as the stuff it is, in his BIND pose (nothing swims as he moves), by his side and a number of
   his own: cloth (thread from the cloth map round each limb, folds that ring the limb and gather at knee, hip, ankle and elbow as a relief the lamps
   light, an operator's print cut from his own colour, dust on the knees, age), webbing (rows of tape, rubbed edges), helmet (cover, chips), metal
-  (bright edges, an oiled sheen), boots, skin (tone, the cold in the face, a day's growth), and on a snow level snow caked on the boots and hems (a CAP on helmets and shoulders was here until 10-24: out on the maintainer's word, see round three). Carried by one float: `vsSkin` packs slot + 16 x side into `fin.w` on that page only (`charMaterials.ts charLookSides`, raised by
+  (bright edges, an oiled sheen), boots, skin (tone, the cold in the face, a day's growth), and on a snow level snow caked on the boots and hems (a CAP on helmets and shoulders was here until 10-24: out on the maintainer's word, see round three). Carried by one float: `vsSkin` packs slot + 16 x side (and, since round four, + 128 x the cast part) into `fin.w` on that page only (`charMaterials.ts charLookSides`, raised by
   main.ts with the look), where the build keeps 1. Amount: the panel's Men row (`look=men:0` = the men as the build draws them; `window.__look.set({
   men })` for a scripted picture). KNOWN GAPS: the tilted normal is stored as a man's normal always was (alpha 1), so the working-size passes read
   the folds too: on a GPU look for crawl on cloth under the denoiser; the print and folds are noise, which is the "procedural" he named, so authored
@@ -659,7 +659,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   only: the dark suit keeps dark boots and gloves); knee pads as hard caps scraped pale; gloves with a sand back, a dark palm and a knuckle bar. THE
   OTHER SIDE: a shirt's placket with buttons, collar band and cuffs; loose trousers and the shirt's skirt hang in long vertical folds (relief); the
   waistcoat is wool in a twill; headgear is felted wool. The shader has slot and side but NOT the part, so a shawl or scarf in `cloth_plain` gets the
-  shirt's lines too, and every hat is "wool": a part id in `fin` is the next step if that shows. WGSL TRAP: `patch` and `loop` are reserved words.
+  shirt's lines too, and every hat is "wool": a part id in `fin` is the next step if that shows (round four carries it, for the webbing). WGSL TRAP: `patch` and `loop` are reserved words.
   A PREVIEW WITHOUT THE PAGE made this round possible (a still of the men costs ten minutes here): rasterise the cast in its bind pose under bun
   (`tools/qa/headless.ts loadCastCharacter`, `charMaterials.ts charSlots`) into point / normal / slot / cavity buffers for a front, back, side and top
   view, then shade them with a numpy stand-in of `lookMan` (two seconds a man); design there, port to WGSL after. The stand-in is not in the repo (it
@@ -678,6 +678,26 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   shoulders is out, after three tries at making it smaller; only the cake on boots and hems stays. Do not put it back. (He saw the cap on a GPU; the build without it booted on the
   software adapter with no console errors and has not been seen on a GPU.)
   The print and the worn clothes were designed in the bind-pose preview, then ported; never seen on a GPU.
+- **THE MEN, ROUND FOUR: A PLATE CARRIER THAT IS MADE, AND THE PART REACHES THE PIXEL** (`shaders/look.wgsl manWeb`, `manVest`, `manRigPouch`; rides
+  the Kit detail row; `look=tailor:0` = round one's webbing with every other sewn thing gone too: no setting shows round two's carrier beside this). A close picture of the squad showed
+  the weakest thing on the page: rounds one and two taped EVERY webbing pixel, so a carrier was a wall of bricks from collar to belt, shoulders,
+  packs and straps alike, the "procedural" look he had named. THE PART ID NOW RIDES TO THE FRAGMENT (round two's known gap): `gbuffer.wgsl vsSkin`
+  adds 128 × the vertex's cast part to `fin.w` on the look page (`code` = slot + 16 × side + 128 × part, 4043 at most, exact in the float), and
+  the page says which parts matter once its cast is loaded (`gbuffer.ts lookParts`: 1 + the index of `op_suit` and of `chest_rig`, 0 = this cast
+  has none, sent as `lookCfg.g.w`). `manWeb` sorts a webbing pixel four ways. (1) THE OPERATORS' CARRIER (the webbing of `op_suit`, side 0 only:
+  the dark suit keeps its black harness as it was): tape rows only on the front panel (to 1.345 m), the back panel (to 1.385 m) and the
+  cummerbund, lower in relief (1.1 mm, was 2.2) and drawn as paler tape on the cloth, not as dark gaps; above them a plain plate bag with a
+  seam and the plate's clipped corners stitched through; a loop field on the chest with a name tape (its letters only marks) and a flag in two
+  drab tones; on the back a drag handle under the collar (a doubled strap boxed and crossed at each end, standing 2.8 mm off) and a loop field
+  with a call-sign tape and a glint square; shoulder straps padded between two rows of stitching, a buckle where each meets the front; a bound
+  hem. (2) HIS OTHER KIT (the `kit_*` packs, the chin strap): plain cloth, no tape. (3) A DEFENDER'S CANVAS CHEST RIG (`chest_rig`): no tape; a
+  twill, each pouch under a flap whose edge is stitched across at the toggle and stands 1.6 mm proud, a stitched hem. (0) Everything else (the
+  responders' kit, a cast with no such parts) as before. Everything on the carrier is placed by bind-pose coordinates on the one mesh the cast
+  has, and the part is found by its NAME in the page's boot (`main.ts`): another carrier mesh needs its own numbers, and nothing checks them.
+  KNOWN: the pouches on the carrier's front are `op_suit` too, so the tape rows run over them and the front seam crosses the chest pouch; the canvas rig's pouch mask is "the front of him between two heights", so the belt's front arc takes the hem line; a
+  pack on a man's back hides the handle and the back's loop field from most angles. SEEN: the numpy preview of `operator_2` and `defender_4`
+  (bind pose, four views) and the squad of four on the pass at dawn on the software adapter (very low, one seed, 119 of 119 pipelines, no
+  errors). Never seen on a GPU; the defenders' rig never seen on the page at all.
 - **BIG HAND-MADE RELIEF: STONE, MUD BRICK, PLANKS, DAUBED MUD** (`render/lookTex.ts`; the look page only; the maintainer, 10-23, sent two stills of a
   2005 stealth game, a stone stairwell and a dark brick room, as the materials reference: "this looks pretty good and it's pretty much all materials,
   right?"). What those stills have that noise does not: FEATURES A PERSON CAN NAME, each a few centimetres to half a metre, under one raking light.
