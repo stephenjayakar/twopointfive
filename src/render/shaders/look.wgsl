@@ -296,7 +296,7 @@ fn lookGround(wp: vec3f, nIn: vec3f, roughIn: f32, fp: f32) -> LookGround {
 //   TAILORING what was cut and sewn (manCut and the slots' own blocks below): seams, doubled knees and elbows, a sleeve pocket with its patches, the plain body
 //             of a combat shirt, bar tacks on the webbing, a helmet cover's seams, band and cat's eyes, sand boots with laces, knee pads, gloves; on the other
 //             side a shirt's placket and buttons, long folds in loose trousers, a wool waistcoat and cap
-//   SNOW      on a snow level, lying on what faces up and caked on the boots and hems to a ragged line; most on the men who came in from the weather
+//   SNOW      on a snow level, caked on the boots and hems to a ragged line, most on the men who came in from the weather (none lies on a man: his call)
 // lookCfg.f.z = how much of it (the panel's Men row; 0 = the men as the build draws them). Derivatives are taken by the caller: nothing below needs uniform flow.
 struct LookMan { albedo: vec3f, n: vec3f, rough: f32, gain: f32 };
 fn manH(i: vec3i) -> f32 { var h = (u32(i.x + 4096) * 73856093u) ^ (u32(i.y + 4096) * 19349663u) ^ (u32(i.z + 4096) * 83492791u); h = h * 747796405u + 2891336453u; h = ((h >> ((h >> 28u) + 4u)) ^ h) * 277803737u; return f32((h ^ (h >> 22u)) >> 8u) * (1.0 / 16777216.0); }
@@ -574,16 +574,14 @@ fn lookMan(code: u32, mp: vec3f, dmx: vec3f, dmy: vec3f, dwx: vec3f, dwy: vec3f,
       alb = mix(alb, gc, T); rough = mix(rough, 0.85, T);
     }
   }
-  if (cold && lookCfg.e.w > 0.0 && slot != 0u && slot != 8u && slot != 10u) {
+  if (cold && lookCfg.e.w > 0.0 && mp.y < 0.32 && slot != 0u && slot != 8u && slot != 10u) {
     let ks = min(lookCfg.e.w, 1.5) * K * select(0.45, 1.0, side == 0u || side == 4u);
     let coarse = smoothstep(0.006, 0.02, fp);
     let g = mix(manNoise(mp * 55.0 + vec3f(seed)), 0.5, coarse); let g2 = manNoise(mp * 17.0 + vec3f(4.0 + seed, 1.0, seed));
-    let top = nIn.y + 0.2 * (0.55 * g + 0.45 * g2 - 0.5) - 0.08 * own;                   // a cap where he faces the sky, its edge ragged (one sheet, not a spatter: flecks all over him read as a camouflage)
-    let yj = mp.y + 0.03 * (g2 - 0.5);                                                       // where on HIM it can lie at all, by the bind pose: the crown of his head, the shoulders' own top and the upper side of his arms (one height band in the T pose). From the play camera every part of a man faces the sky, and a cap on all of it was a white man with no kit
-    let shelf = max(smoothstep(1.45, 1.48, yj) * (1.0 - smoothstep(1.52, 1.56, yj)), smoothstep(1.76, 1.82, yj));   // (one ramp for the shoulder and the arm: a different one each side of the sleeve's seam was a step across it)
-    let lie = smoothstep(0.8 - 0.1 * ks, 0.9 - 0.08 * ks, top) * shelf;
+    // NO SNOW LIES ON A MAN (the maintainer, on a GPU: "weird that the men are covered in snow, shouldn't happen"; a cap on his helmet and shoulders was tried three
+    // ways and each hid the kit this page is about): only what he walked through, caked on the boots and the hems to a ragged line
     let cake = (1.0 - smoothstep(0.08, 0.2 + 0.12 * g2, mp.y)) * smoothstep(0.42, 0.6, 0.5 * g + 0.5 * g2 + 0.12);
-    let s = clamp(max(lie, 0.9 * cake) * ks, 0.0, 1.0);
+    let s = clamp(0.9 * cake * ks, 0.0, 1.0);
     alb = mix(alb, snowCfg.p[2].xyz, s); rough = mix(rough, 0.9, s); gain *= 1.0 - s;
   }
   o.albedo = max(alb, vec3f(0.0)); o.rough = clamp(rough, 0.05, 1.0); o.gain = max(gain, 0.0);

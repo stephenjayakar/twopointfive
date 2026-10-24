@@ -621,8 +621,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   slot with the mesh's creases; here each slot is drawn as the stuff it is, in his BIND pose (nothing swims as he moves), by his side and a number of
   his own: cloth (thread from the cloth map round each limb, folds that ring the limb and gather at knee, hip, ankle and elbow as a relief the lamps
   light, an operator's print cut from his own colour, dust on the knees, age), webbing (rows of tape, rubbed edges), helmet (cover, chips), metal
-  (bright edges, an oiled sheen), boots, skin (tone, the cold in the face, a day's growth), and on a snow level snow as a CAP on what faces the sky (helmet crown, shoulder tops; one sheet with
-  a ragged edge: the first try gated it by noise over every upward-leaning face and the flecks read as a white camouflage) and caked on the boots. Carried by one float: `vsSkin` packs slot + 16 x side into `fin.w` on that page only (`charMaterials.ts charLookSides`, raised by
+  (bright edges, an oiled sheen), boots, skin (tone, the cold in the face, a day's growth), and on a snow level snow caked on the boots and hems (a CAP on helmets and shoulders was here until 10-24: out on the maintainer's word, see round three). Carried by one float: `vsSkin` packs slot + 16 x side into `fin.w` on that page only (`charMaterials.ts charLookSides`, raised by
   main.ts with the look), where the build keeps 1. Amount: the panel's Men row (`look=men:0` = the men as the build draws them; `window.__look.set({
   men })` for a scripted picture). KNOWN GAPS: the tilted normal is stored as a man's normal always was (alpha 1), so the working-size passes read
   the folds too: on a GPU look for crawl on cloth under the denoiser; the print and folds are noise, which is the "procedural" he named, so authored
@@ -654,8 +653,10 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   road in the trouser legs to a ragged line below the knee and on the seat, grime at the cuffs, the collar and where a man wipes his hands, rubbed
   elbows, sweat down the back, a breast pocket with its flap (`manCut`), and on about half the men a stripe in the weave; a responder's duty shirt
   takes under half the dirt and no stripe. The dirt is the side's own grime colour at half strength, so it darkens a pale shirt and dusts a dark one.
-  SNOW ON A MAN now lies only on three shelves of the bind pose (the crown of the head over y 1.76, and one band from 1.45 to 1.56 that is the shoulders' own top and
-  the upper side of an arm): from the play camera every part of a man faces the sky, and a cap on all of it was a white man with no kit to see. Designed in the bind-pose preview, then ported; never seen on a GPU.
+  NO SNOW LIES ON A MAN (the maintainer on a GPU, 10-24: "weird that the men are covered in snow, shouldn't happen"): the cap on helmets and
+  shoulders is out, after three tries at making it smaller; only the cake on boots and hems stays. Do not put it back. (He saw the cap on a GPU; the build without it booted on the
+  software adapter with no console errors and has not been seen on a GPU.)
+  The print and the worn clothes were designed in the bind-pose preview, then ported; never seen on a GPU.
 - **BIG HAND-MADE RELIEF: STONE, MUD BRICK, PLANKS, DAUBED MUD** (`render/lookTex.ts`; the look page only; the maintainer, 10-23, sent two stills of a
   2005 stealth game, a stone stairwell and a dark brick room, as the materials reference: "this looks pretty good and it's pretty much all materials,
   right?"). What those stills have that noise does not: FEATURES A PERSON CAN NAME, each a few centimetres to half a metre, under one raking light.
