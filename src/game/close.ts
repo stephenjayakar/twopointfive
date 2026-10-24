@@ -282,7 +282,7 @@ export function closeRows(g: Game, gd: Guard, p: ArrayLike<number>, busy: boolea
   offer(it, verbs);
 }
 /** the line that says what the held click does (STALK.key: the hold walks him in, the row's key grabs) */
-const sneakHint = (): string => STALK.key ? 'LMB  hold to sneak up on him' : 'LMB  hold to sneak up and grab him';
+const sneakHint = (): string => STALK.drag ? 'LMB  press and drag to sneak up on him' : STALK.key ? 'LMB  hold to sneak up on him' : 'LMB  hold to sneak up and grab him';   // (STALK.drag: the mouse is the stick)
 /** this frame's best offer: the nearest man Sam could do something to (what the ready pose is taken from) */
 function noteBest(g: Game, o: CloseOffer) { const S = stateOf(g); if (S.t !== g.time) { S.t = g.time; S.best = null; } if (!S.best || o.dist < S.best.dist) S.best = o; }
 /** A civilian's gate with the windows on (player.ts keeps her rows and their wording): is Sam in her window, and near enough */
@@ -343,7 +343,9 @@ export function closeTick(g: Game) {
   else { const H = pl.holding;   // (…and he comes up out of it THROUGH the step in, not in its first frame)
     if (H && H.from && H.phase === 'grab' && an.coil > 0) { H.coil0 ??= an.coil; an.coil = STALK.cornerRise > 0 ? H.coil0 * (1 - smoothstep(0, STALK.cornerRise, H.t)) : 0; } else an.coil = 0; }
   // (stalk.ts STALK.low: his hands are down wherever the carriage would raise them, and a stalk's grab is the spring up out of the low creep)
-  { const H = pl.holding, low = STALK.on && STALK.low; an.handsDown = low && closeBare(g) ? STALK.lowHands : 0;   // (bare hands: with a knife the right hand's hover by the hilt is the carriage's own)
+  { const H = pl.holding, low = STALK.on && STALK.low; an.handsDown = low && closeBare(g) ? STALK.lowHands : 0;
+    an.wide = low && STALK.wide && closeBare(g) && !H ? Math.min(1, an.low / Math.max(0.05, STALK.wideBy)) : 0; if (an.wide) { const Ws = an.wideShape; Ws[0] = STALK.wideOut; Ws[1] = STALK.wideDown; Ws[2] = STALK.wideFwd; }   // (STALK.wide: closing on a man, his arms come out wide and low with the sink — `an.low` is 0 where the tell was stood down for another man)
+      // (bare hands: with a knife the right hand's hover by the hilt is the carriage's own)
     an.spring = low && H && H.from && H.phase === 'grab' && H.coil0 === undefined ? Math.max(1, STALK.lowSpring * (STALK.lowWind > 0 ? smoothstep(0, STALK.lowWind, H.t) : 1)) : 0; }   // (…a rate that winds up over `lowWind` s: he leaves the floor slowly and arrives fast, where a plain ease would jump in its first frame)
   if (r) CLOSE_STATS.readyFrames++;
   const m = pl.takedown ? S.mode : modeNow(g, S); S.mode = m;   // (a blow under way keeps the mode it was thrown in: the stance does not let go mid-swing)

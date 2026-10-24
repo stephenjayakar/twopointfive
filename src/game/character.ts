@@ -159,6 +159,14 @@ export const HOLD = {
    *  held it. The hold itself is what it was: he is `held` on the same frame, by the same clock. Off = the gun leaves his hand on the first frame, thrown clear
    *  with a roll of the dice, as before. ON in the page (?disarm=0), off here and on the frozen stand (TPS_DISARM=1, with TPS_HOLDDROP=1). */
   disarm: false,
+  /** THE DISARM LEADS (game rule; disarm.ts `lead`). The maintainer, of the grab: "you really want a disarm and then a grab, right?" — and in the footage he
+   *  works from the gun is the first thing to move: it is out of the man's hands before the arm is round his neck. With the two beats above the take fell at
+   *  `strip.take` 0.2 s, the same moment the arm closed. With this on the move's own clock runs AHEAD of the hold's until the gun is let go: it is out of his
+   *  fist `first.take` s after the grab begins (Sam's right hand comes up at it from the crouch as he rises) and let fly at `first.drop`, where `strip.take` and
+   *  `strip.drop` had them, and from there the hand comes home at the pace it always did — so the order is the strip, then the arm (which lands when it did),
+   *  and the catch's voice is kept for the arm's landing, `first.catch` s in, behind the strip's. Only for a grab that has a gun to take. Off = the two at
+   *  once, as before. ON in the page (?stripfirst=0), off here and on the frozen stand (TPS_STRIPFIRST=1); under `disarm`. */
+  stripFirst: false, first: { take: 0.16, drop: 0.3, catch: 0.26 },
   /** …its numbers. Seconds from the grab's first frame: `take` Sam's hand has the gun (it leaves the man's) · `out` it is torn out to the side · `drop` he lets
    *  it go · `knife` the knife is in that fist (it is drawn as the hand comes back up over the man's shoulder, not before) · `home` the hand is back at its
    *  station on him and the move is over · `free` the man's wrist is let go of · `up` his hand is where the hold has it. The man, his own model space: `meet` =
@@ -172,15 +180,18 @@ export const HOLD = {
    *  out to a straight arm at his right (`low`), his chest going with it (`yaw`), and lets it fly from there: it lands most of a metre clear of the pair at
    *  the same moment as before (the sounds' beats are the fall's time, which is unchanged). THIRD PASS: let go from a thigh-high hand with the muzzle down it
    *  still read as a drop behind him — he lets it go earlier (`drop`) from a LEVEL arm, the gun level, and the arm stays out `follow` s after it. FOURTH PASS
-   *  (10-24, the maintainer's own beats, set by ear on the listening page: "strip: new 2 at 0.25 s · gun down: in the game at 0.70 s"): the take a touch later
-   *  (`take` 0.2 → 0.24: the frame at 0.25 s), the tear in two thirds of the time (`out` 0.34 → 0.33, `drop` 0.42 → 0.395: let go on the frame at 0.40 s, just
-   *  after the strip's own click at 0.38), and THE FALL IS TIMED: `fall` s from the hand to what lies under the landing place (disarm.ts letGo: he throws it
-   *  down as hard as that takes, about 1.9 m/s from a level arm where the fixed push was 1.05), so the gun is on the floor 0.70 s after the catch where it
-   *  was 0.82 — and on that frame for a pistol or a carbine, Sam crouched or standing, on either stand's poses (a fixed down push landed a frame early on
-   *  the frozen stand's). 0.311 is the middle of what lands on that frame (0.303 to 0.318). `fall` 0 or absent = the fixed push, as a recording from before
-   *  it has it (journal.ts). `push` down is still what a gun rapped out, stopped at a wall or let fall with no hold leaves at. `free` follows `take` (the
-   *  man's hand is held torn until it). The sounds' page rows hold the same two times (sounds/catalog.ts; grabvoice-check ties both rows to the frame). */
-  strip: { take: 0.24, out: 0.33, drop: 0.395, follow: 0.1, knife: 0.7, home: 0.95, free: 0.34, up: 0.68,
+   *  (10-24, the maintainer's own beats, set by ear on the listening page: "strip: new 2 at 0.25 s · gun down: in the game at 0.70 s"): the take later
+   *  (`take` 0.2 → 0.26), the tear in two thirds of the time (`out` 0.34 → 0.35, `drop` 0.42 → 0.41: the strip's own click is 0.13 s into it, just before he
+   *  lets go), and THE FALL IS TIMED: `fall` s from the hand to what lies under the landing place (disarm.ts letGo: he throws it down as hard as that takes,
+   *  about 1.9 m/s from a level arm where the fixed push was 1.05), so the knock is on one frame for a pistol or a carbine, Sam crouched or standing, on
+   *  either stand's poses (a fixed down push landed a frame early on the frozen stand's). COUNTED IN FRAMES OF THE PAGE, where the grab begins inside an
+   *  update (the catch is heard on that frame and this move's clock already reads one step at its end): the strip is 15 frames after the catch (0.25 s) and
+   *  the knock 42 (0.70 s; it was 0.80). `take` and `drop` sit in the middle of the frame they must fall in, and 0.311 is the middle of the falls that land
+   *  18 frames after the let-go (0.303 to 0.318). `fall` 0 or absent = the fixed push, as a recording from before it has it (journal.ts). With `stripFirst`
+   *  up he lets go sooner and the fall is longer by that many whole frames, so the knock is on the same frame from the grab's start in either order. `push`
+   *  down is still what a gun rapped out, stopped at a wall or let fall with no hold leaves at. `free` follows `take` (the man's hand is held torn until
+   *  it). The sounds' page rows hold the same times (sounds/catalog.ts; grabvoice-check takes him by the key, as the page does, and ties them to the frame). */
+  strip: { take: 0.26, out: 0.35, drop: 0.41, follow: 0.1, knife: 0.7, home: 0.95, free: 0.36, up: 0.68,
            meet: [-0.36, 1.15, 0.05] as Vec3, torn: [-0.47, 1.06, -0.05] as Vec3,
            over: [0, 0.035, -0.05] as Vec3, wrench: [-0.15, -0.1, -0.2] as Vec3, low: [-0.66, 1.2, -0.08] as Vec3, yaw: -16,
            rap: [0.02, 0.08, -0.03] as Vec3, hold: [0.08, 0.02] as [number, number], pitch: [12, 25, 15] as Vec3, rest: 0.05, push: [1.3, 1.05] as [number, number], fall: 0.311, spin: 5 },
@@ -1138,6 +1149,10 @@ const CREEP = {
   /** LOWER, HANDS DOWN (stalk.ts STALK.low feeds `low`, 0‥1 by the distance to the man's back, its shape as `lowShape` and `handsDown`): the shown share
    *  of it eases in and out at `rate` 1/s, and lets go at `up` when a grab springs him out of it. Nothing at 0, which is all the animator has unless fed. */
   low: { rate: 8, up: 24 },
+  /** ARMS OUT WIDE AND LOW (stalk.ts STALK.wide feeds `wide`, 0‥1, and its shape as `wideShape` [out, down, ahead of the shoulder, m]): in at `in` 1/s
+   *  (slowly, and only while he moves faster than `still` m/s: stopped, the pose is a held frame), out at `out` (fast). The elbow out and back (`pole`), fingers ahead and down (`fing`), the
+   *  back of the hand up (`back`), an open hand. Left arm; the right is its mirror. */
+  wide: { in: 5, out: 14, still: 0.03, pole: [0.75, 0.1, -0.65] as Vec3, fing: [0.3, -0.5, 0.8] as Vec3, back: [0.15, 0.9, 0.35] as Vec3, curl: 0.1, thumb: 0.15, spread: 0.55 },
   L: { at: [-0.05, -0.27, 0.3] as Vec3, atC: [0.0, -0.17, 0.3] as Vec3, pole: [0.7, -0.6, -0.5] as Vec3, fing: [-0.2, 0.35, 1] as Vec3, back: [0.7, 0.7, 0] as Vec3, curl: 0.32, thumb: 0.25, spread: 0.2 },
   R: { at: [0.05, -0.33, 0.27] as Vec3, atC: [0.0, -0.21, 0.28] as Vec3, pole: [-0.7, -0.6, -0.5] as Vec3, fing: [0.2, 0.3, 1] as Vec3, back: [-0.7, 0.7, 0] as Vec3, curl: 0.38, thumb: 0.3, spread: 0.15 },
 };
@@ -1666,6 +1681,8 @@ export class CharacterAnimator {
   readyAmt = 1; rise = 0;
   /** sunk this far below the carriage for the man he is closing on, 0‥1 (0 unless fed — stalk.ts's tell under STALK.low; CREEP.low is its shape) */
   low = 0; private lowS = 0; /** its shape as fed: [drop m, back m, lean °] */ lowShape: [number, number, number] = [0, 0, 0];
+  /** STALK.wide (fed by close.ts with the sink, closing on a man from behind): his arms out wide and low, 0‥1, and the shape as fed [out, down, ahead m] — the share shown is eased */
+  wide = 0; wideShape: [number, number, number] = [0, 0, 0]; private wideS = 0;
   /** …and with it (STALK.low): this share of the carriage's raised hands is given up, at any distance — his hands stay down by his knees, the crouch's own (0 = the carriage as it was) */ handsDown = 0;
   /** …and the SPRING out of it (close.ts closeTick, through a stalk's grab): the rate he comes up out of the crouch at (0 = the animator's own 10) */ spring = 0;
   /** sunk this far into the crouch whatever his stance (0 unless fed — stalk.ts's wait at a corner: a man coiled on a wall) */
@@ -2163,6 +2180,8 @@ export class CharacterAnimator {
     this.holdGunSide = this.hdGv.x >= 0.5;                        // which tool the hold's right hand has (the knife below ½, the pistol from there: they change hands behind the man's shoulder)
     const gunHold = wHd > 0.003 && this.holdGunSide;             // the pistol stays in the hand through this hold: drawn, lit if it was, and a shot's recoil is the hold layer's (not the two-handed aim clip's)
     this.hideHeldItem = wLp > 0.5 || wHl > 0.5 || (wHd > 0.5 && !gunHold) || (this.bigTool !== null && bigOff(this.bigTool));   // hands on the lock tools, or both on a held man: the pistol rides the thigh — or off his gun for the big slot's tool (BIGMOVE: never with bigTool null)
+    { const Wd = CREEP.wide, want = clamp(this.wide, 0, 1), inn = want >= this.wideS;   // (CREEP.wide: slow in — and only while he moves: a stop is a held frame of the move — fast out)
+      if (!inn || Math.abs(this.speed) > Wd.still) this.wideS = want || this.wideS > 1e-3 ? damp(this.wideS, want, inn ? Wd.in : Wd.out, dt) : 0; }
     this.lowS = this.low > 0 || this.lowS > 1e-3 ? damp(this.lowS, clamp(this.low, 0, 1), this.low <= 0 && this.spring > 0 ? CREEP.low.up : CREEP.low.rate, dt) : 0;   // (CREEP.low: the shown share of it — eased, so a stalk taken up or let go by another man does not snap)
     this.crouch = damp(this.crouch, Math.max(this.crouchTarget, clamp(this.coil, 0, 1), this.lockpick ? 1 : 0) * (1 - (this.lockpick ? 0 : clamp(this.rise, 0, 1))), this.spring > 0 ? this.spring : 10, dt);   // (rise: 0 unless fed — stalk.ts's tell)
     const s = Math.abs(this.speed) * (1 - wK);
@@ -4149,7 +4168,9 @@ export class CharacterAnimator {
     const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, C = CREEP, cr = clamp(this.crouch, 0, 1);
     const ck = this.closeK >= 0 ? this.clK : -1, KC = KIT.close, cke = ck < 0 ? 0 : ck * ck * (3 - 2 * ck);   // (KIT.close: how close he is, eased — −1 = not dealt, the carriage as it was)
     const e = w * w * (3 - 2 * w) * (ck < 0 ? 1 : lerp(KC.far, 1, cke)), free = 1 - clamp(this.upperW.aim, 0, 1);
-    const lo = this.lowS, LS = this.lowShape; if (this.handsDown > 0) { const k = 1 - clamp(this.handsDown, 0, 1); wL *= k; wR *= k; }   // (CREEP.low: lower, and — at any distance — the raised hands let down)
+    const lo = this.lowS, LS = this.lowShape; let ws = 0;
+    if (this.handsDown > 0) { const hd = clamp(this.handsDown, 0, 1), k = 1 - hd * (1 - this.wideS); ws = k > 1e-4 ? clamp(hd * this.wideS / k, 0, 1) : 0; wL *= k; wR *= k; }   // (CREEP.low: lower, and — at any distance — the raised hands let down; CREEP.wide: what is left of the arms is out wide and low, `ws` of it)
+    const WD = C.wide, WS = this.wideShape;
     { this.fkPart(pA, this.fkLegs);
       const fL = v3.copy(fk.pos[nd.footL]), fR = v3.copy(fk.pos[nd.footR]); const rL = [...fk.rot[nd.footL]] as Quat, rR = [...fk.rot[nd.footR]] as Quat;
       this.shift(pA, nd.hips, [0, -(lerp(C.drop[0], C.drop[1], cr) + LS[0] * lo) * e, -(lerp(C.back[0], C.back[1], cr) + LS[1] * lo) * e * free]);
@@ -4174,20 +4195,25 @@ export class CharacterAnimator {
     // KIT.close, the hands alive: a slow working of the fingers and a drift of the wrists on the layer's own clock (two rates per hand, never in step)
     const lt = this.clT * Math.PI * 2 * KC.flex, flL = ck < 0 ? 0 : KC.flexAmp * (0.6 * Math.sin(lt) + 0.4 * Math.sin(lt * 1.63 + 1.1)), flR = ck < 0 ? 0 : KC.flexAmp * (0.6 * Math.sin(lt * 1.21 + 2.3) + 0.4 * Math.sin(lt * 0.71 + 0.4));
     const drift = (ph: number): Vec3 => ck < 0 ? [0, 0, 0] : [KC.drift * Math.sin(lt * 0.83 + ph), KC.drift * Math.sin(lt * 1.17 + ph * 1.7), KC.drift * 0.6 * Math.sin(lt * 0.61 + ph * 0.6)];
-    if (wL > 0.003) { const H = C.L;
-      twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, v3.add(sl, sq(v3.add(v3.mad(v3.lerp(H.at, H.atC, cr), KC.lead, cke), v3.scale(drift(0), ck < 0 ? 1 : 1 / Math.max(0.38, KC.left))))), sq(H.pole), 0.8, this.handRot(0, sq(H.fing), sq(H.back)));   // (the drift at its full size through the part of this arm the layer has)
-      this.hand(pB, 0, [H.curl + flL, H.curl + 0.05 + flL * 0.9, H.curl + 0.1 + flL * 0.8, H.curl + 0.15 + flL * 0.7], H.thumb + flL * 0.5, H.spread);
-      const lw = wL * (ck < 0 ? 1 : KC.left);   // (KIT.close: most of this arm is left to the crouch under it — it goes for the man only in reach, the tell's own reach)
+    if (wL > 0.003) { const H = C.L; let pole = H.pole, fing = H.fing, back = H.back, cu = H.curl, th = H.thumb, sp = H.spread;
+      let at = v3.add(v3.mad(v3.lerp(H.at, H.atC, cr), KC.lead, cke), v3.scale(drift(0), ck < 0 ? 1 : 1 / Math.max(0.38, lerp(KC.left, 1, ws))));   // (the drift at its full size through the part of this arm the layer has)
+      if (ws > 0) { at = v3.lerp(at, [WS[0], -WS[1], WS[2]], ws); pole = v3.lerp(pole, WD.pole, ws); fing = v3.lerp(fing, WD.fing, ws); back = v3.lerp(back, WD.back, ws); cu = lerp(cu, WD.curl, ws); th = lerp(th, WD.thumb, ws); sp = lerp(sp, WD.spread, ws); }   // (CREEP.wide: out to its side, and still — the wide hand has no drift: a stop is a held frame)
+      twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, v3.add(sl, sq(at)), sq(pole), 0.8, this.handRot(0, sq(fing), sq(back)));
+      this.hand(pB, 0, [cu + flL, cu + 0.05 + flL * 0.9, cu + 0.1 + flL * 0.8, cu + 0.15 + flL * 0.7], th + flL * 0.5, sp);
+      const lw = wL * (ck < 0 ? 1 : lerp(KC.left, 1, ws));   // (KIT.close: most of this arm is left to the crouch under it — it goes for the man only in reach, the tell's own reach)
       m[nd.shoulderL] = m[nd.upperArmL] = wUp * lw; m[nd.forearmL] = wFore * lw; setSub(nd.handL, wHand * lw); }
     if (wR > 0.003) { const H = C.R;
-      let at = v3.add(sr, sq(v3.add(v3.lerp(H.at, H.atC, cr), drift(2.1)))), rot = this.handRot(1, sq(H.fing), sq(H.back)), pole = sq(H.pole), curl = H.curl;
+      let a0 = v3.add(v3.lerp(H.at, H.atC, cr), drift(2.1)), p0 = H.pole, fing = H.fing, back = H.back, curl = H.curl, thb = H.thumb, spr = H.spread * (1 - cke);
+      if (ws > 0) { const mir = (v: Vec3): Vec3 => [-v[0], v[1], v[2]];   // (CREEP.wide: the left's mirror)
+        a0 = v3.lerp(a0, [-WS[0], -WS[1], WS[2]], ws); p0 = v3.lerp(p0, mir(WD.pole), ws); fing = v3.lerp(fing, mir(WD.fing), ws); back = v3.lerp(back, mir(WD.back), ws); curl = lerp(curl, WD.curl, ws); thb = lerp(thb, WD.thumb, ws); spr = lerp(spr, WD.spread, ws); }
+      let at = v3.add(sr, sq(a0)), rot = this.handRot(1, sq(fing), sq(back)), pole = sq(p0);
       if (ck >= 0 && !this.grip[1] && !this.noKnife) {   // the knife hand by distance: from its guard up across the chest to hover off the hilt — where the reach (readyLayer) closes it on the handle
         const S = this.sheathFist(0, KC.hover);
         { const cp = cke + (ck - cke) * 0.5; at = v3.add(v3.mad(v3.lerp(at, S.at, cp), sq(KC.bow), Math.sin(Math.PI * cke)), v3.scale(sq(drift(2.1)), cke)); }   // (the travel half-eased: an eased-only one sat still over the first metre in, and the hand must be seen to go with every step)
         rot = quat.slerp(rot, S.rot, cke); pole = v3.lerp(pole, S.pole, cke); curl = lerp(H.curl, KC.curl, cke);
       }
       twoBoneIK(fk, pB, nd.upperArmR, nd.forearmR, nd.handR, at, pole, 0.8, rot);
-      if (!this.grip[1]) this.hand(pB, 1, [curl + flR, curl + 0.05 + flR * 0.9, curl + 0.1 + flR * 0.8, curl + 0.15 + flR * 0.7], H.thumb + flR * 0.5, H.spread * (1 - cke));
+      if (!this.grip[1]) this.hand(pB, 1, [curl + flR, curl + 0.05 + flR * 0.9, curl + 0.1 + flR * 0.8, curl + 0.15 + flR * 0.7], thb + flR * 0.5, spr);
       m[nd.shoulderR] = m[nd.upperArmR] = wUp * wR; m[nd.forearmR] = wFore * wR; setSub(nd.handR, wHand * wR); }
     blendPose(pA, pB, 1, m, pA);
     this.creepShown = w;
@@ -4237,7 +4263,7 @@ export class CharacterAnimator {
     for (let side = 0; side < 2; side++) {
       const sg = side === 0 ? 1 : -1, kn = side === 0 ? kL : kR, a = sg * s;
       const up_ = side === 0 ? nd.upperArmL : nd.upperArmR, fo = side === 0 ? nd.forearmL : nd.forearmR, ha = side === 0 ? nd.handL : nd.handR, sh = side === 0 ? nd.shoulderL : nd.shoulderR;
-      const wArm = W * (1 - this.readyW) * (side === 0 ? (P.creep ? 1 : 1 - cs) : 1 - cs);   // (the knife hand is the close-in mode's; the tell takes either when it wants it)
+      const wArm = W * (1 - this.readyW) * (side === 0 ? (P.creep ? 1 - cs * this.wideS * clamp(this.handsDown, 0, 1) : 1 - cs) : 1 - cs);   // (the knife hand is the close-in mode's; the tell takes either when it wants it; CREEP.wide: with his arms out the left is the creep's too)
       if (wArm <= 0.003) continue;
       const S0 = fk.pos[up_], L = (hyp3(fk.pos[fo][0] - S0[0], fk.pos[fo][1] - S0[1], fk.pos[fo][2] - S0[2]) + hyp3(fk.pos[ha][0] - fk.pos[fo][0], fk.pos[ha][1] - fk.pos[fo][1], fk.pos[ha][2] - fk.pos[fo][2])) * 0.97;
       const d1 = dr * Math.sin(lt * 0.83 + side * 2.1), d2 = dr * Math.sin(lt * 1.31 + side * 1.3 + 0.7), d3 = dr * Math.sin(lt * 0.57 + side * 0.9 + 1.9);
