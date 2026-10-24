@@ -63,6 +63,10 @@ export interface FogFrame {
   /** THIN THINGS THAT STAND FREE DO NOT CUT THE SIGHT (game/fogofwar.ts FOG.thin; under the full picture alone — it rides the sight table): the picture's
    *  fog eye passes the statics whose bit is set in `thinBits` (bit i = box i; 4096 boxes), and what a man carries. false = every box stops it, as it was */
   thin: boolean;
+  /** WHAT LIES STILL STAYS AS LAST SEEN (game/fogofwar.ts FOG.kept; under the full picture alone — it rides the sight table's head): a particle at rest
+   *  on floor the team sees is marked (shaders/particles.wgsl) and is then drawn over that floor when nobody looks too, until something wakes it. false = a
+   *  case, a chip or a leaf of paper at rest is cut the moment the team looks away, as it was */
+  kept: boolean;
   /** which statics are thin and free, a bit a box index (game/fogofwar.ts thinBlock, off scene/thin.ts's marks), and the box list they were read off: its
    *  geometry serial and its count of statics. A frame drawn after the list changed and before the next fill (a wall rebuilt, a restart: an index is another
    *  box's by then — a leaf's, should the statics have shrunk) is drawn with the row off (FogSight.encode) */
@@ -73,7 +77,7 @@ export interface FogFrame {
   /** the renderer's own switch (the game never writes it): which program draws the pass — the picture is the same either way (FogPassMode) */
   pass: FogPassMode;
 }
-export function makeFogFrame(): FogFrame { const lights = new Float32Array(FOG_LIGHTS * 16); return { on: false, count: 0, eyes: new Float32Array(FOG_EYES * 4), looks: new Float32Array(FOG_EYES * 4), dim: 0.4, desat: 0.75, topPad: 0.3, edge: 0, softIn: 0, softOut: 0, nearSoft: 0, full: false, fullFlat: 0, air: false, thin: false, thinBits: new Uint32Array(FOG_THIN_WORDS), thinSerial: -1, thinCount: -1, sight: false, flat: 0, lit: 0, litFill: 0, litCut: 0, litAo: 0, litAoM: 0, lightCount: 0, lights, lightsU: new Uint32Array(lights.buffer), pass: fogPassFlag() }; }
+export function makeFogFrame(): FogFrame { const lights = new Float32Array(FOG_LIGHTS * 16); return { on: false, count: 0, eyes: new Float32Array(FOG_EYES * 4), looks: new Float32Array(FOG_EYES * 4), dim: 0.4, desat: 0.75, topPad: 0.3, edge: 0, softIn: 0, softOut: 0, nearSoft: 0, full: false, fullFlat: 0, air: false, thin: false, thinBits: new Uint32Array(FOG_THIN_WORDS), thinSerial: -1, thinCount: -1, kept: false, sight: false, flat: 0, lit: 0, litFill: 0, litCut: 0, litAo: 0, litAoM: 0, lightCount: 0, lights, lightsU: new Uint32Array(lights.buffer), pass: fogPassFlag() }; }
 
 const U_BYTES = FOG_EYES * 16 * 2 + 64;
 
@@ -309,7 +313,7 @@ export class FogSight implements CutSwappable {
     const U = this.udata, count = Math.min(F!.count, FOG_EYES); U.set(F!.eyes, 0); U.set(F!.looks, FOG_EYES * 4);
     const W = this.world, thin = F!.thin && (!W || (W.geomSerial === F!.thinSerial && W.statics.length === F!.thinCount));   // (FOG.thin, and its bits still this box list's)
     for (let k = count; k < FOG_EYES; k++) U[k * 4 + 3] = 0;   // (a row past the count is no eye)
-    const o = FOG_EYES * 8; U[o] = count; U[o + 1] = 1; U[o + 2] = F!.topPad; U[o + 3] = Math.max(0, F!.edge); U[o + 4] = F!.softIn; U[o + 5] = F!.softOut; U[o + 6] = F!.nearSoft; U[o + 7] = (F!.air ? 1 : 0) + (thin ? 2 : 0);   // (one whole number, two bits: common.wgsl fogSmokeOn / fogThinOn)
+    const o = FOG_EYES * 8; U[o] = count; U[o + 1] = 1; U[o + 2] = F!.topPad; U[o + 3] = Math.max(0, F!.edge); U[o + 4] = F!.softIn; U[o + 5] = F!.softOut; U[o + 6] = F!.nearSoft; U[o + 7] = (F!.air ? 1 : 0) + (thin ? 2 : 0) + (F!.kept ? 4 : 0);   // (one whole number, three bits: common.wgsl fogSmokeOn / fogThinOn / fogKeptOn)
     this.uwords.set(F!.thinBits, SIGHT_FLOATS_BYTES / 4);
     this.device.queue.writeBuffer(this.ubuf, 0, U, 0, SIGHT_FLOATS_BYTES / 4); this.device.queue.writeBuffer(this.buf, SIGHT_HEAD, U);   // (this pass's own block is the floats alone: fogsight.wgsl SightU)
     if (this.stand && thin) { const T = F!.thinBits, was = this.standBits; let same = !!was; if (was) for (let i = 0; i < T.length; i++) if (T[i] !== was[i]) { same = false; break; }

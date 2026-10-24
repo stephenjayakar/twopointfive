@@ -424,7 +424,7 @@ fn applyImpulses(p: ptr<function, Particle>, kind: u32, slot: u32, sn: ptr<funct
   }
   if (kick <= 0.0) { return false; }
   let lay = *asleep;
-  if (lay) { if (kick < G.w) { return false; } *asleep = false; (*p).bits &= ~(PB_ASLEEP | PB_OURS); }   // (woken where it lay: whoever kicked it, it is no longer the team's own doing — the fog cuts it again where nobody sees)
+  if (lay) { if (kick < G.w) { return false; } *asleep = false; (*p).bits &= ~(PB_ASLEEP | PB_OURS | PB_KEPT); }   // (woken where it lay: whoever kicked it, it is no longer the team's own doing — the fog cuts it again where nobody sees)
   var v = (*p).vel + dv; let sp = length(v); if (sp > G.z) { v *= G.z / sp; } (*p).vel = v;
   if (kind == P_SHEET) {
     sheetKickShape(p, slot, sn, sw, gust, aspect, kick, kseed, lay);
@@ -481,7 +481,7 @@ fn applyImpulses(p: ptr<function, Particle>, kind: u32, slot: u32, sn: ptr<funct
         let spEff = spd * (0.8 + 0.4 * rnd(wh, 33u));                                                            // (the air over THIS leaf: a pile is not one leaf)
         let pw = clamp((spEff - wk.wake) / max(wk.wake, 0.05), 0.0, 1.0) * WIND_WAKE_PMAX;
         if (spEff > wk.wake && rnd(wh, 34u) < pw) {
-          asleep = false; p.bits &= ~(PB_ASLEEP | PB_OURS);
+          asleep = false; p.bits &= ~(PB_ASLEEP | PB_OURS | PB_KEPT);
           let kick = spEff * wk.kick;
           var kd = vec3f(vAir.x, 0.0, vAir.z); let kl = length(kd); kd = select(vec3f(0.0), kd / kl, kl > 1e-4);
           p.vel += normalize(kd + vec3f(0.0, WIND_WAKE_UP, 0.0)) * kick;                                          // along the air over it, edge lifted into it …
@@ -578,7 +578,8 @@ fn applyImpulses(p: ptr<function, Particle>, kind: u32, slot: u32, sn: ptr<funct
     atomicAdd(&pool.hdr[1], 1u);
     // resting: is what it rests on still there? (a leaf swung away, a chair shoved) — one short ray down every 16th frame, staggered by slot
     if (((frame.frameIdx + slot) & 15u) == 0u && dt > 0.0) {
-      if (!occluded(p.pos + vec3f(0.0, 0.02, 0.0), vec3f(0.0, -1.0, 0.0), 0.02 + p.size * 0.5 + 0.03, owner)) { p.bits &= ~(PB_ASLEEP | PB_OURS); asleep = false; }
+      if (!occluded(p.pos + vec3f(0.0, 0.02, 0.0), vec3f(0.0, -1.0, 0.0), 0.02 + p.size * 0.5 + 0.03, owner)) { p.bits &= ~(PB_ASLEEP | PB_OURS | PB_KEPT); asleep = false; }
+      else if (fogKeptOn() && (p.bits & PB_KEPT) == 0u && fogSeenBins(p.pos) >= 0.5) { p.bits |= PB_KEPT; }   // (FOG.kept: at rest where the team sees it — it stays in the picture when they look away, until it is woken; the draw asks the row too, so with the row off a marked one is cut as ever)
     }
   }
   // ---- shade

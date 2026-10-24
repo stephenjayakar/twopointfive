@@ -74,6 +74,10 @@ export interface Box {
   /** × the emission of this box's emissive markings (runtime: game/lighting.ts writes a switchable's supply factor here — a blackout, the OCP, a flicker —
    *  next to the box's own emissive; absent = 1) */
   markGain?: number;
+  /** THE PICTURE'S EMISSION, where it is not the box's own (render-only: game/fogofwar.ts FOG.kept — a lamp's face under the fog of war as the team last saw
+   *  it, lit or dark): the upload takes these in place of `emissive` / `markGain`; nothing in the game reads them, and `emissive` itself stays the lamp's real
+   *  state. Absent = the box's own. Read only: several boxes may be handed one array */
+  fogEmit?: Readonly<Vec3>; fogMark?: number;
   /** MOTION IDENTITY (renderer v3, image-quality program E1): a key that names THIS part of THIS object across frames — a door's leaf, a chair's seat, a flying
    *  can's band, the torch in a man's hand (MKEY ranges below; the code that emits the box sets it). With it the g-buffer's motion vector for the box comes from
    *  the transform the SAME part had a frame ago wherever it sat in the dynamic list; without it (sparks, tracers, one-frame effects) the old rule stands: the
@@ -491,8 +495,8 @@ export class BoxWorld {
     if (cutOn && this.cutVisible.length < this.maxBoxes) this.cutVisible = new Uint32Array(this.maxBoxes);
     const cv = this.cutVisible;
     for (let i = 0; i < nStat; i++) {
-      const b = all[i]; const so = i * SS; const c = b.c, h = b.h, al = b.albedo, em = b.emissive, rot = b.rot, marks = b.marks;
-      const mw = matWord(b), mg = b.markGain ?? 1, wk = b.wetK ?? 1, ml = marks === undefined ? -1 : marks.length;
+      const b = all[i]; const so = i * SS; const c = b.c, h = b.h, al = b.albedo, em = b.fogEmit ?? b.emissive, rot = b.rot, marks = b.marks;
+      const mw = matWord(b), mg = b.fogMark ?? b.markGain ?? 1, wk = b.wetK ?? 1, ml = marks === undefined ? -1 : marks.length;
       if (!forceAll && S[so] === c[0] && S[so + 1] === c[1] && S[so + 2] === c[2] && S[so + 3] === b.yaw && S[so + 4] === h[0] && S[so + 5] === h[1] && S[so + 6] === h[2]
         && S[so + 7] === b.flags && S[so + 8] === b.owner && S[so + 9] === al[0] * wk && S[so + 10] === al[1] * wk && S[so + 11] === al[2] * wk && S[so + 12] === em[0] && S[so + 13] === em[1] && S[so + 14] === em[2]
         && S[so + 15] === b.cutHeight && S[so + 16] === mw && S[so + 17] === mg && S[so + 23] === ml && SM[i] === marks && (!cutOn || SC[i] === b.cut)
@@ -565,7 +569,8 @@ export class BoxWorld {
     const gf = this.geoF32, gu = this.geoU32, mf = this.matData; const o = i * GEO_STRIDE; let marked = false;
     const round = this.roundOn && b.round === true;   // (round wins over a cut record, here as in rayBox and lineBox: nothing gives a round box one)
     let flags = (b.flags & (this.roundOn ? 0xf7 : 0xff)) | (round ? BOX_ROUND_BIT : 0) | ((b.owner & 0xff) << 8) | (b.rot ? BoxFlag.Rot : 0) | (b.flags & BoxFlag.Glass);   // GPU word: flag bits 0-7, owner byte 8-15 (boxOwner() in common.wgsl), Glass at bit 17 (the one CPU flag ≥ 1<<16 that is passed through: BOX_GLASS), the marking slot in 18-31 (below); everything else up there is CPU-only and never reaches the GPU
-    if (b.emissive[0] + b.emissive[1] + b.emissive[2] > 0) flags |= BoxFlag.Emissive;
+    const em = b.fogEmit ?? b.emissive;   // (the picture's emission: Box.fogEmit)
+    if (em[0] + em[1] + em[2] > 0) flags |= BoxFlag.Emissive;
     const wk = b.wetK ?? 1;   // (render-only: see Box.wetK)
     let s0 = b.albedo[0] * wk, s1 = b.albedo[1] * wk, s2a = b.albedo[2] * wk;   // the secondary albedo (4th mat row): the albedo itself unless markings fold in
     if (marksOn && b.marks !== undefined && b.marks.length > 0 && !b.rot) {   // (a tilted box never carries markings: the face frame assumes yaw only)
@@ -583,10 +588,10 @@ export class BoxWorld {
     gf[o + 4] = b.h[0]; gf[o + 5] = b.h[1]; gf[o + 6] = b.h[2]; gu[o + 7] = flags >>> 0;
     const m = i * MAT_STRIDE;
     mf[m] = b.albedo[0] * wk; mf[m + 1] = b.albedo[1] * wk; mf[m + 2] = b.albedo[2] * wk; mf[m + 3] = b.cutHeight;
-    mf[m + 4] = b.emissive[0]; mf[m + 5] = b.emissive[1]; mf[m + 6] = b.emissive[2]; mf[m + 7] = matWord(b);   // (the finish: read through common.wgsl boxFinish by the g-buffer / reflect.wgsl — every other shader ignores the word, as it ignored the owner that sat here)
+    mf[m + 4] = em[0]; mf[m + 5] = em[1]; mf[m + 6] = em[2]; mf[m + 7] = matWord(b);   // (the finish: read through common.wgsl boxFinish by the g-buffer / reflect.wgsl — every other shader ignores the word, as it ignored the owner that sat here)
     if (b.rot) { mf[m + 8] = b.rot[0]; mf[m + 9] = b.rot[1]; mf[m + 10] = b.rot[2]; mf[m + 11] = b.rot[3]; }
     else { const s2 = Math.sin(b.yaw / 2), c2 = Math.cos(b.yaw / 2); mf[m + 8] = 0; mf[m + 9] = s2; mf[m + 10] = 0; mf[m + 11] = c2; }   // yaw about +Y (local +X → (cos, 0, −sin), +Z → (sin, 0, cos): the same convention as the packed yaw the rays use)
-    mf[m + 12] = s0; mf[m + 13] = s1; mf[m + 14] = s2a; mf[m + 15] = b.markGain ?? 1;   // secondary albedo + the marking emission gain (game/lighting.ts drives it with the switchable's supply)
+    mf[m + 12] = s0; mf[m + 13] = s1; mf[m + 14] = s2a; mf[m + 15] = b.fogMark ?? b.markGain ?? 1;   // secondary albedo + the marking emission gain (game/lighting.ts drives it with the switchable's supply)
     return marked;
   }
 

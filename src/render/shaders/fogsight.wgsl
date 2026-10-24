@@ -10,7 +10,7 @@ struct SightU {
   eyes: array<vec4f, 7>,    // FowU's head (shaders/fogofwar.wgsl), field for field
   looks: array<vec4f, 7>,
   cfg: vec4f,               // x = eyes
-  soft: vec4f,              // xyz = FowU's · w is NOT FowU's (its own light): here the table's own two bits (common.wgsl FogSightT.soft): 1 = smoke is drawn under the fog too, 2 = thin things that stand free do not stop an eye
+  soft: vec4f,              // xyz = FowU's · w is NOT FowU's (its own light): here the table's own three bits (4 = FOG.kept, not read here) (common.wgsl FogSightT.soft): 1 = smoke is drawn under the fog too, 2 = thin things that stand free do not stop an eye
 };
 @group(1) @binding(0) var<uniform> sight: SightU;
 @group(1) @binding(1) var<storage, read_write> sightOut: array<f32>;   // FogSightT.dist, a float a bin

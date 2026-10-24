@@ -84,7 +84,7 @@ fn shardVertex(p: Particle, corner: u32, k1: vec4f) -> VOut {
   let p = poolR.parts[slot];
   if (p.age >= p.life) { return cull(); }
   let kind = p.bits & PB_KIND; let asleep = (p.bits & PB_ASLEEP) != 0u;
-  if (kind != P_RAIN && (p.bits & PB_OURS) == 0u && fogSeenBins(p.pos) < 0.5) { return cull(); }   // (the fog of war's full picture: a spark, a puff, a chip, a case, a leaf of paper or a shard over floor nobody on the team sees is not drawn, unless it is the team's own doing (PB_OURS — game/fogofwar.ts FOG.ours) — the weather is the same everywhere and stays; 1 while no sight table is written)
+  if (kind != P_RAIN && (p.bits & PB_OURS) == 0u && !((p.bits & PB_KEPT) != 0u && fogKeptOn()) && fogSeenBins(p.pos) < 0.5) { return cull(); }   // (the fog of war's full picture: a spark, a puff, a chip, a case, a leaf of paper or a shard over floor nobody on the team sees is not drawn, unless it is the team's own doing (PB_OURS — game/fogofwar.ts FOG.ours) — the weather is the same everywhere and stays; 1 while no sight table is written)
   let k1 = em.kp[kind * 2u + 1u];
   if (kind == P_SHEET) { return sheetVertex(p, corner, k1); }
   if (kind == P_RAIN) { return rainVertex(p, corner, em.kp[kind * 2u], k1); }   // the rain drop's streak / its splash crown (below)

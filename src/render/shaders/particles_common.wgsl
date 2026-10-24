@@ -29,6 +29,7 @@ const PB_ASLEEP: u32 = 16u;       // resting on an up-facing surface: no integra
 const PB_NEW: u32 = 32u;          // born this frame (the emit kernel pre-integrated it a random fraction of dt): the update kernel skips its step once
 const PB_BOUNCED: u32 = 64u;      // has met geometry at least once
 const PB_OURS: u32 = 128u;        // the team's own doing (the record's bit 18 — particles.ts Particles.ours): drawn over floor the fog of war hides too, until it has lain and is woken (the kernel takes the bit off)
+const PB_KEPT: u32 = 65536u;      // at rest, and the team has seen it lying there (FOG.kept: the update kernel puts it on over seen floor, a wake takes it off): drawn over floor the fog hides too while the row is on. Bit 16: the owner has bits 8‥15
 // bits 8..15: owner — the character id whose capsules / boxes this particle's rays ignore (a casing leaves the port INSIDE the shooter's arm capsules)
 
 struct Particle {

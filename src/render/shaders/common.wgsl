@@ -125,7 +125,7 @@ struct FogSightT {            // THE FOG OF WAR'S SIGHT TABLE (render/fogofwar.t
   eyes: array<vec4f, 7>,      // FowU's head (shaders/fogofwar.wgsl), field for field: the eye and its man, …
   looks: array<vec4f, 7>,     // … where he looks, his cone and near field
   cfg: vec4f,                 // x = eyes, y = 1 while this frame's table is written (0: no table — every spot answers 'seen'), z = topPad (m), w = the fog's soft edge: its band (m; 0 = the hard line — shaders/fogofwar.wgsl fowEdge, the fog pass alone reads it)
-  soft: vec4f,                // xyz = the cone's soft edges, as FowU.soft · w = one whole number, two bits: 1 = smoke and dust are drawn under the fog too (fogSmokeOn below; 0 = cut there, as it was), 2 = thin things that stand free do not stop a fog eye (fogThinOn)
+  soft: vec4f,                // xyz = the cone's soft edges, as FowU.soft · w = one whole number, three bits (4 = FOG.kept, fogKeptOn below): 1 = smoke and dust are drawn under the fog too (fogSmokeOn below; 0 = cut there, as it was), 2 = thin things that stand free do not stop a fog eye (fogThinOn)
   thin: array<vec4u, 32>,     // WHICH statics are thin and free (game/fogofwar.ts FOG.thin; scene/thin.ts): a bit a box index, 4096 boxes (fogThinBox below). In the buffer the sight table's own pass reads here too (the stand-in: render/fogofwar.ts FogSight.stand)
 };
 @group(0) @binding(11) var<uniform> fogSight: FogSightT;   // (a UNIFORM, 58 KB: the fragment stage's sampled textures are all spoken for — passes.ts lComp)
@@ -1054,9 +1054,11 @@ fn fogEyeSay(k: i32, e: vec4f, q: vec2f, pad: f32) -> vec4f {
 /// that far, or neither) that is the answer, and only where they differ — a sight edge, a wall seen along its length — is the fog pass's own ray walked. So the
 /// light a class cuts ends on the line the fog is drawn to. 1 while no table is written (the fog is not drawn either). Compute and fragment stages (the walk
 /// reads the grid); the vertex stage has fogSeenBins.
-/// the head's last float, a whole number of two bits (render/fogofwar.ts FogSight.encode): the air's, and thin things' (only over a table written this frame)
+/// the head's last float, a whole number of three bits (render/fogofwar.ts FogSight.encode): the air's (1), thin things' (2) and what lies still (4) (only over a table written this frame)
 fn fogSmokeOn() -> bool { return (u32(fogSight.soft.w + 0.5) & 1u) != 0u; }
 fn fogThinOn() -> bool { return fogSight.cfg.y == 1.0 && (u32(fogSight.soft.w + 0.5) & 2u) != 0u; }
+/// FOG.kept: what lies still stays as the team last saw it (particles.wgsl marks a resting particle on seen floor; particles_draw.wgsl then draws it under the fog)
+fn fogKeptOn() -> bool { return fogSight.cfg.y == 1.0 && (u32(fogSight.soft.w + 0.5) & 4u) != 0u; }
 fn fogSeenAt(P: vec3f, N: vec3f) -> f32 {
   if (all(P == fogSeenKeyP) && all(N == fogSeenKeyN)) { return fogSeenVal; }
   fogSeenKeyP = P; fogSeenKeyN = N; fogSeenVal = 1.0;
