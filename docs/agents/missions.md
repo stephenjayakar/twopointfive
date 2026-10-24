@@ -2354,7 +2354,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   he is down (and with nobody else in sight fires nothing at all), comes off the alert, takes the man beside him where one stands there, and
   is on him again once he is up; with the switch off he is on him throughout (480 frames, 11 rounds on the shipped stand, 15 on the frozen).
   `RAILS_BREAK=1` makes the line fail; the line reads the stand's own word, so it also passes under `TPS_SPAREDOWN=1` on the frozen stand.
-  THE LINE STANDS ON `acquireFoe` ALONE: the other four places that ask `railsDown` are read, not staged.
+  TWO OF THE FIVE PLACES ARE STAGED (10-24, after the rule was in the build): `acquireFoe` as above, and `roomfight.ts tickMove` (the same
+  defender put on a walk away with the kneeling man in his eye, the room fight's step for a moving man run once: he walks on; with the switch
+  off he stops to fight him). `qrf.ts`, `tactics.ts` and `frag.ts` are held only by the line's read of their source (each still asks
+  `railsDown`): nobody has staged the response's eye, a colleague's man handed on or the grenade's count against a kneeling man. A recorded
+  play cannot hold the rule either: the 00:31Z tape rerun on the build no longer reaches its door moment.
   MEASURED: that line on seed 1, both stands (31 of 31). lesson-gate over the six missions ALL PASS (36 checks; each mission by script on four
   dice as the page ships, the rule on). Mission 1 by script on dice 1 to 4 with the rule on and with `TPS_SPAREDOWN=0`: 15 of 15 steps both
   ways, lengths within a second of each other; how many men were spared in those runs was not counted.
