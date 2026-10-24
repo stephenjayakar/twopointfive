@@ -59,24 +59,24 @@ export function dressLorry(level: { boxes: Box[] }): number {
     set(tilt, -1.15, 0, 0.9, 1.6, 1.95, 1.06);
     out.push(arc(box(-1.15, 0, 1.6, 2.05, 1.95, 1.06, CANVAS, { rough: tilt.rough }), R, 1, 11.5));
     for (const lx of [-2.65, -1.65, -0.65, 0.35]) out.push(arc(box(lx, 0, 1.6, 2.062, 0.02, Math.sqrt((R + 0.012) ** 2 - (1.6 - y0) ** 2), of(CANVAS, 0.72), { rough: 0.9, flags: BoxFlag.NoShadow }), R + 0.012, 1, 11.5));
-    arc(set(tiltSnow, -1.15, 0, 1.8, 2.11, 1.84, 0.8), R + 0.06, 1, 8);
+    arc(set(tiltSnow, -1.15, 0, 1.8, 2.07, 1.84, 0.8), R + 0.02, 1, 8);   // (a snow cap is a sheet two centimetres over what it lies on: the cut pass draws no sides for it)
     tiltSnow2.flags |= BoxFlag.NoPrimary | BoxFlag.NoShadow; tiltSnow2.c = at(-1.15, 1.7, 0); tiltSnow2.h = [0.01, 0.01, 0.01]; }
 
   // ---- the cab: the roof an arch from the windscreen back, the windscreen leaned ----
   { const R = radiusOf(0.64, 0.2);
     arc(set(roof, 1.5, 0, 2.04, 2.24, 0.64, 1.1), R, 3, 9);
-    arc(set(roofSnow, 1.5, 0, 2.11, 2.285, 0.5, 1.02), R + 0.045, 3, 7);
+    arc(set(roofSnow, 1.5, 0, 2.11, 2.26, 0.5, 1.02), R + 0.02, 3, 7);
     const t = 14 * D; glass.cut = cutRecord(glass.h, [cutPlane([Math.cos(t), Math.sin(t), 0], Math.cos(t) * glass.h[0] - Math.sin(t) * glass.h[1])]).cut; }
 
   // ---- the nose: a narrow engine cover with a round top, a fender arched over each front wheel, the lamps in round pods ----
   { const R = radiusOf(0.56, 0.26);
     set(bonnet, 2.75, 0, 0.74, 1.2, 0.62, 0.56);
     out.push(arc(box(2.75, 0, 1.2, 1.46, 0.62, 0.56, RED, { rough: bonnet.rough }), R, 1, 12.5));
-    arc(set(bonnetSnow, 2.75, 0, 1.33, 1.5, 0.52, 0.4), R + 0.04, 1, 9);
+    arc(set(bonnetSnow, 2.75, 0, 1.33, 1.48, 0.52, 0.4), R + 0.02, 1, 9);
     out.push(box(3.376, 0, 0.8, 1.3, 0.006, 0.4, IRON, { rough: 0.5, metal: true, flags: BoxFlag.NoShadow }));   // the grille
     for (const s of [-1, 1]) {
       out.push(arc(box(2.2, s * 0.855, 0.74, 1.08, 0.54, 0.295, RED, { rough: bonnet.rough }), 0.6, 3, 16));     // (its axis is the wheel's own: 0.48 m up)
-      out.push(arc(snowOf(bonnetSnow, 2.2, s * 0.855, 0.99, 1.11, 0.3, 0.22), 0.63, 3, 8));
+      out.push(arc(snowOf(bonnetSnow, 2.2, s * 0.855, 0.99, 1.1, 0.3, 0.22), 0.62, 3, 8));
       const pod = box(3.18, s * 0.68, 0.86, 1.1, 0.14, 0.12, RED, { rough: bonnet.rough }); pod.cut = cutRecord(pod.h, ring(0.12, 1)).cut; pod.cutRound = 1; out.push(pod);
       const lamp = lamps[s < 0 ? 0 : 1]!; set(lamp, 3.325, s * 0.68, 0.88, 1.08, 0.006, 0.1); lamp.cut = cutRecord(lamp.h, ring(0.1, 1)).cut;
     } }

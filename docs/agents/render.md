@@ -627,13 +627,13 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   that circle. It rides in the record's unused LAST row (`cut.ts packCut`: `CUT_PAD`'s w + k; every reader of a plane stops at the first zero normal),
   so an arc carries seven planes at most (an eighth plane drops the arc without a word); about x or z only. In `gbuffer_cut.wgsl` its facets and top
   turn (the box's own upright faces and underside stay flat), the look's paint is read straight down each quarter (no unrolling), its ends get no drum's
-  rim, and an arc in the snow paint that is a box of the level file gets `snowBox`'s snow (grain, glow, the wandering edge) asked as the box's top face.
+  rim, and an arc in the snow paint gets `snowBox`'s snow (grain, glow, the wandering edge) asked as the box's top face, and is drawn as a SHEET: its
+  upright faces and ends are discarded (they stood as straight lines where the wandering edge drew back), so a cap lies two centimetres over its roof.
   Picture only: every ray meets the facets. A round's rolled rim is now on both end faces (a wheel shows one to each side).
   WHAT A RAY AND A BODY MEET CHANGES on that page: the bonnet (1.5 m high, 0.98 m a side) is a hump 0.56 m a side that tops out at 1.46 m, with a
   fender of at most 1.08 m beside it and, for 0.63 m in front of each fender, only the 0.78 m bumper; the tilt's eaves come down from 1.95 m to 1.6 m;
   a tank closes a metre of the gap under the bed each side. No knob and no journal key, as the geometry trial.
-  KNOWN: no clinging snow from the look on an arc (the round's snow hook is about y only), so the authored caps are all the snow there is, and the two
-  fender caps (new boxes, not the level file's) are flat paint; the level's banks against the lorry are as they were; the lorry is found by twenty
+  KNOWN: no clinging snow from the look on an arc (the round's snow hook is about y only), so the authored caps are all the snow there is; the level's banks against the lorry are as they were; the lorry is found by twenty
   numbers copied from the generator, and the console says so when one misses.
   Checked: `dressLorry` on `levels/pass.json` under bun (21 added, 16 changed, every record seven planes or fewer where it is an arc); the page booted
   on the software adapter with 0 console errors; four pictures (play camera, the nose, from above, dusk). Never seen on a GPU.

@@ -199,6 +199,7 @@ fn cutEdgeTake(s0: f32, g: vec2f, best: ptr<function, f32>, d: ptr<function, vec
     if (sb.gone) { gone = true; }
     else if (sb.amt > 0.0) { albedo = sb.albedo; rough = sb.rough; n = normalize(gn + sb.n - flatN); lookTilt = false; if (SNOW_GLOW || SNOW_SPARKLE) { snowA = sb.amt * 0.6667; } }
   }
+  if (LOOK && SNOW_SURF && arc > 0.0 && !side && own < 0 && snowCfg.p[1].z > 0.5 && snowIsPaint(v.albedo)) { gone = true; }   // …and such a cap is a SHEET: its own upright faces and ends are not drawn, or they stand as straight lines where the snow's wandering edge has drawn back from them
   if (LOOK && SNOW_SURF && oldCut && gn.y > 0.7 && snowCfg.p[1].z > 0.5) { let ls = lookSnow(lookClass(v.albedo), v.wp, vec3f(0.0, 1.0, 0.0), bi, vec3f(0.0, v.lc.y, 0.0), vec4f(0.3, v.hf.y, 0.3, 2.0), v.albedo, albedo, rough, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y); if (ls.amt > 0.0) { albedo = ls.albedo; rough = ls.rough; n = normalize(gn + ls.n - vec3f(0.0, 1.0, 0.0)); lookTilt = false; if (SNOW_GLOW || SNOW_SPARKLE) { snowA = ls.amt * 0.6667; } } }   // THE LOOK PROTOTYPE on a snow level: snow lies on an old break's faces that look up (lookSnow's top, asked as a wide flat top; the break keeps its own slope under the snow's grain)
   if ((frame.flags & FLAG_DECALS) != 0u) {
     let fp = distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y;
