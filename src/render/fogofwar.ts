@@ -1,6 +1,6 @@
 // FOG OF WAR — the renderer's half (game/fogofwar.ts has the rule and fills the FogFrame; shaders/fogofwar.wgsl is the kernel): one compute pass over the
 // composite, in place, that pushes down every pixel whose surface none of the team's eyes can see in plan. Everything of it lives here: the pipeline (compiled
-// the first frame the switch is on, asynchronously — the pass simply does not run until it is ready), its 224-B uniform (+ the lit fog's 3 KB of lamps), its copy of hdr (made at the
+// the first frame the switch is on, asynchronously — the pass simply does not run until it is ready), its 288-B uniform (+ the lit fog's 3 KB of lamps), its copy of hdr (made at the
 // composite's size on first use, re-made when that changes, let go when the switch goes off). passes.ts gives hdr the two usages the pass needs while the
 // switch is on (setFog → STORAGE_BINDING + COPY_SRC, as GBAA has it) and calls encode() between GBAA and the resolve. Switch off = none of this exists and
 // nothing is dispatched: the frame as it was.
@@ -14,9 +14,11 @@ import { scenePrelude } from './frame';
 import fogSrc from './shaders/fogofwar.wgsl' with { type: 'text' };
 import sightSrc from './shaders/fogsight.wgsl' with { type: 'text' };
 
-/** eyes the pass takes (the team: Sam + four — the four-man squad; the pair fills three and the kernel walks only the live ones). The kernel's two arrays in
- *  shaders/fogofwar.wgsl carry this number as a literal: change both together. */
-export const FOG_EYES = 5;
+/** eyes the pass has ROOM for (the team: Sam + four — the four-man squad — and two more: a sticky camera's feed, a tutorial's lookout; the pair fills three
+ *  and the kernel walks only the live ones). How many the game USES is game/fogofwar.ts FOG.eyes (5 until 10-24). The arrays in shaders/fogofwar.wgsl,
+ *  fogsight.wgsl and common.wgsl FogSightT carry this number as a literal (and FogSightT.dist FOG_BINS × this / 4): change them together. 7 is the most
+ *  the sight table holds: FOG_BINS × 8 × 4 B is the whole 64 KB a uniform block may be. */
+export const FOG_EYES = 7;
 /** bearing bins round an eye in the hint table (one texel a bin, one row an eye). shaders/fogofwar.wgsl FOW_BINS carries this number as a literal: change both together. */
 export const FOG_BINS = 2048;
 /** lamps the lit fog takes (FogFrame.lights; 64 B each, the scene's own Light record). shaders/fogofwar.wgsl FOW_LIGHTS and its array carry this number as a literal: change both together. */
@@ -171,7 +173,7 @@ export class FogPass {
     if (serial === this.cutSerial) { this.cutSet.set(this, cut); for (const m of modes) this.cutHas[m] = true; }   // (a later call covers more programs: only the newest set goes in)
   }
   useCut(on: boolean) { this.cutSet.use(this, on); }
-  /** the switch went off: the copy is let go (the pipelines and the 40 KB table are kept — a flip back on costs nothing) */
+  /** the switch went off: the copy is let go (the pipelines and the hint table are kept — a flip back on costs nothing) */
   release() { this.copy?.destroy(); this.copy = null; this.copyView = null; this.bg = null; this.cw = this.ch = 0; this.last = null; }
 
   /** After the composite (+ splat, + GBAA), before the resolve: hdr → the copy, then (hinted) the table pass and the kernel, which stores hdr. `hdr` must carry COPY_SRC +
@@ -248,14 +250,15 @@ export class FogPass {
 }
 
 // ---- THE SIGHT TABLE (game/fogofwar.ts rule 4g, shaders/fogsight.wgsl): where the team sees, as a table every pass of the picture can ask (common.wgsl
-//      fogSeenAt, the scene group's binding 11 — a 41 KB UNIFORM: FOG_BINS × FOG_EYES distances, then the eyes, their looks, the count and the soft edges). One
-//      32 × 5-group dispatch at the head of the frame while the full-picture fog is on writes the distances (the same buffer, as storage); the CPU writes the
+//      fogSeenAt, the scene group's binding 11 — a 58 KB UNIFORM: FOG_BINS × FOG_EYES distances, then the eyes, their looks, the count and the soft edges). One
+//      32 × live-eyes-group dispatch at the head of the frame while the full-picture fog is on writes the distances (the same buffer, as storage); the CPU writes the
 //      head. Nothing while it is off: the head's 'written' word is put back to 0 the frame the rule goes off, so a stale table is never asked.
 /** the sight table's list of thin statics: this many u32 (a bit a box index — common.wgsl FogSightT.thin, an array<vec4u, FOG_THIN_WORDS / 4>) */
 export const FOG_THIN_WORDS = 128;
 const SIGHT_HEAD = FOG_BINS * FOG_EYES * 4, SIGHT_FLOATS_BYTES = FOG_EYES * 32 + 32, SIGHT_HEAD_BYTES = SIGHT_FLOATS_BYTES + FOG_THIN_WORDS * 4;
 /** the table's size in bytes (common.wgsl FogSightT) — the engine's stand-in for the pass that writes it is as large */
 export const FOG_SIGHT_BYTES = SIGHT_HEAD + SIGHT_HEAD_BYTES;
+if (FOG_SIGHT_BYTES > 65536 || FOG_SIGHT_BYTES % 16 !== 0) throw new Error(`the fog's sight table: ${FOG_SIGHT_BYTES} B is over a uniform block's 64 KB or off a 16-byte row (FOG_EYES ${FOG_EYES} × FOG_BINS ${FOG_BINS})`);
 export class FogSight implements CutSwappable {
   readonly buf: GPUBuffer;
   private pipe: GPUComputePipeline | null = null; private building = false; private bad = false;
@@ -312,7 +315,7 @@ export class FogSight implements CutSwappable {
     if (this.stand && thin) { const T = F!.thinBits, was = this.standBits; let same = !!was; if (was) for (let i = 0; i < T.length; i++) if (T[i] !== was[i]) { same = false; break; }
       if (!same) { this.device.queue.writeBuffer(this.stand, SIGHT_HEAD + SIGHT_FLOATS_BYTES, T); (this.standBits ??= new Uint32Array(T.length)).set(T); } }
     const p = enc.beginComputePass({ label: 'fogSight' });
-    p.setPipeline(this.pipe); p.setBindGroup(0, sceneBGPlain); p.setBindGroup(1, this.bg); p.dispatchWorkgroups(FOG_BINS / 64, FOG_EYES); p.end();
+    p.setPipeline(this.pipe); p.setBindGroup(0, sceneBGPlain); p.setBindGroup(1, this.bg); p.dispatchWorkgroups(FOG_BINS / 64, count); p.end();   // (the live eyes' rows: a row past the count is no eye, and nothing reads its distances — fogSeenAt skips it)
     this.live = true; this.dispatched++;
   }
 }

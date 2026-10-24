@@ -11,7 +11,7 @@
 //   ONE MODEL: the eye is tested by the fog's own line test (col.segmentBlocked — statics and leaves where they stand, glass passes) and by the picture's own
 //   ray, like every other eye. No light term (a fog eye has none), no range limit (Sam's has none).
 //   THE COST: a pouch each on the card (slots.json), the launcher's small noise at the shooter and a tick where it sticks ('prop' events: a calm man close by
-//   may come and look at the tick — he finds nothing), and one of the fog's five eyes for each camera that sends (a squad of four leaves none: drawn, blind).
+//   may come and look at the tick — he finds nothing), and one of the fog's eyes for each camera that sends (FOG.eyes: at five a squad of four leaves none — drawn, blind; at seven it has two).
 //   THE BALANCE (the maintainer, 10-13: "we find a way to balance sticky cams"): ONE FEED AT A TIME — only the newest stuck camera sends a picture
 //   (`STICKY.live` 1; its lens is drawn red, a dark one's black), so the second camera is a second LOOK, not a second eye: sending it gives up what the
 //   first one saw — and the lens is a wedge of 110°, not 160. `live` 3 and `fovDeg` 160 = the cameras as they first shipped (a recording from before the
@@ -241,7 +241,7 @@ export function takeCam(g: Game, pl: Player): boolean {
 const BODY: Vec3 = [0.05, 0.05, 0.055], LENS: Vec3 = [0.012, 0.012, 0.014], LENS_LIVE: Vec3 = [0.42, 0.05, 0.04];
 /** Drawn (game.ts, beside the rings and the 40 mm rounds): a matt dark block the size of a fist flush on its surface and a darker lens proud of it — in
  *  flight, lens first along the line it flies; the lens of a camera that is SENDING — one the fog took as an eye this frame (fogofwar.ts: none with no fog
- *  up, none past the frame's five) — is a dull red, a dark one's black (paint, never a light).
+ *  up, none past the fog's eyes, FOG.eyes) — is a dull red, a dark one's black (paint, never a light).
  *  Picture only: NoShadow dynamics no ray, eye or foot meets. */
 export function stickyBoxes(g: Game, out: Box[]) {
   const sends = sending(g);
@@ -259,7 +259,7 @@ export function stickyBoxes(g: Game, out: Box[]) {
 }
 /** where a stuck camera's keys start among the wall devices' (devices.ts numbers its own from 0 by ordinal: a few hundred at most) */
 const CAM_KEY = 0x800000;
-/** is this camera SENDING this frame: one of the newest STICKY.live stuck, and the fog took it as an eye (none with no fog up, none past the frame's five) */
+/** is this camera SENDING this frame: one of the newest STICKY.live stuck, and the fog took it as an eye (none with no fog up, none past the fog's eyes, FOG.eyes) */
 function sending(g: Game): (c: StickyCam) => boolean {
   const live = STICKY.on && g.fogOfWar.active ? stickyLive(g.player) : NONE_CAMS, eyes = g.fogOfWar.eyes;
   return c => live.includes(c) && eyes.some(e => e.id === EYE_ID + (c.id % 50));

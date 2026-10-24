@@ -364,7 +364,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     mission's last third is the mains going out, so a visitor's standing pick of another hour no longer opens it by day; no weather is named (a snow
     level's own stands). `rowset-check` green on both stands with its break red, two seeds of the scripted player after it. NO FOG OF WAR
     ON THIS MISSION (`rails.fog: false`, level data; the maintainer after a third play with the squad's own wall charge going off unseen: "still can't see
-    the wall shot detonate here. maybe we just remove fog of war entirely from this mission?"). WHY IT WAS UNSEEN, measured: the fog takes five eyes
+    the wall shot detonate here. maybe we just remove fog of war entirely from this mission?"). WHY IT WAS UNSEEN, measured: the fog took five eyes (seven in the page since 10-24, `FOG.eyes`)
     (`FOG_EYES`), the four men and the seat's road lookout fill them, and the eye the wall steps name (`eye`, `rails.ts stepEye`) is pushed last, so with
     four men up it never got one: at the blow's step the fog had eyes 20 21 22 23 199 and the wall's face was not seen. That is the frame's to mend for a
     mission that keeps its fog; this one shows the whole floor. `rails-check`'s line on the ring now holds that every man on the road and in the rooms is
@@ -1866,7 +1866,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   each roadblock man the script sent, with the word and without: never a price with it; without it, on a stand with covered lanes, the lanes' price
   (670 man-frames on the page's stand; the frozen stand has no covered lanes and only shows the word reached 3 men).
 - **A step's own eye always has a place among the fog's** (2026-10-22; `RAILS.eyeFirst`, a knob of the frame's table, on with it, off on a recording
-  from before the key; `src/game/fogofwar.ts update`). The fog of war takes five eyes. In the sky seat with four men up and the seat's lookout in, the
+  from before the key; `src/game/fogofwar.ts update`). The fog of war took five eyes (`FOG.eyes`: seven in the page since 10-24, where the lookout and the step's eye both fit; five on the frozen stand). In the sky seat with four men up and the seat's lookout in, the
   list was full and the step's own eye (`eye { at, yaw, fov? }`, pushed last) was the one dropped: on mission 1 the squad's own wall charge went off in
   the fog, twice, in the maintainer's play. Now the step's eye goes in ahead of the lookout and, with the places full, takes the last one (the lookout
   gives way for that step; on a floor mission with the player and four men, the last man's eye does). Mission 1 itself has its fog off since (the

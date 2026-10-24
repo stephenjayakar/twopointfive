@@ -834,7 +834,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   BUDGETS: ten characters (`SQUAD4_BUDGET`, `UnitOpts.budget` lifts spawnUnit's 8 up to skinning's 16); the proxy table still holds 8, so while a night breach is up
   game.ts draws the LIVING first once more than 8 are drawn (bodies lose shadow / reflection proxies first; with all ten up the last two defenders spawned go
   without); steady lights 63 of 64 by spawnUnit's count; the PROBE's 32 queries a frame: nine units' meters + lines would be 35, so with more than 8 guards the
-  smoke lines of men not hostile to Sam are not asked (29 measured headless, fog's ≤ 6 on top are the first dropped); fog of war takes FIVE eyes (`FOG_EYES`, the
+  smoke lines of men not hostile to Sam are not asked (29 measured headless, fog's ≤ 6 on top are the first dropped); fog of war took FIVE eyes (seven in the page since 10-24: `FOG.eyes`, `docs/agents/stealth.md`; the room is `FOG_EYES`, the
   kernel's two arrays carry the literal). QA: `probes.ts foursquad` (off / stage / follow / stack / clear — incl. charge, outside, lanes — / drill / budget).
   THE PAIRS APART (all behind `orders.big` = more than two men; the pair build is untouched — `probes.ts pairs-off`): `orders.give(id, t, who, { onWord })`; a door order
   goes to the side of the door THE MEN can reach without crossing the room (`forMen` → `sideFor`: penalised nav paths per face; else Sam's side — a pair-aware menu

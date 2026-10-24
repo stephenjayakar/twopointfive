@@ -87,7 +87,7 @@ import { WORDS } from '../game/words';
 import { UNSEEN } from '../game/unseen';
 import { SEENWALK } from '../game/seenwalk';
 import { HOLDFIRE } from '../game/holdfire';
-import { FOG, FOG_DESAT_WAS, FOG_EDGE_ON, FOG_FLAT_ON, FOG_LIT_ON } from '../game/fogofwar';
+import { FOG, FOG_DESAT_WAS, FOG_EDGE_ON, FOG_EYES_ON, FOG_EYES_WAS, FOG_FLAT_ON, FOG_LIT_ON } from '../game/fogofwar';
 import { START } from '../game/startfile';
 import { SAMESTART } from '../game/samestart';
 import { TAKE } from '../game/takecheck';
@@ -266,6 +266,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_FOGAIR')) FOG.air = String((globalThis as any).process?.env?.TPS_FOGAIR ?? '') === '1';   // smoke and dust drawn under the fog too (src/game/fogofwar.ts FOG.air; the picture only): off, so the fog block handed to the renderer is the one every stored frame was drawn with
     if (pinned('TPS_FOGOURS')) FOG.ours = String((globalThis as any).process?.env?.TPS_FOGOURS ?? '') === '1';   // what the team does is always shown (src/game/fogofwar.ts FOG.ours; the picture only): off, so every light's class and the list of loose boxes handed to the renderer are the ones every stored frame was drawn with
     if (pinned('TPS_FOGTHIN')) FOG.thin = String((globalThis as any).process?.env?.TPS_FOGTHIN ?? '') === '1';   // thin things that stand free do not cut the fog's sight (src/game/fogofwar.ts FOG.thin: what the squad's eyes have and the picture's): off, so every stored run and frame has the sight it was recorded with
+    if (pinned('TPS_FOGEYES')) FOG.eyes = String((globalThis as any).process?.env?.TPS_FOGEYES ?? '') === '1' ? FOG_EYES_ON : FOG_EYES_WAS;   // how many eyes lift the fog (src/game/fogofwar.ts FOG.eyes: 7 in the page, 5 as it was): 5, so a squad of four leaves a camera no place, as every stored run had it
     if (pinned('TPS_FOGCOLOUR')) FOG.desat = String((globalThis as any).process?.env?.TPS_FOGCOLOUR ?? '') === '1' ? 0 : FOG_DESAT_WAS;   // the fog keeps its colour (src/game/fogofwar.ts FOG.desat 0; the picture only): greyed as it was, so the fog block handed to the renderer is the one every stored frame was drawn with
     if (pinned('TPS_SQUADDOORS')) FOG.squadDoors = String((globalThis as any).process?.env?.TPS_SQUADDOORS ?? '') === '1';   // a door the squad works is seen (src/game/fogofwar.ts doorSeen): off, so a leaf out of the eyes' sight is drawn — and met by the cursor's ray — where every stored run had it
     if (pinned('TPS_SQUADFIRE')) FOG.squadFire = String((globalThis as any).process?.env?.TPS_SQUADFIRE ?? '') === '1';   // a man the squad is shooting at is in the picture (src/game/fogofwar.ts firedOn): off, so the reticle takes only the men every stored run had in the picture

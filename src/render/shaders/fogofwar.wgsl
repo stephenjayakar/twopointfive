@@ -2,7 +2,7 @@
 // no copy, and no other shader's text touched. Runs after the composite (+ the particles' splat, + GBAA) and before the resolve, IN PLACE on hdr: the host copies
 // hdr → a copy first, this reads the copy and stores hdr (the GBAA arrangement).
 //
-// Per pixel: where is the surface it shows (depth → world), and can any of the team's eyes (≤ 5) see THAT SPOT IN PLAN — a ray from the eye, level at the eye's
+// Per pixel: where is the surface it shows (depth → world), and can any of the team's eyes (≤ 7) see THAT SPOT IN PLAN — a ray from the eye, level at the eye's
 // own height, to the spot's (x, z) through the renderer's own trace grid (occludedTBoxes: every box a shadow ray meets — statics, door leaves, furniture, and
 // the things other men carry; glass panes are not in the grid, so sight passes them; characters' bodies are not asked, and the eye's own kit is skipped). In
 // plan, at eye height: the floor behind a desk is seen (he sees over it) and the floor behind a wall, a tall cabinet or a shut leaf is not — the Door Kickers
@@ -28,8 +28,8 @@
 //            not change: a seen pixel and the sky are not stored back (hdr already holds them) and the copy is read only where it is needed.
 //   (`//#C ` / `//#CH ` lines + the count section: tools/qa/fog-pass-check.cjs's counting programs — rays, box tests and cells per pixel instead of the picture.)
 struct FowU {
-  eyes: array<vec4f, 5>,    // xyz = the eye, w = his character id (0 = no eye in this slot): the ray skips the boxes he carries himself (goggles at the eye, the gun)
-  looks: array<vec4f, 5>,   // xy = where it looks in plan (x, z; unit), z = cos of the half field (≤ −1.5: all round), w = the near field's radius (m)
+  eyes: array<vec4f, 7>,    // xyz = the eye, w = his character id (0 = no eye in this slot): the ray skips the boxes he carries himself (goggles at the eye, the gun)
+  looks: array<vec4f, 7>,   // xy = where it looks in plan (x, z; unit), z = cos of the half field (≤ −1.5: all round), w = the near field's radius (m)
   cfg: vec4f,               // x = eyes, y = dim, z = desaturation, w = topPad (m)
   soft: vec4f,              // the cone's soft edges: x = cos(half field − half band), y = cos(half field + half band) (x > y; both 0 = a hard line), z = the near rim's band (m; 0 = hard) · w = the fog's own light (0 = off: the live frame, dimmed)
   lit: vec4f,               // THE FOG LIT AS THE TEAM LAST KNEW IT (game/fogofwar.ts FOG.lit; read only under the fog's own light, soft.w > 0): x = gain on the remembered lamps' light, over cfg.y (0 = off: the one fixed light), y = the fill's level as displayed, z = lamps in fowLights, w = a lamp that would add less than this at the pixel (as displayed) is not traced, one under twice it is faded in
@@ -429,7 +429,7 @@ fn pre(@builtin(global_invocation_id) gid: vec3u) {
     if (r.y > 0.5 && r.y < 65535.5) { h = u32(r.y) | (min(u32(r.x * 100.0), 0xffffu) << 16u); }   // (a box past the 16 bits is simply not named: the walk is taken)
   }
   textureStore(fowHintOut, vec2i(gid.xy), vec4u(h, 0u, 0u, 0u));
-  //#C textureStore(fowHintOut, vec2i(i32(gid.x), i32(gid.y) + 5), vec4u(u32(fowCount.z) | (u32(fowCount.w) << 16u), 0u, 0u, 0u));   // (the counting table is twice as tall: what each ray cost, under the rows — 5 = the eyes, the arrays' own literal)
+  //#C textureStore(fowHintOut, vec2i(i32(gid.x), i32(gid.y) + 7), vec4u(u32(fowCount.z) | (u32(fowCount.w) << 16u), 0u, 0u, 0u));   // (the counting table is twice as tall: what each ray cost, under the rows — 7 = the eyes, the arrays' own literal)
 }
 //#SECTION count — the counting programs only (tools/qa/fog-pass-check.cjs through FogPass.qaRun): per pixel x = walks taken (+ 64 for every disagreement: a hint that
 // answered where the walk says clear, or fowWalk against occludedTBoxes) · y = the hints' box tests · z = the walks' box tests · w = the cells the walks crossed

@@ -73,11 +73,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   any: 2 again with the rifle up steps ring → 40 mm → camera; RMB held previews, letting go sends it — `fireCam`; count `Rifle.cams`, HUD tag `CAM ×n`): it flies flat at `aimY` over the
   cursor's spot and STICKS to the first static it meets (a wall, a pane, built-in furniture); off a leaf, a prop or a man it drops to the floor under where it struck; a camera whose wall
   goes (a blast, a pane broken) drops too (asked once a second by a short ray). Stuck, it is ONE MORE EYE OF THE FOG (`stickyEyes` → fogofwar.ts's eye list, ids 200 +; on a wall a wedge
-  of `fovDeg` 110 about the normal (160 until 10-13), the fog's own cone width while `FOG.cone` is on; lying flat all round; the newest served first inside `FOG_EYES` 5; `max` 3 on the walls at once, one more
+  of `fovDeg` 110 about the normal (160 until 10-13), the fog's own cone width while `FOG.cone` is on; lying flat all round; the newest served first inside the fog's eyes (`FOG.eyes`: 5 until 10-24, 7 in the page since); `max` 3 on the walls at once, one more
   retires the oldest). ONE LIVE FEED (`STICKY.live` 1 — the balance his pick asked for; Tab 'cam ▸ live feeds' 1‥3; `live` = `max` and `fovDeg` 160 = the cameras as they first shipped, and a recording from before the key replays so): only the newest `live` stuck cameras SEND (`stickyLive(pl)` → `stickyEyes`); the others stay on their walls, dark — a second camera is a second LOOK, not a second eye, so two cameras are no longer a floor's worth of coverage left behind — and a sending camera's lens is drawn dull red (`LENS_LIVE`), a dark one's black. The sheet's row says it in one line (levers.ts `CAM_WORDS`, a tooltip). MEASURED on the maintainer's 253 s police-post tape (`sticky-cover.ts --tape`; of the moments a guard stood within 12 m with no line to him, the share the cameras gave back, as first built → now): two cameras placed as well as possible 19.8 % → 15.0 %, two at the nearest walls 15.3 % → 7.5 %, three placed well 25.6 % → 17.2 %. Nobody on the floor notices one and nobody picks one up (open calls); its only cost in play is the launcher's small noise and a tick where it sticks ('prop' events).
   Per-player state on the Player (`Player.cams`, `camSeq`), no dice, a checkpoint slice (`stickySnapshot / stickyRestore`; one in flight refuses a plain save, a forced one files it back on
   the rifle; the slice carries `camSeq`, the run's count of camera ids, so an id is never handed out twice). KNOWN: a card with no rifle gets no camera, the mission's `cams=N` included (the camera is the
-  rifle launcher's load: the row still reads 2); a squad of four under the team's fog fills the fog's five eyes, so a camera there lifts nothing (`STICKY_STATS.blind` counts those frames). A camera's lens is drawn red only while the fog took it as an eye THAT frame (`stickyBoxes` reads `fogOfWar.eyes`: black with no fog up and past the five). The mission's cameras are handed only where the fog is up (`?quiet&nofow` = none) and are let go of BEFORE a quit's stop (its restart kits the fresh player); a kept 'None' survives all shown under `?quietdef=off` too. KNOWN, left: an old kept rung or `quietfog=team` link with no `cams` key now gets the cameras (they come with the fog); 'newest' is firing order, not sticking order. The debrief says 'placed a sticky camera' (a 'thrown' row of kind `cam`; the thrown count and the par clock are untouched). Tab ▸ Player & weapons ▸ Sticky cameras.
+  rifle launcher's load: the row still reads 2); a squad of four under the team's fog filled the fog's five eyes, so a camera there lifted nothing — with `FOG.eyes` at 7 (the page since 10-24) it is the sixth eye (`STICKY_STATS.blind` counts those frames). A camera's lens is drawn red only while the fog took it as an eye THAT frame (`stickyBoxes` reads `fogOfWar.eyes`: black with no fog up and past the fog's eyes). The mission's cameras are handed only where the fog is up (`?quiet&nofow` = none) and are let go of BEFORE a quit's stop (its restart kits the fresh player); a kept 'None' survives all shown under `?quietdef=off` too. KNOWN, left: an old kept rung or `quietfog=team` link with no `cams` key now gets the cameras (they come with the fog); 'newest' is firing order, not sticking order. The debrief says 'placed a sticky camera' (a 'thrown' row of kind `cam`; the thrown count and the par clock are untouched). Tab ▸ Player & weapons ▸ Sticky cameras.
   QA: `bun run tools/qa/sticky-check.ts [kit|fly|fog|save|ways|default|off]` (`probes.ts sticky`, in all-quick; both stands; `STICKY_BREAK=1` must fail), `PORT=<dev server> node
   tools/qa/sticky-page.cjs` (the real start page, no GPU: the Sticky cameras rail row, its links, none on a squad row, none under `?nosticky`), `bun run tools/qa/sticky-cover.ts --tape <F7
   replay> | --ghost <level> --seeds 1-3 [--live N|all] [--fov deg]` (how much of the guards each way shows over a recorded or scripted run; `--live all --fov 160` = the cameras as first shipped). Page rebuild/stealth-sight/read-first.md. Never
@@ -685,7 +685,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   until the sight table below is live). An unseen pixel is the LIVE FRAME dimmed (`dim` 0.4; greyed too until 10-15, `desat` 0.75 — now 0, the bullet after this one: every pass, its bounce, soft
   shadows, air) and what must not show there is cut WHERE IT IS MADE: (1) THE SIGHT TABLE — `render/fogofwar.ts FogSight`, `shaders/fogsight.wgsl`: at the
   head of the frame one 32 × 5-group compute pass writes, for each eye, how far its level ray goes along each of 2048 bearings (`occludedTBoxes`, the fog
-  pass's own eye ray) into a 41 KB buffer that is the scene group's binding 11 in every pass (a UNIFORM — the fragment stage has no sampled texture left;
+  pass's own eye ray) into a 58 KB buffer (41 KB until 10-24: five eyes' rows, now seven's) that is the scene group's binding 11 in every pass (a UNIFORM — the fragment stage has no sampled texture left;
   the pass itself binds a zero stand-in there, `Engine.sceneBGPlain`); `common.wgsl fogSeenAt(P, N)` = the fog pass's `fowSeen` rule answered from it — the two
   table rays beside the spot's bearing, and the exact ray walked only where they disagree (a sight edge, a wall seen along its length), cached per spot;
   `fogSeenBins` = the table alone, for the vertex stage (which does not see the grid). (2) LIGHT CLASSES in the light record's kind word (bits 25 / 26,
@@ -795,7 +795,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   a lamp the 40 % dim is lost in the tone map's shoulder. That is his ask taken literally and his call: `dim` lower, or `?fogdesat=0.25`, are the two knobs.
   COST: unknown — never timed. On the replica a seen pixel reads the table 14 times an eye on average and an unseen one 11 (most: about 200 beside an eye
   along a slanted wall; bounded by the code at 65 steps × 2 sides × 5 eyes); only pixels within half a band of a sight edge pay more than the row skips.
-  The table is a 41 KB uniform read at a per-pixel index, which some GPUs serialise (a read-only storage view is the mend if it shows). `?fogedge=0` is the
+  The table is a 58 KB uniform (41 KB until 10-24) read at a per-pixel index, which some GPUs serialise (a read-only storage view is the mend if it shows). `?fogedge=0` is the
   way out. NEVER SEEN ON A GPU, never played: how the band reads in motion (a sight line sweeping as a man turns), whether 0.5 m is the right width, and
   whether the fog still reads as fog now that it has its colour (`dim` is the knob).
 - **Smoke is drawn under the fog too (`FOG.air`, 10-23; the maintainer, of a shot of the pass with a lit drum and no flame under the fog: "I think we
@@ -807,7 +807,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   whole while the sight table's head says so (`fogSight.soft.w`, written by `render/fogofwar.ts FogSight.encode` from `FogFrame.air`; that float is NOT
   what `FowU.soft.w` means in the fog pass), and the fog pass dims the frame afterwards. WHAT STAYS HIDDEN: what a hidden MAN puts into the air is not
   filed with the solver at all — his breath and his cigarette already (`snowBreath.ts`, `smokebreak.ts`), and now the gas of his shot
-  (`FogOfWar.airHides`, asked by `combat.ts` of every shooter; `effects.ts spawnShot`'s `gas: false` files no emitter and gives the same flash; only
+  (`FogOfWar.airHides`, asked by `combat.ts` of every shooter — and true only under the full picture, since 10-24: with `?fogfull=0` nothing draws smoke
+  under the fog, so a hidden man's gas is filed as it always was; the probe holds it; `effects.ts spawnShot`'s `gas: false` files no emitter and gives the same flash; only
   while `FOG.air` is on — off, the solver gets everything as it did). A hidden light still gives a plume nothing (`lightFogK`), so an enemy's flashlight
   draws no cone in smoke the team does not see. The PARTICLES' puffs (a blast's dust ring, a round's chip of plaster: `particles_draw.wgsl`) are cut
   over unseen floor unless the team made them: `FOG.ours`, the next bullet. WHAT IT NOW SHOWS THAT IT DID NOT: ALL the solver's smoke, whoever made it — an enemy
@@ -899,6 +900,31 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   them while the squad's lines do (a man behind a pipe is drawn on a sliver the picture still fogs); (e) the rule's numbers are code, not knobs: retuning `THIN_WIDTH` changes what an old recording's level marks; (f) the fans a window's own
   frame and wall thickness cast on Hard (each man a cone) are real sight edges and stay. **Never seen on a GPU**: the page boots with it on the
   software adapter (every pipeline, no error); whether the room now reads clean is the maintainer's to judge.
+- **More than five eyes lift the fog (`FOG.eyes`, 10-24; the fourth of the fog's principles the maintainer agreed 10-23: "to see more, get more eyes on
+  it").** The fog took FIVE eyes (`render/fogofwar.ts FOG_EYES`, a literal in three shaders): Sam and a squad of four filled them, so a sticky camera
+  that sent was "drawn, blind" (`STICKY_STATS.blind`), and in the tutorial's sky seat the lookout and a step's own eye fought for the last place. NOW the
+  ROOM is seven (`FOG_EYES` 7: the fog pass's block, the sight table — 58 KB of the 64 KB a uniform block may be, so seven is the most at 2048 bearings —
+  and `fogofwar.wgsl`, `fogsight.wgsl`, `common.wgsl FogSightT`; the passes walk only the live eyes — the sight table's pass dispatches the live rows,
+  not the room) and HOW MANY ARE USED is the row: `FOG.eyes`, read where the list is made (`game/fogofwar.ts update`) through `fogEyeCount`, the one
+  clamp the list, the address and the checks share (under five is five, over seven is seven, no number is five). The order is as it was: Sam (or his lens), the
+  living teammates in list order, the newest sending camera(s), then the tutorial frame's lookout and step eye (`RAILS.eyeFirst` still puts a step's eye
+  in the last place when the places are full). NOT the picture alone: an eye more is a man more the squad may have seen (`seen()`), so a run with a
+  camera out can differ; with nobody past the fifth place it is the same run (the probe holds two seeds). SWITCH: 7 in the module and the page;
+  `?fogeyes=5` (or `=0`) = five, as it was (`?fogeyes` or `=1` = seven, `=6` = six); the debugger's fog page has the row (5 to 7); frozen stand: five, `TPS_FOGEYES=1` raises it
+  (`FROZEN_HOLDS['FOG.eyes']`); the journal carries it (a recording without the key replays with five); not part of the replay page's look. CHECK:
+  `probes.ts fog-eyes` (family `fog`; 7 lines; `FOGEYES_BREAK=1` red on the game's line) on both stands — the room as written in the block, the table,
+  the shaders and the hint pass's counting twin (its costs go under the seventh row: `fogofwar.wgsl`'s `//#C` line carries the literal too); THE CASE IT
+  WAS BUILT FOR, the room clear with a squad of four, three cameras sending and the newest laid by a man nobody sees (at five: 5 eyes, blind counted,
+  unseen; at six: the camera is the sixth eye, the block's next row at its lens, seen; at seven: two see, the third blind; asked 99 or no end: seven;
+  no number or 0: five; one feed live, as the page has it: 6 eyes, nothing blind; cameras up: unseen again); the same four with no camera, eight
+  seconds on their marks at five and at seven: the same game by digest; the address; the journal; the stands; the night breach fought at five and at
+  seven, two seeds, the same digest and dice. `sticky-check`'s cap line reads the row through `fogEyeCount`, and `rails-check`'s line for a step's own
+  eye asks its rule at five places and then that at seven the lookout and the step's eye both have one. NOT HELD: (a) what a sixth and seventh eye cost a frame on a real GPU (two more rows of the sight
+  table's pass and of the fog pass's per-pixel loop while they are live) — unmeasured; and the ROOM is not behind the switch: the sight table bound in
+  every pass is 58 KB where it was 41 KB whatever the row says (the note on GPUs that serialise a uniform read at a per-pixel index stands, at the
+  larger size); (b) the tutorial's sky seat now has room for the lookout AND a
+  step's eye with four men up: nobody has looked at mission 1 with it; (c) three cameras all sending (`STICKY.live` 3) with a squad of four still
+  leaves one blind. **Never seen on a GPU.**
 - **A held man drops his gun** (`HOLD.dropGun`, the table in `src/game/character.ts`; the rule is `player.ts startGrab`; ON in the page, `?nogundrop` puts it
   off; OFF in the module and on the frozen stand, `TPS_HOLDDROP=1`; a `FROZEN_HOLDS` row; a recording from before the key replays with it off). The maintainer,
   10-15, of a rifleman in his arm with the rifle up in his fist: "held enemies should drop their gun". As the arm goes round, the weapon in his hand (rifle or
