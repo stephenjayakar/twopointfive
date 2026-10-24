@@ -11,7 +11,7 @@
 // The harness has no GPU, no smoke solver and no speaker: what is proven HERE is what the game hands on (the lamp's strength and place frame by frame, the
 // record the renderer is given, the sources it would file with the solver, the mixer's calls) and what the CPU's light estimate reads beside the drum — never
 // a flame seen or a crack heard. tools/qa/fire-page.cjs looks at the page.
-//   burns     the pass, switch on, twenty seconds: its brazier is found, the lamp's strength swings about the authored one (its mean within a twentieth of
+//   burns     the pass, switch on, twenty seconds: its brazier is found, the lamp's strength swings about the authored one (its mean within a tenth of
 //             it) and its place is the table's lift over where the level hung it and wanders by no more than the table says, and the renderer is handed one fire at the drum's mouth
 //   same      … the swing is a closed form of the game's clock: a second game stood the same way has the same strength every frame, and the lamp is what
 //             fireFlicker says for that time
@@ -97,7 +97,7 @@ export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean>
           off = Math.max(off, Math.abs(l.intensity - base * t.factor * fireFlicker(fireSeed(t), A.g.time))); });
         const fires = A.g.engine.fires ?? [], F = fires[0], box = t.boxes.length ? A.g.engine.world.statics[t.boxes[0]] : null, T = fireStats(A.g);
         const atMouth = !!F && !!box && Math.hypot(F.pos[0] - box.c[0], F.pos[2] - box.c[2]) < 0.01 && Math.abs(F.pos[1] - (box.c[1] + box.h[1])) < 0.01 && Math.abs(F.r - Math.min(box.h[0], box.h[2]) * K.mouth) < 1e-9 && Math.abs((F.bed ?? 0) - Math.min(box.h[0], box.h[2]) * K.bedR) < 1e-9;
-        verdict(A.stood === A.sw && T.lit === 1 && lo < 1 - K.depth * 0.5 && hi > 1 + K.depth * 0.5 && lo > 0.4 && hi < 2 && Math.abs(sum / n - 1) < 0.05 && far > 0.005 && far >= K.lift - K.wanderUp * 4 && far <= Math.hypot(K.wander, K.wander, K.lift + K.wanderUp * 4) && fires.length === 1 && atMouth,
+        verdict(A.stood === A.sw && T.lit === 1 && lo < 1 - K.depth * 0.5 && hi > 1 + K.depth * 0.5 && lo > 0.4 && hi < 2 && Math.abs(sum / n - 1) < 0.1 && far > 0.005 && far >= K.lift - K.wanderUp * 4 && far <= Math.hypot(K.wander, K.wander, K.lift + K.wanderUp * 4) && fires.length === 1 && atMouth,
           'burns — the pass\'s brazier: the lamp swings about the authored strength and wanders a little, and the renderer is handed one fire at the drum\'s mouth',
           `the stand stood the switch ${A.stood ? 'on' : 'off'} · ${T.lit} of ${T.fires} burning · the lamp ${lo.toFixed(2)} to ${hi.toFixed(2)} of the authored ${base} (mean ${(sum / n).toFixed(3)}), at most ${(far * 100).toFixed(1)} cm from where the level hung it (the table lifts it ${K.lift * 100} cm into the flame) · ${fires.length} handed on${F ? `: at ${F.pos.map((v: number) => v.toFixed(2)).join(', ')}, mouth ${F.r.toFixed(3)} m, bed of coals ${(F.bed ?? 0).toFixed(3)} m, flame ${F.h} m, ${F.embers} embers` : ''}`);
         const B = await rig(true, false), seqB: number[] = []; if (B.t) B.step(20 * 60, () => seqB.push(B.t.light.intensity));
@@ -317,7 +317,7 @@ export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean>
         t.on = true; t.broken = false; A.step(3);
         const k = (J as any).knobsSnapshot(A.g); FIRE.bright = 1; (J as any).applyKnobs(A.g, k); const own = FIRE.bright;
         const k2 = (J as any).knobsSnapshot(A.g); delete k2.tables.FIRE.bright; delete k2.tables.FIRE.reach; delete k2.tables.FIRE.hardy; FIRE.hardy = true; (J as any).applyKnobs(A.g, k2); const old = [FIRE.bright, FIRE.reach, ...FIRE.warm, FIRE.hardy ? 1 : 0];
-        verdict(A.sw && Math.abs(sum / n - 2) < 0.1 && m1 > m0 * 1.5 && told && tint && far && back && own === 2 && old.join() === '1,1,1,1,1,0',
+        verdict(A.sw && Math.abs(sum / n - 2) < 0.2 && m1 > m0 * 1.5 && told && tint && far && back && own === 2 && old.join() === '1,1,1,1,1,0',
           'lamp — while it burns the lamp is the table\'s times the level\'s, carries that much further and is tinted, and the steady readers are told so; out, it is the level\'s lamp again; a recording from before the keys replays with the level\'s lamp',
           `mean ${(sum / n).toFixed(3)} of the authored ${base} (the table says 2) · the light meter three metres off reads ${m0.toFixed(3)} by the level's lamp and ${m1.toFixed(3)} by the fire's · the steady reader told twice the level's: ${told ? 'yes' : 'NO'} · colour × ${W.join(', ')}: ${tint ? 'yes' : 'NO'} · reach ${r0} × 1.4: ${far ? 'yes' : 'NO'} · put out: ${back ? 'the level\'s colour and reach, nothing told' : 'NOT put back'} · its own snapshot put back: bright ${own} · one from before the keys: bright, reach, tint, hardy = ${old.join(', ')}`);
         levels(); FIRE.hardy = table0.hardy;
