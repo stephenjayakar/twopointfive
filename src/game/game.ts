@@ -305,6 +305,8 @@ export class Player {
    *  questions to him (Game.interrogate) and choke him out quiet (holstered: the arm variant) or pistol-whip him (pistol drawn: the gun variant, which also
    *  fires past him on a click) — there is no letting him go; null when his hands are his own. */
   holding: Hold | null = null;
+  /** disarm.ts HOLD.stripFirst: the game time the grab's catch voice is due (the arm landing, behind the strip's) — undefined = none owed */
+  catchDue: number | undefined = undefined;
   /** what Sam is saying right now — his side of an exchange with the man in his arm (player.ts askHeld: his line first, the man's answer when it ends) — drawn
    *  over HIS head like a guard's line, in his own tint (ui/bubbles.ts); the same shape as Guard.bubble */
   bubble: { text: string; t: number; dur: number; radio: boolean } | null = null;

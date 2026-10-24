@@ -32,7 +32,7 @@
 //  THE FRAME'S EYES ARE THE PLAYER'S VIEW (fogofwar.ts update, RAILS.eyeFirst, RAILS.eyeView): a step's eye has a place among the fog's five, and a man
 //      only a frame's eye has is drawn, not seen: the squad's entry on his room's door is the one it would take with no eye there. RAILS_BREAK=1 reaches
 //      both lines through the step's eye (none is named under it).
-// RAILS_BREAK=1 = the gate lets everything through, the ring is no place, nothing keeps it in the picture and the menu lists every order: lines 3, 4, 10, 11, 12, 13 and 14, the last line's, the wall's, the first play's notes', the second play's, the card's, the card's beat's, the big line's, the two of the step's eye and the plan on the move must fail (the opening card's line is data and a screen: no break of its own).   exit 0 = all hold · 1 = one does not
+// RAILS_BREAK=1 = the gate lets everything through, the ring is no place, nothing keeps it in the picture and the menu lists every order: lines 3, 4, 10, 11, 12, 13 and 14, the last line's, the wall's, the stalk's, the first play's notes', the second play's, the card's, the card's beat's, the big line's, the two of the step's eye and the plan on the move must fail (the opening card's line is data and a screen: no break of its own).   exit 0 = all hold · 1 = one does not
 import { readFileSync } from 'node:fs';
 import { ROOT, standUp } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
@@ -164,6 +164,32 @@ export async function railsCheck(): Promise<boolean> {
       verdict(plain && !free0 && locked && !taught && !open && after,
         'a mission that teaches the wall keeps a walk into one from taking it until that line: with no step naming the wall a move key held into the house wall takes it, as on any page; with the wall on a later step it does not; with the wall open it does again',
         `no step names it: taken ${plain} (locked ${free0}) · on the last step: locked ${locked}, taken ${taught} · open from the start: locked ${open}, taken ${after}`); }
+    // ---- a step can take the stalk's held click and leave the interaction key (`stalk`: the one action that is open unless a step denies it — rails.ts
+    //      `shuts`. The quiet mission's store: a man stalked there is a man walked into a laser, and the back door behind him still wants its key). The
+    //      stalk's switch is put on for the line: the gate's line for the click is the stalk's own, and the frozen stand holds it off. RAILS_BREAK=1:
+    //      the gate is open and `shuts` says nothing, so the click is his on the step that denies it
+    { const log = console.log, warn = console.warn, err = console.error; if (!VERBOSE) console.log = console.warn = console.error = () => { };
+      let W: any; try { W = await standUp({ uploadEvery: 4, level: loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/tut-quiet.json`, 'utf8'))), seed: 1 }); RAILS.on = true; startFromQuery(W.game, '?levelFile=tut-quiet.json&quiet'); }
+      finally { console.log = log; console.warn = warn; console.error = err; }
+      const { STALK } = await import(`${ROOT}/src/game/stalk.ts`), { railsFaults } = await import(`${ROOT}/src/game/rails.ts`), { CLOSE } = await import(`${ROOT}/src/game/close.ts`), stalk0 = STALK.on, close0 = CLOSE.on; STALK.on = CLOSE.on = true;   // (and the close-in mode the stalk lives in: the frozen stand holds that off too)
+      const g = W.game, I = W.input, L = g.level.scenarios.lesson, at = (id: string) => L.steps.findIndex((x: any) => x.id === id), N = L.steps[at('nook')], C = L.steps[at('corner')], deny0: string[] | undefined = N?.deny, allow0: string[] | undefined = C?.allow;
+      // (the left button down and the interaction key down, put through the gate: what is left of each)
+      const ask = () => { I.buttons |= 1; I.clicked |= 1; I.keys.add('Space'); g.rails.gate(I, W.cam, DT); const r = { left: !!(I.buttons & 1), use: I.keys.has('Space') }; I.buttons &= ~1; I.clicked &= ~1; I.keys.delete('Space'); return r; };
+      // (what the stalk itself says of the man at his back: stalk.ts `stalkCould`, which the row's hint and the pose that tells both ask)
+      const { stalkCould } = await import(`${ROOT}/src/game/stalk.ts`), H = g.guards.find((x: any) => x.route?.name === 'hall'), could = () => { for (let i = 0; i < 6; i++) W.step(DT); return !!H && stalkCould(g, H); };
+      let empty = false, noFire = false, named = false, said = false, saidAgain = true, saidNone = true, both = false, inFrame = -1, asBuilt = -1, sum = '', shut = { left: true, use: false }, again = { left: false, use: false }, none = { left: false, use: false }, can = { shut: true, again: false, none: false };
+      try {
+        for (let i = 0; i < 30; i++) W.step(DT); g.lesson.i = at('corner'); if (H) { g.player.crouch = true; g.teleportPlayer([H.char.pos[0] - Math.sin(H.char.bodyYaw) * 1.6, 0, H.char.pos[2] - Math.cos(H.char.bodyYaw) * 1.6]); }
+        empty = !!g.player.holstered; noFire = g.rails.locks('fire'); named = !!deny0?.includes('stalk'); can.shut = could(); shut = ask(); said = g.rails.shuts('stalk'); sum = g.rails.summary();
+        if (C) C.allow = [...(allow0 ?? []), 'stalk']; can.again = could(); again = ask(); saidAgain = g.rails.shuts('stalk');
+        if (C) C.deny = [...(C.deny ?? []), 'stalk']; both = g.rails.shuts('stalk') && !g.rails.allowed().has('stalk'); if (C) { C.allow = allow0; delete C.deny; }   // (named both ways on one step: shut, as `allowed` folds the pair)
+        if (N) N.deny = (deny0 ?? []).filter(a => a !== 'stalk'); can.none = could(); none = ask(); saidNone = g.rails.shuts('stalk');
+        inFrame = railsFaults({ ...L, rails: { ...L.rails, allow: [...L.rails.allow, 'stalk'] } }).filter((f: string) => /stalk/.test(f)).length;
+      } finally { if (C) { C.allow = allow0; delete C.deny; } if (N) N.deny = deny0; STALK.on = stalk0; CLOSE.on = close0; }
+      asBuilt = railsFaults(L).filter((f: string) => /stalk/.test(f)).length;
+      verdict(empty && noFire && named && said && !shut.left && shut.use && !can.shut && /stalk shut/.test(sum) && !saidAgain && again.left && again.use && can.again && both && !saidNone && none.left && none.use && can.none && inFrame === 1 && asBuilt === 0,
+        'a step can take the stalk\'s held click and leave the interaction key: on the store\'s line, his hands empty and the trigger locked, the left button is not his, the interaction key is, and the stalk itself says he cannot (its hint and its pose ask that); a later step that allows it gives the click back; with no step naming it the gate is as it was; the word in a frame\'s own list is a fault',
+        `the store's first line denies it: ${named} (hands empty ${empty}, the trigger locked ${noFire}, 1.6 m behind the hall's man) · denied: shut ${said}, the left button ${shut.left ? 'his' : 'not his'}, the interaction key ${shut.use ? 'his' : 'not his'}, the stalk says he could ${can.shut}, the panel's line "${sum}" · a later step allows it: shut ${saidAgain}, the left button ${again.left ? 'his' : 'not his'}, he could ${can.again} · allowed and denied on one step: shut ${both} · no step names it: shut ${saidNone}, the left button ${none.left ? 'his' : 'not his'}, he could ${can.none} · in the frame's list: ${inFrame} fault, as built ${asBuilt}`); }
     // ---- the first play's notes (tut-sky): the squad on a knee until its first order; no teammate's laser; the hold is its own line and a tap gives nothing
     //      on it; the wall has a lookout while its charge is up; the last order hands the view back to the squad and puts the night vision up
     { const R = await rig(true), g = R.g, I = R.I, L = g.level.scenarios.lesson, { laserOn, IR } = await import(`${ROOT}/src/game/irlaser.ts`);

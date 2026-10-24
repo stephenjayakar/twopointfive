@@ -667,6 +667,36 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     up; the side door's ring is on the screen in the mode (about 50 px from the top edge in the one still); the right button sends four; the card; [Tab] puts the mode
     away and the line reads "Go around with them". NOT RUN: `all-quick`, a tour, a soak. NOBODY HAS PLAYED IT, and it has never been seen on a GPU: whether the pair
     reads as natural here, whether the ring so near the top edge is found, and how the card lands a beat after the right click are his to judge.
+  - **The hall's two wait out of the window's line until the window's line is up** (2026-10-23; the level's script, one cue on a step, and the scripted player. No
+    switch, no rule of the game's, no box moved). WHAT WENT WRONG: a frag that leaves a man of the nest alive sends the player round the nest by the strip in
+    front of the hall's window, his four behind him, while the line still says 'Take the gun nest'. The hall's two stood in their places from the first tick, in
+    that window's line: a teammate shot the near one through the glass from the strip, the other was then the last of his room and in a room fight's list, so
+    `runner.ts` had him drop it and run, the hall counted as taken, and 'window', 'door' and 'lock' all went by with nobody having read them. Found on the default
+    die of the shipped stand once the card beat (`RAILS.cardBeat`) put the frag a second and a half later (`TPS_CARDBEAT=0`: the same die in order); two dice of
+    sixteen before it. THE MEND: step 'window' sends a cue (`cue: 'window'`, with its card), and beat 'hall' of `levels/tut-squad.script.ts` keeps the two on
+    `HALL_BACK` until it, against the street wall west of the glass (measured with the game's own collision: of 8178 free cells outside the hall none has a line
+    to a man standing on either mark; their places are seen from 2.2 and 1.4 m2, the strip at the glass), rifles on their door. On the cue they walk to their
+    places (`HALL_POST`, the level's own marks for them: about two seconds for the near one, four for the far one). FIRST TRY, kept as a warning: sent to their
+    places as the nest FELL they were there before a slow reader's line was, and a teammate at the glass had both three seconds early. The program starts over
+    when the window's own checkpoint is put back, its cue sent again: they go on to their places from wherever they are. One hit, the other turns his rifle to
+    the window ON HIS OWN PLACE (told to stand where he stood, a man still crossing the room stopped out of the window's line and the line had nobody left to
+    shoot); a man `runner.ts` has is given no order. WHAT IT DOES NOT MEND: on the missed-frag path the squad is already at the glass, and it can take the two
+    as they walk into view, before the player has fired: the line is up and read, the glass breaks in front of him, the door and the lock follow in order, and
+    the shots are not his. THE SCRIPTED PLAYER: `hallEarly` fails at 'window' and again at 'hall' when a man of the hall went down before the window's step came
+    up (`diedAt` against the lesson's own log; `TUT_SQUAD_HALL=any`: not held); he stands square on to the glass (a pace along the wall his rifle's line is the
+    jamb, and a gun at a wall is not fired: one run stood forty seconds there) and shoots only a man he has a line to; `TUT_SQUAD_FRAG=wide` throws the frag on
+    to the road past the nest so both of its men outlive it (run in god mode: unprotected, a nest with both men up puts the scripted player down, which is the
+    mission's own price for a missed throw and nothing this bullet changes; its aim point is a pace and a half from a picket's camp mark, who was unharmed on
+    the six dice run). `lived-check`'s row for the level moves to this commit (a step's `cue` is a held key).
+    MEASURED: `lesson-gate tut-squad` ALL PASS; `lesson-check` and `rails-check` ALL PASS on both stands; both typechecks; `probes.ts kitpack`. The 16
+    unprotected runs on the shipped stand (six dice, three at a reader's pace, three on hard, three on hard with the frag held back, one on hard at a reader's
+    pace): 24 of 24 steps on all 16, the window's, the door's and the lock's steps each done on all 16 (none goes by), no man of the hall down before the
+    window's step; both to the player on 15, both to a teammate at the glass after the line was up on one (die 6). The die that broke (default, shipped): both
+    to the player; with the script as it was, the scripted player's new check fails it ("Tango 7 (at 103.1 s) of the hall went down before the window's step
+    came up (113.8 s)"). `TUT_SQUAD_FRAG=wide`, six dice in god mode (two at a reader's pace, two on hard): every step done on all six; both to the player on
+    four; on the two slow ones a teammate at the glass took one or both after the line was up. NOT RUN: `all-quick`, a tour, a soak. The page check
+    (`tools/qa/tut-squad-page.cjs`) boots the level and its script but does not play the hall. NOBODY HAS PLAYED IT, and it has never been seen on a GPU: how
+    the two walking into the window's view reads (about two and four seconds after the card is closed) is the maintainer's to judge.
   - **The harsh places, re-staged** (2026-10-22: the script, one Director verb, two Director reads, and one line in the defenders' squads; no hit point, no number of the fight's, one hit
     still downs the player). A player who does what a line says is not put down for it; a wrong move still costs the checkpoint. THE DEVICE, three times: a man the script holds does
     not fight, so he is kept in its hand until the player has done what the line asks, and brought where the squad's rifles or the player's have him first.
@@ -1711,20 +1741,31 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   player to. THE KIT: the level issues its own card (`scenarios.issue.members.0`: the rifle, one grenade, five sponge rounds, no cans and no frag),
   dealt whole on the page. THE NEW KEY, `loaded: 'ring' | 'he40'` on that card (`scene/scenarios.ts IssueCard`, parsed in `levelData.ts`, read in
   `kit.ts kitPlayer` on the player's own card only; `docs/level-format.md`): the load the launcher COMES UP ON. Absent it is the sponge round wherever
-  he carries one, as before, so no other level changes. Here it is the grenade, so the swap is done for a reason and not only said. THE LOCKS: from
-  `nook` both mouse buttons are shut; `corner` shuts `use`, because the frame gives a held left click to the stalk wherever the interaction key is his
-  and his hands are empty, whatever a step denies (`rails.ts gate`; a reviewer's run took the man that way with `fire` denied); `rifle` opens
+  he carries one, as before, so no other level changes. Here it is the grenade, so the swap is done for a reason and not only said. THE LOCKS: `nook` shuts both mouse buttons, the whistle (it would bring the man round to the store) and `stalk`; `rifle` opens
   `slot:rifle`;
   `load` opens the frame's `load` (the load's row alone: a right click held before the swap sends nothing); `sponge` opens `alt`; `sling` opens `hands`;
-  `under` gives back the left button, the right and `use`, and shuts the rifle's key, the load and the hands' key again. The interaction key stays his on `nook` (the back door needs it), so the held click is shut from his first stride inside and not before. With
+  `under` gives back both buttons, the whistle and `stalk`, and shuts the rifle's key, the load and the hands' key again. THE INTERACTION KEY IS HIS ON
+  EVERY LINE, AND `stalk` IS A NEW WORD OF THE FRAME (`rails.ts ACTS`, `shuts`; mended the same day, on the build after the one that first carried
+  the lesson; the frame's owner agreed the line). The frame gives a held left click to the stalk wherever the interaction key is his and his hands
+  are empty, whatever `fire` says (a reviewer's run took the man that way), and the first build shut it the only way a level could, by denying
+  `use` from `corner` to `under`: a tap at the open back door then did nothing and said nothing (the maintainer, of this door, before: "nothing in
+  reach to close the door?") and `handring-check`'s line at that door went red on both stands. `stalk` has no key and is the one action that is
+  OPEN UNLESS A STEP DENIES IT (the last step that names it decides; a level that never says the word plays as it did; in `rails.allow` it is a
+  fault): a step that denies it shuts that click and nothing else, at the frame's gate (the left button is not given to the stalk) and at the
+  stalk's own (`stalk.ts free`, `cornerGate`: so whatever else owns the button no stalk begins, and the row's "hold to sneak up" hint and the pose
+  that tells are not shown for a click that would do nothing). The debugger's rails line says `stalk shut` while it is. A first mend that drew the rifle at the back door instead was dropped under
+  review (he could walk in without pressing the key and be stalked into the beam). What is left open: the grab's own row is still his close behind the man, and taking it holds the man and breaks the beam (the break path below): the room says no, not a dead key. That row's hint names the right button's knockout, which is shut until `sponge` (the frame does not edit a row's hint; he reads it only where he has already gone against the line). With
   `alt` open the load's row is open too (the frame's rule), so from `sponge` he can swap back and fire the grenade: at 2.6 m it does not arm, and the
   man is staggered and alerted; no data of a level can shut that. NEVER STUCK: `sponge` also passes when the launcher has no sponge round left (`lesson.ts ringsOut`). CHECKS
   (2026-10-23, no GPU): `lesson-run tut-quiet` plays 24 of 24 on both stands (`TPS_RAILS=1` in front on the frozen one), seeds 1 to 4 on the shipped
-  stand, two of them with `--pace 6`: a left click held on the man from the doorway's line stalks nobody, a right click held there before the swap
+  stand, two of them with `--pace 6`: inside the open back door the row `pull` shuts the leaf behind him; the whistle's own code does nothing in the store and the interaction key held on open floor puts no ring up (`WHISTLE_STATS.blown` does not move); a left click held on the man from the doorway's line stalks nobody, a right click held there before the swap
   sends nothing, a straight line to his head is blocked from the corner and clear from the mark (asked of the level's own collision), then one sponge round spent, the man out cold (the chronicle's `ko` by `ring`), no beam
   broken, the man at the table on patrol with awareness 0.00, GHOST at the end. Its BREAK PATHS: `TQSMOKE_BREAK=hands` (he goes for the man by hand after all,
-  crouched; on the frozen stand, which has no reaching hand and no row to grab by on that line, he then stands up behind him) fails the run on both
-  stands with the beam broken; `RAILS_BREAK=1` fails it at the held left click (the stalk walks him 1.35 m).
+  crouched, and takes the grab's row 0.4 m behind him) fails the run on both
+  stands with the beam broken; `RAILS_BREAK=1` fails it at the held left click (the stalk walks him over a metre). `rails-check` has the word's own line (on the store's line
+  the gate keeps the left button from him and leaves the interaction key, and `stalkCould` says no 1.6 m behind the man; a later `allow` gives
+  both back; allowed and denied on one step is shut, as `allowed` folds the pair; no step naming it is the gate as it was; the word in a frame's
+  list is a fault), red under `RAILS_BREAK=1` on both stands.
   `lesson-check` and `rails-check` on both stands, `lesson-gate tut-quiet`, `level-needs tut-quiet --run` on both, `issue-check`, `issuewhole`,
   `kit-audit`, `writing-check`, the `pouches` family, `handring-check` and `smokebreak-check` on both stands, `solofog`, `attentionway`, `radiohome`:
   green. `lesson-check`'s kit lines that staged this mission as "a lesson that issues no kit of its own" now stage `tut-sky` (the comment there says
@@ -2169,6 +2210,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   of 36, with each mission's four dice (two at six seconds a line). On the real page (headless Chromium, the software adapter, real keys,
   `tut-page.cjs tut-sky`): mission 1 played to its end, its three cards up and closed, 24 lines and no fault — on the tree before the last mends
   (the deeds carried forward then, and the rule was on in the module), not run again after them.
+  A CUE IS A BEAT LATE BY DESIGN: a step's cue comes with its card, 1.2 s or more after the deed before it. That is the right time for men a script
+  moves WHEN the step comes up; men who must be out of sight BEFORE the player can see them are placed from the first tick (or the card says `now`).
+  The squad mission's hall men stood in the window's line until their step's cue and were shot through the glass a step early (mended there).
+  THE RUNNER'S BAR (`tools/qa/lesson-run.ts`, a script's `fightRun`, default 1): a `fightOk` step that goes by before the script reaches it is
+  logged with how long it was up and named on the run's last line; two in a row fail the run ("lessons nobody played") unless the script raises
+  `fightRun` and says why. Before, three such in a row still ended 24 of 24. Tried on the squad mission (the only script with `fightOk`): no step
+  goes by that way on seeds 1 to 6 in its own arm or on seeds 1 to 4 plain; with the lesson pushed on by hand one step is a note and two fail.
   NOT DONE: Tab's objectives card and the small objective row still read the done step's ask while it settles; an order given in the beat still snaps
   to the done step's mark. The other missions' cards are plain (the beat): which of them follow a fight he only watches is their parts' to mark.
   Never seen on a GPU; nobody has played it.
@@ -2216,3 +2264,15 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   line are what is asked); `ringflat-check` 14 on both; mission 1 played to the breaker step on the real page with real keys on the software
   adapter: one ring, one key cap in the line, [2] gives the charge and no second ring comes up.
   NOT DONE: the digit in a `flatLine` is hand-written, and only tut-sky's is held by a check. Never seen on a GPU; nobody has played it.
+- **A tutorial step's mark gives way to a ring over it (2026-10-23, from the first picture of mission 1's one ring, where the mark's orange
+  circle lay over the second wedge's digit; his own 19:46Z shot of that step shows the same, "the line and circle are weird")**. `ui/cmdring.ts`
+  keeps the rings it draws as discs (`covers(x, y)`, the squad's ring and his own), and `ui/overlay.ts` draws no step mark that lies under one.
+  Picture only, asked of where the rings are DRAWN, so a ring opened elsewhere, a ring left on the screen while the view pans, or the old list
+  under `?qring=0` hides nothing. SWITCH `RAILS.markClear`: a knob of the frame's table like `lineClear` (on in the module and the page,
+  `?markclear=0` off; no FROZEN_HOLDS row, the frame itself being off on the frozen stand), off for a recording from before the key.
+  CHECK `tools/qa/tut-page.cjs` on mission 1's wall step, real keys: the mark is drawn before the ring and not with the ring up;
+  `MARKCLEAR_BREAK=1` loads the page with `?markclear=0` and that line fails. No headless line: the harness draws no overlay.
+  MEASURED: mission 1 played to the wall step with real keys on the software adapter, twice: with the knob on the mark is drawn before the ring
+  and not under it (18 lines pass, and the picture shows both digits clear); with `?markclear=0` the mark is drawn under the ring and that line
+  fails. `rails-check` 30 of 30 on both stands with the change in.
+  NOT DONE: his own ring over a mark was not played (the same code path); never seen on a GPU; nobody has played it.

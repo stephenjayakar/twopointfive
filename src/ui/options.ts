@@ -17,7 +17,7 @@ import { gearText } from '../game/gear';
 import { menuTheme } from './theme';
 import { TABKEY, tabChoices, setTabKey, tabSettle, tabKept, tabLoad } from './tabkey';
 import { BACKKEY } from '../game/backkey';
-import { TWOGEARS } from '../game/player';
+import { TWOGEARS, CROUCHRUN } from '../game/player';
 import { WALLSNAP } from '../game/wallsnap';
 import { CMDRING } from '../game/cmdring';
 import { HANDRING } from '../game/handring';
@@ -57,11 +57,14 @@ const ACT_WHAT = 'Do the highlighted action', WHISTLE_WHAT = 'Whistle';
 const RING_SMALL = 'hold it a moment for a ring of everything you can do here, then pick with 1 to 5 or a click', WHISTLE_SMALL = 'the nearest guard will come to look. the whistle is on the ring';
 /** the auto camera's row (host/autocam.ts): the camera's key tapped twice */
 const AUTO_WHAT = 'Tap twice for the auto camera';
-const PACE_WHAT = 'Walking pace';
+const PACE_WHAT = 'Walking pace', SPRINT_WHAT = 'Sprint';
+/** the sprint's row while Shift in a crouch is a fast crouch walk (game/player.ts CROUCHRUN): what the same key does crouched, and that it is heard
+ *  (each footfall louder than a walk's: it is no sneak) */
+export const sprintSmall = (): string | undefined => CROUCHRUN.on ? "hold it while you're crouched to stay low and move faster, but it's louder than walking" : undefined;
 const KEYS: { group: string; rows: [string[], string, string?][] }[] = [
   { group: 'Move', rows: [
     [['W', 'A', 'S', 'D'], 'Move'],
-    [['Shift'], 'Sprint'],
+    [['Shift'], SPRINT_WHAT],
     [['C'], 'Crouch'],
     [['Wheel'], PACE_WHAT, 'slower is quieter'],
     [['Q'], WALL_WHAT, WALL_SMALL],   // (wallLine below: its words while the row has no key)
@@ -375,7 +378,8 @@ function controls(body: HTMLElement, host: KeyHost) {
     const back: typeof g.rows = BACKKEY.tab && g.group === 'Game' ? g.rows.flatMap(r => r[0][0] === 'Esc' ? [r, [['Tab'], 'Back out of a list'] as typeof r] : [r]) : g.rows;   // (game/backkey.ts: the key Esc gave up)
     const tabbed = tab && tab.group === g.group ? back.flatMap(r => r[0][0] === tab.after && r[1] !== 'Back out of a list' ? [r, tab.row] : [r]) : back;
     const geared = !TWOGEARS.on ? tabbed : tabbed.flatMap(r => r[1] === PACE_WHAT ? [] : r[1] === 'Crouch' ? [[r[0], r[1], 'slower and quiet'] as typeof r] : [r]);   // (game/player.ts TWOGEARS: the wheel is nobody's pace, the crouch is the sneak)
-    const rows = !slotNow() ? geared : g.group === 'Kit' ? [SLOT_ROW, ...geared] : geared.filter(r => r[1] !== E_WHAT || keysOf('KeyE').length > 0);   // (E's row put on a key by hand is still his to see and move)
+    const low = sprintSmall(), paced = !low ? geared : geared.map(r => r[1] === SPRINT_WHAT ? [r[0], r[1], low] as typeof r : r);   // (CROUCHRUN: Shift is not only the sprint)
+    const rows = !slotNow() ? paced : g.group === 'Kit' ? [SLOT_ROW, ...paced] : paced.filter(r => r[1] !== E_WHAT || keysOf('KeyE').length > 0);   // (E's row put on a key by hand is still his to see and move)
     for (const [caps, what, small0] of rows) {
       const small1 = !HANDRING.on ? small0 : what === ACT_WHAT ? RING_SMALL : what === WHISTLE_WHAT ? WHISTLE_SMALL : small0;
       if (caps[0] === 'F5' && !SAVETIMELINE.on) continue;   // (the save by hand is the save timeline's key: game/savestate.ts)

@@ -8,6 +8,7 @@ import type { Vec3 } from '../math/vec';
 import { FollowCamera } from '../game/camera';
 import { Game, Player, Interactable, isBreathing } from '../game/game';
 import { FLOOR } from '../game/floor';
+import { RAILS } from '../game/rails';
 import { backName } from '../game/backkey';
 import { KEYMAP, keyCap, keyText, camCap } from '../host/keymap';   // (the player's own keys: every key this HUD names is named as it is bound — the same string back while nothing is rebound)
 import { FLOOR_KEY } from '../game/doors';
@@ -426,13 +427,19 @@ export class Overlay implements HudLike {
       let nx = vp[0] * op[0] + vp[4] * op[1] + vp[8] * op[2] + vp[12], ny = vp[1] * op[0] + vp[5] * op[1] + vp[9] * op[2] + vp[13];
       if (cw > 1e-4) { nx /= cw; ny /= cw; } else { const l = Math.hypot(nx, ny) || 1; nx = nx / l * 9; ny = ny / l * 9; }   // behind the eye: keep the undivided clip direction (dividing by w < 0 would mirror it) and force it onto the edge
       const mx = 1 - 2 * 36 / w, my = 1 - 2 * 36 / h; const k = Math.max(1, Math.abs(nx) / mx, Math.abs(ny) / my); nx /= k; ny /= k;   // into a 36 px inset of the view
-      const el = this.objMark; el.style.display = 'block'; el.style.opacity = alpha.toFixed(2);
+      const el = this.objMark, mx0 = (nx * 0.5 + 0.5) * w, my0 = (1 - (ny * 0.5 + 0.5)) * h;
+      // (…and a tutorial step's mark under a ring that is up, the squad's or his own, is not drawn: it lay over the ring's middle and its inner digits, and
+      //  with the ring up there the place is found — rails.ts RAILS.markClear; the rings are last frame's, as drawn)
+      if (game.rails.live && RAILS.markClear && this.cmdRing.covers(mx0, my0)) el.style.display = 'none';
+      else {
+      el.style.display = 'block'; el.style.opacity = alpha.toFixed(2);
       // (a tutorial step's `toward`: the mark is an arrow lying from the place to where it points, turned as the view has the two — never at the picture's edge, where the ring says 'that way')
       const to = k > 1 ? null : game.rails.arrow(); let turn = '';
       if (to) { const [ax, ay, av] = cam.project(op, w, h, EDGE), [bx, by] = cam.project(to, w, h); if (av && Math.hypot(bx - ax, by - ay) > 4) turn = `${(Math.atan2(by - ay, bx - ax) * 180 / Math.PI).toFixed(1)}deg`; }
       el.className = k > 1 ? 'objmark edge' : turn ? 'objmark arrow' : 'objmark'; if (turn !== this.objTurn) { this.objTurn = turn; el.style.setProperty?.('--turn', turn || '0deg'); }
-      el.style.left = `${((nx * 0.5 + 0.5) * w).toFixed(1)}px`; el.style.top = `${((1 - (ny * 0.5 + 0.5)) * h).toFixed(1)}px`;
+      el.style.left = `${mx0.toFixed(1)}px`; el.style.top = `${my0.toFixed(1)}px`;
       (el.lastChild as HTMLElement).textContent = skySeat || turn ? '' : `${Math.round(far)}m`;   // (an arrow lies at his feet and says which way, not how far: under it the metres read '99m', the number that keeps it from fading)
+      }
     }
     // the squad's order menu: a ring on the door / spot / man it was opened on, in the addressed element's colour (it stays there while Sam walks and aims on)
     this.cmdRing.update(game, cam, w, h, tz);

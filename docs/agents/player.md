@@ -1344,7 +1344,12 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   0.138 crouched, 0.286 walking, 1.100 sprinting), sneak, look (the stride's share whole with Shift and gone a second after; 2.67 steps a second where its
   own stride would take 3.45), stand ([C] with Shift held stands him up into 4.70 m/s), off, harness. One seed: these are speeds on a flat floor. The
   debugger has the toggle and both numbers under Detection & movement; the sneak lab has them and the stride and lean. `close-stills.ts` has a scene
-  `dash`. NOT DONE: the Controls list still says "Shift sprint · C crouch (slower and quiet)"; no sound of its own; teammates following a crouched Sam
+  `dash`. THE WORDS (the controls goal, same day): while the rule is on, Options ▸ Controls' Sprint row has the line "hold it while you're crouched
+  to stay low and move faster, but it's louder than walking" (`ui/options.ts sprintSmall`), and the controls list of the old start card (`?cards`,
+  the boot card of a URL that names a mission, the harness: `ui/menu.ts moveRowNow`) adds "and Shift while you're crouched to hurry (it's louder)";
+  the shipped start page and the load brief show no controls list. Off, both read as they did. `keybinds` has the line, both stands;
+  `MOVEWORDS_BREAK=1` fails it. It asks the two functions, not the drawn rows. KNOWN: a screen already open keeps its words when the rule is
+  flipped in the debugger or the sneak lab, until it is drawn again. Not seen on a page. NOT DONE: no sound of its own; teammates following a crouched Sam
   keep their sneak pace (they speed up only for a real sprint). Nobody has played it or seen it on a GPU.
 - **Four ring notes: one row is a pill, no line under his ring, his ring stands on its thing, a switch's row turns him** (2026-10-23; four fields of
   `HANDRING`, handring.ts, each with its own page word and all four off under `?handring=0` too; all four off in the module and on the frozen stand and raised there by the hands ring's own

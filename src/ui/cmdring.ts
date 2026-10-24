@@ -175,7 +175,12 @@ export class CmdRingViz {
     const V0 = CMDRING.on || game.orders.cmdRing ? game.orders.ringView() : null, P = V0 && CMDRING.pin ? this.pinned(game.orders.cmdRing, cam, w, h, tz) : null, V = V0 && P ? { ...V0, x: P[0], y: P[1] } : V0;
     const H0 = game.player.sel.ring ? handRingView(game) : null, HP = H0 ? this.pinned(game.player.sel.ring, cam, w, h, tz) : null, H = H0 && HP ? { ...H0, x: HP[0], y: HP[1] } : H0;   // (his own ring on its thing: handring.ts onThing)
     this.orders.draw(V, tz); this.hands.draw(H, tz); this.clear(V, H, tz);
+    const D = this.discs; D.length = 0; for (const R of [V, H]) if (R) D.push(R.x / tz, R.y / tz, R1 * R.zoom / tz);
   }
+  /** the rings drawn now as discs of the layer, to the rim (x, y, r in threes) */
+  private discs: number[] = [];
+  /** is this point of the layer (the same px the overlay places its marks in) under a ring that is drawn (ui/overlay.ts: a tutorial step's mark gives way, RAILS.markClear) */
+  covers(x: number, y: number): boolean { const D = this.discs; for (let i = 0; i < D.length; i += 3) if (Math.hypot(x - D[i], y - D[i + 1]) <= D[i + 2]) return true; return false; }
   private overKey = '';
   /** a ring is drawn (the tutorial's big line is at home under one, its step clear of your men stood down: ui/overlay.ts) */
   get ringUp(): boolean { return this.overKey !== ''; }
