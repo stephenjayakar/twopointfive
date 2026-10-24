@@ -41,6 +41,7 @@ import { DESTRUCTION } from './destructionSwitch';
 import { chaosOf, impulsesOn } from './destruction';
 import { WALLCHARGE, wallPt } from './wallcharge';
 import { gpuFx, emitDust } from './particleFx';
+import { PLAYER_ID } from './consts';
 import * as fx from './effects';
 
 export const FEEL = {
@@ -124,7 +125,8 @@ export function wallReport(g: Game, at: Vec3): boolean {
 }
 
 /** game.ts update, once a frame: the charges that stand set remembered for next frame's blast, the queued stages let go, the kick written to the camera */
-export function blastFeelTick(g: Game, cam: FollowCamera) {
+export function blastFeelTick(g: Game, cam: FollowCamera) { const was = g.fogOfWar.begin(PLAYER_ID); try { blastFeelTickRaw(g, cam); } finally { g.fogOfWar.done(was); } }   // (a wall charge and every later stage of its blast — the dust ring, the roll, the soot, the crumbs — are the team's doing: fogofwar.ts FOG.ours)
+function blastFeelTickRaw(g: Game, cam: FollowCamera) {
   const S0 = STATE.get(g), WC = g.wallCharge;
   if (!WC || !live(g)) { if (S0) { S0.seen.length = 0; S0.queue.length = 0; S0.kicks.length = 0; } if (cam.kick) cam.kick = null; return; }
   if (!S0 && !WC.set.length) { if (cam.kick) cam.kick = null; return; }   // (a kick left on the camera by another Game: not this one's to keep)

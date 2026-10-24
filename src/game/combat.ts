@@ -51,6 +51,7 @@ import { thinNote, thinAir } from './thinline';
 import { drawnBeam } from './stature';
 import { bulletMark, bangScorch, staticSurface } from './marks';
 import { gpuFx, impactFx, muzzleSparksFx, casingFx, bangFx, fixtureShatterFx, lensShatterFx, breakerSparkFx } from './particleFx';
+import { fireHolds, fireStir } from './fire';   // a round does not put a fire out (FIRE.hardy)
 import { lampGlass, deadLamp, CARLAMPS_STATS } from './carlamps';   // a vehicle's lamp is glass a round breaks, lit or not (a leaf)
 import { civilianDown, civilianBodies, civiliansShown } from './civilians';
 import { roundDoes, woundDown } from './wounds';
@@ -111,7 +112,9 @@ function aiWide(g: Game, sg: Guard | null, shooter: Character, def: WeaponDef): 
   const tv = Math.hypot(tc.vel[0], tc.vel[2]); const range = v3.dist(shooter.pos, tc.pos); const S = def.aiSpread;
   return S.base + Math.min(S.moveCap, tv * S.moveK) + Math.max(0, range - S.rangeFrom) * S.rangeK;
 }
-export function fireWeapon(g: Game, shooter: Character, target: Vec3, isPlayer: boolean, o: FireOpts = {}) {
+/** (the round's sparks, chips and dust are its shooter's doing — fogofwar.ts FOG.ours: a teammate's are drawn under the fog) */
+export function fireWeapon(g: Game, shooter: Character, target: Vec3, isPlayer: boolean, o: FireOpts = {}) { const was = g.fogOfWar.begin(shooter.id); try { return fireWeaponRaw(g, shooter, target, isPlayer, o); } finally { g.fogOfWar.done(was); } }   // (fogofwar.ts FOG.ours: what a round throws up is its shooter's doing)
+function fireWeaponRaw(g: Game, shooter: Character, target: Vec3, isPlayer: boolean, o: FireOpts) {
   const sg = isPlayer ? null : g.guards.find(x => x.char === shooter) ?? null;   // the guard whose round this is (null: Sam, or a stray in a harness)
   if (sg?.workStow) stowFired(sg);   // (workstow.ts: a round out of a gun let go of for a two-handed job — it is in his hands at once; the fire site's own gate keeps this from happening)
   if (!isPlayer && shooter.anim.bigTool) bigFired(g, shooter);   // (bigkit.ts, BIGSLOT.moves: a teammate with the hammer out who fires — it is on his back at once)
@@ -141,7 +144,7 @@ export function fireWeapon(g: Game, shooter: Character, target: Vec3, isPlayer: 
   const track = () => ({ pos: shooter.muzzle, dir: shooter.gunDir });
   const port = () => ({ pos: v3.add(v3.mad(shooter.bones.handR ?? shooter.muzzle, shooter.gunDir, 0.06), [0, 0.06, 0]), dir: [0, 1, 0] as Vec3 });
   const gpu = gpuFx(g);   // GPU particles on: the powder sparks go to the GPU (muzzleSparksFx below, the same effects.ts numbers) instead of the box pool; the gas and the light are the same either way
-  if (lead) for (const L of fx.spawnShot(g.smoke, gpu ? null : g.sparks, muzzle, dir, { seed: g.fxSeed++, lightGain: M.lightGain * (def.suppressed ? fx.shot.suppressedGain : 1), lightRange: M.lightRange, track, eject: port }))
+  if (lead) for (const L of fx.spawnShot(g.smoke, gpu ? null : g.sparks, muzzle, dir, { seed: g.fxSeed++, lightGain: M.lightGain * (def.suppressed ? fx.shot.suppressedGain : 1), lightRange: M.lightRange, track, eject: port, gas: !g.fogOfWar.airHides(shooter) }))
     g.engine.lights.flash(L.pos, L.color, L.intensity, L.range, L.ttl, shooter.id);
   if (gpu && lead) { muzzleSparksFx(g, muzzle, dir, shooter); casingFx(g, shooter, def); }   // + the spent case out of the port (heard landing half a second on: particleFx.ts)
   if (lead) g.audio.play(voiceOf(def), muzzle, 1);   // (gunlook.ts: … and a voice of its own)
@@ -212,7 +215,8 @@ export function fireWeapon(g: Game, shooter: Character, target: Vec3, isPlayer: 
   // bullet wake through smoke volumes
   if (third) for (let d = 0.3; d < Math.min(tHit, 25); d += 0.28) { const p = pen ? pathAt(pen, d) : v3.mad(muzzle, dir, d); if (g.smoke.inSmokeDomain(p)) g.smoke.push({ pos: p, dir: pen ? segAt(pen, d).d : dir, speed: 5.5, radius: 0.07 }); }
   // impact flash + sound
-  if (lead) g.engine.lights.flash(v3.mad(hitP, dir, -0.05), [1, 0.8, 0.5], 1.5, 2.5, 0.05, 0);
+  const blind = !!hitGuard && g.fogOfWar.hidden(hitGuard); if (blind) g.fogOfWar.hush();   // (FOG.ours: a round that stopped in a man nobody on the team sees — no flash and no spray off him says where he stands)
+  if (lead) { const fl = g.engine.lights.flash(v3.mad(hitP, dir, -0.05), [1, 0.8, 0.5], 1.5, 2.5, 0.05, 0); if (!blind) g.fogOfWar.lightBy(fl, shooter.id); }   // (FOG.ours: a teammate's round strikes where the picture shows it)
   const inGlass = !!(st && st.index < 1e6 && !through && Math.abs(tHit - st.t) < 1e-6 && (g.level.boxes[st.index]?.flags ?? 0) & BoxFlag.Glass);   // the round stopped in a pane / the solid bottle: glassHit above played its crack (or nothing for solid glass) — no wall thud, and no bullet decal on a box that is never rasterised (review 08-12)
   if (!hitGuard && !playerHit && !inGlass && lead) g.audio.play('bulletImpact', hitP, 0.8);
   if (!hitGuard && !playerHit && !through && !inGlass) bulletMark(g, hitP, ph && ph.t <= tHit + 1e-3 ? ph.n : st ? st.n : [0, 1, 0], ph && ph.t <= tHit + 1e-3 ? { box: ph.box, dynamic: true } : st && st.t <= tHit + 1e-3 ? staticSurface(g, st.index) : null, def);   // decals (E1, marks.ts): the hole where the round stopped — in the furniture it knocked, else the static / the leaf it met; nothing in flesh, in the sky, or through the panel at the muzzle
@@ -254,8 +258,9 @@ export function fireWeapon(g: Game, shooter: Character, target: Vec3, isPlayer: 
     };
     if (legs) {
       const stIx = st && Math.abs(tHit - st.t) < 1e-6 ? st.index : -1;
-      const live = (t: LightTarget) => !(t.broken || !t.interactive || t.factor <= 0 && !t.on && !lampGlass(t));   // (a vehicle's lamp is glass whether it burns or not)
+      const live = (t: LightTarget) => !(t.broken || !t.interactive || t.factor <= 0 && !t.on && !lampGlass(t) || fireHolds(t));   // (a vehicle's lamp is glass whether it burns or not)
       const own = (t: LightTarget) => t.kind === 'breaker' ? g.level.breaker.boxes : t.boxes;   // (the breaker's target lists its LED alone: a round into the panel is a round into the breaker)
+      if (stIx >= 0) { const fire = g.targets.find(t => fireHolds(t) && t.boxes.includes(stIx)); if (fire) fireStir(g, fire); }   // (fire.ts FIRE.hardy: a round into a burning drum stirs it — a crack and a throw of embers — and puts nothing out; a fire is no lamp to this search, so a lamp behind one can still be shot)
       let got = stIx >= 0 ? g.targets.find(t => live(t) && own(t).includes(stIx)) : undefined;   // the thing the round STOPPED in first, whatever else its line passed
       if (!got) for (const t of g.targets) {
         if (!live(t) || legsNear(t.pos, legs) > 3) continue;
@@ -265,7 +270,7 @@ export function fireWeapon(g: Game, shooter: Character, target: Vec3, isPlayer: 
       }
       if (got) { AIMCOST_STATS.lampHits++; shootOut(got); }
     } else for (const t of g.targets) {
-      if (t.broken || !t.interactive || t.factor <= 0 && !t.on && !lampGlass(t)) continue;   // scenery (rack LEDs / glow strips) cannot be shot out
+      if (t.broken || !t.interactive || t.factor <= 0 && !t.on && !lampGlass(t) || fireHolds(t)) continue;   // scenery (rack LEDs / glow strips) cannot be shot out, nor a fire (FIRE.hardy)
       const slack = t.kind === 'breaker' ? 0.08 : 0.3; let dist = -1;
       if (!pen) {
         const toT = v3.sub(t.pos, muzzle); const depth = v3.dot(toT, flown);
@@ -646,13 +651,14 @@ export function flashFuse(g: Game): number { return FLASH.on && fightLive(g) ? F
 /** The stun canister goes off: graded burst (jets, wisp, sparks + trails) on the coarse smoke lattice, the white flash, the bang every guard on the
  *  floor hears, and the gameplay effect — guards with line of sight within bang.dazzleRadius are dazzled (Guard.dazzledUntil: canSee() fails, they
  *  cannot fire, and reactT roots them to the spot), then go and look at where it went off like any other loud noise. */
-export function detonateStun(g: Game, it: Item, borrowed = false, sam?: { side?: Team; spare?: boolean }) {   // (`borrowed`: a door or wall charge using the canister's report and flash — to destruction.ts it stays a blast, not a stun)
+export function detonateStun(g: Game, it: Item, borrowed = false, sam?: { side?: Team; spare?: boolean }) { return g.fogOfWar.doing(it.who, () => detonateStunRaw(g, it, borrowed, sam)); }   // (its sparks and dust are its thrower's doing: fogofwar.ts FOG.ours)
+function detonateStunRaw(g: Game, it: Item, borrowed: boolean, sam?: { side?: Team; spare?: boolean }) {   // (`borrowed`: a door or wall charge using the canister's report and flash — to destruction.ts it stays a blast, not a stun)
   const B = fx.bang; const at: Vec3 = [it.pos[0], it.pos[1] + B.height, it.pos[2]];
   g.doors.blast(at, DOORBLAST.tearM.stun, it.who ?? 0);   // the doors' side of a blast (doorblast.ts): a stun charge's reach on a leaf is 0 — it takes none off
   const gpu = gpuFx(g);   // GPU particles on: the CPU pool only flies the dozen fragments that carry smoke trails (their emitters ride CPU positions); the four hundred you see and the dust ring are bangFx's
   const L = fx.spawnBurst(g.smoke, g.sparks, at, g.fxSeed++, gpu ? { sparkCount: Math.min(B.sparkCount, fx.flags.trails ? B.trailCount : 0) } : undefined);
   if (gpu) bangFx(g, at);
-  const light = g.engine.lights.flash(L.pos, L.color, L.intensity, L.range, L.ttl, 0); if (L.radius) light.radius = L.radius;
+  const light = g.fogOfWar.lightBy(g.engine.lights.flash(L.pos, L.color, L.intensity, L.range, L.ttl, 0), it.who); if (L.radius) light.radius = L.radius;   // (FOG.ours: the team's own can or charge lights the fog's picture too)
   if (!wallReport(g, at)) g.audio.play('stunBang', at, 1.0);   // (blastFeel.ts, under the destruction switch: a WALL charge has its own report — crack, thump and falling debris — and the rest of its feel starts there; false = the can's, as ever)
   bangScorch(g, at);   // decals (E1, marks.ts): the scorch on what it lay on and the splashes up whatever stands within a metre
   g.destr.bang(at, it.who, 1, !borrowed);    // DESTRUCTION (destruction.ts, behind tune.chaos): the desk over it cleared, papers up in a ring, the tile above down, dust off the ceiling, the litter about it up again — what it knocks about is heard as the THROWER's doing

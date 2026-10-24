@@ -798,6 +798,75 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   The table is a 41 KB uniform read at a per-pixel index, which some GPUs serialise (a read-only storage view is the mend if it shows). `?fogedge=0` is the
   way out. NEVER SEEN ON A GPU, never played: how the band reads in motion (a sight line sweeping as a man turns), whether 0.5 m is the right width, and
   whether the fog still reads as fog now that it has its colour (`dim` is the knob).
+- **Smoke is drawn under the fog too (`FOG.air`, 10-23; the maintainer, of a shot of the pass with a lit drum and no flame under the fog: "I think we
+  should at least show everything in the environment visible at the start of the level all the time?").** PICTURE ONLY, and only under the full picture
+  (`FOG.full`: it rides the sight table). THE FIRST STEP OF SORTING THE FOG BY WHOSE A THING IS, NOT BY WHETHER IT MOVES: the place (the level as it
+  starts, its fires, its weather, its air) is always shown; the team's own doings are always shown; everybody else is where the team last saw them.
+  Before, the smoke's march took no density over floor nobody on the team saw (`common.wgsl fogSmoke`, rule 4g's "what is not light"), so a fire burned
+  under the fog (`FIRE.fog`) with no plume, and the cloud of the team's own grenade stopped on the sight line. Now `fogSmoke` hands the density back
+  whole while the sight table's head says so (`fogSight.soft.w`, written by `render/fogofwar.ts FogSight.encode` from `FogFrame.air`; that float is NOT
+  what `FowU.soft.w` means in the fog pass), and the fog pass dims the frame afterwards. WHAT STAYS HIDDEN: what a hidden MAN puts into the air is not
+  filed with the solver at all — his breath and his cigarette already (`snowBreath.ts`, `smokebreak.ts`), and now the gas of his shot
+  (`FogOfWar.airHides`, asked by `combat.ts` of every shooter; `effects.ts spawnShot`'s `gas: false` files no emitter and gives the same flash; only
+  while `FOG.air` is on — off, the solver gets everything as it did). A hidden light still gives a plume nothing (`lightFogK`), so an enemy's flashlight
+  draws no cone in smoke the team does not see. The PARTICLES' puffs (a blast's dust ring, a round's chip of plaster: `particles_draw.wgsl`) are cut
+  over unseen floor unless the team made them: `FOG.ours`, the next bullet. WHAT IT NOW SHOWS THAT IT DID NOT: ALL the solver's smoke, whoever made it — an enemy
+  grenade's cloud in a room nobody watches (it was heard), and smoke drifting through a door opened unseen (a hint that it is open). The stricter rule
+  (only the place's smoke) would need the solver to know whose smoke is whose; that is the maintainer's call and is asked. NOT HELD, each a tell or a
+  flaw to judge on a GPU: (1) a hidden man walking through a plume still stirs it (`game.ts smokeWake` pushes the solver for every man) — live movement
+  in the fog; (2) the fog pass dims a pixel by the SURFACE behind it, so the part of a tall plume that stands over unseen floor but is drawn in front of
+  seen ground is not dimmed (before, the cut was a curtain on the sight line); (3) a fire lit or put out where nobody saw: the flame is drawn by the
+  fog's memory (`FIRE.fog`) and the plume by the fire as it is, so the two can disagree; (4) the march no longer skips smoke over unseen floor: its
+  cost in a smoky room nobody watches is not measured. THE ENGINE REPLAY SHOWS A TAPE UNDER THE PAGE'S OWN LOOK, as it does for `edge` and `desat`
+  (`FOG_PAGE.air`, `FogOfWar.pageLook`; `ui/replaykey.ts VISIT_FLAGS` keeps a visit's `?fogair`): a tape from before the key would otherwise show no
+  smoke under the fog for ever. SWITCH: ON in the module and the page (the `FOG` table's own way: `full` and `edge` ship the same); `?fogair=0` = no
+  smoke over unseen floor, as it was; the debugger's fog page has the row ('full: smoke under the fog'); frozen stand: off, `TPS_FOGAIR=1` raises it
+  (`FROZEN_HOLDS['FOG.air']`, `host/standup.ts`, `host/standEnv.ts`); `FOG` rides the journal — a recording without the `air` key replays in the
+  harness with it off (`journal.ts applyKnobs`). CHECK: `probes.ts fog-air` (family `fog`; 7 lines; `FOGAIR_BREAK=1` red on the block's line) on both
+  stands — the block's row every frame and the head's write; the march's rule as written (all three marches and the dust look's twin lines go through
+  `fogSmoke`; no other shader reads the row); a hidden defender's gas left out, a teammate's and the player's never, nobody's with the row off; the
+  address; the journal and the replay's look; the stands; and the night breach under the full picture, a hidden defender firing one round through
+  `fireWeapon` and the team then ordered in, two seeds, 21 s each, digesting the same with it as without, dice and all, his gas left out only with it.
+  NOT CHECKED: the picture itself. **Never seen on a GPU**, and not seen moving; whether a plume dimmed to the fog's 0.4 reads as part of the fog or as
+  something seen is the maintainer's to judge.
+- **What the team does is always shown under the fog (`FOG.ours`, 10-23; the maintainer, of the tutorial's wall charge: "still can't see the wall
+  shot detonate" — the fog was taken off that whole mission for it).** The second step of sorting the fog by whose a thing is; under the full picture
+  alone (`FogOfWar.oursOn`: the row, the fog on, `FOG.full`'s block filled). It adds NO EYE: the room a charge opens is the fog's picture of it,
+  dimmed — the room as last seen, with nobody hidden drawn and nobody hidden casting a shadow (the men the fog filters out hand over no capsules) — and
+  nobody in it is drawn until one of the team has a line. A grenade is not a look through a wall. FOUR THINGS TAKE THEIR DOER'S SIDE
+  (`FogOfWar.oursId`, read off the team list the fog fills for the lights, `LightSet.fogTeam.owners`, never off `g.guards`: a blast swaps that list
+  out while it works). (1) A FLASH NOBODY CARRIES: `lights.ts RtLight.fogBy` = who made it, read by `LightSet.fogClass` in place of `owner` (which
+  stays 0: `owner` is also the shadow rule); set through `FogOfWar.lightBy(light, who)` at a round's strike (`combat.ts`), the stun charge
+  (`detonateStun`, `it.who`), the frag (`frag.ts`, `spec.who`), the wall charge's afterglow (`blastLook.ts`, the player's) and a tracer's ember
+  (`tracers.ts`, through the `Tracers.fog` hook `game.ts` sets: the class stays Game-free). The team's lights the fog's picture, an enemy's and an
+  ownerless one only what the team sees, as before. (2) A TEAMMATE'S TRACER is drawn its whole length (`things()`: an unkeyed box whose `owner` is one
+  of the team). (3) THE TEAM'S RUBBLE (`debris.ts Chunk.who`, a kinked panel's `mate` box too) is drawn on its FIRST way down and lies in the picture
+  where it fell; once the picture has it at rest it is a thing like any other (woken unseen, it stays where the picture has it), and a piece a boot
+  slides is nobody's, so walking through rubble still shows nobody. (4) THE PARTICLES: `FogOfWar.begin(who)` / `done()` (or `doing(who, fn)`) name
+  the doer round a cause — `fireWeapon`, `detonateStun`, `frag.ts blast`, `Destruction.blast`, the wall and door charges' `blow`, `blastLookTick`,
+  `blastFeelTick` (the wall charge's later stages: the dust ring, the roll, the soot, the crumbs), a tracer's ember — and what is filed inside
+  carries `Particles.ours` → the emit record's bit 18 → `PB_OURS` (128) on the particle, which `particles_draw.wgsl` leaves uncut over unseen floor.
+  A doing by nobody inside another keeps its cause; an enemy's inside a teammate's is his own; a particle that has lain and is woken (a kick, the
+  wind, its support gone) loses the mark in the kernel, so litter the team made does not jump under the fog when somebody unseen disturbs it. A
+  ROUND THAT STOPS IN A MAN NOBODY SEES (`combat.ts`: `FogOfWar.hidden(hitGuard)` → `hush()`): nothing filed after it met him is marked and its
+  flash is nobody's, so no spray and no flash say where he stands. NOT THE PICTURE ALONE IN ONE WAY: the boxes it hands the renderer (streaks,
+  rubble) are what the cursor's ray meets (`world.dynamics`), as with every thing the fog shows or holds — so the row is the tape's, not the replay
+  page's look (`FOG_PAGE` does not carry it, no visit word). NOT HELD: (a) a lamp shot out by the team (`combat.ts`, `destruction.ts` lamp flashes)
+  and what a team's chunk throws up when it lands or breaks on a later frame (`breakTable.ts`) are not marked and are cut as before; (b) a marked
+  particle stays marked while it flies, so a team's spark that bounces on into another unseen room is drawn there; (c) the STREAK of a teammate's
+  round that stops in a hidden man still ends at him (as its head light, a carried light, always did); (d) with `FOG.air` a team's flash now lights
+  the plume over unseen floor too; (e) the first frame the fog is live has no team list yet: a blast on that frame is not marked. SWITCH: ON in the
+  module and the page; `?fogours=0` = as it was; the debugger's fog page has the row; frozen stand: off, `TPS_FOGOURS=1` raises it
+  (`FROZEN_HOLDS['FOG.ours']`, `host/standup.ts`, `host/standEnv.ts`); the journal carries it (a recording without the `ours` key replays with it
+  off). CHECK: `probes.ts fog-ours` (family `fog`; 8 lines; `FOGOURS_BREAK=1` red on whose, the lights', the boxes' and the particles' lines) on
+  both stands — whose a doing is; a made flash's class by its doer and the real stun charge's set off unseen by the player and by a defender; a
+  streak and a chunk of rubble over unseen floor by owner, in flight, under a boot and at rest; the mark round a real round fired by a teammate and
+  by a defender on a stand-in for the GPU system, a teammate's round put into a hidden man (hushed, no flash given), and the record, kernel and draw
+  lines as written; the address; the journal, and that the replay leaves the row alone; the stands; the night breach fought under the full picture,
+  two seeds, 21 s each, the same digest and dice with it as without (the harness has no cursor). NOT CHECKED: the picture. **Never seen on a GPU**:
+  whether a blast under the fog reads as the team's own doing or as a hole in the fog, and how bright the flash should be there (it is dimmed with
+  the frame, `FOG.dim`), are the maintainer's to judge. The tutorial's first mission still has its fog off: whether it wants it back is that
+  mission's owner's call.
 - **A held man drops his gun** (`HOLD.dropGun`, the table in `src/game/character.ts`; the rule is `player.ts startGrab`; ON in the page, `?nogundrop` puts it
   off; OFF in the module and on the frozen stand, `TPS_HOLDDROP=1`; a `FROZEN_HOLDS` row; a recording from before the key replays with it off). The maintainer,
   10-15, of a rifleman in his arm with the rifle up in his fist: "held enemies should drop their gun". As the arm goes round, the weapon in his hand (rifle or
@@ -1328,6 +1397,65 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   past, not before; no press or the switch off and he walks by; a man facing him is not taken; `STALK_BREAK=1` fails it), both stands. LIMITS: no pose of
   its own while he waits (the wall stance), no hint on screen until the man is in the grab's own reach, and whether a guard notices him first is the guard's
   sight as ever. One scene, one seed, the AI off; stills `--scene stalk-corner`; never seen on a GPU, never played.
+- **The disarm leads the grab (10-23; `HOLD.stripFirst`, `HOLD.first`; `disarm.ts lead`; `?stripfirst=0`, `TPS_STRIPFIRST=1`).** The
+  maintainer: "sam springs into action for the final grab ... you really want a disarm and then a grab, right?" In the footage he works
+  from, the rifle is the first thing to move, out of the man's hands before the arm is round his neck (which lands 0.22 to 0.33 s in).
+  TIMED FIRST (the E grab from the low creep's station on a rifleman, the page's stand): Sam is upright by frame 12, his left hand is
+  at the man's neck on frame 16 (0.27 s), the pair go back and down from frame 19, all inside the footage's counts already. What did
+  not match was the order: the gun left the man's hand on frame 13, three frames before the arm, with the catch's voice on frame 0. ON
+  in the page, OFF in the module and on the frozen stand, a `FROZEN_HOLDS` row, under `HOLD.disarm`; a recording from before the key
+  replays with it off (`applyKnobs`). THE RULE: the move's own clock (`Strip.t`) runs ahead of the hold's until the gun is let go, so
+  the take falls `first.take` 0.16 s in and the let-go at `first.drop` 0.3 where `strip.take` 0.2 and `strip.drop` 0.42 had them, and
+  the hand comes home at its old pace from there (the move is over 0.12 s sooner). Both figures' poses read that clock, so nothing in
+  character.ts changed. The hold's own clock is untouched: he is `held` on the frame he was. The catch's voice (`grabCatch`) is kept
+  for the arm's landing, `first.catch` 0.26 s in (`Strip.owed`, played by `disarmTick`), behind the strip's. Only for a grab with a gun
+  to take and an empty right hand: a man with his torch has the catch on the grab's frame, and the pistol hold's rap comes with the
+  frame as it did. Why not sooner: at 0.12 s Sam's hand is still 23 cm short of the gun (he is rising out of the squat), at 0.16 it is
+  13. THE CHECK is `stripfirst-check.ts` (`probes.ts stripfirst`, the grab and stealth families; `STRIPFIRST_BREAK=1` reds three of
+  its five lines), both stands: lead (out of his hand at 0.17 s and let go at 0.32, against 0.22 and 0.43 with the key down; held on
+  frame 28 either way), voices (the strip at 0.17 s, the catch at 0.27; key down the catch at 0 and the strip at 0.22), arm (the gun
+  leaves him on frame 10 and the hand is at his neck on frame 16: six frames between, three with the key down), others, harness.
+  `disarm-check.ts` writes the key down in its worlds: it reads the two beats as they were. The lab has the toggle and both moments.
+  One seed: a fixed staging. Nobody has seen it on a GPU or heard it.
+- **Arms out wide and low in the creep (10-23; `STALK.wide`, `wideOut` / `wideDown` / `wideFwd` / `wideBy`; `CREEP.wide`;
+  `?stalkwide=0`, `TPS_STALKWIDE=1`).** The maintainer: "having the hands up just doesn't look cool", and the low creep's answer (hands
+  down by his knees) read as a man picking something up. In the footage he works from, the man creeping has both arms out to his sides
+  with open hands. THE RULE (`close.ts` feeds the animator, `character.ts creepLayer` draws it): under `STALK.low`, bare hands, in his
+  crouch, closing on a man from behind, each hand is 0.3 m outside its own shoulder, 0.2 m under it and 0.16 m ahead of it, open, palm
+  to the floor, elbows out and back. It comes with the sink (all of it once he is `wideBy` 0.35 of the way down, about 2.1 m from the
+  man), in at 4 1/s and out at 14. It is by distance, not by the click: it holds while he waits behind the man and goes with the
+  carriage when no man is in front of him. Upright it is nothing. The stealth pose layer gives the left arm back to the creep by the
+  share shown (it owned that arm through the creep: with it the left hand stayed by his knee and only the right went out). ON in the
+  page, OFF in the module and on the frozen stand, a `FROZEN_HOLDS` row; a recording from before the key replays with it off. The lab
+  has the toggle and the four numbers. THE CHECK is `stalkwide-check.ts` (`probes.ts stalkwide`, the grab and stealth families;
+  `STALKWIDE_BREAK=1` reds two of its five lines), both stands: out (his hands 1.0 m apart under two metres against 0.6 with the key
+  down, the same before he sinks, neither hand above his neck), waits (still out two seconds after the click is let go; the plain
+  crouch's half a second after the man is taken away), upright, grab (held on frame 29 either way), harness. Judged on CPU stills
+  (`close-stills.ts` scene `stalk-rifle`, the page's stand): it reads as a prowl from the game's camera, and it is wide. One seed: a
+  fixed staging. Nobody has seen it on a GPU.
+- **Drag to steer the creep, a prototype (10-23; `STALK.drag`, `dragDead` 14 px, `dragFull` 140 px; `stalk.ts dragged`; lab only:
+  `?sneaklab` raises it, `?stalkdrag=1` anywhere, `?stalkdrag=0` in the lab; `TPS_STALKDRAG=1`).** The maintainer: "you click on the guy
+  and then you can drag towards him to move in that direction. like a joystick centered on the guy. that would make things feel more
+  controlled than right now which feels automatic." THE RULE: the press on a man still begins the creep (the same arc, range and
+  cursor test) and the screen point it was made at is the stick's middle. While the button is down the mouse's way from there is the
+  way Sam creeps (screen up = the camera's forward, as the move keys have it, so the camera following him does not feed the stick) and
+  its length from `dragDead` to `dragFull` is the share of `pace`. Left at the press he holds still in the pose. He faces the man
+  throughout; the way into the man is taken off the stick over the last 20 cm before `keyM`, so he stops there and can still go round.
+  Everything else is the creep's (the arc ends it, a wall ends it, the key grabs). NOT the switch rule on purpose: it changes how the
+  hold plays everywhere (the tutorials teach "hold left click"), so it is down in the plain page and on both stands until the
+  maintainer has tried it; there is no `FROZEN_HOLDS` row because the stands agree. The line over the man reads "press and drag to
+  sneak up on him" while it is up. THE CHECK is `stalkdrag-check.ts` (`probes.ts stalkdrag`; `STALKDRAG_BREAK=1` reds three of six),
+  both stands: still (2 s, 0 cm moved), toward (the whole drag 1.6 m/s, half of it 0.8), side (across, 2° off the man), stops (0.79 m
+  behind him, the key takes him), off, harness. The page drive drags the real mouse in the lab. No hand has held it and nobody has
+  seen it on a GPU.
+- **The sneak lab's knobs in groups (10-23; `src/host/sneaklab.ts` GROUPS, NUMS, TOGS).** The maintainer, of the panel on his GPU:
+  "it's hard to tweak the knobs in the debug panel, illegible. maybe more grouping, shorter names, alt text would help? and some
+  explanation of what to look for / test in the alt text?" The one long "The creep" list is ten sections that fold (Start and stop,
+  Pace, Pose, The grab, Right click, Passing guards, Fast crouch walk, Corner wait, When he turns, Old pose), the first three of the
+  game's own feel open; each has its own '↺', a header hover saying what to watch, and a live "N moved" summary; every switch sits in
+  its group; every slider has a revert dot. Names are short enough for the 372 px column; each hover says what the number is, what
+  to look for and what to try. The page drive reads it: 12 sections, 79 rows, none cut short, none without a hover. Panel code
+  (`src/ui/panel.ts`) is unchanged. A new STALK number still needs its row here (`sneaklab-check` words).
 - **The grab's disarm, second pass (`HOLD.strip`, `HOLD.bareGrip`; `disarm.ts`, `character.ts`).** The move itself is `HOLD.disarm` (`?disarm=0`,
   `TPS_DISARM=1` with `TPS_HOLDDROP=1`): Sam's right hand takes the gun out of the man's hand 0.2 s into the grab and lets it go at 0.5 s; its voices are
   `docs/agents/sounds.md`'s. Judged on stills, the first pass set the gun down at his thigh (it slid down his leg and lay under his foot) and the held man's

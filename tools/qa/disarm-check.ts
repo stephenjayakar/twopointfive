@@ -33,7 +33,7 @@ const up = () => !BREAK;
 /** the rifleman with his gun in his hands stood on the lobby's floor facing east, the rest parked, Sam with empty hands 0.8 m behind him */
 async function world(on: boolean) {
   const W: any = await quiet(() => standUp({ seed: 11 } as any)), g = W.game;
-  HOLD.dropGun = true; HOLD.disarm = on; CLOSE.on = true; CLOSE.noKnife = false; STALK.on = false;   // (the frozen stand's pins write them at every stand-up)
+  HOLD.dropGun = true; HOLD.disarm = on; HOLD.stripFirst = false; CLOSE.on = true; CLOSE.noKnife = false; STALK.on = false;   // (the frozen stand's pins write them at every stand-up)
   g.godMode = true; g.aiEnabled = false; g.playerInvisible = true; g.player.slot = 'pistol'; g.player.holstered = true;
   g.tune.carbineGuards = 'reyes'; for (let i = 0; i < 5; i++) W.step(DT);   // (a calm man with a pistol rig carries his torch: the rifleman has his gun in his hands)
   const A = g.guards.find((x: any) => x.callsign === 'Reyes'), rest = g.guards.filter((x: any) => x !== A);

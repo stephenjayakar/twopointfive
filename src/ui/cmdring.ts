@@ -15,6 +15,7 @@ import { CMDRING, ringPin, type RingHint, type RingState, type RingView } from '
 import { handRingView } from '../game/interact';
 import { planView } from '../game/planmode';
 import { hoverKept } from './hoverkept';
+import { planRings } from './planlook';
 import { HANDRING } from '../game/handring';
 import { RING_BOX, RING_HOLE, RING_RIM, lonePill, loneWedge, wedgeMid, wedgeWords, type LonePill, type RingPlace } from '../game/ringlone';
 
@@ -105,6 +106,7 @@ export class CmdRingViz {
   private hintWas = '';
   private plan: SVGGElement | null = null;
   private planWas = '';
+  private planK = '';
   constructor(private svg: SVGSVGElement) { this.orders = new RingDraw(svg); this.hands = new RingDraw(svg); }
   /** the hint of what the ring would open on (orders.ts hintView): the thing's outline on the floor and a glyph beside the cursor — in the ring's middle
    *  once a ring is up */
@@ -137,7 +139,9 @@ export class CmdRingViz {
     let s = V.frame ? `<rect class="pf" x="3" y="3" width="${(w - 6).toFixed(0)}" height="${(h - 6).toFixed(0)}" rx="4"/><text class="pt" x="${(w / 2).toFixed(0)}" y="${(h - 14).toFixed(0)}">PLAN</text>` : '';
     for (const m of V.men) { const out: string[] = [];
       for (let i = 0; i < HINT_N; i++) { const t = i / HINT_N * 2 * Math.PI, q = xy([m.at[0] + Math.cos(t) * CMDRING.hintManM, m.at[1], m.at[2] + Math.sin(t) * CMDRING.hintManM]); if (!q) { out.length = 0; break; } out.push(`${q[0].toFixed(1)},${q[1].toFixed(1)}`); }
-      if (out.length) s += `<path class="pm${tone(m.tone)}${m.picked ? ' picked' : ''}" d="M${out.join('L')}Z"/>`; }
+      if (out.length) s += `<path class="pm${tone(m.tone)}${m.picked ? ' picked' : ''}" d="M${out.join('L')}Z"/>`;
+      const c = out.length && m.n ? xy([m.at[0], m.at[1], m.at[2]]) : null;   // (the digit that picks him, up and to the right of his circle: planmode.ts planDigits)
+      if (c) s += `<text class="pn${tone(m.tone)}" x="${(c[0] + 15).toFixed(1)}" y="${(c[1] - 11).toFixed(1)}">${m.n}</text>`; }
     if (V.sam) {   // Sam's own mark: a ring at his feet — or, the view gone from him, a head at its edge pointing the way back
       const q = xy(V.sam), m = 34;
       if (q && q[0] >= m && q[0] <= w - m && q[1] >= m && q[1] <= h - m) { const out: string[] = [];
@@ -157,8 +161,11 @@ export class CmdRingViz {
       s += '</g>'; }
     if (V.aim) { const a = xy(V.aim.from), b = xy(V.aim.to); if (a && b) s += arrow(a[0], a[1], b[0], b[1], 'pa drag'); }   // (a right press being dragged: the way it will set)
     if (V.drag) { const D = V.drag; s += `<rect class="pb" x="${(Math.min(D.x0, D.x1) / tz).toFixed(1)}" y="${(Math.min(D.y0, D.y1) / tz).toFixed(1)}" width="${(Math.abs(D.x1 - D.x0) / tz).toFixed(1)}" height="${(Math.abs(D.y1 - D.y0) / tz).toFixed(1)}"/>`; }
-    if (s === this.planWas) return; this.planWas = s;
+    const k = planRings().toFixed(2);   // (how strongly the circles at the men's feet are drawn: ui/planlook.ts — the look's own `--pm-k`, written only when it has changed)
+    if (s === this.planWas && k === this.planK) return;
     if (!this.plan) { const g = this.plan = document.createElementNS(NS, 'g') as SVGGElement; g.setAttribute('class', 'planmode'); this.svg.insertBefore(g, this.svg.firstChild); }
+    if (k !== this.planK) { this.planK = k; this.plan.style.setProperty('--pm-k', k); }
+    if (s === this.planWas) return; this.planWas = s;
     this.plan.style.display = ''; this.plan.innerHTML = s;
   }
   /** A ring that stays on its point (CMDRING.pin), where THIS picture's camera puts it, in the view's px: the game's own place for it (RingState.ax / ay) was

@@ -105,7 +105,11 @@ export const SOUNDS: Record<SfxName, Sound> = {
   grabCatch: { group: 'hands', what: 'the grab: the catch', gain: 0.5, rate: 1, also: [
     { what: 'the whole grab: catch, his pistol stripped and let down', gain: 0.5, rate: 1, plus: [{ name: 'gunStrip', gain: 0.45, rate: 1, after: 0.22 }, { name: 'heldProtest', gain: 0.18, after: 0.47 }, { name: 'gunDown', gain: 0.4, rate: 1, after: 0.82 }] },
     { what: 'the whole grab, a carbine (strip and knock slowed)', gain: 0.5, rate: 1, plus: [{ name: 'gunStrip', gain: 0.45, rate: 0.8, after: 0.22 }, { name: 'heldProtest', gain: 0.18, after: 0.47 }, { name: 'gunDown', gain: 0.4, rate: 0.8, after: 0.82 }] }] },
-  gunStrip: { group: 'hands', what: 'the grab: his pistol twisted out of his hand', gain: 0.45, rate: 1, also: [{ what: 'a carbine stripped (slowed)', gain: 0.45, rate: 0.8 }, { what: 'rapped out of his hand by Sam\'s own pistol (quicker)', gain: 0.45, rate: 1.12 }] },
+  // (…and the grab as the page plays it with HOLD.stripFirst up: the strip first at 0.17 s, the catch 0.10 s after it as the arm lands, his protest at 0.47 and
+  //  the gun down at 0.70 from the grab's start, measured on the page's stand off the rifleman; the rows above are the beats with it down)
+  gunStrip: { group: 'hands', what: 'the grab: his pistol twisted out of his hand', gain: 0.45, rate: 1, also: [{ what: 'a carbine stripped (slowed)', gain: 0.45, rate: 0.8 },
+    { what: 'the whole grab, the gun first: strip, catch, his pistol let down', gain: 0.45, rate: 1, plus: [{ name: 'grabCatch', gain: 0.5, rate: 1, after: 0.1 }, { name: 'heldProtest', gain: 0.18, after: 0.3 }, { name: 'gunDown', gain: 0.4, rate: 1, after: 0.53 }] },
+    { what: 'the whole grab, the gun first, a carbine (strip and knock slowed)', gain: 0.45, rate: 0.8, plus: [{ name: 'grabCatch', gain: 0.5, rate: 1, after: 0.1 }, { name: 'heldProtest', gain: 0.18, after: 0.3 }, { name: 'gunDown', gain: 0.4, rate: 0.8, after: 0.53 }] }, { what: 'rapped out of his hand by Sam\'s own pistol (quicker)', gain: 0.45, rate: 1.12 }] },
   gunDown: { group: 'hands', what: 'the grab: his pistol let down onto the floor', gain: 0.4, rate: 1, also: [{ what: 'a carbine let down (slowed)', gain: 0.4, rate: 0.8 }] },
   chokeStrain: { group: 'hands', what: 'the choke, one strain', gain: 0.25, also: [{ what: 'choking him out', gain: 0.25, burst: { n: 6, every: 0.4 }, plus: [{ name: 'chokeLimp', gain: 0.35, after: 2.5 }] }] },
   chokeLimp: { group: 'hands', what: 'he goes limp', gain: 0.35 },

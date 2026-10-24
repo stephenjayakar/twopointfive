@@ -305,6 +305,8 @@ export class Player {
    *  questions to him (Game.interrogate) and choke him out quiet (holstered: the arm variant) or pistol-whip him (pistol drawn: the gun variant, which also
    *  fires past him on a click) — there is no letting him go; null when his hands are his own. */
   holding: Hold | null = null;
+  /** disarm.ts HOLD.stripFirst: the game time the grab's catch voice is due (the arm landing, behind the strip's) — undefined = none owed */
+  catchDue: number | undefined = undefined;
   /** what Sam is saying right now — his side of an exchange with the man in his arm (player.ts askHeld: his line first, the man's answer when it ends) — drawn
    *  over HIS head like a guard's line, in his own tint (ui/bubbles.ts); the same shape as Guard.bubble */
   bubble: { text: string; t: number; dur: number; radio: boolean } | null = null;
@@ -1168,7 +1170,7 @@ export class Game {
     this.props = new PropSystem(level.props, this.col, (e) => this.onPropEvent(e));
     this.items = new Throwables(this.col, this.props); this.items.bog = (x, y, z) => snowBogAt(this, x, y, z);   // (… and bog down where they land in lying snow: snowBog.ts, 0 everywhere with its switch off)
       // canisters and dropped magazines bounce off (and nudge) the furniture
-    this.tracers = new Tracers(engine.lights, sparkSink(this));   // tracer streaks: their head lights live in the engine's LightSet (transient), their embers are sparks — GPU sparks while that path is on, the CPU pool's otherwise (particleFx.ts sparkSink)
+    this.tracers = new Tracers(engine.lights, sparkSink(this)); this.tracers.fog = { begin: who => this.fogOfWar.begin(who), done: was => this.fogOfWar.done(was), lightBy: (l, who) => this.fogOfWar.lightBy(l, who) };   // tracer streaks: their head lights live in the engine's LightSet (transient), their embers are sparks — GPU sparks while that path is on, the CPU pool's otherwise (particleFx.ts sparkSink)
     this.decals = new Decals(engine.device); engine.setDecals?.(this.decals);   // (the QA harness's engine stand-in has no renderer to hand it to: the list still fills, nothing draws)
     if (engine.settings && engine.settings.decals === false) this.decals.enabled = false;
     this.weather = new Weather(this);
