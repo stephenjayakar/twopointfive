@@ -400,6 +400,20 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   moves it from a page check. CHECK `probes.ts planlook` (family ui; 5 lines, no game stood up, the same on both stands; `PLANLOOK_BREAK=1` asks them
   of a `?planrings=1` visit: lines 1 and 2 fail) and, on the real page, `PORT=<port> node tools/qa/planlook-page.cjs` (the circles' own computed
   opacity; the software adapter). NOT SEEN: the right default is the maintainer's to find on his GPU; 0.5 is a first guess.
+- **The wheel with the ring up steps nobody** (2026-10-24; `CMDRING.wheelIdle`, `orders.ts ringInput`). The maintainer, with a recording of the
+  depot: "got into a weird state where my command modes (not plan mode) only selected blue team". The recording has a two-finger scroll with the
+  squad's ring still up. A scroll there stepped who the orders go to (everyone, one pair, the other: "the wheel steps who" in the ring's bullets
+  above is the ring as built), the choice stayed after the ring had gone, only the ring's own caption showed it, and under `only` the who key has
+  no key to step it back. ON: the scroll is still taken out of the frame (it is not his walking pace under the ring) and changes nobody's choice. A
+  click on a man with the ring up is still him, plan mode's picks still choose, and the who key still steps where the player has given it a key.
+  SWITCH: ON in the page (`?wheelidle=0` = the wheel steps who, as built), OFF in the module and on the frozen stand (`TPS_WHEELIDLE=1`); a
+  recording from before the key replays with it off; debugger tick "Tab ▸ the ring ▸ the wheel steps nobody". CHECK: `probes.ts wheelidle` (family
+  squadorders; `tools/qa/wheelidle-check.ts`), six lines on both stands, fed the recording's own twenty wheel records tick for tick: with the switch
+  off they walk everyone, blue, red, everyone, blue and the next tap goes to two men of four; with it on the orders stay everyone's and the tap goes
+  to all four. `WHEELIDLE_BREAK=1` fails lines 1 and 3 on both stands. `cmdring-check` holds the switch off in its rig (its line 7 steps who by the
+  wheel). MEASURED: one deal of the office room clear, squad of four; the rule has no die in it. NOT DONE: nothing on screen outside the ring's
+  caption says the orders are narrowed to a pair or a man, and plan mode put down leaves the orders with whoever was last picked in it. Nobody has
+  played it; no part of it is a picture.
 - **Plan mode: the digits pick the men** (2026-10-24; `CMDRING.planDigits`, `planmode.ts planInput` / `pickDigit` / `planGroundAll`; the maintainer,
   10-24: "1 2 3 4 in plan mode should select the appropriate squad members, and 5 selects all of them? and then we should remove clicking on the
   ground selects all"). With the mode up and no ring or menu up: 1 to 4 pick that man alone in the squad's own order (Red One, Red Two, Blue One,

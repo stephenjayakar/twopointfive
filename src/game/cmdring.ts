@@ -201,6 +201,13 @@ export const CMDRING = {
    *  ring (orders.ts hintView answers null; a picture only). What a tap would order, and on what, is the corner's line on the key. false: the
    *  outline, as built. Off here and on the frozen stand (`TPS_BAREHINT=1`); the page raises it (`?barehint=0` off) */
   bareHint: false,
+  /** THE WHEEL WITH THE RING UP STEPS NOBODY (orders.ts ringInput; the maintainer, 10-24, after a two-finger scroll with the ring still up: "got into a
+   *  weird state where my command modes (not plan mode) only selected blue team"): a scroll with the squad's ring up used to step who the orders go
+   *  to (everyone, one pair, the other), the choice stayed after the ring had gone, and under `only` no key steps it back. true: the scroll is still
+   *  taken out of the frame (it is not his walking pace under the ring) and changes nobody's choice; a click on a man with the ring up is still him, and the
+   *  who key, where it has one, still steps. false: the wheel steps who, as it was built. Off here and on the frozen stand (`TPS_WHEELIDLE=1`); the
+   *  page raises it (`?wheelidle=0` off) */
+  wheelIdle: false,
   /** THE SQUAD'S ONLY KEYS (the maintainer, 10-22: "squad is now just q and f. everything is through the radial menu (which is 1-5? is that
    *  sufficient) so we don't need all the other keys"): the ring carries EVERY order of the menu it is — a row the menu had on a letter of its own
    *  (throw there on G, frag and clear on G, the big slot's tool on H, a look under the door on V) takes a spare wedge of its page, and where a page has

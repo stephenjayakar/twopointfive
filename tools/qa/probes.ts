@@ -3342,6 +3342,7 @@ if (on('onesignal', 'squadorders', 'all')) await run('onesignal', async () => (a
 // plan mode's view stays a few metres from the player: a room's worth, not the level's (CMDRING.planNear) — plannear-check.ts
 if (on('plannear', 'squadorders', 'all')) await run('plannear', async () => (await import('./plannear-check.ts')).plannearCheck());
 if (on('plandigits', 'squadorders', 'all')) await run('plandigits', async () => (await import('./plandigits-check.ts')).plandigitsCheck());   // plan mode: the digits pick the men (CMDRING.planDigits): 1 to 4 a man, Shift + a digit adds him or takes him out, 5 everyone, a click on bare ground picks nobody new, a tutorial mission keeps the ground click; PLANDIGITS_BREAK=1 must fail
+if (on('wheelidle', 'squadorders', 'all')) await run('wheelidle', async () => (await import('./wheelidle-check.ts')).wheelidleCheck());   // the wheel with the ring up steps nobody (CMDRING.wheelIdle): the recorded scroll leaves the orders with everyone; off, it steps who and the choice stays
 // the squad's ring two rings deep, no glyph at the cursor (CMDRING.flat / plainHint) — ringflat-check.ts
 if (on('ringflat', 'squadorders', 'all')) await run('ringflat', async () => (await import('./ringflat-check.ts')).ringflatCheck());
 // X is where the plan is laid: an order picked with 'wait for my word' on is laid — nobody moves — F sends the plan, a restart puts it back (planlay-check.ts; PLANLAY.on)

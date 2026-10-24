@@ -442,6 +442,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_RINGFLAT')) CMDRING.flat = CMDRING.only && String((globalThis as any).process?.env?.TPS_RINGFLAT ?? '') === '1';   // … and the ring two rings deep at most: off; TPS_RINGFLAT=1 raises it beside TPS_QRING=1 TPS_QONLY=1 (the page: ?ringflat=0 off)
     if (pinned('TPS_PLAINHINT')) CMDRING.plainHint = String((globalThis as any).process?.env?.TPS_PLAINHINT ?? '') === '1';   // … no glyph at the cursor: off; TPS_PLAINHINT=1 raises it (the page: ?plainhint=0 off)
     if (pinned('TPS_BAREHINT')) CMDRING.bareHint = String((globalThis as any).process?.env?.TPS_BAREHINT ?? '') === '1';   // … no outline at the cursor either: off; TPS_BAREHINT=1 raises it (the page: ?barehint=0)
+    if (pinned('TPS_WHEELIDLE')) CMDRING.wheelIdle = String((globalThis as any).process?.env?.TPS_WHEELIDLE ?? '') === '1';   // … a scroll with the ring up changes nobody's choice
     if (!CMDRING.on) { CMDRING.stay = false; CMDRING.stayDigit = false; CMDRING.pin = false; CMDRING.plan = false; CMDRING.planRts = false; CMDRING.planRun = false; CMDRING.hands = false; CMDRING.only = false; }
     if (!CMDRING.only) CMDRING.flat = false;
     if (!CMDRING.plan) { CMDRING.planLook = false; CMDRING.planWaits = false; CMDRING.planKnee = false; CMDRING.planOne = false; CMDRING.planNear = false; CMDRING.planDigits = false; }   // (TPS_QRING=0 on the page's stand is the page's ?qring=0: what rides on the ring goes with it)
