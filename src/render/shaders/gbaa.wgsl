@@ -48,7 +48,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   // (|d| ≥ ½: the encoder's NONE, or an edge that does not cross this pixel) shifts nothing
   var sh = select(vec2f(-0.5), vec2f(0.5), off >= vec2f(0.0)) - off;
   sh = select(sh, vec2f(0.0), abs(off) >= vec2f(0.5));
-  var c = textureLoad(hdrCopy, p, 0).xyz;
+  let c4 = textureLoad(hdrCopy, p, 0); var c = c4.xyz;
   let ax = abs(sh.x); let ay = abs(sh.y);
   if (max(ax, ay) > 1e-3) {
     var nb: vec2i; var w: f32;
@@ -59,5 +59,5 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
       c = tmInv(mix(tm(c), tm(cn), clamp(w, 0.0, 0.5)));
     }
   }
-  textureStore(hdrOut, p, vec4f(c, 1.0));
+  textureStore(hdrOut, p, vec4f(c, c4.a));   // (alpha carried through: the composite marks an open fire's pixels in it for the temporal resolve, composite.wgsl fireReact)
 }

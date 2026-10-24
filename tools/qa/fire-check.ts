@@ -33,9 +33,12 @@
 //             team sees when the fog has its lamp as one lit unseen (RtLight.fog 1, said by hand); with the fog itself raised and the squad at its start,
 //             the frame the fire is put out its record is one at full heat for where the team does not see (the lamp's ghost up, the lamp itself as the
 //             level hung it); with FIRE.fog off (?firefog=0) only where the team sees and no ghost; a recording from before the key replays with it off
-//   look      the flame's numbers (FIRE.look) reach the renderer as they stand (engine.fireLook, twelve numbers); the embers are GPU particles: sparks flagged
+//   look      the flame's numbers (FIRE.look) reach the renderer as they stand (engine.fireLook, sixteen numbers); the embers are GPU particles: sparks flagged
 //             embers, filed over the coals with a seed made by hand from the host's own book, about as many as the table says; with no pool none are filed
 //             and the two games differ in nothing; FIRE.embers 0 = none; a recording from before the key replays with no shimmer, no drawn smoke, no embers
+//   gas       FIRE.gas on with a solver drawing: a look-only source on the FINE lattice at the coals every `every` s, as wide and as dense as the table says, and
+//             the fire's record tells the picture to draw the flame from it (eased to 1); with no solver drawing or put off: none, and the flame of noise;
+//             a recording from before the key replays with it off
 //   off       switch off: the lamp steady at the authored strength where the level hung it, nothing handed to the renderer, the solver or the mixer
 //   old       a recording from before the key replays with it off (journal.ts applyKnobs)
 import { standUp, ROOT, fake } from './headless.ts';
@@ -47,7 +50,7 @@ const DT = 1 / 60;
 export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean> {
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
-  const { FIRE, fireStats, fireShown, fireFlicker, fireSeed, isFire, fireDraws } = await import(`${ROOT}/src/game/fire.ts`);
+  const { FIRE, FIRE_LEAN_WAS, FIRE_LIFT_WAS, FIRE_WANDER_WAS, FIRE_WANDER_UP_WAS, fireHolds, fireStir, fireStats, fireShown, fireFlicker, fireSeed, isFire, fireDraws } = await import(`${ROOT}/src/game/fire.ts`);
   const { FOG } = await import(`${ROOT}/src/game/fogofwar.ts`);
   const { lightEstimateAt } = await import(`${ROOT}/src/game/guards.ts`);
   const J = await import(`${ROOT}/src/game/journal.ts`);
@@ -56,6 +59,12 @@ export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean>
   let fails = 0, checks = 0;
   const verdict = (ok: boolean, label: string, detail: string) => { checks++; if (!ok) fails++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
   const was = { on: FIRE.on, env: process.env.TPS_FIRE };
+  // (the lamp's newer numbers are held at the level's own for the lines written before them — `lamp` below raises them — and the whole table is put back at the end:
+  //  the journal lines of this file put an old recording's defaults into it)
+  const table0: any = JSON.parse(JSON.stringify(FIRE));
+  const putBack = () => { for (const k of Object.keys(table0)) { const v = table0[k], cur = (FIRE as any)[k]; if (v && typeof v === 'object' && !Array.isArray(v)) Object.assign(cur, v); else (FIRE as any)[k] = Array.isArray(v) ? [...v] : v; } };
+  const levels = () => { FIRE.bright = 1; FIRE.reach = 1; FIRE.warm = [1, 1, 1]; FIRE.lift = FIRE_LIFT_WAS; FIRE.wander = FIRE_WANDER_WAS; FIRE.wanderUp = FIRE_WANDER_UP_WAS; };   // (the page's ?firebright=0&firesway=0)
+  levels();
 
   /** the pass stood up, the switch where `on` says (by the stand's own word), its brazier found; `solver` = a smoke solver that says it draws */
   async function rig(on: boolean, solver: boolean) {
@@ -253,7 +262,7 @@ export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean>
           pool.emit = (kind: string, pos: number[], dir: number[], n: number, opts: any) => { if (opts?.ember !== undefined) filed.push({ kind, n, opts, up: pos[1] - t.pos[1], out: Math.hypot(pos[0] - t.pos[0], pos[2] - t.pos[2]) }); return emit0(kind, pos, dir, n, opts); };
           E.particles = pool;
           E.settings = { ...(set0 ?? {}), gpuParticles: true };
-          FIRE.look.gain = 1.5; FIRE.look.shimmer = 0.02;
+          FIRE.look.gain = 1.5; FIRE.look.shimmer = 0.02; FIRE.look.react = 0.6; FIRE.look.lean = 0.2;
           A.step(600); B.step(600);
           const row: number[] = E.fireLook ?? [], PA = fireShown(A.g), PB = fireShown(B.g), sum = filed.reduce((a, f) => a + f.n, 0), cracks = fireStats(A.g).cracks;
           const sparks = filed.length > 0 && filed.every(f => f.kind === 'spark' && f.opts.ember > 0 && f.opts.ember < 1 && typeof f.opts.seed === 'number' && f.up > 0 && f.out < 0.01), seeds = new Set(filed.map(f => f.opts.seed)).size;
@@ -263,12 +272,73 @@ export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean>
           FIRE.embers = 0; const before = filed.length; A.step(60); const none = filed.length - before; FIRE.embers = n0;
           E.settings = set0; E.particles = pool0;
           const k = (J as any).knobsSnapshot(A.g); FIRE.look.shimmer = 0; (J as any).applyKnobs(A.g, k); const own = FIRE.look.shimmer;
-          const k2 = (J as any).knobsSnapshot(A.g); delete k2.tables.FIRE.look; FIRE.look.shimmer = 0.02; FIRE.look.plume = 1; FIRE.embers = 24; (J as any).applyKnobs(A.g, k2); const old = [FIRE.look.shimmer, FIRE.look.plume, FIRE.embers];
-          verdict(row.length === 12 && row[0] === 1.5 && row[7] === 0.02 && sparks && seeds === filed.length && PA?.embers === sum && sum >= steady * 0.5 && sum <= steady * 1.2 + cracks * FIRE.emberCrack + 1 && throwsOk && (PB?.embers ?? 0) === 0 && all.length === 0 && !cut && none === 0 && own === 0.02 && old.every(v => v === 0),
+          const k2 = (J as any).knobsSnapshot(A.g); delete k2.tables.FIRE.look; FIRE.look.shimmer = 0.02; FIRE.look.plume = 1; FIRE.embers = 24; (J as any).applyKnobs(A.g, k2); const old = [FIRE.look.shimmer, FIRE.look.plume, FIRE.embers]; const oldRL = FIRE.look.react === 0 && FIRE.look.lean === FIRE_LEAN_WAS;
+          verdict(row.length === 16 && row[0] === 1.5 && row[7] === 0.02 && row[12] === 0.6 && row[13] === 0.2 && oldRL && sparks && seeds === filed.length && PA?.embers === sum && sum >= steady * 0.5 && sum <= steady * 1.2 + cracks * FIRE.emberCrack + 1 && throwsOk && (PB?.embers ?? 0) === 0 && all.length === 0 && !cut && none === 0 && own === 0.02 && old.every(v => v === 0),
             'look — the flame\'s numbers reach the renderer as they stand, and its embers are particles filed by the host\'s own book: with a pool or with none the two games are the same game',
             `the row handed on: ${row.length} numbers, gain ${row[0]}, shimmer ${row[7]} · ${sum} embers in ${filed.length} emits over ten seconds (about ${steady.toFixed(0)} steady, and ${thrown.length} throws of ${thrown.map(f => f.n).join(', ') || 'none'} for ${cracks} cracks, each harder than a steady one: ${throwsOk ? 'yes' : 'NO'}), every one a spark flagged an ember over the coals with a seed of its own: ${sparks && seeds === filed.length ? 'yes' : 'NO'} · the book says ${PA?.embers} · with no pool: ${PB?.embers ?? 0} · the two games differ in ${all.length} rows${cut ? ' (NOT PROVEN: the compare was cut)' : ''}${all.length ? ': ' + all.slice(0, 3).join(' | ') : ''} · FIRE.embers 0: ${none} more · its own snapshot put back: shimmer ${own} · one without the key: shimmer ${old[0]}, plume ${old[1]}, embers ${old[2]}`);
         }
       } finally { Object.assign(FIRE.look, look0); FIRE.embers = n0; }
+    }
+
+    {
+      const gas0 = { ...FIRE.gas };
+      try {
+        FIRE.gas.on = true;
+        const A = await rig(true, true), B = await rig(true, false), t = A.t, G = FIRE.gas, told: number[] = [];
+        A.g.smoke.keepHot = (h: number) => { told.push(h); };
+        if (!t) verdict(false, 'gas — the pass has a fire', 'none found');
+        else {
+          const fine = (X: any) => X.sources.filter((e: any) => e.kind === 'cloud' && e.look === true && e.lattice === 'fine'), share = (X: any) => (X.g.engine.fires?.[0]?.gas ?? 0) as number;
+          A.step(120); B.step(120);
+          const S = fine(A), up = S.map((e: any) => e.pos[1] - (A.g.engine.fires[0].pos[1] as number)), row: number[] = A.g.engine.fireLook ?? [];
+          const shaped = S.length > 0 && S.every((e: any, i: number) => Math.hypot(e.pos[0] - t.pos[0], e.pos[2] - t.pos[2]) < 0.01 && Math.abs(up[i] - FIRE.height * G.up) < 1e-6 && e.radius === G.radius && e.minVoxels === G.cells && e.density > 0 && e.density <= G.density && e.temperature > 0 && e.temperature <= G.temp && e.ttl === G.every && e.dir[1] === 1);
+          const on = share(A), none = fine(B).length, off = share(B);
+          const toldOn = told.join(','); FIRE.gas.on = false; const n1 = S.length; A.step(90); const after = fine(A).length - n1, back = share(A), toldOff = told.join(','); FIRE.gas.on = true;
+          const k = (J as any).knobsSnapshot(A.g); FIRE.gas.on = false; (J as any).applyKnobs(A.g, k); const own = FIRE.gas.on;
+          const k2 = (J as any).knobsSnapshot(A.g); delete k2.tables.FIRE.gas; FIRE.gas.on = true; (J as any).applyKnobs(A.g, k2); const old = FIRE.gas.on;
+          verdict(shaped && S.length >= 2 / G.every && S.length <= 2 / G.every + 1 && on === 1 && row[10] === G.ref && row[11] === G.lo && fireShown(A.g)?.gases === S.length && none === 0 && off === 0 && after === 0 && back === 0 && toldOn === String(G.keep) && toldOff === `${G.keep},0` && own === true && old === false,
+            'gas — with a solver drawing, a fire\'s flame is gas on the fine lattice: a look-only source of heat at the coals every half second, the solver told to keep hot gas while it burns, and its record says the picture is to draw the flame from it; with no solver, or put off, none and the flame of noise',
+            `${S.length} fine look sources in two seconds (every ${G.every} s), each at the drum's axis ${up[0]?.toFixed(3)} m over the coals, ${G.radius} m wide, smoke ${S[0]?.density} and heat ${S[0]?.temperature} a second, ttl ${S[0]?.ttl}: ${shaped ? 'yes' : 'NO'} · the record's share of gas ${on} · the look row's last two ${row[10]}, ${row[11]} · the book says ${fireShown(A.g)?.gases} · no solver drawing: ${none} sources, share ${off} · the solver told to keep hot gas: ${toldOn} · put off: ${after} more in a second and a half, share back to ${back}, the solver told ${toldOff} · its own snapshot put back: ${own ? 'on' : 'off'} · one without the key: ${old ? 'on' : 'off'}`);
+        }
+      } finally { Object.assign(FIRE.gas, gas0); }
+    }
+    // ---- lamp: a fire's lamp is a fire's (FIRE.bright, .reach, .warm), and the level's own again the moment it is out
+    {
+      const A = await rig(true, false), t = A.t;
+      if (!t) verdict(false, 'lamp — the pass has a fire', 'none found');
+      else {
+        const l = t.light, c0 = [...l.color], r0 = l.range as number, base = t.baseIntensity, W = [1, 0.72, 0.51];
+        const spot = [t.pos[0] - 3, 1.0, t.pos[2]]; let m0 = 0, m1 = 0;
+        A.step(10 * 60, () => { m0 += lightEstimateAt(A.g, spot as any) / 600; });
+        FIRE.bright = 2; FIRE.reach = 1.4; FIRE.warm = [...W]; FIRE.lift = table0.lift; FIRE.wander = table0.wander; FIRE.wanderUp = table0.wanderUp;
+        let sum = 0, n = 0, told = true, tint = true, far = true;
+        A.step(20 * 60, () => { m1 += lightEstimateAt(A.g, spot as any) / 1200; sum += l.intensity / base; n++; told &&= Math.abs((l.steady?.intensity ?? 0) - base * t.factor * 2) < 1e-9; tint &&= l.color.every((v: number, i: number) => Math.abs(v - c0[i] * W[i]) < 1e-9); far &&= Math.abs(l.range - r0 * 1.4) < 1e-9; });
+        t.on = false; t.broken = true; A.step(30); const back = l.color.every((v: number, i: number) => v === c0[i]) && l.range === r0 && l.steady === undefined;
+        t.on = true; t.broken = false; A.step(3);
+        const k = (J as any).knobsSnapshot(A.g); FIRE.bright = 1; (J as any).applyKnobs(A.g, k); const own = FIRE.bright;
+        const k2 = (J as any).knobsSnapshot(A.g); delete k2.tables.FIRE.bright; delete k2.tables.FIRE.reach; delete k2.tables.FIRE.hardy; FIRE.hardy = true; (J as any).applyKnobs(A.g, k2); const old = [FIRE.bright, FIRE.reach, ...FIRE.warm, FIRE.hardy ? 1 : 0];
+        verdict(A.sw && Math.abs(sum / n - 2) < 0.1 && m1 > m0 * 1.5 && told && tint && far && back && own === 2 && old.join() === '1,1,1,1,1,0',
+          'lamp — while it burns the lamp is the table\'s times the level\'s, carries that much further and is tinted, and the steady readers are told so; out, it is the level\'s lamp again; a recording from before the keys replays with the level\'s lamp',
+          `mean ${(sum / n).toFixed(3)} of the authored ${base} (the table says 2) · the light meter three metres off reads ${m0.toFixed(3)} by the level's lamp and ${m1.toFixed(3)} by the fire's · the steady reader told twice the level's: ${told ? 'yes' : 'NO'} · colour × ${W.join(', ')}: ${tint ? 'yes' : 'NO'} · reach ${r0} × 1.4: ${far ? 'yes' : 'NO'} · put out: ${back ? 'the level\'s colour and reach, nothing told' : 'NOT put back'} · its own snapshot put back: bright ${own} · one from before the keys: bright, reach, tint, hardy = ${old.join(', ')}`);
+        levels(); FIRE.hardy = table0.hardy;
+      }
+    }
+    // ---- hardy: to a round's and a blast's fixture rules a burning fire is no fixture (they stir it); its own box blown away still takes it; rule off, it goes like a bulb
+    {
+      const A = await rig(true, false), B = await rig(true, false), t = A.t, D: any = A.g.destr, hardy0 = FIRE.hardy;
+      if (!t || !D || !B.t) verdict(false, 'hardy — the pass has a fire', 'none found');
+      else try {
+        FIRE.hardy = true; A.step(30); B.step(30);
+        const log = A.W.audioLog as any[], n0 = log.length, fx0 = D.fixtureCount, by = [t.pos[0] + 1, 0.4, t.pos[2]];
+        const fixture = D.fixtureLive(t), holds = fireHolds(t); D.bang(by, undefined, 1, false);
+        fireStir(A.g, t); fireStir(A.g, t); fireStir(A.g, t); const queued = fireShown(A.g)?.stir?.length ?? 0, lit = !t.broken; A.step(60);
+        const burning = (A.g.engine.fires ?? []).length, stirred = log.slice(n0).filter(c => c.name === 'fireCrack' && c.opts?.rate === 0.7).length, counted = D.fixtureCount - fx0, left = fireShown(A.g)?.stir?.length ?? 0;
+        B.g.destr.breakFixtureBox(B.t.boxes[0]); B.step(30); const boxGone = B.t.broken && (B.g.engine.fires ?? []).length === 0;
+        FIRE.hardy = false; const fixture2 = D.fixtureLive(t), went2 = D.killFixture(t, by, 'blast', true); A.step(30); const out = t.broken && (A.g.engine.fires ?? []).length === 0;
+        verdict(A.sw && fixture === false && holds && lit && burning === 1 && stirred === 1 && queued === 1 && left === 0 && counted === 0 && boxGone && fixture2 === true && went2 === true && out,
+          'hardy — a burning fire is no fixture to a round or a blast: a bang beside it leaves it burning, three hits in a frame stir it once; its own box blown away takes it; with the rule off it goes out like a bulb',
+          `the rule on: a fixture to the blast rule ${fixture ? 'YES' : 'no'}, ${lit ? 'burning' : 'OUT'} after a bang a metre off, ${burning} fire handed on a second later, ${stirred} stirring crack for three hits (${queued} throw of embers queued, ${left} left a second later), ${counted} counted against the encounter's fixtures · its own box broken: ${boxGone ? 'out' : 'STILL burning'} · the rule off: a fixture ${fixture2 ? 'yes' : 'NO'}, ${went2 ? 'put out' : 'LEFT'}, ${out ? 'nothing handed on' : 'STILL burning'}`);
+      } finally { FIRE.hardy = hardy0; }
     }
     // ---- off
     {
@@ -287,7 +357,7 @@ export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean>
       FIRE.on = true; const k2 = (J as any).knobsSnapshot(A.g); delete k2.tables.FIRE; (J as any).applyKnobs(A.g, k2); const none = FIRE.on;
       verdict(kept === true && none === false, 'old — a recording from before the key replays with it off', `its own snapshot put back: ${kept ? 'on' : 'off'} · one without the table: ${none ? 'on' : 'off'}`);
     }
-  } finally { FIRE.on = was.on; if (was.env === undefined) delete process.env.TPS_FIRE; else process.env.TPS_FIRE = was.env; }
+  } finally { putBack(); FIRE.on = was.on; if (was.env === undefined) delete process.env.TPS_FIRE; else process.env.TPS_FIRE = was.env; }
   console.log(`\nfire-check: ${checks - fails}/${checks} pass${BREAK ? ' (FIRE_BREAK=1: the switch never raised — this run must fail)' : ''}`);
   return fails === 0;
 }
