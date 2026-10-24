@@ -1481,9 +1481,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   Everything else is the creep's (the arc ends it, a wall ends it, the key grabs). NOT the switch rule on purpose: it changes how the
   hold plays everywhere (the tutorials teach "hold left click"), so it is down in the plain page and on both stands until the
   maintainer has tried it; there is no `FROZEN_HOLDS` row because the stands agree. The line over the man reads "press and drag to
-  sneak up on him" while it is up. THE CHECK is `stalkdrag-check.ts` (`probes.ts stalkdrag`; `STALKDRAG_BREAK=1` reds three of six),
+  sneak up on him" while it is up. THE CHECK is `stalkdrag-check.ts` (`probes.ts stalkdrag`; `STALKDRAG_BREAK=1` reds four of seven),
   both stands: still (2 s, 0 cm moved), toward (the whole drag 1.6 m/s, half of it 0.8), side (across, 2° off the man), stops (0.79 m
-  behind him, the key takes him), off, harness. The page drive drags the real mouse in the lab. No hand has held it and nobody has
+  behind him, the key takes him), outside, off, harness. OFF THE VIEW: a press made on the view goes on being the stick with the mouse
+  over the panel or the HUD (`input.ts` window `mousemove`), only while `Input.dragOff`, which `Game.update` writes on the host's input
+  from `STALK.on && STALK.drag` each frame (the editor imports `Input`, so input.ts does not import stalk.ts). It asks the event's own
+  `buttons` (a button let go outside the window sends no mouseup), calls `modsUp` first, keeps tracking through a lock as the view's
+  listener does, and follows no press begun off the view (a lab slider). The `outside` line drives it on a window of lists. The page
+  drive drags the real mouse in the lab (on the real page the drag goes over the panel: 139 px of 140 read with the listener, 46 without). No hand has held it and nobody has
   seen it on a GPU.
 - **Round him: the keys and the stick orbit the man (10-24; `STALK.orbit`, `orbitK` 3, `orbitEdge` 0.05, `orbitSnap` 0.3; `stalk.ts orbited`;
   `?stalkorbit=0`, `TPS_STALKORBIT=1`).** The maintainer: "when you're clicking on an enemy and moving around them, you should really be
