@@ -60,7 +60,7 @@ import { LIGHTWALL } from './lighting';
 import { IRLIGHT } from './irlight';
 import { IR } from './irlaser';
 import { AIRDUST } from './airDust';
-import { FOG } from './fogofwar';
+import { FOG, FOG_EYES_WAS } from './fogofwar';
 import { WALLSNAP } from './wallsnap';
 import { UNSEEN } from './unseen';
 import { FRAG } from './frag';
@@ -330,6 +330,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (typeof (k.tables.FOG as { air?: boolean } | undefined)?.air !== 'boolean') FOG.air = false;   // (a file from before smoke was drawn under the fog: its picture took no smoke over floor nobody saw)
   if (typeof (k.tables.FOG as { ours?: boolean } | undefined)?.ours !== 'boolean') FOG.ours = false;   // (a file from before what the team does was always shown: its blasts' flashes lit only what the team saw, its tracers and sparks were cut there)
   if (typeof (k.tables.FOG as { thin?: boolean } | undefined)?.thin !== 'boolean') FOG.thin = false;   // (a file from before thin things that stand free stopped cutting the fog's sight: every static stopped the squad's eye and the picture's)
+  if (typeof (k.tables.FOG as { eyes?: number } | undefined)?.eyes !== 'number') FOG.eyes = FOG_EYES_WAS;   // (a file from before more than five eyes lifted the fog: a squad of four left a camera's feed no place)
   if (typeof (k.tables.FOG as { edge?: number } | undefined)?.edge !== 'number') FOG.edge = 0;   // (a file from before the fog's edge was soft: its fog ended on a hard line)
   if (typeof (k.tables.FOG as { squadDoors?: boolean } | undefined)?.squadDoors !== 'boolean') FOG.squadDoors = false;   // (a file from before a door the squad works was seen: its leaves stood as the eyes last had them)
   if (typeof (k.tables.FOG as { squadFire?: boolean } | undefined)?.squadFire !== 'boolean') FOG.squadFire = false;   // (a file from before a man the squad shoots at was in the picture: the reticle took only the men the fog's eyes had)

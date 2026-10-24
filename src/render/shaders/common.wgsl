@@ -121,14 +121,14 @@ struct SmokeBound {                // a loose box round some of the smoke (smoke
 @group(0) @binding(9) var linSamp: sampler;
 @group(0) @binding(10) var<storage, read> capsules: array<Capsule>;
 struct FogSightT {            // THE FOG OF WAR'S SIGHT TABLE (render/fogofwar.ts FogSight; asked only for a light that carries a fog bit, the picture's smoke and its particles — fogSeenAt below)
-  dist: array<vec4f, 2560>,   // [eye × FOG_SIGHT_BINS + bin], four to a vec4: how far that eye's level ray along the bin's bearing goes before a box (the head-of-frame pass, shaders/fogsight.wgsl)
-  eyes: array<vec4f, 5>,      // FowU's head (shaders/fogofwar.wgsl), field for field: the eye and its man, …
-  looks: array<vec4f, 5>,     // … where he looks, his cone and near field
+  dist: array<vec4f, 3584>,   // [eye × FOG_SIGHT_BINS + bin], four to a vec4: how far that eye's level ray along the bin's bearing goes before a box (the head-of-frame pass, shaders/fogsight.wgsl)
+  eyes: array<vec4f, 7>,      // FowU's head (shaders/fogofwar.wgsl), field for field: the eye and its man, …
+  looks: array<vec4f, 7>,     // … where he looks, his cone and near field
   cfg: vec4f,                 // x = eyes, y = 1 while this frame's table is written (0: no table — every spot answers 'seen'), z = topPad (m), w = the fog's soft edge: its band (m; 0 = the hard line — shaders/fogofwar.wgsl fowEdge, the fog pass alone reads it)
   soft: vec4f,                // xyz = the cone's soft edges, as FowU.soft · w = one whole number, two bits: 1 = smoke and dust are drawn under the fog too (fogSmokeOn below; 0 = cut there, as it was), 2 = thin things that stand free do not stop a fog eye (fogThinOn)
   thin: array<vec4u, 32>,     // WHICH statics are thin and free (game/fogofwar.ts FOG.thin; scene/thin.ts): a bit a box index, 4096 boxes (fogThinBox below). In the buffer the sight table's own pass reads here too (the stand-in: render/fogofwar.ts FogSight.stand)
 };
-@group(0) @binding(11) var<uniform> fogSight: FogSightT;   // (a UNIFORM, 41 KB: the fragment stage's sampled textures are all spoken for — passes.ts lComp)
+@group(0) @binding(11) var<uniform> fogSight: FogSightT;   // (a UNIFORM, 58 KB: the fragment stage's sampled textures are all spoken for — passes.ts lComp)
 // binding 12 — the per-light reach rows (render/reach.ts, lights.ts reachBuf) — is declared by the scene prelude (frame.ts scenePrelude) as either a read-only
 // storage array<u32> (the default: measured cheaper) or a uniform array<vec4u, REACH_VEC4S> (adapters with only 8 storage buffers per stage, or ?reachUniform
 // for A/B), each with a reachWord(w) accessor over the flat word index
