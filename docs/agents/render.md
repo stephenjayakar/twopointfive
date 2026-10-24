@@ -713,5 +713,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   the block rule skips them anyway); the bridge is paint the far read (the plain coverage past 1.75 cells a pixel) and a reflection (`markHit`) do
   not have, so a joined stroke is about a tenth heavier up close than far off. A wider smooth read (a B-spline over the cells, cut at 0.4) was tried
   first and DROPPED: it filled one-cell holes (the police post's lattice), washed out a lone cell of one paint inside another, and did not keep the
-  cover. Seen so far: the bridge alone, on the software adapter at the pass gate (the diamond joins); the plain ramp has compiled in a page boot and
-  has not been looked at yet. Never on a GPU.
+  cover. Seen on the software adapter at the pass gate (the diamond is one line, the bars have a brushed edge), a rug (the lozenges are slanted and
+  round, no steps) and a crate; never on a GPU. TRAP: the corner test first read its eight cells in two chains of `&&` over `markCell` calls, and
+  with that the software adapter never finished the look page's first frame (three boots of three; every pipeline compiled, no error). It is one
+  call site in a loop over `MK_BRIDGE` now. A page boot that reports its pipelines says nothing until a frame is drawn.
