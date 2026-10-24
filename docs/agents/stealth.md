@@ -1452,6 +1452,21 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   both stands: still (2 s, 0 cm moved), toward (the whole drag 1.6 m/s, half of it 0.8), side (across, 2° off the man), stops (0.79 m
   behind him, the key takes him), off, harness. The page drive drags the real mouse in the lab. No hand has held it and nobody has
   seen it on a GPU.
+- **Round him: the keys and the stick orbit the man (10-24; `STALK.orbit`, `orbitK` 3, `orbitEdge` 0.12; `stalk.ts orbited`;
+  `?stalkorbit=0`, `TPS_STALKORBIT=1`).** The maintainer: "when you're clicking on an enemy and moving around them, you should really be
+  "orbiting" them". THE RULE: with the button held on a man, a move key no longer ends the creep. The way it points is split, as it is
+  first asked for (and again when it swings more than 30° off that), into a share toward the man and a share round him, and those shares
+  are kept while it is held: a key held across him carries Sam round him on the circle he is on, facing him, at the creep's `pace`
+  (1.6 m/s), with a pull of `orbitK` per metre back onto that circle; the share toward or away closes or opens the gap, never inside
+  `keyM`. He goes round no further than `orbitEdge` short of the end of the man's back arc (`outCos`), and waits there. Keys let go, the
+  held button walks him in as before. The stick (`STALK.drag`, the lab's) is taken the same way. With it up the aim's weight
+  (`aimweight.ts`, which turned him to the cursor's floor point, left where the press was) has no say in a creep: he faces the man. ON
+  in the page, OFF in the module and on the frozen stand, a `FROZEN_HOLDS` row; a recording from before it replays with it off. The lab
+  has the toggle ('keys go round him') and the two numbers. THE CHECK is `stalkorbit-check.ts` (`probes.ts stalkorbit`, the grab and
+  stealth families; `STALKORBIT_BREAK=1` reds three of its six lines), both stands: round (the key across him for a second: 53° round
+  him, the gap within 1 cm, facing him within 3°), edge (six seconds: stops at the arc's edge, the creep on), in and out (closes to
+  0.79 m against `keyM` 0.8; away opens 1.08 m in 0.75 s), letgo (walked into reach in 2.6 s), off (a move key ends it), harness. Nobody
+  has played it; the harness has no hand on the keys. One seed: a fixed staging.
 - **The sneak lab's knobs in groups (10-23; `src/host/sneaklab.ts` GROUPS, NUMS, TOGS).** The maintainer, of the panel on his GPU:
   "it's hard to tweak the knobs in the debug panel, illegible. maybe more grouping, shorter names, alt text would help? and some
   explanation of what to look for / test in the alt text?" The one long "The creep" list is ten sections that fold (Start and stop,

@@ -14,7 +14,7 @@
 //                `stalkGrab` exactly where it takes the row's (player.ts startGrab).
 //   OUT          he is dead, held, onto Sam, or out of the picture · past CLOSE.modeOutM · a wall or a door leaf between them · he has turned until Sam is no longer
 //                behind him (`outCos`: a few degrees of grace past the rear arc's own edge) · Sam's hands are no longer empty or are busy · a move key of the
-//                player's own (his feet are his again at once). Out = nothing stalked until the button is pressed afresh; a button merely still down does nothing.
+//                player's own (his feet are his again at once; with `orbit` up his keys take him round the man instead, below). Out = nothing stalked until the button is pressed afresh; a button merely still down does nothing.
 //
 // What it does NOT touch: what the men see and hear (a creeping Sam files the crouch's footfalls and moves under their eyes as any crouched Sam), the grab itself,
 // a civilian's own grab row. With `only` (below) a staff man's 'grab him' row is gone: the held click is the one way to him. The left click that began or carries a stalk is no blow (game.ts asks `stalkHas`).
@@ -110,6 +110,14 @@ export const STALK = {
    *  is taken off the stick there, the way round him is not); the rest is the creep's own rules (the arc, the walls, the key's grab). PROTOTYPE: OFF here,
    *  on the frozen stand AND in the plain page; up in the sneak lab (?sneaklab) and anywhere with ?stalkdrag=1; ?stalkdrag=0 puts it down in the lab. */
   drag: false, dragDead: 14, dragFull: 140,
+  /** ROUND HIM (the maintainer: "when you're clicking on an enemy and moving around them, you should really be "orbiting" them"). With `orbit` up, a move
+   *  key while the button holds a man no longer ends the creep: the way the keys point is taken round the man, not past him. The part of it toward or away from
+   *  him closes or opens the gap; the part across him carries Sam round on the circle he is on (he keeps facing the man, and a pull of `orbitK` per metre off
+   *  that circle holds him to it), at the creep's `pace`. The stick (`drag`) is taken the same way. He goes no further round than `orbitEdge` short of where his
+   *  back arc ends (`outCos`: past it the creep would end), and no closer than `keyM`. Keys let go: the held button walks him in as before. With it up he faces the man in any creep, the aim's weight (aimweight.ts, which turned him
+   *  to the cursor's floor point, left where the press was) has no say there. ON in the page
+   *  (?stalkorbit=0: a move key ends the creep, as it was), OFF here and on the frozen stand. */
+  orbit: false, orbitK: 3, orbitEdge: 0.12,
   /** …and with it a press can begin one from further off ("i think we can make the start radius a bit larger too"): inside `lowBeginM`, kept out to `lowOutM`,
    *  where close.ts's mode range (3.0 and 3.6 m) was the limit. From out there he comes on at his plain crouch walk; the mode's carriage and the sink come in inside it */
   lowBeginM: 4.2, lowOutM: 5,
@@ -120,6 +128,8 @@ type Why = keyof typeof STALK_STATS.out;
 
 interface St { on: Guard | null; grab: Guard | null; t: number; /** on a wall with the button held and nothing in the way of a grab: he is lying in wait */ wait?: boolean; /** the button went down and has not come up or taken a man since: a stalk may begin */ armed?: boolean;
   /** STALK.drag: where on the screen (px) the press that began this stalk was made — the stick's middle */ stick?: [number, number] | null;
+  /** STALK.orbit: the circle round the man he is held to (m), the frame it was last held on, and the way asked for as it was taken: on the floor, then its
+   *  share into the man and its share round him (+ = the way round that turns left about him) */ orbitR?: number; orbitT?: number; orbitAsk?: [number, number, number, number];
   /** the man who broke a stalk off by turning, and when: if he comes round to FACE Sam inside STALK.joltSecs, Sam ducks */ broke?: { gd: Guard; t: number; /** where Sam stood */ at: Vec3 } | null }
 const STATE = new SideMap<Game, St>('stalk.STATE');
 function stateOf(g: Game): St { let s = STATE.get(g); if (!s) { s = { on: null, grab: null, t: -1 }; STATE.set(g, s); } return s; }
@@ -209,8 +219,8 @@ export interface StalkMove { mx: number; mz: number; pace: number; at: Vec3; /**
  *  null = his feet and his aim are his own. */
 /** STALK.drag: the mouse this frame (px on the view) and the camera's floor axes (player.ts: the move keys' own) */
 export interface StalkStick { x: number; y: number; fwd: Vec3; right: Vec3 }
-export function stalkStep(g: Game, lmb: boolean, lmbHit: boolean, ownKeys: boolean, stick?: StalkStick): StalkMove | null {
-  const S = stateOf(g); S.t = g.time; S.grab = null; S.wait = false; brokeDuck(g, S);
+export function stalkStep(g: Game, lmb: boolean, lmbHit: boolean, ownKeys: boolean, stick?: StalkStick, keys?: [number, number]): StalkMove | null {
+  const S = stateOf(g), dt = clamp(g.time - S.t, 0, 0.05); S.t = g.time; S.grab = null; S.wait = false; brokeDuck(g, S);
   if (!free(g)) { end(S, 'hands'); if (lmb || lmbHit) { S.wait = cornerGate(g); const gd = cornerMan(g); if (gd) { S.grab = gd; STALK_STATS.grabs++; STALK_STATS.corner++; STALK_STATS.last = 'corner'; } } return null; }
   if (lmbHit) S.armed = true; else if (!lmb) S.armed = false;
   // (a press made with a move key still down waits for the key: the button held on him begins it the frame his own feet stop — once a press)
@@ -218,7 +228,8 @@ export function stalkStep(g: Game, lmb: boolean, lmbHit: boolean, ownKeys: boole
   if (!S.on && S.armed && !ownKeys) { const gd = pressed(g); if (gd) { S.on = gd; S.armed = false; STALK_STATS.begun++; S.stick = stick ? [stick.x, stick.y] : null; } }
   const gd = S.on; if (!gd) return null;
   if (!lmb && !lmbHit) { end(S, 'let'); return null; }
-  if (ownKeys) { end(S, 'keys'); return null; }
+  const round = STALK.orbit && ownKeys && !!keys;   // (STALK.orbit: his keys take him round the man, the creep goes on)
+  if (ownKeys && !round) { end(S, 'keys'); return null; }
   const p = g.player.char.pos, why = outOf(g, gd, p, false);
   if (why) {   // (STALK.jolt: broken off by the man himself, Sam shrinks back off him — at once when the man is onto him, and when he has turned off his back only if he comes on round to face Sam: brokeDuck; not on the frame a stalk began)
     if (had === gd && STALK.jolt > 0) { if (why === 'him') duck(g, gd, 1); else if (why === 'turned') { if (STALK.joltAtOnce) duck(g, gd, STALK.jolt); else S.broke = { gd, t: g.time, at: [p[0], p[1], p[2]] }; } }   // (joltAtOnce, which only journal.ts raises: the fifth pass's rule to the letter — at any turn, on this frame, whatever stands between them — for a recording of that pass)
@@ -232,7 +243,8 @@ export function stalkStep(g: Game, lmb: boolean, lmbHit: boolean, ownKeys: boole
     if (wait) hold = clamp((dist - STALK.keyM) / Math.max(1e-3, STALK.grabM - STALK.keyM), -1, 1);   // (STALK.key: in reach with the grab on offer he keeps STATION — the man's own speed, and the last of his closing speed let off over the way from `grabM` in to `keyM` — so a man who walks is followed without a stop and a start, and a man who stands is come up on softly; nearer than `keyM` he gives that much way, down to standing still)
     // …or he is in reach on the man's flank, outside the grab's own arc (the man turned a little): he is walked on round to the point behind his back, below
   }
-  if (STALK.drag && stick && S.stick) return dragged(gd, p, at, dist, stick, S.stick);
+  if (round) { const L = Math.hypot(keys![0], keys![1]) || 1; return orbited(g, S, gd, p, at, dist, keys![0] / L, keys![1] / L, STALK.pace, dt); }
+  if (STALK.drag && stick && S.stick) return dragged(g, S, gd, p, at, dist, stick, S.stick, dt);
   // toward the point behind his back: from his rear it is a straight line in; from a rear quarter it swings Sam in behind him as he closes
   const yaw = gd.char.bodyYaw, bx = gp[0] - Math.sin(yaw) * STALK.stationM - p[0], bz = gp[2] - Math.cos(yaw) * STALK.stationM - p[2], bl = Math.hypot(bx, bz) || 1;
   const his = Math.hypot(gd.char.vel[0], gd.char.vel[2]);
@@ -241,14 +253,36 @@ export function stalkStep(g: Game, lmb: boolean, lmbHit: boolean, ownKeys: boole
 }
 /** STALK.drag: the stick's step — the mouse's way from where the press was made, as a way across the floor, and its length as a share of the pace; never
  *  further into the man than `keyM` */
-function dragged(gd: Guard, p: ArrayLike<number>, at: Vec3, dist: number, st: StalkStick, mid: [number, number]): StalkMove {
+function dragged(g: Game, S: St, gd: Guard, p: ArrayLike<number>, at: Vec3, dist: number, st: StalkStick, mid: [number, number], dt: number): StalkMove {
   const dx = st.x - mid[0], dy = st.y - mid[1], m = Math.hypot(dx, dy), k = clamp((m - STALK.dragDead) / Math.max(1, STALK.dragFull - STALK.dragDead), 0, 1);
   if (k <= 0) return { mx: 0, mz: 0, pace: 0, at, keep: true };
   let mx = st.right[0] * dx - st.fwd[0] * dy, mz = st.right[2] * dx - st.fwd[2] * dy; { const L = Math.hypot(mx, mz) || 1; mx /= L; mz /= L; }   // (screen down is the camera's back)
+  if (STALK.orbit) return orbited(g, S, gd, p, at, dist, mx, mz, STALK.pace * k, dt);   // (STALK.orbit: the stick taken round him, as the keys are)
   const ux = (gd.char.pos[0] - p[0]) / Math.max(1e-3, dist), uz = (gd.char.pos[2] - p[2]) / Math.max(1e-3, dist), into = mx * ux + mz * uz;
   let pace = STALK.pace * k;
   if (into > 0 && dist < STALK.keyM + 0.2) { const keep = clamp((dist - STALK.keyM - 0.04) / 0.16, 0, 1); mx -= ux * into * (1 - keep); mz -= uz * into * (1 - keep); const L = Math.hypot(mx, mz); if (L < 1e-3) return { mx: 0, mz: 0, pace: 0, at, keep: true }; mx /= L; mz /= L; pace *= L; }   // (the last 20 cm into him taken off the stick, all of it 4 cm out — his own speed carries him that far: he comes up to `keyM` and stops, and can still go round)
   return { mx, mz, pace, at, keep: true };
+}
+/** STALK.orbit: a way across the floor (`dx`, `dz`, of unit length, at `pace`) taken round the man. It is split as it is first asked for (and again whenever it
+ *  swings more than 30° off that), into its share toward him and its share round him, and those shares are kept while it is held: a key held across him goes
+ *  on round him, not off in a line. The share into him closes the gap (never inside `keyM`); the share round him carries Sam round the circle he is held to
+ *  (`St.orbitR`, which only the first share moves), and never past `orbitEdge` short of his back arc's end. */
+function orbited(g: Game, S: St, gd: Guard, p: ArrayLike<number>, at: Vec3, dist: number, dx: number, dz: number, pace: number, dt: number): StalkMove {
+  const gp = gd.char.pos, d = Math.max(1e-3, dist), ux = (gp[0] - p[0]) / d, uz = (gp[2] - p[2]) / d;   // (toward him)
+  const stale = S.orbitR === undefined || S.orbitT === undefined || g.time - S.orbitT > 0.1, A = S.orbitAsk;
+  if (stale || !A || dx * A[0] + dz * A[1] < Math.cos(Math.PI / 6)) { const r0 = dx * ux + dz * uz; S.orbitAsk = [dx, dz, r0, (ux * dz - uz * dx) >= 0 ? Math.sqrt(Math.max(0, 1 - r0 * r0)) : -Math.sqrt(Math.max(0, 1 - r0 * r0))]; }
+  const K = S.orbitAsk!; let r = K[2], tx = -uz * K[3], tz = ux * K[3];
+  if (r > 0 && dist < STALK.keyM + 0.2) r *= clamp((dist - STALK.keyM - 0.04) / 0.16, 0, 1);   // (as the stick has it: the last 20 cm into him taken off, all of it 4 cm out)
+  const tl = Math.hypot(tx, tz);
+  if (tl > 1e-4) { const c0 = Math.cos(bearingOf(gd, p)), c1 = Math.cos(bearingOf(gd, [p[0] + tx / tl * 0.05, 0, p[2] + tz / tl * 0.05]));
+    if (c1 > c0 && c1 > STALK.outCos - STALK.orbitEdge) { tx = 0; tz = 0; } }   // (round toward his flank only as far as the edge of his back arc, short of where the creep ends)
+  if (stale) S.orbitR = dist;
+  S.orbitR = clamp(S.orbitR! - r * pace * dt, Math.max(STALK.keyM, dist - 0.15), dist + 0.15); S.orbitT = g.time;
+  const pull = clamp(STALK.orbitK * (dist - S.orbitR), -1, 1), want = Math.hypot(Math.hypot(tx, tz), r);
+  let mx = tx + ux * (r + pull), mz = tz + uz * (r + pull); const L = Math.hypot(mx, mz);
+  if (want < 1e-3 || L < 1e-3) return { mx: 0, mz: 0, pace: 0, at, keep: true };
+  mx /= L; mz /= L;
+  return { mx, mz, pace: pace * Math.min(1, want), at, keep: true };
 }
 /** THE TELL BY DISTANCE (close.ts closeTick, once a frame): the man Sam's body speaks of — the one stalked, else the nearest he could begin on —
  *  the point the arm goes for (his neck), and how much of the reach and of the rise the distance asks for. null = none of it (the tell as close.ts has it). */
