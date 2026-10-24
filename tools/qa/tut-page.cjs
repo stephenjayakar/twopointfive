@@ -47,7 +47,7 @@ const at = (page, p) => page.evaluate(p => { const c = document.getElementById('
     try { await page.screenshot({ path: f, timeout: 60000 }); } catch (e) { return `(no picture: ${String(e).slice(0, 60)})`; }
     finally { await page.evaluate(() => { document.getElementById('view').style.visibility = ''; document.getElementById('__still')?.remove(); }); }
     return f; };
-  const url = `http://localhost:${PORT}/?roomclear&squad4&levelFile=${name}.json&paused&quality=${QUALITY}&mute`;
+  const url = `http://localhost:${PORT}/?roomclear&squad4&levelFile=${name}.json&paused&quality=${QUALITY}&mute${process.env.MARKCLEAR_BREAK === '1' ? '&markclear=0' : ''}`;
   log(url);
   if (!held) await page.goto(url, { timeout: 600000 });
   await page.evaluate(async held => { await window.__ready; window.__testVisible = true; if (held && window.__game.lesson.i > 0) window.__game.restartEncounter();   // (a page played before: the mission again, as Shift+Enter gives it)
@@ -88,10 +88,12 @@ const at = (page, p) => page.evaluate(p => { const c = document.getElementById('
       const T = await page.evaluate(() => ({ o: window.__game.orders.log.length, note: document.querySelector('#railprompt .note')?.textContent || '', line: document.querySelector('#railprompt .line')?.textContent || '' }));
       check(T.o === o0 && !!T.note, 'on the hold\'s step a tap of the command key gives no order and words come up under the line', `orders ${o0} → ${T.o} · line "${T.line}" · under it "${T.note}"`);
       log('picture', await shot('91-tap'));
-      await point(s.at); await page.keyboard.down('KeyQ'); await run(page, 30); await page.keyboard.up('KeyQ'); await run(page, 3);
-      const U = await page.evaluate(() => ({ menu: !!window.__orders.menu, flat: !!window.__orders.menu?.flat, line: document.querySelector('#railprompt .line')?.textContent || '', keys: [...document.querySelectorAll('#railprompt .line kbd')].map(k => k.textContent) }));
+      const mk = () => page.evaluate(() => { const e = document.querySelector('.objmark'); if (!e || getComputedStyle(e).display === 'none') return null; const r = e.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+      await point(s.at); const mark0 = await mk(); await page.keyboard.down('KeyQ'); await run(page, 30); await page.keyboard.up('KeyQ'); await run(page, 3);
+      await run(page, 2); const mark1 = await mk(); const U = await page.evaluate(() => ({ menu: !!window.__orders.menu, flat: !!window.__orders.menu?.flat, line: document.querySelector('#railprompt .line')?.textContent || '', keys: [...document.querySelectorAll('#railprompt .line kbd')].map(k => k.textContent) }));
       if (U.flat) check(U.menu && U.keys.length === 1 && /^[1-5]$/.test(U.keys[0]), 'held, the ring is up and stays with the key let go: one ring, and the line names its one digit', `ring ${U.menu}, flat ${U.flat} · line "${U.line}" · keys ${JSON.stringify(U.keys)}`);
       else check(U.menu && /5/.test(U.line) && /3/.test(U.line), 'held, the ring is up and stays with the key let go, and the line names the two digits', `ring ${U.menu} · line "${U.line}"`);
+      check(!!mark0 && !mark1, 'the step\'s mark is drawn on its place, and gives way to the ring held up over it (?markclear=0 keeps it: MARKCLEAR_BREAK=1 loads that)', `before the ring ${mark0 ? `at ${mark0.x.toFixed(0)},${mark0.y.toFixed(0)}` : 'NOT DRAWN'} · with the ring up ${mark1 ? `DRAWN at ${mark1.x.toFixed(0)},${mark1.y.toFixed(0)}` : 'not drawn'}`);
       log('picture', await shot('92-ring'));
       if (U.flat) { await tap('Digit' + U.keys[0]); const V = await page.evaluate(() => ({ menu: !!window.__orders.menu, last: window.__game.orders.log[window.__game.orders.log.length - 1]?.order ?? null })); check(!V.menu && V.last === 'wallCharge', 'that one digit gives the wall charge and the ring is gone: no second ring', `ring up ${V.menu} · the last order '${V.last}'`); }
       else { await tap('Digit5'); await tap('Digit3'); }

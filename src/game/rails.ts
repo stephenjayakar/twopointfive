@@ -92,6 +92,11 @@ export const RAILS = { on: false,
   shiftTap: true,
   /** the big line goes to the bottom edge from over the player and his teammates where they stand under it (ui/railclear.ts; picture only) */
   lineClear: true,
+  /** a step's mark is not drawn where a ring lies over it, the squad's or his own (ui/overlay.ts asks ui/cmdring.ts `covers`; picture only): the mark
+   *  is on the spot a ring opens on, so its circle lay over the ring's middle and the digits of its inner wedges — and with the ring up there the
+   *  place is found, and the line says what to press (`?markclear=0`; a knob of the frame's table like lineClear, and the frame is off on the
+   *  frozen stand) */
+  markClear: true,
   /** a step's own eye is never the one the fog of war has no place for: with the places full (four men up and the seat's lookout) it takes the last
    *  (fogofwar.ts update; before, it was the one dropped, and the squad's own wall charge went off unseen) */
   eyeFirst: true,
