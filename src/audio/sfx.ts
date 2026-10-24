@@ -69,8 +69,9 @@ export const HEARD: Partial<Record<SfxName, number>> = {
   mk12Suppressed: 0.118, mp7Suppressed: 0.086, mk46Report: 0.268, m1014Report: 0.31, m870Report: 0.3, hk45Suppressed: 0.08, g18Report: 0.268,
   fireBed: 0.03, fireCrack: 0.075,   // (an open fire, game/fire.ts: set by hand under a footstep on a hard floor — the bed is a thing you notice when you stop, a crack turns no head)
   beltCoverUp: 0.09, beltBoxOff: 0.075, beltBoxOn: 0.11, beltLay: 0.09, beltCoverDown: 0.15, chargeLmg: 0.17, shellIn: 0.105, boltDrop: 0.18,
-  // (the grab's three beats: no table before them either — set by hand against the hold's voices at the gains they are played at (0.5, 0.45, 0.4): the catch over the
-  //  scuffle it stands in for and under the whip, the strip and the knock each under the catch)
+  // (the grab's three beats: no table before them either — set by hand against the hold's voices at the gains they are played at (0.5, 0.45, 0.4): the catch about
+  //  as loud as the scuffle it stands in for and under the whip, the strip and the knock each under the catch. The takes he picked on 10-24 were made to these
+  //  same numbers, so his picks changed the sounds and not the levels)
   grabCatch: 0.125, gunStrip: 0.1, gunDown: 0.095,
 };
 /** one voice: run, levelled to its HEARD number, and CUT WHERE IT ENDS (`dur` is room to work in — the mixer holds a voice's slot for its buffer's whole length, so a
@@ -822,32 +823,26 @@ export function buildSfx(ctx: SfxContext): Record<SfxName, SfxBuffer> {
       const sole = ts > 0 ? (lp(m, st, 2, 0.05) * 1.3 + (lp(m, st, 3, 0.3) - lp(m, st, 4, 0.08)) * 0.3) * env(ts, 0.005, 0.045) : 0;
       return peel + sole;
     }, 227),
-    // ---- THE GRAB AS THREE BEATS (played by name in place of grabScuffle and the knocked-out gun's borrowed magDrop: the catch as the arm lands, the strip 0.22 s
-    //      after it at his gun hand, the gun let down about 0.8 s after it at the floor — low thump, bright snap, dull knock). FIRST TAKES, written blind: nobody has
-    //      heard one. Other takes of each: audio/sfxAlt.ts.
-    // the catch: Sam's sleeve whipping round the man's neck (cloth swelling for a fortieth of a second and STOPPED by what it lands on), then one firm thump of a chest
-    // into a back 28 ms in — its weight between 100 and 500 Hz so a laptop's speakers carry it, the slap of a rig on a jacket over it, one buckle — and the breath
-    // the man snatches, shut off by the forearm seventy milliseconds after it starts. Nothing after that but his collar settling: a catch, not a struggle
-    grabCatch: make(ctx, 'grabCatch', 0.31, 4201, v => {
-      v.hiss(0, 1400, 6500, 0.026, 0.004, 0.42); v.hiss(0, 450, 1600, 0.026, 0.005, 0.25);                // the sleeve, and the heavier cloth of the arm under it
-      thud(v, 0.028, 150, 0.1, 1.0, 520); v.hiss(0.028, 220, 900, 0.001, 0.011, 0.9);                   // chest into back
-      knock(v, 0.03, 1300, 3800, 0.003, 0.2);                                                             // a buckle between them
-      const b = v.layer();
-      v.throat(0.058, 0.085, t => 190 - 500 * t, t => Math.min(1, t / 0.035) * (t < 0.07 ? 1 : Math.exp(-(t - 0.07) / 0.004)),
-        () => [[650, 180, 1], [1500, 250, 0.6], [2700, 300, 0.3]], { open: 0.7, breath: 0.9, voice: 0.35, jitter: 0.05, shimmer: 0.2 }, b);
-      v.add(peakTo(b), 0.4);                                                                              // his breath in, cut off
-      v.hiss(0.15, 700, 3000, 0.02, 0.014, 0.045);                                                       // his collar settling under the arm
+    // ---- THE GRAB AS THREE BEATS (played by name in place of grabScuffle and the knocked-out gun's borrowed magDrop: the catch as the arm lands, the strip 0.25 s
+    //      after it at his gun hand, the gun on the floor 0.70 s after it — a soft bump, a snap and a click, a dull knock). Written blind, three takes of each;
+    //      THE MAINTAINER PICKED BY EAR (10-24: "catch: new 1 · strip: new 2 at 0.25 s · gun down: in the game at 0.70 s"): the catch and the strip below are the
+    //      takes he chose, moved here from audio/sfxAlt.ts with their seeds (the same buffers to the sample), the knock is the first one written.
+    // the catch (his pick, 'new 1'): more sleeve than thump — the whole forearm dragged over his shoulder and collar, Sam closing up behind him 55 ms in (felt more
+    // than struck: its weight about 130 Hz), the jacket bunching under the arm, and his breath in through the nose, pinched off. A catch, not a struggle
+    grabCatch: make(ctx, 'grabCatch', 0.32, 9401, v => {
+      v.hiss(0, 900, 5500, 0.05, 0.008, 0.6); v.hiss(0.004, 350, 1400, 0.05, 0.01, 0.4);                  // the whole forearm dragged over his shoulder and collar
+      thud(v, 0.055, 130, 0.07, 0.45, 420); v.hiss(0.055, 250, 800, 0.002, 0.012, 0.3);                   // Sam closing up behind him: felt more than struck
+      v.hiss(0.075, 1200, 5000, 0.012, 0.03, 0.3);                                                        // the jacket bunching under the arm
+      v.hiss(0.1, 1500, 4200, 0.035, 0.005, 0.22);                                                        // his breath in through the nose, pinched off
+      v.hiss(0.17, 700, 3000, 0.02, 0.014, 0.08);
     }),
-    // the strip: the pistol twisted out of his grip — a dry snap as the grip leaves his palm (skin and polymer, no note in it), the slide rattling in its rails as the
-    // gun turns (four ticks, each the slide's own few modes drawn again, dying), Sam's glove round it, and one small hard click as it turns over in his hand. Bright
-    // and dry against the catch's thump; nothing in it rings longer than a fortieth of a second, so slowed to 0.8 it is a carbine's sling swivel and not a slowed pistol
-    gunStrip: make(ctx, 'gunStrip', 0.27, 4211, v => {
-      knock(v, 0, 1600, 7500, 0.003, 1.0); v.hiss(0, 450, 1800, 0.0004, 0.005, 0.8); v.ring(0, cluster(v, 1300, 4800, 6, 0.007), 0.0004, 0.3);   // the snap
-      for (let k = 0; k < 4; k++) { const at = 0.036 + 0.022 * k + 0.006 * v.u(), a = 0.3 * (1 - 0.17 * k); knock(v, at, 2200, 7000, 0.0012, a); v.ring(at, vary(v, SLIDE, 4, 0.05), 0.0004, a * 0.35); }
-      v.hiss(0.03, 900, 3200, 0.03, 0.012, 0.1);                                                          // the glove
-      clack(v, 0.17, 1400, 6500, 0.009, 0.34); v.ring(0.17, [[2900, 0.006, 1], [4700, 0.004, 0.6]], 0.0003, 0.14);   // over in his hand
+    // the strip (his pick, 'new 2'): one snap and one click, nothing between them — the gun wrenched out against his thumb (a snap with a knuckle in it), and
+    // 0.13 s later the grip turned over into Sam's hand. Hard and dry between the catch's cloth and the knock; nothing in it rings, so slowed to 0.8 it is a carbine and not a slowed pistol
+    gunStrip: make(ctx, 'gunStrip', 0.2, 9412, v => {
+      knock(v, 0, 1200, 8000, 0.0035, 1.0); v.hiss(0, 300, 1100, 0.0005, 0.008, 0.9); v.ring(0, cluster(v, 700, 3600, 7, 0.01), 0.0006, 0.3);   // wrenched out against his thumb: a snap with a knuckle in it
+      clack(v, 0.13, 1800, 7000, 0.008, 0.45); v.ring(0.13, [[3100, 0.005, 1], [5000, 0.004, 0.6]], 0.0003, 0.16);   // turned over, the grip in Sam's hand
     }),
-    // the gun let down: from a low hand onto the floor, flat — ONE dull knock (its weight under 500 Hz, the frame and the magazine dead inside two hundredths of a
+    // the gun on the floor (his pick: the first take, as it was), thrown down flat — ONE dull knock (its weight under 500 Hz, the frame and the magazine dead inside two hundredths of a
     // second, a little steel in the contact), then it rocks flat: three small ticks, each half the last, and the hand leaving it. No bounce and no ring
     gunDown: make(ctx, 'gunDown', 0.34, 4219, v => {
       v.hiss(0, 100, 480, 0.001, 0.018, 1.0); knock(v, 0, 380, 1700, 0.006, 0.6); v.ring(0, cluster(v, 240, 1000, 6, 0.022), 0.0015, 0.3);

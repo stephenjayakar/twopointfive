@@ -3,12 +3,14 @@
 // propThud, lockBreak, magDrop — those four were also redone in the game's table to his note, so the take here is a second answer to the same note).
 // NOTHING HERE IS IN THE GAME'S TABLE: buildSfx / gameSfx never ask this file, a take is rendered the first time somebody asks for it and loaded beside the
 // game's buffer under a name of its own (`audio.loadTake`). A TAKE HE PICKS IS MOVED INTO sfx.ts BY HAND and its place here becomes `PICKED` (10-13: footHard
-// new 1, magIn new 2, rack new 2), so the take beside it keeps its number; a picked place renders nothing and is offered nowhere (`altPicked`).
+// new 1, magIn new 2, rack new 2; 10-24: grabCatch new 1, gunStrip new 2), so the take beside it keeps its number; a picked place renders nothing and is offered nowhere (`altPicked`).
 // Each tells another physical story than the voice it stands beside, and leans on what the toys lacked: contacts as short bands of noise, bodies as many
 // close modes that die at once, air and cloth — not a few notes left ringing. Each is set to the level of the voice it could replace (sfx.ts HEARD, or the two
 // measured rows below), so a pick changes the sound and not how loud it is. They were made and measured where nothing can be listened to.
-// THE GRAB'S THREE BEATS (grabCatch, gunStrip, gunDown: new voices, never heard by anybody) have two other takes each as well — not a note answered but another
+// THE GRAB'S THREE BEATS (grabCatch, gunStrip, gunDown: new voices of 10-23, written blind) have two other takes each as well — not a note answered but another
 // idea of the same beat to choose from: more cloth or a harder slap, a rattle or one snap and a click, set down soft or knocked down hard.
+// He chose on 10-24: the catch's 'new 1' and the strip's 'new 2' are the game's voices, and the gun on the floor stays the first one written (its two
+// other takes are still here to hear beside it).
 import type { SfxBuffer, SfxContext } from './backend';
 import { HEARD, SLIDE, clack, cluster, knock, thud, tuned, vary, voiced, type SfxName } from './sfx';
 import { biquad, peakTo, type Mode, type Tune, type Voice } from './synth';
@@ -293,13 +295,7 @@ const TAKES: Partial<Record<SfxName, readonly Take[]>> = {
   ],
   // the grab's three beats: two other ideas of each
   grabCatch: [
-    { say: 'more sleeve than thump: the arm slides round, a soft bump', dur: 0.32, seed: 9401, fn: v => {
-      v.hiss(0, 900, 5500, 0.05, 0.008, 0.6); v.hiss(0.004, 350, 1400, 0.05, 0.01, 0.4);                  // the whole forearm dragged over his shoulder and collar
-      thud(v, 0.055, 130, 0.07, 0.45, 420); v.hiss(0.055, 250, 800, 0.002, 0.012, 0.3);                   // Sam closing up behind him: felt more than struck
-      v.hiss(0.075, 1200, 5000, 0.012, 0.03, 0.3);                                                        // the jacket bunching under the arm
-      v.hiss(0.1, 1500, 4200, 0.035, 0.005, 0.22);                                                        // his breath in through the nose, pinched off
-      v.hiss(0.17, 700, 3000, 0.02, 0.014, 0.08);
-    } },
+    PICKED,   // (10-24: 'more sleeve than thump' is the game's catch now)
     { say: 'a hard slap: forearm on his chest rig, a grunt knocked out of him', dur: 0.3, seed: 9402, fn: v => {
       knock(v, 0, 300, 1400, 0.007, 1.1); knock(v, 0, 1400, 4200, 0.0025, 0.5);                           // no cloth first: the arm is there at once, on nylon and plates
       thud(v, 0, 120, 0.11, 0.9, 480);
@@ -317,10 +313,7 @@ const TAKES: Partial<Record<SfxName, readonly Take[]>> = {
       v.ring(0.06, [[3600, 0.012, 1], [5300, 0.008, 0.6], [7400, 0.005, 0.3]], 0.0003, 0.12, 0.3);        // a sling swivel, or the lanyard loop
       knock(v, at + 0.02, 1500, 5000, 0.002, 0.3);                                                        // into Sam's palm
     } },
-    { say: 'one snap and one click, nothing between them', dur: 0.2, seed: 9412, fn: v => {
-      knock(v, 0, 1200, 8000, 0.0035, 1.0); v.hiss(0, 300, 1100, 0.0005, 0.008, 0.9); v.ring(0, cluster(v, 700, 3600, 7, 0.01), 0.0006, 0.3);   // wrenched out against his thumb: a snap with a knuckle in it
-      clack(v, 0.13, 1800, 7000, 0.008, 0.45); v.ring(0.13, [[3100, 0.005, 1], [5000, 0.004, 0.6]], 0.0003, 0.16);   // turned over, the grip in Sam's hand
-    } },
+    PICKED,   // (10-24: 'one snap and one click' is the game's strip now)
   ],
   gunDown: [
     { say: 'set down soft, as onto carpet: a pat and the hand leaving it', dur: 0.3, seed: 9421, fn: v => {

@@ -22,13 +22,14 @@ export async function grabVoiceCheck(): Promise<boolean> {
   const guns = (g: any) => g.items.items.filter((it: any) => it.kind === 'rifle' || it.kind === 'pistol');
   /** one man with a gun in his hand taken from behind on a fresh stand, two seconds of it recorded: every audio call and every noise event from the grab on.
    *  `ear`: a second man stood that many metres ahead of him on the lobby's open floor, back turned, to hear it or not · `cancelAfter`: let go that many frames in ·
-   *  `seed`: the game's own die (every take has one, so a red here can be run again) · `drop: false`: HOLD.dropGun left off under the move's key */
-  const take = async (who: 'rifle' | 'pistol', rule: boolean, o: { gunHold?: boolean; ear?: number; seed?: number; cancelAfter?: number; drop?: boolean } = {}) => {
+   *  `seed`: the game's own die (every take has one, so a red here can be run again) · `drop: false`: HOLD.dropGun left off under the move's key · `wall`: taken in
+   *  the office, a wall 0.35 m off Sam's right hand (the thrown gun brushes it on its way down); every other take is on the lobby's open floor */
+  const take = async (who: 'rifle' | 'pistol', rule: boolean, o: { gunHold?: boolean; ear?: number; seed?: number; cancelAfter?: number; drop?: boolean; wall?: boolean } = {}) => {
     console.log = () => { };
     try {
       const W: any = await standUp({ seed: o.seed ?? SEED }); HOLD.dropGun = o.drop !== false; HOLD.disarm = rule; const g = W.game; g.godMode = true; g.player.visibility = 0.02; g.tune.carbineGuards = who === 'rifle' ? 'reyes' : 'none';
       for (let i = 0; i < 5; i++) W.step(DT);
-      const A = g.guards.find((x: any) => x.callsign === 'Reyes'), B = o.ear ? g.guards.find((x: any) => x !== A) : null, at = o.ear ? LOBBY : AT;
+      const A = g.guards.find((x: any) => x.callsign === 'Reyes'), B = o.ear ? g.guards.find((x: any) => x !== A) : null, at = o.wall ? AT : LOBBY;
       g.guards.forEach((x: any, i: number) => { if (x !== A && x !== B) park(x, i); });
       place(A, at, YAW); A.wp = 1; if (B) { place(B, [at[0] + o.ear!, 0, at[2]], YAW); B.hold = true; B.pinned = true; }
       g.teleportPlayer([at[0] - Math.sin(YAW) * 0.8, 0, at[2] - Math.cos(YAW) * 0.8]); g.player.crouch = true; g.player.slot = 'pistol'; g.player.holstered = !o.gunHold; W.step(DT); g.player.visibility = 0.02;
@@ -68,8 +69,8 @@ export async function grabVoiceCheck(): Promise<boolean> {
         `${said(on)} · the take is at ${K.take} s, let go at ${K.drop} s · the catch ${atThroat ? 'at his throat' : 'NOT at his throat'}, the knock ${onFloor ? 'on the floor by the gun' : 'NOT at the gun on the floor'}`); }
     // ---- the listening page's whole grab is the game's: the same beats, so a retimed move cannot leave the page (and the WAVs grab-sounds-render.ts cuts from it) behind
     { const whole = (SOUNDS as any).grabCatch?.also?.[0]?.plus ?? [], pg = (n: string) => whole.find((l: any) => l.name === n)?.after as number | undefined, gs = one(on, 'gunStrip')[0]?.at, gd = one(on, 'gunDown')[0]?.at, hp = one(on, 'heldProtest')[0]?.at;
-      const ok = [[pg('gunStrip'), gs], [pg('gunDown'), gd], [pg('heldProtest'), hp]].every(([a, b]) => a !== undefined && b !== undefined && Math.abs(a - b) <= 0.02);
-      verdict(ok && near((SOUNDS as any).grabCatch?.rate ?? 0, 1), 'the listening page plays the whole grab on the game\'s own beats (strip, his protest, the gun down, each within 0.02 s) and the catch at the game\'s pinned rate',
+      const ok = [[pg('gunStrip'), gs], [pg('gunDown'), gd], [pg('heldProtest'), hp]].every(([a, b]) => a !== undefined && b !== undefined && Math.abs(a - b) <= 0.01);
+      verdict(ok && near((SOUNDS as any).grabCatch?.rate ?? 0, 1), 'the listening page plays the whole grab on the game\'s own beats (strip, his protest, the gun down, each to the frame: within 0.01 s) and the catch at the game\'s pinned rate',
         `the page: strip ${pg('gunStrip')} s, protest ${pg('heldProtest')} s, gun down ${pg('gunDown')} s · the game: ${gs?.toFixed(3) ?? '—'} / ${hp?.toFixed(3) ?? '—'} / ${gd?.toFixed(3) ?? '—'} s`); }
     // ---- one condition for all three: the move's key without HOLD.dropGun under it is the grab as it was
     { const N = await take('pistol', true, { drop: false });
@@ -77,9 +78,17 @@ export async function grabVoiceCheck(): Promise<boolean> {
         'the move\'s key with HOLD.dropGun off: nothing is stripped, and the grab says the scuffle it always said (none of the three)', `${said(N)} · in his hand ${inHand(N.A)}`); }
     // ---- a carbine is the same two buffers played lower; the pistol hold raps it out a little brighter
     { const R = await take('rifle', rule), P = await take('pistol', rule, { gunHold: true }), s = one(R, 'gunStrip'), d = one(R, 'gunDown'), ps = one(P, 'gunStrip'), pd = one(P, 'gunDown');
-      verdict(s.length === 1 && near(s[0].rate, G.long) && d.length === 1 && near(d[0].rate, G.long) && ps.length === 1 && ps[0].rate > 1 && pd.length === 1 && pd[0].at < (one(on, 'gunDown')[0]?.at ?? 0),
-        'a carbine: the strip and the knock at the long gun\'s lower rate; Sam\'s own pistol drawn: the gun rapped out (a brighter strip) falls from the man\'s hand and lands sooner',
-        `carbine ${said(R)} · pistol hold ${said(P)}`); }
+      const row = (SOUNDS as any).grabCatch?.also?.[1]?.plus ?? [], pg = (n: string) => row.find((l: any) => l.name === n)?.after as number | undefined;
+      const page = [[pg('gunStrip'), s[0]?.at], [pg('gunDown'), d[0]?.at]].every(([a, b]) => a !== undefined && b !== undefined && Math.abs(a - b) <= 0.01);
+      verdict(s.length === 1 && near(s[0].rate, G.long) && d.length === 1 && near(d[0].rate, G.long) && page && ps.length === 1 && ps[0].rate > 1 && pd.length === 1 && pd[0].at < (one(on, 'gunDown')[0]?.at ?? 0),
+        'a carbine: the strip and the knock at the long gun\'s lower rate, on the beats the listening page\'s carbine row plays them (to the frame); Sam\'s own pistol drawn: the gun rapped out (a brighter strip) falls from the man\'s hand and lands sooner',
+        `carbine ${said(R)} · the page's carbine row: strip ${pg('gunStrip')} s, gun down ${pg('gunDown')} s · pistol hold ${said(P)}`); }
+    // ---- by a wall: the thrown gun brushes it on the way down, and the knock is still the floor's, once, where the gun lies
+    { const Wl = await take('pistol', rule, { wall: true }), d = one(Wl, 'gunDown'), it = Wl.gun, open = one(on, 'gunDown')[0]?.at ?? -9;
+      const onFloor = !!d[0]?.pos && !!it && d[0].pos[1] < 0.2 && Math.hypot(d[0].pos[0] - it.pos[0], d[0].pos[2] - it.pos[2]) < 0.35;
+      verdict(d.length === 1 && onFloor && Math.abs(d[0].at - open) <= 0.05,
+        'taken beside a wall the gun brushes on its way down: one knock, at the floor where the gun lies (not at the wall), within 0.05 s of the open floor\'s beat',
+        `gun down ${d.map(c => `${c.at.toFixed(3)} s at height ${c.pos ? c.pos[1].toFixed(2) : '?'}`).join(', ') || 'never'} · on open floor ${open.toFixed(3)} s · the knock ${onFloor ? 'on the floor by the gun' : 'NOT at the gun on the floor'}`); }
     // ---- the same beats on other dice
     { const B = await take('pistol', rule, { seed: OTHER }), O = await take('pistol', false, { seed: OTHER }), a = one(on, 'gunDown')[0], b = one(B, 'gunDown')[0];
       const old = off.gun && O.gun ? Math.hypot(off.gun.pos[0] - O.gun.pos[0], off.gun.pos[2] - O.gun.pos[2]) : -1;   // (the staging's own proof that the dice were other dice: the knocked-out gun lies somewhere else)

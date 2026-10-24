@@ -1334,7 +1334,22 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   open right hand waved over the pair. Now the gun is torn out to a straight arm at Sam's right (`strip.low`), his chest going with it (`strip.yaw` -16),
   and thrown from there (`strip.push` 1.3 m/s out, `strip.spin`). Third pass: let go earlier (`strip.drop` 0.42 s, was 0.5) from a LEVEL arm with the gun
   level, the arm held out `strip.follow` 0.1 s after it; it lands a metre clear on the same beat as before (0.83 s; `grabvoice` green), and the knock is
-  the floor's alone (`disarm.ts GUN_FLOOR`: a thrown gun may touch a wall on its way, which moved the beat). With no knife in the hold the man's right hand is on the arm across his throat from the start (`HeldPose.bare`, `HOLD.bareGrip`
+  the floor's alone (a height test then, `GUN_FLOOR`; a thrown gun may touch a wall on its way, which moved the beat). FOURTH PASS (2026-10-24, the maintainer's own
+  beats, set by ear on the listening page: "strip: new 2 at 0.25 s · gun down: in the game at 0.70 s"): `strip.take` 0.2 → 0.24 (the frame at 0.25 s),
+  the tear in two thirds of the time (`strip.out` 0.34 → 0.33, `strip.drop` 0.42 → 0.395: let go on the frame at 0.40 s, just after the strip voice's own
+  click at 0.38), `strip.free` 0.3 → 0.34 to follow the take, and THE FALL IS TIMED (`strip.fall` 0.311 s; `disarm.ts letGo`): he throws it down as hard
+  as it takes to be on what lies under its landing place that long after it leaves the hand (about 2 m/s from a level arm; the fixed push was 1.05), so
+  the knock does not move a frame with the height of the hand. `fall` 0 or absent = the fixed push (`journal.ts`: a recording from before it). MEASURED
+  headless on the lobby's open floor, one staging, seed 4471, a frame at a time: the knock is on the frame at 0.700 s for a pistol and for a carbine, Sam
+  crouched or standing, on both stands (0.311 is the middle of the 0.303 to 0.318 that lands there; the knock was at 0.800 by the same ruler; a FIXED
+  down push of 1.92 landed a pistol a frame early on the frozen stand's poses), 0.717 s beside the office wall it brushes on the way, 0.62 s when Sam's
+  own pistol raps it out (that one is not timed); it rests 0.97 m from Sam (was 1.06). Sam's hand carries the gun at 3.5
+  to 4.5 m/s where it was 2 to 3 (its peak in the whole move, 5.4 m/s, is the reach in and unchanged in kind; the old grab's first frames were 10.7). AS
+  IT LEAVES THE HAND the gun's velocity changes by 5.2 m/s in a frame (the hand is going back and up at 4 m/s, the gun leaves out and down at 2.4); that jump
+  was 3.8 before, and nobody has watched either. The knock asks WHAT FACE the gun struck (`throwables.ts onBounce` hands the normal on; `disarm.ts
+  gunDown` wants one that faces up) where it asked a height (`GUN_FLOOR` 0.25 m): thrown down harder the gun met the wall under that height and knocked
+  there, and a gun landing on a low slab would have said nothing. `disarm`, `grabvoice`, `holddrop` green on both stands. Judged on mesh stills and these
+  numbers only; never seen on a GPU, and nobody has watched it move. With no knife in the hold the man's right hand is on the arm across his throat from the start (`HeldPose.bare`, `HOLD.bareGrip`
   0.9) instead of half up and open beside his head. CHECK: `tools/qa/disarm-check.ts` (probe `disarm`; beats, pose, ends, off, harness; `DISARM_BREAK=1`
   fails), both stands. Where the gun lands is the item's own physics and was read off stills in one open room; never seen on a GPU.
 - **The close-in poses as pictures with no Blender: `tools/qa/close-stills.ts` + `tools/qa/pose-mesh-raster.py`.** `close-stills.ts [--scene approach-crouch |
