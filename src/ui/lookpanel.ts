@@ -111,11 +111,13 @@ export function buildLookPanel(engine: Engine, fps: () => number, shapes?: { on:
           return { from: { [key]: from }, to: { [key]: to }, apply: () => { lookAmounts[key] = to; send(); return () => { lookAmounts[key] = from; send(); }; } }; } })),
       ];
       const deliver = rec.deliver.bind(rec);
-      rec.deliver = (dump: PerfDump) => {   // (the recorder's own way out first: a download where the page may start one, the shot server on this machine)
-        deliver(dump);
+      rec.deliver = (dump: PerfDump) => {
+        // the recorder's own way out (a download, the shot server on this machine) where no store is handed in. With a store the page is a hosted one that
+        // starts no download: the try only raises the host's "downloads aren't available" notice over a take that did get out
+        if ((window as unknown as { __takeStore?: unknown }).__takeStore) (window as unknown as { __lastPerfDump?: PerfDump }).__lastPerfDump = dump; else deliver(dump);
         const id = `perf-${dump.startedAt.replace(/[:.]/g, '-')}`, read = takeRead(dump, id), words = takeWords(read).join('\n');
         box.value = JSON.stringify(read); box.hidden = false; cp.hidden = false; said.textContent = words;
-        void sendTake(dump, read, t => { said.textContent = `${words}\n${t}`; }).then(t => { said.textContent = `${words}\n${t}`; });
+        void sendTake(dump, read, t => { said.textContent = `${words}\n${t}`; }).then(t => { said.textContent = `${words}\n${t}`; said.scrollIntoView({ block: 'nearest' }); });
       };
       play.addEventListener('click', () => { if (sweep.active) return; if (rec.recording) rec.stop(); else { rec.start('look prototype: a play take (the panel)'); said.textContent = 'recording: play, then press Stop'; } });
       price.addEventListener('click', () => { if (sweep.active) { sweep.stop('the panel'); return; } if (rec.recording) return;
