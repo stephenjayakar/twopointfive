@@ -8,9 +8,10 @@ import { readStalls, stallLines } from './perf-stalls';
 const BREAK = process.env.PERFREC_BREAK === '1';
 const realNow = performance.now.bind(performance); let now = 1000, fake = true; (performance as any).now = () => fake ? now : realNow();
 let red = 0; const check = (ok: boolean, w: string) => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${w}`); if (!ok) red++; };
+const GAME: any = { guards: [], saves: { stats: { autosaves: 3, manual: 0, loads: 0 } } };
 const mk = () => { const timer: any = { lastFrame: new Map([['direct', 3], ['gather', 2]]), results: new Map(), lastRaw: [] };
   const engine: any = { timer, width: 100, height: 50, effectiveScale: 1, lights: { activeCount: 1 }, world: { dynamics: [] }, settings: { renderScale: 1, keepHistories: true }, passes: { reallocs: 0, lastRealloc: '' }, gpu: { adapterInfo: 'fake' } };
-  return new PerfRecorder(engine, { guards: [] } as any, { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 } as any, { label: 'high', adaptive: false, lastChange: '' } as any, () => {}); };
+  return new PerfRecorder(engine, GAME as any, { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 } as any, { label: 'high', adaptive: false, lastChange: '' } as any, () => {}); };
 /** one frame as the page runs it: the step begins (the gap ends), the step takes `cpu` ms with the thread busy, the frame is recorded */
 const step = (r: PerfRecorder, dt: number, cpu = 1) => { r.cpuFrameStart = now; now += cpu; r.cpuUpdate = cpu; r.frame(dt / 1000, 1000 / dt); };
 const page = (vis: any = {}) => { (globalThis as any).document = vis; };
@@ -71,6 +72,11 @@ const page = (vis: any = {}) => { (globalThis as any).document = vis; };
   const r = mk(); r.cpuFrameStart = now; r.start('mid step'); now += 1; r.frame(0.016, 60); now += 12; if (!BREAK) r.beatTick(); step(r, 16); const d = r.stop(false)!;
   const r2 = mk(); r2.start('slow page'); const t0 = now; for (let i = 0; i < 20; i++) { now += 59; step(r2, 60); } r2.long('long-animation-frame', { startTime: t0 + 300, duration: 62 }); r2.long('long-animation-frame', { startTime: t0 + 600, duration: 140 }); const d2 = r2.stop(false)!;
   check(!('beat' in d.frames[0]) && d.frames[1].beat === 12 && d2.events.filter(e => e.kind === 'long').map(e => e.t).join() === '600', 'a take begun inside a step has no beat on its first frame; on a page at 60 ms a frame only a hold well over that is kept'); }
+// 3c · a checkpoint written during the take is an event of the step it was written in, and the report sets it beside the stall that step made
+{ page(); const r = mk(); r.start('saves'); for (let i = 0; i < 60; i++) { now += 15; step(r, 16); } GAME.saves.stats.autosaves++; now += 15; step(r, 16, 60); now += 2; step(r, 78); for (let i = 0; i < 60; i++) { now += 15; step(r, 16); }
+  GAME.saves.stats.loads++; now += 15; step(r, 16); const d = r.stop(false)!, ev = d.events.filter(e => e.kind === 'save' || e.kind === 'load'), R = readStalls(d as any);
+  check(ev.length === 2 && ev[0].kind === 'save' && /4 by the game/.test(ev[0].text) && ev[1].kind === 'load' && R.stalls.length === 1 && R.stalls[0].verdict === 'in the frame' && /^save: a checkpoint was written/.test(R.stalls[0].beside[0] ?? '') && /beside it: save/.test(stallLines(d as any).join('\n')),
+    `a save the game made before the take is no event; one made during it is, and stands beside the stall its step made (${R.stalls[0]?.beside[0]})`); }
 // 4 · the report's reading
 { const f = (t: number, dt: number, o: any = {}) => ({ t, dt, cpu: { update: 0, render: 0.5, other: 0.5 }, gpuSum: 15, gpuUnion: 15, ...o }) as any;
   const run = (n: number, t0: number, o: any = {}, dt = 16.7) => Array.from({ length: n }, (_, i) => f(t0 + i * dt, dt, o));
