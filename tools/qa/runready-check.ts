@@ -3,6 +3,8 @@
 //   bun run tools/qa/runready-check.ts        (also `probes.ts runready`; run it on BOTH stands: TPS_PROFILE=shipped in front for the second)
 //   hands     the pistol in his hand and the sprint held: the animator is told, and over a second of the run his two hands stay together on the gun, below
 //             his chest and ahead of him, the muzzle down, and the gun hand keeps its place by his body where the fist pumped.
+//             (On the page's stand the run passes a thing inside the gun's reach: for those frames the low ready is the wall rule's own, gunwall.ts, with
+//             the key up or down. They are counted apart, and the hands are judged through them too.)
 //   back      Shift let go: the gun is back in its carry within half a second, and nothing is left up (no stance was written, the input is down).
 //   others    the same sprint with the pistol holstered, and with the rifle in his hands, never tells the animator: the bare arms and the long gun's low
 //             ready are as they were.
@@ -14,6 +16,7 @@
 import { standUp, ROOT } from './headless.ts';
 
 const { RUNREADY } = await import(`${ROOT}/src/game/character.ts`);
+const { gunWallIs } = await import(`${ROOT}/src/game/gunwall.ts`);
 const PR = await import(`${ROOT}/src/host/profile.ts`);
 const JR = await import(`${ROOT}/src/game/journal.ts`);
 const { STAND_ENV } = await import(`${ROOT}/src/host/standEnv.ts`);
@@ -33,11 +36,11 @@ async function world(on: boolean, gun: 'pistol' | 'holstered' | 'rifle') {
   W.cam.yaw = 0; W.cam.rebuild?.(); g.teleportPlayer([...FROM]); pl.crouch = false; const c = pl.char;
   const C = { W, g, pl, c,
     go: (keys: string[], secs: number) => { for (const k of keys) W.input.keys.add(k);
-      const M = { apart: 0, yLo: 9, yHi: -9, fLo: 9, fHi: -9, dip: 9, told: 0, n: 0, sprint: 0, stance: 0, v: 0 };
+      const M = { apart: 0, yLo: 9, yHi: -9, fLo: 9, fHi: -9, dip: 9, told: 0, n: 0, sprint: 0, stance: 0, walled: 0, v: 0 };
       for (let i = 0; i < Math.round(secs / DT); i++) { W.cursorAt([c.pos[0] + 6, 1, c.pos[2]]); W.step(DT); const b = c.bones, r = b.handR, l = b.handL; M.n++;
         M.apart = Math.max(M.apart, Math.hypot(r[0] - l[0], r[1] - l[1], r[2] - l[2])); M.yLo = Math.min(M.yLo, r[1]); M.yHi = Math.max(M.yHi, r[1]);
         const f = (r[0] - c.pos[0]) * Math.sin(c.bodyYaw) + (r[2] - c.pos[2]) * Math.cos(c.bodyYaw); M.fLo = Math.min(M.fLo, f); M.fHi = Math.max(M.fHi, f);
-        M.dip = Math.min(M.dip, -c.gunDir[1]); if (c.anim.runReady) M.told++; if (pl.sprinting) M.sprint++; if (c.anim.stance !== 'none') M.stance++; }
+        M.dip = Math.min(M.dip, -c.gunDir[1]); if (c.anim.runReady) M.told++; if (pl.sprinting) M.sprint++; const wall = gunWallIs(g, c); if (wall) M.walled++; else if (c.anim.stance !== 'none') M.stance++; }
       for (const k of keys) W.input.keys.delete(k); M.v = Math.hypot(c.vel[0], c.vel[2]); return M; },
     still: () => { g.teleportPlayer([...FROM]); for (let i = 0; i < 30; i++) { W.cursorAt([c.pos[0] + 6, 1, c.pos[2]]); W.step(DT); } } };
   C.still(); return C;
@@ -50,8 +53,8 @@ async function handsAndBack() {
   const A = (await world(up(), 'pistol'))!; A.go(RUN, 1.0); const run = A.go(RUN, 1.0);
   const O = (await world(false, 'pistol'))!; O.go(RUN, 1.0); const old = O.go(RUN, 1.0);
   verdict(run.told === run.n && run.sprint === run.n && run.apart < 0.14 && run.yHi < 1.2 && run.fLo > 0.1 && run.dip > 0.4 && run.fHi - run.fLo < 0.12 && old.fHi - old.fLo > (run.fHi - run.fLo) * 2 && run.stance === 0 && run.v > 4,
-    'over a second of the sprint the animator is told, his hands stay together on the pistol, below his chest and ahead of him, the muzzle down, and the gun hand keeps its place where the fist pumped; no stance is written',
-    `${say(run)} · a stance written on ${run.stance} frames\n    with the key down: ${say(old)}`);
+    'over a second of the sprint the animator is told, his hands stay together on the pistol, below his chest and ahead of him, the muzzle down, and the gun hand keeps its place where the fist pumped; no stance is written but the one the wall rule owns',
+    `${say(run)} · a stance written on ${run.stance} frames (the wall rule's own low ready on ${run.walled} more, ${old.walled} with the key down)\n    with the key down: ${say(old)}`);
 
   console.log('\n=== back: Shift let go, the gun is back in its carry ===');
   const walk0 = A.go(['KeyD'], 0.5), walk = A.go(['KeyD'], 0.5), upper = A.c.anim.upper;

@@ -1545,7 +1545,10 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   recording from before it replays the fist. CHECK: `probes.ts runready` (family player; `tools/qa/runready-check.ts`; `RUNREADY_BREAK=1` fails
   `hands`), both stands, the lobby, one seed: over a second of the sprint the hands are at most 11 cm apart (91 with the key down), the gun hand 96
   to 109 cm up and 38 to 39 cm ahead of him (it travelled 58 cm fore and aft as a fist), the muzzle at least 49° down; beside it the rifle's sprint
-  reads 105 to 119 cm, 33 to 34 cm, 41°. Half a second after Shift is let go the carry is back. LOOK AT IT: `pose-strip.ts sprint-pistol |
+  reads 105 to 119 cm, 33 to 34 cm, 41° (the frozen stand's numbers). ON THE PAGE'S STAND the same run passes a thing inside the gun's reach: for 8 of
+  the 60 frames the low ready is the wall rule's own (12 with the key down, so it is not this rule's doing), the hands stay together through them
+  (the gun hand 94 to 109 cm up, 38 to 42 cm ahead, the muzzle at least 45° down), and the check counts those frames apart (`gunWallIs`) and wants
+  no other stance written. Half a second after Shift is let go the carry is back. LOOK AT IT: `pose-strip.ts sprint-pistol |
   sprint-pistol-old | sprint-rifle` (capsules), `pose-mesh.ts operator_1 sprint-pistol --inhand --at <secs>` (the worn mesh; `sprint-pistol-old` =
   before). NOT TOUCHED: gunhand.ts / inhand.ts (how a gun sits in a hand) and the creep's arms. NOT SEEN, NOT PLAYED: never on a GPU or in the
   page; the numbers are first numbers off the capsule strips and CPU-skinned stills; the way into the sprint and out of it was looked at as a capsule strip only
