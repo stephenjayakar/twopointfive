@@ -60,7 +60,7 @@ export function charLabFrame(game: Game, cam: FollowCamera): void {
   const p = game.player.char.pos, look: [number, number, number] = [p[0], p[1] + CHARLAB.height, p[2]], yaw = CHARLAB.yaw * DEG, pitch = CHARLAB.pitch * DEG;
   // THE EYE STAYS ON YOUR SIDE OF A WALL: a camera at a man's height has no roof to look down through, and three metres behind you is often the next room
   // (camera.ts rebuild: the eye is `dist` back from the look point along the view). `clear(a)` = how far back the eye can stand looking from angle a, up to
-  // the distance asked. Too near on the angle asked → the nearest angle, a twelfth of a turn at a time to either side, that gives room; none → the roomiest.
+  // the distance asked. Too near on the angle asked → the roomiest of the twelve angles a twelfth of a turn apart, a nearer one preferred.
   // Coming in is at once (a frame behind a wall is a frame of wall); going back out is eased, so a post passed in a slow turn does not make the picture jump.
   const cp = Math.cos(pitch), sp = Math.sin(pitch), want = CHARLAB.dist, enough = Math.min(NEAR, want);
   const eye = (a: number, d: number): [number, number, number] => [look[0] + Math.sin(a) * cp * d, look[1] + sp * d, look[2] + Math.cos(a) * cp * d];
@@ -72,7 +72,7 @@ export function charLabFrame(game: Game, cam: FollowCamera): void {
     return Math.max(0, lo - ROOM);
   };
   let at = yaw, dist = clear(yaw);
-  if (dist < enough) for (let k = 1; k <= 6 && dist < enough; k++) for (const side of [1, -1]) { const a = yaw + side * k * (Math.PI / 6), d = clear(a); if (d > dist) { at = a; dist = d; } if (dist >= enough) break; }
+  if (dist < enough) { let best = dist; for (let k = 1; k <= 6; k++) for (const side of [1, -1]) { const a = yaw + side * k * (Math.PI / 6), d = clear(a), score = d - 0.1 * k; if (score > best) { best = score; at = a; dist = d; } } }   // (the roomiest side, a nearer angle preferred by 10 cm a step: the first angle with room would stop a metre off in a shed)
   dist = Math.max(0.3, dist);   // (a cupboard: nearer than the near plane shows nothing at all)
   if (was.d > 0 && dist > was.d) dist = was.d + (dist - was.d) * Math.min(1, dt * 5);
   was.d = dist;

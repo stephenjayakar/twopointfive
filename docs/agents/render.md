@@ -824,8 +824,8 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   where every outfit is the suit. Nobody notices or hurts you while it is open: `playerInvisible` and `godMode` are raised once on Open, only where they
   were down, and Leave puts down only what the lab raised, with your own outfit and the free camera back. You walk the mannequin into the light you want
   to judge him in. THE EYE STAYS ON YOUR SIDE OF A WALL (`charLabFrame`: `col.segmentBlocked` from the look point to the eye and to a point 0.25 m to
-  either side of it, the distance bisected and 0.25 m kept off the wall); where that leaves it nearer than 1.2 m it looks from the nearest angle, a
-  twelfth of a turn at a time to either side, that gives room. Coming in is at once, going back out is eased. `quietUtility` is raised with the two
+  either side of it, the distance bisected and 0.25 m kept off the wall); where that leaves it nearer than 1.2 m it looks from the roomiest of the twelve
+  angles a twelfth of a turn apart, a nearer one preferred. Coming in is at once, going back out is eased. `quietUtility` is raised with the two
   flags, as a show has it, so NO CHECKPOINT is written while the lab is open (`savestate.ts runNo`): a file with the lab's unseen player in it could
   be loaded later with nothing to put the flag down. `window.__charlab` = `{ state, open, leave, wear, worn, outfits }`. Sam keeps his own
   weapon in any outfit. Never seen on a GPU.
