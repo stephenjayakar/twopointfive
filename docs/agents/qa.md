@@ -318,6 +318,24 @@ but synthetic writes still work.
   a frame there taking seconds and the wall's cut put out of reach, so a scene ends by the player's own cut after `CAP` game seconds and the last page's
   tail is the fake page's to prove; `STEP=script` has the check step the scenes with `__runFrames` instead; about 80 minutes at 320x180). NEVER RUN ON A GPU: no number of its report has been read on a real machine, the seven
   minutes are an estimate, and nobody has watched a scene played or looked at the card.
+- **Stalls: the recorder watches the page's own thread** (`ui/perfrec.ts`, from 10-25). A frame's marks see only inside the frame, and a stall is nearly
+  always between two frames. While a take runs ON THE PAGE (never headless: a headless take is the file it was; `perfrec.watch = false` leaves it off on
+  a page too) a 4 ms timer answers, and each frame's `beat` is the longest it went silent in the GAP before the frame: from the end of the step before to
+  the start of this one, so neither frame's own work is in it. What the browser itself reports as a long task or a long frame becomes a `long` event at the
+  moment it began, with the script it blames by file name (300 of a kind a take, then one `longcap` line; they start at 50 ms, so the beat is the finer of
+  the two; on a page whose usual frame is itself long only one well over it is kept), and the tab going out of sight and coming back are `tab` events. Mind the frame time's own shape: a frame's `dt` runs from the start of the
+  step before to the start of this one, so a slow step shows in the NEXT frame's `dt`, and the reader looks at the row before for it. Reading: a long
+  frame after a long step, or under a long GPU frame = IN THE FRAME; with a beat over three tenths of the gap = the thread was HELD between frames (a timer, a collection, another
+  script; also what the page itself does in its callback after the step is recorded: a sweep's flip, a benchmark's scene change); with a short beat = the thread was FREE and the browser handed the page no frame (its compositor, the GPU's queue, the page around an embedded
+  one). `tools/qa/perf-report.ts` prints a STALLS block (`tools/qa/perf-stalls.ts`: frames over 35 ms and over twice the frames around them, so a slow
+  stretch is not a stall; bursts and how often they come; each stall read as above with the long lines that fall in it; long frames with the tab hidden
+  counted apart; and the slowest ten seconds of the take where they are well under its usual frame, since a slow stretch reads as stutter with no stall
+  in it). It does not guess the display's refresh: frame times on the maintainer's 120 Hz display are not whole refreshes (a take at 45 fps reads a steady
+  22 ms, not 16.7 and 25), and two ways of guessing both gave wrong answers on real takes. The watch is on for every take on a page, the sweep's and the benchmark's too (a timer of three
+  operations 250 times a second; its cost was never measured on a GPU, `watch = false` is the way to an A/B). Check: `bun run tools/qa/perfrec-check.ts`
+  (`PERFREC_BREAK=1` must fail; one part of it runs the real timer on the real clock, one the wiring on a stand-in observer). Why: the maintainer's first take from an embedded page had 40 stalls of about 50 ms in
+  three minutes with the GPU and the frame's CPU as ever, and nothing in the file could say whose they were. Run on a real page on the software adapter;
+  no take from a GPU carries a beat yet.
 - **A page's own rows in the F8 sweep** (`ui/perfsweep.ts PerfSweep.extra`, a list of `SweepExtra { id, label, flip, liveOnly?, warm? }`; the page's
   sweep is `window.__perfsweep`). For a switch that is a page's own and no row of `SWEEP_ROWS` (a prototype page's panel): `flip({ live })` is asked once
   as the take begins and answers `{ from, to, apply: () => undo, settleMs?, ready? }` or, as a string, why the row is skipped here (`ready` = a `warm`

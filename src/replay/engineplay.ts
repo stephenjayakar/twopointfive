@@ -68,6 +68,7 @@ import { carLampsTape } from '../game/carlamps';
 import { roundTape } from '../scene/round';
 import { rowsetTape } from '../game/rowset';
 import { memoryStore } from '../game/savestate';
+import { tapePoses } from '../game/runtape';
 import { resetCivilians } from '../game/civilians';
 
 /** the URL's key */
@@ -182,6 +183,7 @@ export class TapePlay {
   private simInput = Input.detached(); private simCam = new FollowCamera(); private simView = { clientWidth: 1280, clientHeight: 720, width: 1280, height: 720 };
   /** the tape's row cursors and its sensor answers: tapewalk.ts, the walk tools/qa/rerun.ts takes too */
   private walk: TapeWalk | null = null;
+  private poses: ReturnType<typeof tapePoses> | null = null;
   private byN = new Map<number, number>(); private tAt: Float64Array = new Float64Array(1); private simTime = 0; private owed = 0; private first = true;
   private compared = 0; private drift: TapeState['drift'] = null; private worst: TapeState['worst'] = null; private fp: TapeState['fp'] = 'unknown';
   private ui: { bar: HTMLElement; play: HTMLButtonElement; time: HTMLElement; line: HTMLElement; fill: HTMLElement; parted: HTMLElement; ticks: HTMLElement; speed: HTMLButtonElement; slow: HTMLButtonElement; fast: HTMLButtonElement; view: HTMLButtonElement; fog: HTMLButtonElement; nv: HTMLButtonElement; note: HTMLButtonElement; map: HTMLAnchorElement | null; say: HTMLElement; big: HTMLElement; box: HTMLElement; field: HTMLInputElement; marks: HTMLCanvasElement; ghost: HTMLElement; mini: HTMLCanvasElement; modal: HTMLElement; large: HTMLCanvasElement } | null = null;
@@ -232,6 +234,7 @@ export class TapePlay {
     if (rc.knobs) J.applyKnobs(g, rc.knobs as never); this.tables(); if (rc.env) J.applyEnvGame(g, rc.env as never);
     if (!!g.tune.civilians !== civ) resetCivilians(g);   // (the game was built on this machine's kept switch: the floor's civilians are the tape's switch's)
     g.saves.store = memoryStore();   // (a replay's autosaves are the replay's: this browser's own checkpoints are not written over)
+    this.poses = tapePoses(g);
   }
   private flags(g: Game, fl: Plain): void { g.godMode = !!fl.godMode; g.aiEnabled = fl.aiEnabled !== false; g.infiniteAmmo = !!fl.infiniteAmmo; g.playerInvisible = !!fl.playerInvisible; }
 
@@ -263,6 +266,7 @@ export class TapePlay {
     if (this.first) { this.first = false; const rc = T.recipe, kn = rc.knobs as { tune?: Plain } | null; this.tables(); g.fogOfWar.pageLook(); if (kn?.tune) K.assignDeep(g.tune as never, kn.tune); }   // (the last word over what the boot wrote after the staging: this machine's sandbox row, its kept feel rows)
     for (const [, kind, data] of W.outside()) {
       if (kind === 'restart') g.restartEncounter();
+      else if (this.poses?.row(f, kind, data)) { /* where the player was put from outside a step, or by a restart inside the coming one: runtape.ts, as tools/qa/rerun.ts does it */ }
       else if (kind === 'flags') this.flags(g, data as Plain);
       else if (kind === 'tune') K.assignDeep(g.tune as never, data as Plain);
       else if (kind === 'table') { const [name, src] = data as [string, unknown]; const Tb = (K.knobsPlayed() as Record<string, Plain>)[name]; if (Tb && plain(src)) put(Tb, src); if (name === 'FOG') g.fogOfWar.pageLook(); }

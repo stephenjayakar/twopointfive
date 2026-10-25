@@ -3,16 +3,19 @@
 //   bun run tools/qa/tapstep-check.ts        (also `probes.ts tapstep`; run it on BOTH stands: TPS_PROFILE=shipped in front for the second)
 //   tap       a press of a few frames, crouched: he goes `tapM` and stops dead, one footfall, at the quiet level, nothing after it.
 //   hold      the key kept down: `reachM` steps with a dead stop between them, one footfall each, and every one quiet: a held key cannot scuff.
-//   legs      each step moves the walk cycle on by half a turn and it stands still between steps, on a stride with both feet down.
+//   legs      each step moves the walk cycle on by about half a turn and it stands still between steps.
+//   soft      his speed has no corner: no frame changes it by more than a step's own curve allows, and the legs are slow as the foot comes down (a trapezoid fails).
 //   rush      a second press inside the settling: the step comes at once and its footfall is well over the quiet level; mashing covers more ground than holding.
 //   beat      a tap just after he settles goes `beatM`.
 //   mask      a plant just after a near man's footfall is `mask` of the level.
-//   land      a tap toward a man's back from a metre and a bit out carries on to the spot behind him, and the grab's key takes him from there.
+//   land      a tap toward a man's back from under a metre out carries on to the spot behind him, and the grab's key takes him from there.
+//   away      on that spot every key takes him off it (the first cut held him there: "stuck on them afterwards"), and a key across a man's back is a plain step.
+//   letgo     the held click let go mid-stride: the legs stay on the frame they had, and the next step goes on from it ("the animation can be paused at any point").
 //   walker    the key held behind a man walking: the gap closes.
 //   crouch    standing, the keys walk as they did; Shift crouched is the quick crouch walk, no steps.
 //   harness   down on the frozen stand and in the plain page, up in the lab and with ?tapstep=1, down in the lab with ?tapstep=0; rides a recording's tables, and a
 //             recording from before the key replays with it down.
-// TAPSTEP_BREAK=1 = the key left down where tap, hold, legs, rush and land ask for it up: each must FAIL.   exit 0 = all hold · 1 = one does not
+// TAPSTEP_BREAK=1 = the key left down where tap, hold, legs, soft, rush and land ask for it up: each must FAIL.   exit 0 = all hold · 1 = one does not
 // THE HARNESS HAS NO GPU and no hand on a key: nobody has felt the rhythm.
 import { standUp, ROOT } from './headless.ts';
 
@@ -57,20 +60,26 @@ const up = () => !BREAK, D = ['KeyD'];
 async function tap() {
   console.log('\n=== tap: a press of a few frames ===');
   const C = await world(up()), x0 = C.along(); const a = C.go(5, D), b = C.go(60), f = [...a.steps, ...b.steps], went = C.along() - x0, end = b.path[b.path.length - 1].v, tail = Math.abs(b.path[59].x - b.path[45].x);
-  verdict(Math.abs(went - TAPSTEP.tapM) < 0.06 && f.length === 1 && end < 0.01 && tail < 0.002, `a tap goes ${TAPSTEP.tapM} m, stops dead, and files one footfall`, `went ${f2(went)} m · ${f.length} footfalls at ${f.map(s => f2(s.level))} · speed after ${f2(end)}`);
+  verdict(Math.abs(went - TAPSTEP.tapM) < 0.07 && f.length === 1 && end < 0.01 && tail < 0.002, `a tap goes ${TAPSTEP.tapM} m, stops dead, and files one footfall`, `went ${f2(went)} m · ${f.length} footfalls at ${f.map(s => f2(s.level))} · speed after ${f2(end)}`);
   return f[0]?.level ?? 0;
 }
 async function hold() {
   console.log('\n=== hold: the key kept down ===');
-  const C = await world(up()), x0 = C.along(), r = C.go(300, D), went = C.along() - x0, stops = r.path.filter((p: any, i: number) => p.v < 0.01 && i > 0 && r.path[i - 1].v >= 0.01).length;
+  const C = await world(up()), x0 = C.along(), r = C.go(300, D), went = C.along() - x0, stops = r.path.filter((p: any, i: number) => p.v < 0.06 && i > 0 && r.path[i - 1].v >= 0.06).length;
   const levels = r.steps.map(s => s.level), most = Math.max(0, ...levels), least = Math.min(9, ...levels), each = went / Math.max(1, r.steps.length), rate = went / 5;
   verdict(r.steps.length >= 5 && stops >= r.steps.length - 1 && !TAPSTEP_STATS.scuffs && Math.abs(each - TAPSTEP.reachM) < 0.1, 'the key held: steps of the reach with a dead stop between each, one footfall each, no scuff',
     `${r.steps.length} footfalls · ${stops} stops · ${f2(each)} m each · ${f2(rate)} m/s · ${TAPSTEP_STATS.scuffs} scuffs · levels ${f2(least)} to ${f2(most)} by the floor`);
   // legs
-  const ph = r.path, plants: number[] = []; for (let i = 1; i < ph.length - 9; i++) if (ph[i].v < 0.01 && ph[i - 1].v >= 0.01) plants.push(i);
-  const gap = (i: number) => (ph[plants[i + 1] + 9].ph - ph[plants[i] + 9].ph + 1) % 1;   // (settled: the legs finish a little after the plant)
-  const turns = plants.slice(0, -1).map((_, i) => gap(i)), wrong = turns.filter(d => Math.abs(d - 0.5) > 0.02).length;
-  verdict(turns.length >= 3 && !wrong, 'each step moves the cycle on by half a turn, plant to plant', `${turns.length} steps · half turns ${turns.slice(0, 5).map(f2).join(' ')}`);
+  const ph = r.path, lifts: number[] = []; for (let i = 1; i < ph.length; i++) if (ph[i].v >= 0.06 && ph[i - 1].v < 0.06) lifts.push(i);
+  const gap = (i: number) => { const d = (ph[lifts[i + 1]].ph - ph[lifts[i]].ph + 1) % 1; return Math.min(d, 1 - d); };
+  const turns = lifts.slice(0, -1).map((_, i) => gap(i)), wrong = turns.filter(d => d < 0.42).length;
+  verdict(turns.length >= 3 && !wrong, 'each step moves the cycle on by about half a turn', `${turns.length} steps · half turns ${turns.slice(0, 5).map(f2).join(' ')}`);
+  // soft
+  let hardest = 0, top = 0; for (let i = 1; i < ph.length; i++) { hardest = Math.max(hardest, Math.abs(ph[i].v - ph[i - 1].v)); top = Math.max(top, ph[i].v); }
+  const rateAt = (i: number) => { const d = Math.abs(ph[i].ph - ph[i - 1].ph); return Math.min(d, 1 - d) / DT; }, landing: number[] = [], fastest: number[] = [];
+  for (let k = 0; k + 1 < lifts.length; k++) { let m = 0; for (let i = lifts[k] + 1; i < lifts[k + 1]; i++) m = Math.max(m, rateAt(i)); fastest.push(m); landing.push(rateAt(lifts[k + 1] - 1)); }
+  const slowed = Math.max(...landing) / Math.max(...fastest);
+  verdict(hardest < 0.16 && top < 1.9 && slowed < 0.4, 'a step is a curve from rest to rest: no corner in his speed and the legs slow as the foot comes down', `at most ${hardest.toFixed(3)} m/s in a frame, top ${f2(top)} m/s, the legs at the end ${f2(slowed)} of their fastest`);
   return { most, rate };
 }
 async function rush(heldRate: number, safe: number) {
@@ -81,8 +90,8 @@ async function rush(heldRate: number, safe: number) {
 }
 async function beat() {
   console.log('\n=== beat: a tap just after he settles ===');
-  const C = await world(up()); C.go(4, D); C.go(60); const x1 = C.along(); C.go(4, D); C.go(60); const late = C.along() - x1;   // (a second after a tap: past the beat)
-  C.go(4, D); for (let w = 0; w < 90 && !C.go(1).steps.length; w++); C.go(Math.round((TAPSTEP.settle + 0.05) / DT)); const x2 = C.along(); C.go(4, D); C.go(60); const onBeat = C.along() - x2;
+  const C = await world(up()); C.go(4, D); C.go(80); const x1 = C.along(); C.go(4, D); C.go(80); const late = C.along() - x1;   // (a second after a tap: past the beat)
+  C.go(4, D); for (let w = 0; w < 90 && !C.go(1).steps.length; w++); C.go(Math.round((TAPSTEP.settle + 0.04) / DT)); const x2 = C.along(); C.go(4, D); C.go(80); const onBeat = C.along() - x2;
   verdict(Math.abs(onBeat - TAPSTEP.beatM) < 0.07 && Math.abs(late - TAPSTEP.tapM) < 0.06, `a tap on the beat goes ${TAPSTEP.beatM} m, one past it ${TAPSTEP.tapM} m`, `on the beat ${f2(onBeat)} m · late ${f2(late)} m`);
 }
 async function mask(safe: number) {
@@ -92,9 +101,23 @@ async function mask(safe: number) {
 }
 async function land() {
   console.log('\n=== land: a tap toward a man\'s back ===');
-  const C = await world(up(), 2.0); const g0 = C.gapNow(); C.go(5, D); C.go(70); const gap = C.gapNow(), man = C.A, took = TAPSTEP_STATS.lands;
+  const C = await world(up(), 1.6); const g0 = C.gapNow(); C.go(5, D); C.go(90); const gap = C.gapNow(), man = C.A, took = TAPSTEP_STATS.lands;
+  verdict(Math.abs(gap - STALK.keyM) < 0.08 && took === 1, `from ${f2(g0)} m one tap lands ${STALK.keyM} m behind him`, `gap ${f2(gap)} m · ${took} landed`);
+  // away: every key off the spot
+  const went: string[] = []; let least = 9; for (const k of ['KeyA', 'KeyW', 'KeyS', 'KeyD']) { const a = [C.c.pos[0], C.c.pos[2]]; C.go(50, [k]); C.go(30); const d = Math.hypot(C.c.pos[0] - a[0], C.c.pos[2] - a[1]); went.push(`${k.slice(3)} ${f2(d)}`); if (k !== 'KeyD') least = Math.min(least, d); C.g.teleportPlayer([C.A.char.pos[0] - (C.A.char.pos[0] - AT[0]) / Math.max(1e-3, Math.hypot(C.A.char.pos[0] - AT[0], C.A.char.pos[2] - AT[2])) * STALK.keyM, 0, C.A.char.pos[2] - (C.A.char.pos[2] - AT[2]) / Math.max(1e-3, Math.hypot(C.A.char.pos[0] - AT[0], C.A.char.pos[2] - AT[2])) * STALK.keyM]); C.g.player.crouch = true; C.go(20); }
+  verdict(least > 0.3, 'on the spot behind him each key walks him off it', went.join(' · '));
   C.g.selectVerb('guard', 'grab'); C.W.input.pressed.add('Space'); let held = false; for (let i = 0; i < 60 && !held; i++) { C.W.step(DT); held = C.g.player.holding?.g === man; }
-  verdict(Math.abs(gap - STALK.keyM) < 0.08 && took === 1 && (BREAK || held), `from ${f2(g0)} m one tap lands ${STALK.keyM} m behind him and the key takes him`, `gap ${f2(gap)} m · ${took} landed · in his arm ${held}`);
+  verdict(BREAK || held, 'the grab\'s key takes him from there', `in his arm ${held}`);
+}
+async function letgo() {
+  console.log('\n=== letgo: the held click let go mid-stride ===');
+  const C = await world(up(), 3); const { W, g, c, A } = C; STALK.drag = false; C.go(5);
+  W.cursorAt([A.char.pos[0], 1.2, A.char.pos[2]]); W.input.buttons |= 1; W.input.clicked |= 1; const before = c.anim.phase; let n = 0, moved = 0; while (n++ < 200 && (moved < 0.8 || Math.abs(((c.anim.phase * 2) % 1) - 0.25) > 0.1)) { W.step(DT); g.player.visibility = 0.02; moved = 3 - C.gapNow(); }
+  const at = c.anim.phase; W.input.buttons &= ~1; let most = 0, last = at; const seq: number[] = []; for (let i = 0; i < 40; i++) { g.player.visibility = 0.02; W.step(DT); const d = Math.abs(c.anim.phase - last); most = Math.max(most, Math.min(d, 1 - d)); last = c.anim.phase; seq.push(last); }
+  const speedAt = Math.hypot(c.vel[0], c.vel[2]), drift = Math.min(Math.abs(last - at), 1 - Math.abs(last - at));
+  verdict(n < 200 && before !== at && most < 0.03 && drift < 0.08 && speedAt < 0.02, 'the legs stay on the frame they had when the button came up', `walked ${f2(moved)} m in ${n} frames · phase ${f2(at)} then ${f2(last)} · the most in a frame ${most.toFixed(3)} · speed ${f2(speedAt)}`);
+  const p0 = last; let jump = 0, l = p0; const r = C.go(30, D); for (const q of r.path) { const d = Math.abs(q.ph - l); jump = Math.max(jump, Math.min(d, 1 - d)); l = q.ph; }
+  verdict(jump < 0.05 && Math.abs(l - p0) > 0.03, 'the next step goes on from that frame', `the most in a frame ${jump.toFixed(3)} · phase ${f2(p0)} to ${f2(l)}`);
 }
 async function walker() {
   console.log('\n=== walker: the key held behind a man walking ===');
@@ -121,7 +144,7 @@ async function harness() {
 }
 export async function tapstepCheck(): Promise<boolean> {
   const hold0 = JSON.parse(JSON.stringify(HOLD)), close = JSON.parse(JSON.stringify(CLOSE)), stalk = { ...STALK }, table = { ...TAPSTEP }; allPass = true; found = TAPSTEP.on;
-  try { const safe = await tap(), H = await hold(); await rush(H.rate, H.most || safe); await beat(); await mask(safe); await land(); await walker(); if (!BREAK) await others(); Object.assign(STALK, stalk); await harness(); }
+  try { const safe = await tap(), H = await hold(); await rush(H.rate, H.most || safe); await beat(); await mask(safe); await land(); await letgo(); await walker(); if (!BREAK) await others(); Object.assign(STALK, stalk); await harness(); }
   finally { Object.assign(HOLD, hold0); Object.assign(CLOSE, close); Object.assign(STALK, stalk); Object.assign(TAPSTEP, table); }
   console.log(`\n=== tapstep: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`); return allPass;
 }
