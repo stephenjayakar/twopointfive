@@ -1033,6 +1033,28 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     `tutplan-check` on both stands, `lesson-gate`, `rails-check` and `level-needs --run` on both stands and the real page with real keys (36
     lines, the software adapter, held between frames) pass. NOT DONE: nobody has played it; a play where a card was in fact held longer was not
     found or staged, so the held case is the frame's own check's and not this mission's.
+  - **The men are picked with the digits, and no line names a click on bare ground** (2026-10-24; the maintainer: "we should also remove the
+    'click on the ground to select everyone' in plan mode, and change the tutorial to teach using 1, 2, 3, 4, and 5 to select squad members").
+    THE LINES: 'pick' "Press [1] to pick a teammate, then hold [Shift] and press [2] to add another" (its card gains "Every teammate has a number
+    next to them, and you press that number to pick them."), 'pick2' "Now press [3], then hold [Shift] and press [4] to pick the other two", 'all'
+    and 'all2' "Press [5] to pick your whole squad again". The hall and the gates still say only "pick two": a box or the digits, his choice. No
+    step, list, mark or test changed (`picked` asks how many an order would go to, however they were picked), so the level's lived row stands.
+    THE FRAME HAD TO LET THE DIGITS THROUGH: on a tutorial mission the gate dropped every digit as a locked slot's key, the mode up or not (run on
+    the build before this: five presses, five dropped, nobody picked). The switch is the frame's, `RAILS.planDigits` (ON in the page,
+    `?raildigits=0` off; with the frame, so no frozen word of its own beyond `TPS_RAILS=1` and plan mode's `TPS_QPLAN=1 TPS_PLANDIGITS=1`;
+    `journal.ts applyKnobs` puts it off for a recording from before the key). It does two things. (1) With the mode up on a mission that gives
+    `plan`, a digit PRESS passes exactly when `planInput` will take it that tick (`planmode.ts planTakesDigits`, asked by the gate: no menu, no
+    ring, the ring's key neither down nor pressed, no back key on a mission where it closes the mode), so a digit let through never reaches a
+    slot; a digit held, and a digit with the mode down, are dropped as before. That reaches the squad mission's plan steps too: its digits pick
+    men while the mode is up, and are his slots, locked or his, once it is down. (2) PICKS WAIT FOR THEIR LESSON: on a mission where a step's
+    test is `picked` (this one alone), until the first such step is up neither a digit nor the left button picks anybody, so 'view' and 'send'
+    always order all four. Before it, a stray left click on a man there left one man picked and "send your squad" sent one; the way back was the
+    click on bare ground, which is out of the mode. CHECKS: `rails-check` has the line (both levels that have the mode: this one's seat, the
+    squad mission's floor; `RAILDIGITS_BREAK=1` must fail it; its plan-on-the-move rig holds the switch off, that frame having no pick lesson);
+    `tutplan-check` line 3 asks that a box before 'pick' picks nobody and line 8 lets [Shift] be named and bans a click on bare ground from the
+    text; the scripted player presses the digits for 'pick', 'pick2', 'all' and 'all2' and still boxes its pairs at the hall and the gates;
+    `tut-plan-page.cjs` does the same on the real keyboard. MEASURED: see the numbers under this bullet's commit in the git log's message for the
+    hand-in; nobody has played it, and the digits by the men's circles have never been seen on a GPU.
   - **NOT taught, on purpose** (a first prototype): waits on the word added to and taken off a stop (no place where they earn their keep was found), Shift + right click to chain stops,
     the ring by the right button kept down. **Nobody has played it and nothing of it has been seen on a GPU**: the software adapter draws the level and the mode's marks; how the night
     reads, how the plan's lines look over it, and whether nineteen lines feel like a mission or a list are a person's to say.

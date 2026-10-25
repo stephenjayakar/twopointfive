@@ -10,7 +10,8 @@
 //      key alone and the word give no order; he does not move; and the game says there is nothing for the back key to back out of (so Esc and Tab are
 //      the page's own: its pause, its objectives card);
 //   3. THE MODE'S HANDS ARE ITS OWN: the walk keys move the view's point and not him, a right click on the floor is an order to all four and a chain,
-//      a box dragged with the left button picks two men, and the word is still locked until its own step;
+//      a box dragged with the left button picks nobody before the step that teaches picking (rails.ts RAILS.planDigits: the digits and the picks under the
+//      frame are rails-check's line), and the word is still locked until its own step;
 //   4. THE VIEW REACHES EVERY PLACE BY THE WALK KEYS ALONE: with the lesson on each step in turn, the walk keys take the view from where the step before
 //      left it toward every place that step points at — its mark, the end of its drag, the point its view test wants. Each mark must come onto the
 //      picture and each view test must pass;
@@ -21,7 +22,8 @@
 //   7. A SAVE PUT BACK TAKES THE MODE DOWN (planmode.ts planLoaded) AND THE SEAT HAS IT UP AGAIN ON THE NEXT TICK, its view on the four;
 //   8. NOTHING IN THE LESSON ASKS FOR HIS FEET OR FOR A KEY THAT OPENS OR CLOSES THE MODE: no step's test reads where he stands or whether the squad
 //      follows him, neither the frame nor a step gives `move` or `sprint`, no step carries a line for the mode being down, and no line or card names
-//      Tab, Shift, the command key, a walk of his or "yourself".
+//      Tab, the command key, a walk of his, "yourself" or a click on bare ground (the men are picked by the digits: the click that picked everyone is out
+//      of the mode).
 // TUTPLAN_BREAK=1 = RAILS.skyUp is off (the seat is the plain sky seat, the mode down): lines 1, 2, 3, 4, 6, 7 and 9 must fail (line 5 opens its doors by
 // hand, line 8 reads the file).   exit 0 = all hold · 1 = one does not
 import { readFileSync } from 'node:fs';
@@ -47,7 +49,7 @@ async function rig(seed = 1) {
     const level = loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${LEVEL}.json`, 'utf8')));
     W = await standUp({ uploadEvery: 4, level, seed });
     // (the page's own: the frame, the ring on the command key and plan mode with its three later switches — the frozen stand holds each off)
-    RAILS.on = true; Object.assign(CMDRING, { on: true, tapNow: true, stay: true, plan: true, planRts: true, planRun: true, planLook: true, planWaits: true, planKnee: true, planNear: true }); AUTOPILOT.on = true;
+    RAILS.on = true; RAILS.planDigits = true; Object.assign(CMDRING, { on: true, tapNow: true, stay: true, plan: true, planRts: true, planRun: true, planLook: true, planWaits: true, planKnee: true, planNear: true, planDigits: true, planClear: true, wholeSquad: true }); AUTOPILOT.on = true;
     if (BREAK) RAILS.skyUp = false;   // (the seat does not hold the mode up: the plain sky seat, as the build was)
     started = startFromQuery(W.game, `?levelFile=${LEVEL}.json&roomclear=1&squad4`);
   } finally { console.log = log; console.warn = warn; console.error = err; }
@@ -94,10 +96,13 @@ export async function tutplanCheck(): Promise<boolean> {
       R.run(4.0);   // (they walk to the spot and stand: a box round two men who are still filing past each other takes a third)
       const q = two.flatMap(m => [R.px([m.char.pos[0], 0, m.char.pos[2]]), R.px([m.char.pos[0], 1.7, m.char.pos[2]])]);
       R.button(1, [Math.min(...q.map(v => v[0])) - 10, Math.min(...q.map(v => v[1])) - 10], [Math.max(...q.map(v => v[0])) + 10, Math.max(...q.map(v => v[1])) + 10]);
-      const picked = O.recipients().length, d0 = RAILS_STATS.dropped; R.press('KeyF'); const word = RAILS_STATS.dropped - d0;
-      verdict(panned > 3 && moved < 0.05 && gave === 1 && chains === 1 && who === 4 && picked >= 1 && picked < 4 && g.rails.locks('word') && word >= 1,
-        'the mode\'s hands are its own: the walk keys move the view and not him, a right click on the floor is one order to all four and a chain, a box dragged with the left button picks some of them, and the word is locked until its step',
-        `the view's point moved ${panned.toFixed(1)} m, he ${moved.toFixed(2)} m · right click: orders +${gave}, chains ${chains} of ${who} men · the box picked ${picked} of ${men.length} · word locked ${g.rails.locks('word')}, dropped ${word}`); }
+      const boxIt = () => R.button(1, [Math.min(...q.map(v => v[0])) - 10, Math.min(...q.map(v => v[1])) - 10], [Math.max(...q.map(v => v[0])) + 10, Math.max(...q.map(v => v[1])) + 10]);
+      // (CONTROL: the same box with the step that teaches picking up picks some of them — so the box above was on the men, and it was the lesson that held it)
+      const picked = O.recipients().length, i0 = g.lesson.i; g.lesson.i = (L.steps as any[]).findIndex(T => T.id === 'pick'); R.run(2 / 60); boxIt(); const taught = O.recipients().length; R.press('Digit5'); g.lesson.i = i0; R.run(2 / 60);
+      const d0 = RAILS_STATS.dropped; R.press('KeyF'); const word = RAILS_STATS.dropped - d0;
+      verdict(panned > 3 && moved < 0.05 && gave === 1 && chains === 1 && who === 4 && picked === men.length && taught >= 1 && taught < men.length && g.rails.locks('word') && word >= 1,
+        'the mode\'s hands are its own: the walk keys move the view and not him, a right click on the floor is one order to all four and a chain, a box dragged with the left button picks nobody before the step that teaches picking (rails.ts RAILS.planDigits; rails-check has the digits), and the word is locked until its step',
+        `the view's point moved ${panned.toFixed(1)} m, he ${moved.toFixed(2)} m · right click: orders +${gave}, chains ${chains} of ${who} men · after the box an order would still go to ${picked} of ${men.length} (step '${g.lesson.step?.id}'); the same box with 'pick' up picks ${taught} · word locked ${g.rails.locks('word')}, dropped ${word}`); }
     // ---- 7 (on the same game, last): a save put back takes the mode down as the key would; the seat has it up again on the next tick, its view on the four
     { planLoaded(O); const down = !P.up; R.run(2 / 60); const off = P.look ? flat(P.look, mid()) : NaN;
       verdict(down && P.up && off < 1.0, 'a save put back takes the mode down, and the seat has it up again on the next tick with its view on the four', `down as the save went in ${down} · up two ticks on ${P.up} · the view ${Number.isFinite(off) ? `${off.toFixed(1)} m from the four's middle` : 'has no point'}`); }
@@ -174,12 +179,12 @@ export async function tutplanCheck(): Promise<boolean> {
     // ---- 8: nothing in the lesson asks for his feet or for a key that opens or closes the mode (the file's own words and tests)
     { const steps = L.steps as any[], has = (t: any, is: string): boolean => !!t && (t.is === is || (t.of ?? []).some((x: any) => has(x, is)));
       const words = (T: any): string[] => [T.line, T.planLine, T.noTap, T.menuLine, T.pageLine, T.flatLine, T.explain?.title, T.explain?.text, T.after?.line, T.after?.word].filter((s: unknown) => typeof s === 'string');
-      const NAMES = /\[Tab\]|\[Shift\]|\[B\]|\[Escape\]|walk to|walk into the|yourself|(open|close) plan mode/i;
+      const NAMES = /\[Tab\]|\[B\]|\[Escape\]|walk to|walk into the|yourself|(open|close) plan mode|click[^.]*\bground\b|\bground to pick/i;   // ([Shift] is named: it adds a man to the picked — and Shift alone opens nothing, the command key is what the pair needs)
       const feet = steps.filter(T => has(T.done, 'in') || has(T.done, 'following') || (has(T.done, 'flag') && JSON.stringify(T.done).includes('"plan"'))).map(T => T.id);
       const gives = [...(L.rails.allow ?? []), ...steps.flatMap(T => T.allow ?? [])].filter((a: string) => a === 'move' || a === 'sprint');
       const downLines = steps.filter(T => T.planLine !== undefined).map(T => T.id), named = steps.filter(T => words(T).some(s => NAMES.test(s))).map(T => T.id);
       verdict(!feet.length && !gives.length && !downLines.length && !named.length, 'nothing in the lesson asks for his feet or for a key that opens or closes the mode',
-        `${steps.length} steps · tests that read him: ${feet.join(', ') || 'none'} · \`move\` or \`sprint\` given: ${gives.join(', ') || 'no'} · steps with a line for the mode being down: ${downLines.join(', ') || 'none'} · lines or cards that name Tab, Shift, the command key, a walk or "yourself": ${named.join(', ') || 'none'}`); }
+        `${steps.length} steps · tests that read him: ${feet.join(', ') || 'none'} · \`move\` or \`sprint\` given: ${gives.join(', ') || 'no'} · steps with a line for the mode being down: ${downLines.join(', ') || 'none'} · lines or cards that name Tab, the command key, a walk, "yourself" or a click on bare ground: ${named.join(', ') || 'none'}`); }
   } finally { RAILS.on = keep.on; Math.random = keep.rnd; knobsBack(keep.knobs); AUTOPILOT.on = keep.ap; }
   console.log(`=== tutplan: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;

@@ -77,6 +77,7 @@ async function rig(scn: Scn, seed = 21) {
   const log = console.log; if (!VERBOSE) console.log = () => { };
   let W: any; let why: string | null;
   try { W = await standUp(); W.game.godMode = true; why = scn.stage(W.game); } finally { console.log = log; }
+  (await import(`${ROOT}/src/game/cmdring.ts`)).CMDRING.wholeSquad = false;   // (these lines step who the orders go to with T, the wheel and the cursor, outside plan mode, as the menu was built: the rule that only plan mode picks a part of the squad is held off here and has its own lines, wholesquad-check)
   (await import(`${ROOT}/src/game/cmdring.ts`)).CMDRING.only = false;   // (the menu's own keys and the middle button, as these lines were written: `probes.ts qonly` has the page's, where the ring carries every order)
   const opening: string[] = W.game.messages.map((m: any) => m.text);   // (what the staging said, before anything else speaks)
   const game = W.game, input = W.input, O = game.orders, D = game.doorTools;

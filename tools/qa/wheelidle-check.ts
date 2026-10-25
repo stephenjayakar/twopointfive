@@ -33,6 +33,7 @@ export async function wheelidleCheck(): Promise<boolean> {
   try {
     Object.assign(NIGHTBREACH, { squad: 4 });
     const W: any = await standUp(), g = W.game, O = g.orders, input = W.input, DT = 1 / 60;
+    K.wholeSquad = false;   // (lines 4 and 5 ask the choice as it was built, kept outside plan mode: the rule that only plan mode picks a part of the squad has its own check, wholesquad-check)
     const stood = !!K.wheelIdle, ringStood = !!K.on; if (!K.on) K.on = true;   // (a stand with no ring: the ring as it was built, up while its key is down)
     g.godMode = true; g.roomClear.start(3);
     const step = (n = 1) => { for (let i = 0; i < n; i++) W.step(DT); };

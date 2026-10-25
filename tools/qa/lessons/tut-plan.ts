@@ -1,7 +1,8 @@
 // The scripted player for the tutorial's plan mode mission (levels/tut-plan.json; tools/qa/lesson-run.ts runs it as the page opens it: a tutorial mission is
 // always stood up on the shipped stand). Nobody on the floor is his: the frame's sky seat holds plan mode up (rails.ts RAILS.skyUp) and he has the mode's
-// own hands and nothing else — its walk keys on the view, the left button dragged round men, the right button on a door or the floor (clicked, or dragged
-// for a way to face), the word. Game state is READ to time a press and to find where a thing is on the picture, never to do the deed. The points the
+// own hands and nothing else — its walk keys on the view, the digits that pick men (1 to 4 a man, Shift + a digit adds him, 5 everyone: the lines teach
+// them), the left button dragged round men (the hall and the gates: a line there says only "pick two"), the right button on a door or the floor (clicked,
+// or dragged for a way to face), the word. No left click on bare ground: the mission no longer names it. Game state is READ to time a press and to find where a thing is on the picture, never to do the deed. The points the
 // view is asked to are the lesson's own, read from the level.
 import type { Bot } from '../lesson-run';
 import { CMDRING } from '../../../src/game/cmdring';
@@ -11,7 +12,7 @@ import { planView } from '../../../src/game/planmode';
 export const query = `?roomclear=1&squad4${process.env.TUTPLAN_HOUR ? `&hour=${process.env.TUTPLAN_HOUR}` : ''}`;   // (TUTPLAN_HOUR=dusk: the level at another hour — the page's row gives the mission its own)
 /** the frozen stand's arm of the gate: the mission is played in plan mode, which that stand holds off — the mode's own words (the gate gives them to a
  *  level whose STEPS allow `plan`; here the frame allows it for the whole mission) */
-export const raises = { TPS_QRING: '1', TPS_QPLAN: '1', TPS_PLANLOOK: '1', TPS_PLANWAITS: '1', TPS_PLANKNEE: '1' };
+export const raises = { TPS_QRING: '1', TPS_QPLAN: '1', TPS_PLANLOOK: '1', TPS_PLANWAITS: '1', TPS_PLANKNEE: '1', TPS_PLANDIGITS: '1', TPS_PLANCLEAR: '1', TPS_RAILDIGITS: '1' };
 export const ended = (g: any) => g.lesson.finished;
 /** `TUTPLAN_ALONE=1`: the wrong plan, played on purpose — all four on the hall's front door and the word. The steps still end (the room taken is every
  *  step's other way), and the line printed says what it cost: the men the gun put on a knee. It takes the hall on the step before the one that asks for the word */
@@ -156,10 +157,19 @@ function word(B: Bot, doors: string[], room: string) {
   B.say(`  ${said}`);
   for (let k = 0; k < 2 && !cleared(B, room); k++) { B.wait(0.6); B.press('KeyF', 3); B.until(() => cleared(B, room), 40); }
 }
-/** a left click on bare ground in the yard's middle: everyone is picked again */
+/** THE DIGITS, as the lines teach them: the first digit pressed picks that man alone, each one after it with Shift held adds its man. The men picked must
+ *  be those men of the squad's own order and nobody else — a digit the frame dropped, or one that reached a slot, fails here */
+function digits(B: Bot, ...ds: number[]) {
+  modeUp(B); const slot = B.g.player.slot;
+  ds.forEach((d, i) => { if (!i) B.press(`Digit${d}`, 3); else { B.hold(['ShiftLeft'], 2 / 60); B.I.pressed.add(`Digit${d}`); B.hold(['ShiftLeft', `Digit${d}`], 2 / 60); B.hold(['ShiftLeft'], 2 / 60); B.step(2); } });
+  const want: any[] = ds.map(d => O(B).squad()[d - 1]), got: any[] = O(B).recipients();
+  if (got.length !== want.length || !want.every(m => got.includes(m))) B.fail(`the digits ${ds.join(', then Shift + ')} picked ${got.map(m => m.callsign).join(', ') || 'nobody'}, not ${want.map(m => m?.callsign).join(', ')}`);
+  if (B.g.player.slot !== slot) B.fail(`a digit pressed in plan mode changed what the parked player holds: ${slot} to ${B.g.player.slot}`);
+}
+/** [5]: everyone is picked again */
 function allAgain(B: Bot) {
-  const at = [20, 0, 15]; panTo(B, at); cursor(B, px(B, at)); B.step(2); B.I.clicked |= 1; B.I.buttons |= 1; B.step(); B.I.buttons &= ~1; B.step(3);
-  if (O(B).recipients().length !== squad(B).length) B.fail(`a left click on bare ground picked ${O(B).recipients().length} of ${squad(B).length}`);
+  modeUp(B); B.press('Digit5', 3);
+  if (O(B).recipients().length !== squad(B).length) B.fail(`[5] picked ${O(B).recipients().length} of ${squad(B).length}`);
 }
 let pairA: any[] = [];
 /** a place and a way to face, given: EVERY man of the pair took the way to face (the same tape: one of the two was put behind a corner where the order had
@@ -197,9 +207,9 @@ function putBack(B: Bot) {
 export const steps: Record<string, (B: Bot) => void> = {
   view: B => { seatAsked = 0; modeUp(B); viewTo(B, 'view'); },
   send: B => { rclick(B, WALL); B.until(() => B.g.lesson.step?.id !== 'send', 40); B.wait(1.5); },
-  pick: B => { seat(B, 'with the squad at the guardroom wall'); boxMen(B, twoOf(B, [16, 0, 12])); },
+  pick: B => { seat(B, 'with the squad at the guardroom wall'); digits(B, 1, 2); },
   door1: B => { rdoor(B, 'guard'); },
-  pick2: B => { boxMen(B, free(B)); },
+  pick2: B => { const d = free(B).map(m => O(B).squad().indexOf(m) + 1); digits(B, ...d); },   // ("the other two": whoever is on no door, by their own numbers)
   door2: B => { rdoor(B, 'guard_side'); B.until(() => B.g.lesson.step?.id !== 'door2', 60); },
   all: B => allAgain(B),
   word: B => { word(B, ['guard', 'guard_side'], 'guardroom'); B.wait(1.5); },
