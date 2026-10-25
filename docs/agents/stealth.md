@@ -1782,7 +1782,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   your squad is told of. So a teammate's own test and the fog's line from his head say the same of a man across a thin thing. THE MARKS are a level's
   (`scene/thin.ts`, made at every stand-up) AND the bare studs of a wall a charge opened (`wallbreak.ts`), as for the fog. SIGHT ONLY: his rounds
   still meet the thing (`clearShot` holds a shot it is across: a man with a walk left walks on, a planted man waits with his gun on the man and
-  is counted in contact until one of them moves), sound and light are untouched. NO OTHER SIDE'S EYE CHANGES: a defender, a civilian and a camera
+  is counted in contact until one of them moves), sound and light are untouched. A WINDOW'S BAR is the exception since `WINBARS` (`winbars.ts`,
+  joined here from the build head): a line of fire passes a standing bar and the round breaks it, so past a bar he sees AND shoots; a post, a
+  stovepipe and a stud still hold the shot. NO OTHER SIDE'S EYE CHANGES: a defender, a civilian and a camera
   stop at a thin thing as ever, so across a bar the teammate has the defender and the defender does not have him. It does not need the fog up; it
   does need the thin row. NOT the picture alone: who a teammate has noticed is the game's, so a digest can move. SWITCH: ON in the module and the
   page; `?fogmates=0` = his eye stops at a thin thing, as it was; the debugger's fog page has the row; frozen stand: off, `TPS_FOGMATES=1` raises
