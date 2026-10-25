@@ -55,7 +55,7 @@ function makeStage(): { S: Stage; shots: Shot[] } {
       shots.push({ label, marks: marks.map(m => [m[0], m[1], m[2]]), figs: men.map(c => {
         const caps = c.capsules().caps.map((k: number[]) => [...k]);
         const b = c.bones; let gun: [Vec3, Vec3] | null = null;
-        if (b.handR && !c.ragdoll && (c.__rifle || c.anim.upper === 'aim' || c.anim.upper === 'relaxed')) { const back = c.__rifle ? 0.28 : 0.02, ahead = c.__rifle ? 0.5 : 0.2; gun = [v3.mad(b.handR, c.gunDir, -back), v3.mad(b.handR, c.gunDir, ahead)]; }
+        if (b.handR && !c.ragdoll && (c.__rifle || c.__pistol || c.anim.upper === 'aim' || c.anim.upper === 'relaxed')) { const back = c.__rifle ? 0.28 : 0.02, ahead = c.__rifle ? 0.5 : 0.2; gun = [v3.mad(b.handR, c.gunDir, -back), v3.mad(b.handR, c.gunDir, ahead)]; }
         // the long gun's magazine where the rig draws it (rigProps: ahead of the grip on the carbine, behind it on the bullpup), so a hand going to it can be read
         let mag: [Vec3, Vec3] | null = null;
         if (gun && c.__rifle) { const u = c.gunUnder(), z = c.anim.reloadBack ? -0.12 : 0.1, top = v3.mad(v3.mad(b.handR, c.gunDir, z), u, 0.04); mag = [top, v3.mad(v3.mad(top, u, c.anim.reloadBack ? 0.13 : 0.19), c.gunDir, c.anim.reloadBack ? 0 : 0.06)]; }
