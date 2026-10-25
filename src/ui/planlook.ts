@@ -9,7 +9,7 @@
 // `bun run tools/qa/planlook-check.ts` (probes.ts planlook, family ui) asks it; `window.__planlook` moves it from a page check.
 export const PLANLOOK = { rings: 1 };
 /** the page's own strength, where no visit and no kept choice says otherwise */
-export const PLANLOOK_PAGE = 0.5;
+export const PLANLOOK_PAGE = 0.4;
 const LS = 'twopointsix.planlook';
 let loaded = false;
 

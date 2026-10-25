@@ -29,11 +29,14 @@ export async function hoverpickCheck(): Promise<boolean> {
   const BREAK = process.env.HOVERPICK_BREAK === '1', SEED = 11, FRAMES = 480; let all = true; const rnd = Math.random;
   const verdict = (ok: boolean, label: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
   console.log(`\n=== hoverpick: the cursor's pick, read for the picture, writes nothing of the game's${BREAK ? ' (HOVERPICK_BREAK: asked the old way)' : ''} ===`);
+  /** the rig, with the rule that only plan mode picks a part of the squad held off: these lines ask the cursor on a teammate as a man of his own, as the
+   *  pick was built (wholesquad-check has that rule's lines) */
+  const held = async () => { const R: any = await rig(SEED, true, {}); (await import(`${ROOT}/src/game/cmdring.ts`)).CMDRING.wholeSquad = false; return R; };
   try {
     // the cursor's points, found on a game of their own: a point of the screen that is a door, for each of two doors (the doors here are far from Sam: a
     // few points of each doorway are tried), the door to swing, and a point that is a wall a charge might go on (none where the stand has no such wall)
     const P = { doors: [] as number[][], swing: -1, wall: null as number[] | null, outer: false };
-    { const R: any = await quiet(() => rig(SEED, true, {})), g = R.game, s = g.player.char.pos; R.step(); P.outer = !!(WC.WALLCHARGE.on && WC.WALLCHARGE.outer);
+    { const R: any = await quiet(held), g = R.game, s = g.player.char.pos; R.step(); P.outer = !!(WC.WALLCHARGE.on && WC.WALLCHARGE.outer);
       const near = [...g.doors.list].sort((a: any, b: any) => Math.hypot(a.frameCentre[0] - s[0], a.frameCentre[2] - s[2]) - Math.hypot(b.frameCentre[0] - s[0], b.frameCentre[2] - s[2]));
       for (const d of near) { if (P.doors.length >= 2) break; const c = d.frameCentre, th = d.def.closedDir;
         for (const [y, k] of [[1, -0.6], [1, 0.6], [1, 0], [0.04, 0], [0.04, 0.6], [0.04, -0.6]]) { const q = [c[0] - Math.sin(th) * k, y, c[2] + Math.cos(th) * k]; R.cursor(q); const t = R.O.hover(); if (t?.kind === 'door' && t.door === d) { if (P.swing < 0 && !d.locked) P.swing = g.doors.list.indexOf(d); P.doors.push(q); break; } } }
@@ -42,7 +45,7 @@ export async function hoverpickCheck(): Promise<boolean> {
     Bun.gc(true);
     /** eight seconds with the cursor carried about and a door swung; `read`: what is asked each frame (null: nothing) */
     const run = async (read: ((R: any, kept: any) => any) | null, each?: (R: any, f: number, ask: () => any) => void) => {
-      const R: any = await quiet(() => rig(SEED, true, {})), g = R.game, s = [...g.player.char.pos], kept = OR.hoverStore(), leaf = g.doors.list[P.swing]; let swung = 0;
+      const R: any = await quiet(held), g = R.game, s = [...g.player.char.pos], kept = OR.hoverStore(), leaf = g.doors.list[P.swing]; let swung = 0;
       for (let f = 0; f < FRAMES; f++) {
         if (leaf && (f === 50 || f === 290)) g.doors.use(leaf, s, 0);   // (the leaf goes round, and comes back: the same in every run)
         const a0 = leaf?.angle; R.step(); if (leaf && leaf.angle !== a0) swung++;

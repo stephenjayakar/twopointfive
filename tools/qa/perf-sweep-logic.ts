@@ -73,6 +73,9 @@ sw.start({ rounds: 1, only: ['heldAdaptive'] }); check(S.heldAdaptive === true, 
   for (const id of ['irLight', 'irLightOne']) { const L = { ir: [{}, {}, {}], tube: true, irCount: 3, irCap: Infinity }, h = page(); h.engine.lights = L;
     const inH = toFlip(h, id) && L.irCap === (id === 'irLight' ? 0 : 1); h.Q.pin('medium'); now += 16; h.sw.tick();
     check(inH && !h.sw.active && h.sw.last === 'stopped: quality was changed by hand' && L.irCap === Infinity && L.ir.length === 3 && plain(h.settings) === medium, `a hand preset change while '${id}' is flipped: the sweep stops, the picture takes every infrared light again, his preset stands`); }
+  { const P = { paint: true }, h = page(); h.sw.extra = [{ id: 'lookpaint', label: 'look: paint off', flip: () => ({ from: { paint: true }, to: { paint: false }, apply: () => { P.paint = false; return () => { P.paint = true; }; } }) }];
+    const inH = toFlip(h, 'lookpaint') && P.paint === false; h.Q.pin('medium'); now += 16; h.sw.tick();
+    check(inH && !h.sw.active && h.sw.last === 'stopped: quality was changed by hand' && P.paint === true && plain(h.settings) === medium, "a hand preset change while a page's own row is flipped: the sweep stops, the row is back by its own undo, his preset stands"); }
   const untouched = a.settings.volSteps === 999 && (a.Q as any).climbed.length === 1 && a.engine.rebuilds === rb && JSON.stringify(a.smoke.params) === sm; a.settings.volSteps = want.settings.volSteps;
   check(untouched && plain(a.settings) === medium && a.Q.current === 'medium' && /your quality stands/.test(a.said()), 'his new preset stands row for row, and finding out what a preset writes applied nothing to the page');
   const b = page(), inB = toFlip(b, 'meshNear') && b.settings.meshShadows === false; b.Q.pin('medium'); now += 16; b.sw.tick();
@@ -264,5 +267,57 @@ sw.start({ rounds: 1, only: ['heldAdaptive'] }); check(S.heldAdaptive === true, 
   const own = mk3(); own.start({ rounds: 1, settleMs: 0, measureMs: 0, settleFrames: 1, measureFrames: 2, only: ['held2'] });
   for (let i = 0; i < 60 && own.active; i++) { now += 16; own.tick(); }
   check(!own.active && !r.recording && stops === 1 && said.length === 2, 'on its own, as ever: the sweep stops the recording and says so');
+}
+// ROWS THE PAGE ADDS (PerfSweep.extra): flipped alone in the same rounds as the build's own and put back by their own undo, named in the begin line as the report reads
+// it, skipped with the reason they give (or for a taken id, a flip that throws or is not one, a frozen take on a live-only row), left out of the benchmark's sweep, and
+// a take that names none of them writes the lines it wrote before
+{
+  const mk4 = () => { const e: any[] = [], S4: any = { heldRays: 4, renderScale: 0.8 }, said: string[] = [], r: any = { recording: false, start() { this.recording = true; }, stop() { this.recording = false; }, event(k: string, t: string) { e.push(JSON.parse(t)); } };
+    const p = new PerfSweep({ settings: S4, width: 100, height: 50, timer: { enabled: true } } as any, { fogOfWar: null } as any, { current: 'high', calibrating: false, label: 'high', auto: true } as any, { stats: { live: 0 }, params: { enabled: true } } as any, r, t => { said.push(t); });
+    return { p, e, S4, r, said }; };
+  const go = (p: PerfSweep, o: any, each: () => void = () => {}) => { const said = p.start({ rounds: 2, settleMs: 0, measureMs: 0, settleFrames: 1, measureFrames: 2, ...o }); for (let i = 0; i < 600 && p.active; i++) { now += 16; p.tick(); each(); } return said; };
+  const lines = (e: any[]) => JSON.stringify(e);
+  const plain = mk4(); go(plain.p, { only: ['held2'] });
+  const none = mk4(); none.p.extra = [{ id: 'lookUnasked', label: 'never named', flip: () => { throw new Error('asked'); } }]; go(none.p, { only: ['held2'] });
+  check(lines(plain.e) === lines(none.e) && plain.e.filter(e => e.op === 'seg').length === 5, 'an added row the take does not name is not asked and leaves no line: the take is the one a page without it writes');
+  const L: any = { paint: true, relief: true, asked: 0, undone: 0, kinds: [] as boolean[] }, W = mk4(), seen = new Set<string>();
+  const row = (k: string) => ({ id: `look${k}`, label: `look: ${k} off`, flip: (take: { live: boolean }) => { L.asked++; L.kinds.push(take.live); return { from: { [k]: true }, to: { [k]: false }, apply: () => { L[k] = false; return () => { L[k] = true; L.undone++; }; } }; } });
+  const cyc: any = {}; cyc.me = cyc;
+  const bad: [string, any][] = [['lookSnow', () => 'no snow on this level'], ['lookThrows', () => { throw new Error('boom'); }], ['lookVoid', () => undefined], ['lookNoApply', () => ({ from: {}, to: {} })], ['lookCyclic', () => ({ from: { v: cyc }, to: { v: 1 }, apply: () => () => {} })]];
+  W.p.extra = [row('paint'), row('relief'), ...bad.map(([id, flip]) => ({ id, label: id, flip })), { id: 'lookLive', label: 'look: live', liveOnly: 'a frozen world shows none', flip: () => { L.asked += 100; return 'never asked'; } },
+    { id: 'base', label: 'the name of a segment between flips', flip: () => { L.asked += 100; return 'never asked'; } }, { label: 'no id' } as any];
+  go(W.p, { only: ['held2', 'lookpaint', 'lookrelief', 'lookLive', 'base', '', ...bad.map(b => b[0])] }, () => seen.add(`${W.S4.heldRays}${L.paint ? 'P' : '-'}${L.relief ? 'R' : '-'}`));
+  const b4 = W.e.find(e => e.op === 'begin'), segs = W.e.filter(e => e.op === 'seg'), why = (id: string) => b4.skipped.filter((k: any) => k.id === `added row '${id}'`).map((k: any) => k.why).join(' / ');
+  check(!W.p.active && W.p.last === 'done' && b4.rows.map((r: any) => r.id).join(' ') === 'held2 lookpaint lookrelief' && b4.rows[1].label === 'look: paint off' && b4.rows[1].from.paint === true && b4.rows[1].to.paint === false,
+    `added rows stand in the begin line after the build's own, with their labels and what they write (${b4.rows.map((r: any) => r.id).join(' ')})`);
+  check(segs.length === 13 && ['lookpaint', 'lookrelief', 'held2'].every(id => segs.filter(e => e.id === id && e.state === 'flip').length === 2), `each is flipped once a round, a base between (${segs.length} segments)`);
+  check(seen.has('4-R') && seen.has('4P-') && seen.has('2PR') && !seen.has('4--') && !seen.has('2-R') && !seen.has('2P-'), `each was flipped alone (${[...seen].join(' ')})`);
+  check(L.paint === true && L.relief === true && L.undone === 4 && L.asked === 2 && L.kinds.join() === 'false,false' && W.S4.heldRays === 4, `all back by their own undo; each flip was asked for once and told the take is a frozen one (${L.undone} undone, ${L.asked} asked)`);
+  check(why('lookSnow') === 'no snow on this level' && /boom/.test(why('lookThrows')) && /live takes only/.test(why('lookLive')), `a row that cannot be flipped here is skipped with its reason (${why('lookSnow')} · ${why('lookThrows')} · ${why('lookLive')})`);
+  check(/not one/.test(why('lookVoid')) && /not one/.test(why('lookNoApply')) && /cannot be written/.test(why('lookCyclic')) && /another row is called 'base'/.test(why('base')) && /not a row/.test(why('')) && b4.skipped.length === 8,
+    `a flip that is not one, values a line cannot carry, a segment's own name and a row with no id are skipped, and the take runs (${b4.skipped.length} skipped)`);
+  const X = mk4(); X.p.extra = [{ id: 'held2', label: 'a taken name', flip: () => { L.asked += 100; return 'never asked'; } }, row('paint'), { ...row('paint'), label: 'the same id twice' }]; go(X.p, { rounds: 1, only: ['held2', 'lookpaint'] });
+  const bx = X.e.find(e => e.op === 'begin'), took = bx.skipped.filter((k: any) => /another row is called/.test(k.why)).map((k: any) => k.id).join(' · ');
+  check(X.p.last === 'done' && took === "added row 'held2' · added row 'lookpaint'" && bx.rows.map((r: any) => r.id).join(' ') === 'held2 lookpaint' && bx.rows[1].label === 'look: paint off' && L.asked === 3, `an id already taken is skipped under a name of its own and its flip never asked (${took})`);
+  const I = mk4(); I.r.recording = true; I.p.extra = [row('paint')]; go(I.p, { rounds: 1, inside: true, only: ['held2', 'lookpaint'] }); const bi = I.e.find(e => e.op === 'begin');
+  check(I.p.last === 'done' && bi.rows.map((r: any) => r.id).join(' ') === 'held2' && !bi.skipped.length && L.asked === 3, "the benchmark's sweep takes the build's rows alone: an added row is neither flipped nor asked");
+  const K = mk4(); K.p.extra = [row('relief')]; K.p.start({ rounds: 1, settleMs: 0, measureMs: 0, settleFrames: 1, measureFrames: 2, only: ['lookrelief'] });
+  for (let i = 0; i < 400 && K.p.active && L.relief; i++) { now += 16; K.p.tick(); } const mid = L.relief; K.p.stop('by hand');
+  check(mid === false && L.relief === true && !K.p.active && /stopped/.test(K.p.last), 'stopped with an added row flipped: its own undo puts it back');
+  // a slow row and a wait that is no number; a warm row waits for its own picture; a method's `this`; a live take is told so
+  const slow = mk4(), nan = mk4(), t0 = now; slow.p.extra = [{ id: 'lookSlow', label: 'slow', flip: () => ({ from: {}, to: {}, apply: () => () => {}, settleMs: 3000 }) }]; go(slow.p, { rounds: 1, only: ['lookSlow'] }); const tSlow = now - t0, t1 = now;
+  nan.p.extra = [{ id: 'lookNaN', label: 'nan', flip: () => ({ from: {}, to: {}, apply: () => () => {}, settleMs: NaN }) }]; go(nan.p, { rounds: 1, only: ['lookNaN'] });
+  check(slow.p.last === 'done' && tSlow >= 6000 && tSlow < 6400 && nan.p.last === 'done' && now - t1 < 400 && !slow.e.concat(nan.e).some(e => JSON.stringify(e).includes('null')), `a row's own wait is kept for its flip and the base after it (${tSlow} ms); a wait that is no number is no wait and the take ends (${now - t1} ms)`);
+  const Wm = mk4(), tw = now; let drawn = false, when = -1; class Panel { on = true; apply() { this.on = false; return () => { this.on = true; }; } } const panel = new Panel();
+  Wm.p.extra = [{ id: 'lookWarm', label: 'warm', warm: true, flip: () => ({ from: {}, to: {}, apply: () => () => {}, ready: () => drawn }) }, { id: 'lookThis', label: 'a method', flip: (take: { live: boolean }) => { L.kinds.push(take.live); return Object.assign(panel, { from: { on: true }, to: { on: false } }) as any; } }];
+  const offs = new Set<boolean>(); go(Wm.p, { rounds: 1, live: true, only: ['lookWarm', 'lookThis'] }, () => { offs.add(panel.on); if (now - tw >= 5000) drawn = true; if (when < 0 && Wm.e.some(e => e.op === 'seg')) when = now - tw; });
+  check(Wm.p.last === 'done' && when >= 5000 && when < 5100, `a warm added row holds the first segment until its own picture draws (${when} ms)`);
+  check(offs.has(false) && panel.on === true && L.kinds[L.kinds.length - 1] === true, 'a flip whose apply is a method keeps its own `this`, and a live take is told so');
+  // one way back throws: the rest still go back, and the page is not told everything is back
+  const T = mk4(), B: any = { a: true, b: true }; T.p.extra = [{ id: 'lookA', label: 'a', warm: true, flip: () => ({ from: {}, to: {}, apply: () => { B.a = false; return () => { B.a = true; }; } }) }, { id: 'lookB', label: 'b', warm: true, flip: () => ({ from: {}, to: {}, apply: () => { B.b = false; return () => { throw new Error('stuck'); }; } }) }];
+  go(T.p, { rounds: 1, only: ['lookA', 'lookB'] });
+  check(!T.p.active && /stopped/.test(T.p.last) && B.a === true && B.b === false && /way back failed/.test(T.said[T.said.length - 1] ?? '') && !/everything is back/.test(T.said[T.said.length - 1] ?? ''), `one row's way back throws: the other row is back and the closing line says one failed (${T.said[T.said.length - 1]})`);
+  const U = mk4(); U.p.extra = [{ id: 'lookNoUndo', label: 'no way back', flip: () => ({ from: {}, to: {}, apply: () => undefined as any }) }]; go(U.p, { rounds: 1, only: ['lookNoUndo'] });
+  check(!U.p.active && /stopped: a flip failed \(lookNoUndo/.test(U.p.last), `an apply that hands back no undo stops the take by name (${U.p.last})`);
 }
 process.exit(red ? 1 : 0);

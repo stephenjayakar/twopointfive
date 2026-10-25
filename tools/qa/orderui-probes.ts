@@ -53,6 +53,7 @@ async function rig(seed: number, o: { squad?: 2 | 4; sam?: number[] } = {}) {
   reset(); Object.assign(NIGHTBREACH, { squad: o.squad ?? 4 });
   Math.random = seeded(seed);
   const W: any = await standUp(); const game = W.game, input = W.input; const RC = game.roomClear, NB = game.nightBreach, O = game.orders, D = game.doorTools;
+  (await import(`${ROOT}/src/game/cmdring.ts`)).CMDRING.wholeSquad = false;   // (these lines step who the orders go to with T, the wheel and the cursor, outside plan mode, as the menu was built: the rule that only plan mode picks a part of the squad is held off here and has its own lines, wholesquad-check)
   (await import(`${ROOT}/src/game/cmdring.ts`)).CMDRING.only = false;   // (the menu's own keys and the middle button, as these lines were written: `probes.ts qonly` has the page's, where the ring carries every order)
   game.godMode = true;
   const why = RC.start(seed);

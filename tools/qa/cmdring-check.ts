@@ -35,6 +35,8 @@ async function rig(seed: number, on = !BREAK) {
     Math.random = seeded(seed);
     W = await standUp(); HANDRING.on = false;   // (handring.ts: lines 11 on read Sam's own ring as the prototype has it, up the moment the key goes down — the ring that stays has its own check, probes.ts handring)
     CMDRING.on = on; CMDRING.hint = on; CMDRING.hands = on; CMDRING.plan = false; CMDRING.planRts = false; CMDRING.planRun = false; CMDRING.stay = false; CMDRING.tapNow = false; CMDRING.only = false; CMDRING.holdSecs = HOLD_SECS; AUTOPILOT.on = true;   // (the ring that goes with its key, as these lines were written: the one that stays is `probes.ts qring`'s)
+    CMDRING.wholeSquad = false;   // (lines 7 and on pick a man with the ring up and step who with T, as the ring was built: the rule that only plan mode picks a part of the squad is held off here and has its own lines, wholesquad-check)
+    CMDRING.wheelIdle = false;   // (line 7 steps who by the wheel, as the ring was built: the switch that takes the wheel off it is held off here and has its own lines, wheelidle-check)
     CMDRING.bareHint = false;   // (these lines read the cursor mark's outline as it was built: the switch that draws none of it is held off here and has its own lines, ringflat-check 9)
     W.game.godMode = true;
     why = W.game.roomClear.start(seed);

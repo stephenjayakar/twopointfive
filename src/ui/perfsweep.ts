@@ -19,7 +19,7 @@ import { mulberry32 } from '../math/dice';
  *  few flips that are not a settings write (arm() below); `needs` = settings the row only means something under (else it is skipped and says so); `or` = the flip
  *  the other way, taken when the page already stands at `set` (the ladder's climb takes these rungs itself); `warm` = its first flip compiles a shader (a second or so on a real GPU):
  *  every such row is switched on once, together, before the first segment, so no round times the compile */
-export interface SweepRow { id: string; label: string; set?: Record<string, unknown>; needs?: Record<string, unknown>; or?: { label: string; set: Record<string, unknown> }; warm?: boolean; custom?: 'fog' | 'fogOld' | 'fogEdge' | 'smoke' | 'oneAir' | 'wispMotes' | 'irLight' | 'irLightOne' | 'scaleDown' | 'scaleUp' | 'scaleStart' | 'scaleTop' | 'preset';
+export interface SweepRow { id: string; label: string; set?: Record<string, unknown>; needs?: Record<string, unknown>; or?: { label: string; set: Record<string, unknown> }; warm?: boolean; custom?: 'fog' | 'fogOld' | 'fogEdge' | 'smoke' | 'oneAir' | 'wispMotes' | 'irLight' | 'irLightOne' | 'scaleDown' | 'scaleUp' | 'scaleStart' | 'scaleTop' | 'preset' | 'extra';
   /** a row only the RUNNING world shows (Shift+F8): the reason, said when a frozen take skips it */
   liveOnly?: string;
   /** a row whose flip takes seconds to show (a population of particles that fills and drains at its own pace): its flipped segment AND the baseline after it drop this much
@@ -29,7 +29,17 @@ export interface SweepRow { id: string; label: string; set?: Record<string, unkn
   settleAfterMs?: number }
 /** a custom row's flip handed in by the page (the game's half lives outside this file): what it writes, the write that returns its own undo, and — where the page knows
  *  how long the flip takes to show — the row's settleMs for this take */
-export interface SweepFlip { from: Record<string, unknown>; to: Record<string, unknown>; apply: () => () => void; settleMs?: number }
+export interface SweepFlip { from: Record<string, unknown>; to: Record<string, unknown>; apply: () => () => void; settleMs?: number;
+  /** a page's own row with `warm`: true once its flipped picture really draws (a program compiling in the background), asked through the warm-up */
+  ready?: () => boolean }
+/** A ROW THE PAGE ADDS (PerfSweep.extra): a switch that is the page's own and no row of SWEEP_ROWS (a prototype page's panel). `flip` is asked once as the take begins,
+ *  told which kind of take it is, and answers as a custom row's hook does: the flip, or the reason the row is skipped here (a write a running game takes back every step
+ *  says so on a live take, as the fog and the clouds do). `from` / `to` go into the take's begin line as they are: small plain values. Its apply and undo must not go
+ *  through Quality (that reads as the player changing the quality by hand, and the take stops). Added rows are flipped in the same rounds as the build's own (after them
+ *  in the first round; every later round is one shuffle of all the take's rows, so a take with added rows orders the build's rows differently from one without) and the
+ *  take names them like any row, so the report reads them with no change. An id that is taken ('base', a build row's, an earlier added row's) is skipped and says so, as
+ *  is a flip that is not one. The benchmark's sweep (SweepOpts.inside) takes the build's rows alone: two machines' benchmarks are the same rows */
+export interface SweepExtra { id: string; label: string; flip: (take: { live: boolean }) => SweepFlip | string; liveOnly?: string; warm?: boolean }
 /** how long the blown snow takes to stand at new numbers, with room to spare: a grain's slot lives (top + 0.3) × 1.1 + 0.4 s — 8.4 s under the usual 7 m top — and a first set holds its
  *  slots half a second longer (game/snowFx.ts updateGrains). Twelve seconds covers a snow top of nine and a half metres */
 const SLOW_SNOW_MS = 12000;
@@ -90,7 +100,8 @@ export interface SweepOpts {
   live: boolean;
   /** only these row ids (a dry run) */
   only?: string[];
-  /** a sweep inside somebody else's take (the benchmark's: ui/bench.ts): the recording goes on when it ends, and it puts no line or tag of its own on the screen */
+  /** a sweep inside somebody else's take (the benchmark's: ui/bench.ts): the recording goes on when it ends, it puts no line or tag of its own on the screen, and it
+   *  flips the build's rows alone (none of PerfSweep.extra) */
   inside?: boolean;
 }
 export const SWEEP_DEFAULTS: SweepOpts = { rounds: 3, settleMs: 500, measureMs: 1000, settleFrames: 12, measureFrames: 30, live: false };
@@ -126,6 +137,10 @@ export class PerfSweep {
   oneAir: (() => SweepFlip | string) | null = null;
   /** the wisps' row, the same way */
   wispMotes: (() => SweepFlip | string) | null = null;
+  /** rows of the page's own (SweepExtra), set by the page. None = the build's rows alone, as it was */
+  extra: SweepExtra[] = [];
+  /** a row's way back threw during this take: the closing line does not say everything is back */
+  private stuck = false;
   /** the world holds still for the take (host/loop.ts frozen: no game step, the picture stays live) */
   get freezing(): boolean { return this.active && !this.opts.live; }
   get progress(): string { return this.active ? `${this.at + 1}/${this.plan.length}` : this.last; }
@@ -147,11 +162,17 @@ export class PerfSweep {
       if (this.opts.only && !this.opts.only.includes(row.id)) continue;
       const a = this.arm(row); if (typeof a === 'string') skipped.push({ id: row.id, why: a }); else armed.push(a);
     }
+    const ids = new Set(['base', ...SWEEP_ROWS.map(r => r.id)]);   // ('base' is what a segment between two flips is called)
+    if (!this.opts.inside) for (const x of this.extra) {
+      const id = typeof x?.id === 'string' ? x.id : '';
+      if (this.opts.only && !this.opts.only.includes(id)) continue;
+      const a = this.armExtra(x, ids); if (typeof a === 'string') skipped.push({ id: `added row '${id}'`, why: a }); else { ids.add(id); armed.push(a); }
+    }
     if (!armed.length) { this.note('SWEEP: nothing to flip here'); return 'nothing to flip'; }
     this.plan = [];
     for (let r = 0; r < this.opts.rounds; r++) for (const a of sweepOrder(armed, r)) this.plan.push({ round: r, armed: null }, { round: r, armed: a });
     this.plan.push({ round: this.opts.rounds - 1, armed: null });
-    this.active = true; this.last = ''; this.preset = this.quality.current; this.watch(true); this.segG0 = null; this.slow = 1;
+    this.active = true; this.last = ''; this.stuck = false; this.preset = this.quality.current; this.watch(true); this.segG0 = null; this.slow = 1;
     if (!this.rec.recording) this.rec.start('perf sweep (F8): one feature flipped at a time; the sweep events name each segment');
     const secs = Math.round(this.plan.reduce((t, _, i) => t + this.settleOf(i) + this.opts.measureMs, 0) / 1000);
     this.rec.event('sweep', JSON.stringify({ op: 'begin', mode: this.opts.live ? 'live' : 'frozen', rounds: this.opts.rounds, settleMs: this.opts.settleMs, measureMs: this.opts.measureMs, settleFrames: this.opts.settleFrames, measureFrames: this.opts.measureFrames,
@@ -214,7 +235,7 @@ export class PerfSweep {
     this.active = false; this.last = done ? 'done' : `stopped: ${why}`;
     if (this.rec.recording) { this.rec.event('sweep', JSON.stringify({ op: 'end', done, why })); if (!this.opts.inside) this.rec.stop(); }
     this.showTag(null);
-    if (!this.opts.inside) this.note(done ? 'SWEEP done: the perf-….json that just downloaded is the take' : keep ? `SWEEP stopped (${why}): your quality stands as you set it, the sweep's own flip is back` : `SWEEP stopped (${why}): everything is back as it was`);
+    if (!this.opts.inside) this.note(done ? 'SWEEP done: the perf-….json that just downloaded is the take' : keep ? `SWEEP stopped (${why}): your quality stands as you set it, the sweep's own flip is back` : `SWEEP stopped (${why}): ${this.stuck ? "one row's way back failed, the rest is back as it was" : 'everything is back as it was'}`);
   }
   /** the quality was set by hand since the take began: any quality.apply that was not the preset row's own (the same preset picked again counts: the card's scale slider pins it),
    *  or — on a page whose Quality cannot be watched — the preset no longer the one the sweep stands at */
@@ -226,7 +247,11 @@ export class PerfSweep {
     const real = Q.apply; if (!on || typeof real !== 'function') return;
     Q.apply = (n: QualityName) => { if (!this.own) this.hand = true; real.call(Q, n); };
   }
-  private undoLive(): void { const l = this.live; this.live = []; for (const x of l.reverse()) x.undo(); }
+  private undoLive(): void {   // (every undo runs, whatever one of them throws: a page's own row must not leave the others flipped. The first throw is the caller's)
+    const l = this.live; this.live = []; let threw = false, err: unknown;
+    for (const x of l.reverse()) try { x.undo(); } catch (e) { if (!threw) { threw = true; err = e; } }
+    if (threw) { this.stuck = true; throw err; }
+  }
   /** a hand quality change found a row (or the warm-up's rows) flipped. The rows his preset writes stand as it wrote them; the rest of the flip goes back: a flip that is not a
    *  setting (fog, the clouds) by its own undo, a setting no preset writes (the hidden torch fix, the trade rows) to what it was — unless it no longer stands at the flipped value */
   private keepBack(): void {
@@ -263,6 +288,22 @@ export class PerfSweep {
     return () => { for (const k of Object.keys(snap)) if (!same(S[k], snap[k])) S[k] = copy(snap[k]); P.rbIters = rb; };
   }
 
+  /** a row the page added, made ready the same way (its flip is the page's: asked here, once). The page's half is held to its shape before the take leans on it: a flip
+   *  that is not one, values the take's lines cannot carry, or a wait that is no number skip the row and say so, never stop the take */
+  private armExtra(x: SweepExtra, taken: Set<string>): Armed | string {
+    if (typeof x?.id !== 'string' || !x.id || typeof x.label !== 'string' || typeof x.flip !== 'function') return 'not a row (id, label, flip)';
+    if (taken.has(x.id)) return `another row is called '${x.id}'`;
+    if (x.liveOnly && !this.opts.live) return `live takes only (Shift+F8): ${x.liveOnly}`;
+    let f: SweepFlip | string; try { f = x.flip({ live: this.opts.live }); } catch (e) { return `its flip failed (${String(e).slice(0, 80)})`; }
+    if (typeof f === 'string') return f || 'skipped by the page';
+    const plain = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
+    if (!plain(f) || !plain(f.from) || !plain(f.to) || typeof f.apply !== 'function') return 'its flip is not one (from, to, apply)';
+    let from: Record<string, unknown>, to: Record<string, unknown>;
+    try { from = JSON.parse(JSON.stringify(f.from)); to = JSON.parse(JSON.stringify(f.to)); } catch { return "its from / to cannot be written into the take's lines"; }
+    const flip = f, settleMs = typeof f.settleMs === 'number' && Number.isFinite(f.settleMs) && f.settleMs > 0 ? f.settleMs : undefined;
+    return { row: { id: x.id, label: x.label, custom: 'extra', warm: !!x.warm, liveOnly: x.liveOnly, settleMs }, label: x.label, from, to, ready: typeof f.ready === 'function' ? () => !!flip.ready!() : undefined,
+      apply: () => { const undo = flip.apply(); if (typeof undo !== 'function') throw new Error(`'${x.id}' gave no way back`); return undo; } };
+  }
   /** a row made ready against this page's state: its flip and undo, or the reason it does not apply here */
   private arm(row: SweepRow): Armed | string {
     const S = this.settings, E = this.engine;
