@@ -832,7 +832,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the lamp behind the door shows it dim and warm; no cone in the air (the lowest preset drew none at `volumetric` 0.2: the key is not
   set). Never seen: any of it on a GPU or at speed; the walk across the doorway in motion; the solo night's picture (the same framing, under a roof: no slab drawn); any quiet way but the vault's and the crossing's on a page.
 - **The start page** (`src/ui/menu.ts`; under `?cards`) opens on the SHORT LIST (no heading over it since 10-11; `src/scene/picks.ts PICKS` + `src/ui/picks.ts`: compound, registry, warehouse, depot,
-  barracks-day, night-breach, solo — a row is a link that deploys straight in; `?nopicks` = the old card, `?pick=<id>`). **Missions** opens the mission list
+  barracks-day, solo (the night breach's row left it 10-24: the bullet at the foot of this file) — a row is a link that deploys straight in; `?nopicks` = the old card, `?pick=<id>`). **Missions** opens the mission list
   (`src/ui/missions.ts`: the solo night + one row per `SCENARIOS` entry, Hour / Weather rows on its sheet), a pick opens the **Loadout** screen (`src/ui/loadout.ts` +
   `src/ui/kitCard.ts`: how many come, each man's kit card, the Squad kit row; `?loadout=<mission id>`), and Deploy is a PAGE LOAD of the mission's URL.
 
@@ -1922,3 +1922,17 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `?loadout=<that mission>` opens on its rows. A mission with a kit steps into it as before. No switch (a page's navigation; nothing a run reads).
   CHECK: `tools/qa/startpage-look.cjs`, two lines ("a mission with no kit to pick", "a mission WITH a kit still steps into it"), on the real page with no
   adapter under it; the look's group name 'Training' was stale since the old lessons went and reads 'Tutorial' now. Nobody has pressed it on a GPU page.
+- **The night breach is cut from the mission list and from the short list** (2026-10-24; the maintainer: "let's also remove "night breach" since it's
+  unnecessary now"). `night-breach` carries `offList: true` (`scene/scenarioList.ts`) and its row is out of `PICKS` (`scene/picks.ts`: six rows now —
+  compound, registry, warehouse, depot, barracks-day, solo; the barracks' "next" is the solo night). THE SWITCH is the cut rows' own, `OFFLIST_UI.on`:
+  `?offlist=0` draws the row again (the short list's row does not come back with it); off in the module and in every harness, so every list probe still
+  pins the whole table. NOTHING IS DELETED, and little could be: the row, its address `?nightbreach`, `?loadout=night-breach`, its picture and its
+  `scenarios.nightBreach` block stay; `game/nightbreach.ts` is the staging the room clear and the rescue are built on (the team, the pairs, the stack);
+  about a hundred files under `tools/` stage the one-room fight by its id (moves, wounds, kit, restart, the co-op and threshold fixtures), and a kept run
+  or a recording of it still loads. WHAT STILL NAMES IT TO A PLAYER, left as it was (not this step's): the Hard difficulty's long line
+  (`game/difficulty.ts`: "On the night breach the defenders are drilled…"), and the debugger's section 'Room fight staging (night breach · every room
+  clear)' with its start button. The Raids tile's picture is its first listed mission's, as it always was. CHECK: `probes.ts offlist` (the table's cut
+  rows are the five named, and line 6, new: no row of the short list starts a cut row; `OFFLIST_BREAK=1` fails it), both stands; the real page by
+  `PORT=<port> node tools/qa/unplayed-page.cjs` (no adapter under it: 31 cards, none the night breach's; 36 under `?offlist=0`; no page error) and its
+  still of the Raids group, six cards. `tools/qa/card-digest.ts` asks its pause card of the depot's pick now, and `startpage-look.cjs` and the verify
+  notes list six. Nobody has opened the page on a GPU since.
