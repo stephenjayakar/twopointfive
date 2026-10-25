@@ -42,6 +42,7 @@ import { AIR_SIM } from '../game/airSim';
 import { GLASS } from '../game/glass';
 import { WALLPEN } from '../game/wallpen';
 import { DOORSHOT } from '../game/doorblast';
+import { WINBARS } from '../game/winbars';
 import { DOORPATH } from '../game/doorpath';
 import { COVERFIRE } from '../game/coverfire';
 import { LIGHTWALL } from '../game/lighting';
@@ -268,6 +269,7 @@ export function pageSwitches(q: URLSearchParams): void {
   DOORSHOT.on = q.get('doorshot') !== '0';   // sustained gunfire splinters a wooden door leaf apart, on its own count, twelve rifle rounds or twenty-four pistol (game/doorblast.ts DOORSHOT): ON in the page; ?doorshot=0 = a round only marks a leaf, as it did
   if (q.get('doorcost') === '0') { DOORSHOT.toll = 1; DOORSHOT.flat = false; }   // shooting a door out is a cost — twelve rifle rounds, twenty-four pistol, whatever the destruction scale (DOORSHOT.toll 2 and .flat, the module's own words): ?doorcost=0 = drywall's own six and twelve, riding the scale, as it was
   DOORTHROW.on = q.get('doorthrow') !== '0';   // a door opened into a man carries him clear and startles him (a defender stops a beat and goes to look at the doorway); one slammed at a run or booted into him folds and blinds him a moment, longer under a boot (game/doors.ts DOORTHROW, game/doorthrow.ts): ON in the page; ?doorthrow=0 = a leaf stops against a standing man, as it did
+  WINBARS.on = q.get('winbars') !== '0';   // a window's bar breaks from one round, which flies on, and a line of fire passes a standing bar (game/winbars.ts; scene/bars.ts says what a bar is): ON in the page; ?winbars=0 = a bar stops every round like the piece of wall it was
   WALLPEN.on = q.get('wallpen') !== '0';   // a round carries on through thin walls and wooden door leaves with the energy it has left (game/wallpen.ts: plasterboard partitions, fabric and wood screens, a leaf that is not steel — by the glass rule's energy, a toll by stuff and the length of its path through): ON in the page; ?wallpen=0 = a round stops in the first built thing it meets, as it did
   WALLCHARGE.on = !q.has('nowallcharge'); if (q.get('wallmenu') === 'direct') WALLCHARGE.menu = 'direct';   // the wall charge's own switch (game/wallcharge.ts; it also needs the destruction's) · ?wallmenu=direct: X, 5 instead of X, 5, 3
   // each man of a room entry walks a real path through the door (doorpath.ts) — clear of the leaf, one tight file: ON in the page; ?nodoorpath = the entry as it
@@ -839,6 +841,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'GLASS.bothFaces': 'TPS_GLASSEARS=1',
   'WALLPEN.on': 'TPS_WALLPEN=1',
   'DOORSHOT.on': 'TPS_DOORSHOT=1',
+  'WINBARS.on': 'TPS_WINBARS=1',
   'DOORTHROW.on': 'TPS_DOORTHROW=1',
   'HANDS.on': 'TPS_HANDS=1',
   'WORK.on': 'TPS_WORKTHINGS=1',

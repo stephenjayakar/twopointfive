@@ -402,12 +402,13 @@ export class StaticCollision {
    *  him from here' (guards.ts clearShot, the tactics' cover points) must never again be answered by the line of SIGHT, which passes glass: a man who sees Sam
    *  through the conference glazing planted on that line and put round after round into the pane. */
   shotBlocked(a: Vec3, b: Vec3, shrink = 0.02, energy?: number): boolean {
-    const P = this.glassPen; if (!P || !P.live()) return this.segmentBlocked(a, b, shrink, 0);   // (the switch off: the solid walk, as it was)
+    const pass = this.firePass ? this.firePass() : 0;   // (WINDOW BARS: 0 unless that rule is live — then a standing bar is nothing to the line, as it is to the round)
+    const P = this.glassPen; if (!P || !P.live()) return this.segmentBlocked(a, b, shrink, pass);   // (the switch off: the solid walk, as it was)
     // GLASS PENETRATION (game/glasspen.ts): the same walk, but the panes across the line are collected instead of ending it, and — nothing else being in the way —
     // the question becomes the ROUND's: has a round of `energy` (the asker's gun; the model's cautious default without one) enough for every pane in turn? One
     // rule with combat.ts fireWeapon, so a man shoots through a window exactly when his round would get through it.
     const panes = shotPanes; panes.length = 0;
-    if (this.segmentBlocked(a, b, shrink, 0, panes)) return true;
+    if (this.segmentBlocked(a, b, shrink, pass, panes)) return true;
     if (!panes.length) return false;
     panes.sort((x, y) => x.t - y.t);
     const d = v3.sub(b, a); return !P.passes(a, v3.scale(d, 1 / v3.len(d)), panes, energy);
@@ -415,6 +416,9 @@ export class StaticCollision {
   /** GLASS PENETRATION (game/glasspen.ts installs it; null = rounds stop in glass, the game as it was): `live` = the switch as of now, `passes` = would a round of
    *  `energy` leaving `a` along unit `rd` get through these panes (static index + metres along the line to where it enters each, nearest first). */
   glassPen: { live(): boolean; passes(a: Vec3, rd: Vec3, panes: { bi: number; t: number }[], energy?: number): boolean } | null = null;
+  /** WINDOW BARS (game/winbars.ts installs it; null = a bar is a wall to a line of fire, the game as it was): the flags of the statics a line of FIRE passes as of
+   *  now — BoxFlag.Bar while that rule is live (a round that meets a standing bar breaks it and flies on: combat.ts fireWeapon), else 0. */
+  firePass: (() => number) | null = null;
 
   /** Closest static hit along a ray (t, box index) or null. Solid: an intact glass pane IS hit (a round, a canister, a spark, a shin all meet it); a broken one is not. */
   raycast(ro: Vec3, rd: Vec3, tmax: number): { t: number; index: number; n: Vec3 } | null {
