@@ -223,6 +223,7 @@ import { BACKKEY } from './backkey';
 import { FIXEDSTEP } from '../host/loop';
 import { AUTOCAM } from '../host/autocam';
 import { TWEEN } from '../host/tween';
+import { SAVEPIC } from '../host/savepic';
 import { MORALE } from './morale';
 import { RUNNER } from './runner';
 import { STARTLE } from './startle';
@@ -298,8 +299,10 @@ export const NOT_KNOBS: Record<string, readonly string[]> = { SLOTS: ['ok', 'why
  *  every registry table and its player puts each back over the page's (replay/engineplay.ts) — all but these: MUSIC (audio/pieces.ts) is read at every deal of
  *  a piece, so a tape made with the pieces on would play them to a viewer who opened it with `?onetheme`, and one made under `?onetheme` would take the pieces
  *  from everybody who plays it. FIXEDSTEP and TWEEN (host/loop.ts, host/tween.ts) are how this page's frame loop steps and draws: a tape replays the updates it
- *  holds whatever stepped them, and the viewer's loop is the viewer's. */
-export const VISIT_OWN: string[] = ['MUSIC', 'FIXEDSTEP', 'TWEEN'];
+ *  holds whatever stepped them, and the viewer's loop is the viewer's. SAVEPIC (host/savepic.ts) is how this page takes a save's picture: this page's canvas is
+ *  configured for it once, at boot, and a tape that set it would configure a viewer's canvas by the page somebody else recorded on (its address word,
+ *  `savepic`, is the visit's for the same reason: ui/replaykey.ts VISIT_FLAGS). */
+export const VISIT_OWN: string[] = ['MUSIC', 'FIXEDSTEP', 'TWEEN', 'SAVEPIC'];
 
 /** every knob table by name — made on each call (see the head: never at module load) */
 export function knobRegistry(): Record<string, object> {
@@ -394,6 +397,8 @@ export function knobRegistry(): Record<string, object> {
     // the frame loop's two (host/loop.ts, host/tween.ts — not game rules, and no recording's to set: not in JOURNAL_KNOBS, and VISIT_OWN above keeps a tape's player off them): the game in
     // whole 1/60 s ticks, and a frame between two ticks drawn at the blend of them. Here so that the two stands' difference and a probe's put-back cover them
     FIXEDSTEP, TWEEN,
+    // how the page takes a save's picture (host/savepic.ts): the page's alone, as the two above are
+    SAVEPIC,
     // the camera running itself (host/autocam.ts): the switch, what it frames and by how much, when it may turn
     AUTOCAM,
     // shaken (morale.ts): what a blast does to the men it does not hurt — who ducks, who breaks, the rounds a broken man puts into the dust — reads these
