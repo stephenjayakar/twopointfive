@@ -29,6 +29,7 @@ async function rig(seed: number, squad = 4) {
     Object.assign(NIGHTBREACH, { squad });
     Math.random = seeded(seed);
     W = await standUp();
+    (await import(`${ROOT}/src/game/cmdring.ts`)).CMDRING.wholeSquad = false;   // (these lines lay a plan for one pair and then the other with the who key, outside plan mode, as the menu's plan was built: the rule that only plan mode picks a part of the squad is held off here and has its own lines, wholesquad-check)
     PLANLAY.on = !BREAK; PLANLAY.keep = true; PLANLAY.sticky = true; PLAN.on = true; PLAN.menuOnly = true;
     W.game.godMode = true;
     why = W.game.roomClear.start(seed);

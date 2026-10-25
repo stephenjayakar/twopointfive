@@ -169,6 +169,12 @@ export const CMDRING = {
    *  16:10 screen runs 8.4 m to either side of its middle (7.4 along its bottom edge), 5.5 m toward the camera and 7.8 m away: these leave his body
    *  on it. What is drawn from an edge then runs to about 15 m from him */
   planNearSideM: 6.5, planNearAwayM: 4.5, planNearBackM: 6,
+  /** PLAN MODE'S REACH IS THE SAME AT ANY ZOOM (planmode.ts pan; the maintainer, 10-25: "max distance for plan mode seems to be based on the zoom
+   *  level? should be zoom invaraitn"): the box above is its metres whatever the camera's distance. It was made smaller as the camera came in, so
+   *  that he stayed on the screen; zoomed in he can now be off the screen's edge with the view at the box's. false: the box shrinks with the
+   *  camera's distance, as `planNear` was built. Off here and on the frozen stand (`TPS_PLANNEARFLAT=1`, beside `TPS_PLANNEAR=1`); the page
+   *  raises it with `planNear` (`?plannearflat=0` off) */
+  planNearFlat: false,
   /** PLAN MODE: THE DIGITS PICK THE MEN (planmode.ts planInput; the maintainer, 10-24: "1 2 3 4 in plan mode should select the appropriate squad
    *  members, and 5 selects all of them? and then we should remove clicking on the ground selects all"): with the mode up and no ring or menu up, a
    *  digit 1 to 4 picks that man of the squad alone (the squad's own order: a man keeps his digit when another is down), Shift + the digit puts him in
@@ -177,6 +183,14 @@ export const CMDRING = {
    *  own lines stop naming it; the digits work there too. false: no digit is the mode's, and a click on nothing is everyone, as it was built. Off
    *  here and on the frozen stand (`TPS_PLANDIGITS=1`, beside `TPS_QPLAN=1`); the page raises it with the mode (`?plandigits=0` off) */
   planDigits: false,
+  /** PLAN MODE: A CLICK ON BARE GROUND DESELECTS (planmode.ts planInput; the maintainer, 10-25, with the digits picking the men and the ground click
+   *  doing nothing: "clicking on the ground to deselect is pretty key"): with `planDigits` on, a left click on bare ground leaves NOBODY picked: no
+   *  circle is lit, a right click orders nobody ("nobody to take that order") and no ring opens, until a man is picked again by a click, a box or
+   *  his digit, or 5 picks everyone. Shift + a click or Shift + a digit adds to the empty set. The mode put down forgets it: it comes up with
+   *  everyone. A tutorial mission keeps its own ground click (planGroundAll) while its lines name it. false: the click picks nobody new and who was
+   *  picked stays picked, as `planDigits` was built. Off here and on the frozen stand (`TPS_PLANCLEAR=1`, beside `TPS_PLANDIGITS=1`); the page
+   *  raises it with the digits (`?planclear=0` off) */
+  planClear: false,
   /** … how long the view's point takes to come back to him (s) */
   planBackSecs: 0.7,
   /** THE TREE IS TWO RINGS DEEP (the maintainer, 10-23, at a wall with three rings between him and one greyed row: "radial menu tree needs some
@@ -201,6 +215,20 @@ export const CMDRING = {
    *  ring (orders.ts hintView answers null; a picture only). What a tap would order, and on what, is the corner's line on the key. false: the
    *  outline, as built. Off here and on the frozen stand (`TPS_BAREHINT=1`); the page raises it (`?barehint=0` off) */
   bareHint: false,
+  /** THE WHEEL WITH THE RING UP STEPS NOBODY (orders.ts ringInput; the maintainer, 10-24, after a two-finger scroll with the ring still up: "got into a
+   *  weird state where my command modes (not plan mode) only selected blue team"): a scroll with the squad's ring up used to step who the orders go
+   *  to (everyone, one pair, the other), the choice stayed after the ring had gone, and under `only` no key steps it back. true: the scroll is still
+   *  taken out of the frame (it is not his walking pace under the ring) and changes nobody's choice; a click on a man with the ring up is still him, and the
+   *  who key, where it has one, still steps (both until `wholeSquad`, below). false: the wheel steps who, as it was built. Off here and on the frozen stand (`TPS_WHEELIDLE=1`); the
+   *  page raises it (`?wheelidle=0` off) */
+  wheelIdle: false,
+  /** QUICK ORDERS ARE THE WHOLE SQUAD'S (orders.ts whole(); the maintainer, 10-24: "quick Q mode should always do the whole squad. you should only be
+   *  able to issue commands to parts of the squad in plan mode"): with plan mode down, an order from the squad's key or its ring goes to everyone.
+   *  Nothing outside plan mode narrows the choice: a click on a man with the ring up is the ring's own click and picks nobody, the who key steps
+   *  nobody, a tap or a ring on a teammate is the squad's and not his alone, and plan mode put down puts the orders back with everyone (a chain laid
+   *  in the mode keeps the men it was laid for). In plan mode the picks are as they were. false: the choice is stepped and kept, as it was built.
+   *  Off here and on the frozen stand (`TPS_WHOLESQUAD=1`, beside `TPS_QPLAN=1`); the page raises it with the mode (`?wholesquad=0` off) */
+  wholeSquad: false,
   /** THE SQUAD'S ONLY KEYS (the maintainer, 10-22: "squad is now just q and f. everything is through the radial menu (which is 1-5? is that
    *  sufficient) so we don't need all the other keys"): the ring carries EVERY order of the menu it is — a row the menu had on a letter of its own
    *  (throw there on G, frag and clear on G, the big slot's tool on H, a look under the door on V) takes a spare wedge of its page, and where a page has

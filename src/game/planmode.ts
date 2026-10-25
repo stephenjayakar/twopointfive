@@ -187,7 +187,7 @@ function pause(S: SquadOrders, C: PlanChain, phase: 'wait' | 'held'): void {
 /** every chain moved on as far as its men have got (once a tick, ahead of the keys) */
 function tick(S: SquadOrders): void {
   const P = S.plan, g = S.g;
-  if (P.pick && !menOf(S, P.pick).length) P.pick = null;
+  if (P.pick?.length && !menOf(S, P.pick).length) P.pick = null;   // (an EMPTY pick is nobody on purpose, CMDRING.planClear: it stands)
   if (P.back && !(g.time - P.back.t0 >= 0 && g.time - P.back.t0 < CMDRING.planBackSecs)) P.back = null;   // (the view is back on him)
   if (P.up && !S.men('all').length) down(S, null);   // (nobody left to order: the mouse is Sam's)
   if (planKnee(S) && !g.player.crouch) { if (P.stood === null) P.stood = true; g.player.crouch = true; }   // (the mode up and he is not down on the knee — a restart stood a new man up, an older file: down he goes)
@@ -335,7 +335,8 @@ function down(S: SquadOrders, input: Input | null): void {
   const P = S.plan, g = S.g; if (!P.up) return;
   if (CMDRING.planKnee && P.look) P.back = { from: v3c(P.look), t0: g.time };   // (the view eases back to him: planLook)
   if (P.stood !== null) { if (P.stood && !g.player.dragging && canStand(g)) g.player.crouch = false; P.stood = null; }   // (… and he gets up off the knee, if he was standing before and there is room)
-  P.up = false; P.drag = null; P.pick = null; P.showT = g.time; P.look = null; P.aim = null; P.rmbT = -1; P.rdown = null;
+  P.up = false; P.drag = null; P.pick = null; if (CMDRING.wholeSquad && S.sams) S.who = 'all'; P.showT = g.time;   // (wholeSquad: the mode's pick does not outlive it)
+  P.look = null; P.aim = null; P.rmbT = -1; P.rdown = null;
   if (input) { input.clicked &= ~5; input.buttons &= ~5; if (input === g.seat.input) g.seat.swallow(5); }
 }
 /** a memory save put back with the mode up in it (savestate.ts loadMem): the mode is not the saved moment's to bring back — it is put down as the
@@ -365,9 +366,9 @@ function pan(S: SquadOrders, input: Input, cam: FollowCamera, dt: number): void 
   const l = Math.hypot(mx, mz); if (l > 1e-6) { L[0] += mx / l * K.planPanMps * dt; L[2] += mz / l * K.planPanMps * dt; }
   const p = S.g.player.char.pos;
   // (planNear: inside the box where HE is still on the screen — a room's worth, not the level's. The box is the camera's: `right` and `fwd` are the
-  // screen's across and up, and it shrinks as the camera comes in. A point outside it by more than a stride of the pan is walked in, not jumped)
+  // screen's across and up, and it shrinks as the camera comes in, or with planNearFlat it does not. A point outside it by more than a stride of the pan is walked in, not jumped)
   if (planNear(S)) {
-    const k = Math.min(1, cam.distance / 21), dx = L[0] - p[0], dz = L[2] - p[2], r = dx * right[0] + dz * right[2], f = dx * fwd[0] + dz * fwd[2];
+    const k = K.planNearFlat ? 1 : Math.min(1, cam.distance / 21), dx = L[0] - p[0], dz = L[2] - p[2], r = dx * right[0] + dz * right[2], f = dx * fwd[0] + dz * fwd[2];
     const r1 = Math.max(-K.planNearSideM * k, Math.min(K.planNearSideM * k, r)), f1 = Math.max(-Math.max(0, (K.planNearBackM + BODY_M) * k - BODY_M), Math.min(K.planNearAwayM * k, f));
     const cx = p[0] + right[0] * r1 + fwd[0] * f1, cz = p[2] + right[2] * r1 + fwd[2] * f1, out = Math.hypot(L[0] - cx, L[2] - cz), step = 2 * K.planPanMps * dt;
     if (out <= step || !(dt > 0)) { L[0] = cx; L[2] = cz; } else { L[0] += (cx - L[0]) / out * step; L[2] += (cz - L[2]) / out * step; }
@@ -435,6 +436,7 @@ export function planInput(S: SquadOrders, input: Input, cam: FollowCamera, canva
         if (stop) { if (!wordLocked(S)) cycle(S, stop.C, stop.i); }   // (a stop of a chain: its waits, not a choice of men)
         else if (man) { PLAN_STATS.picked++; choose(S, !shift ? [man] : now.includes(man) ? now.filter(m => m !== man) : [...now, man]); }
         else if (!shift && planGroundAll(S)) choose(S, []);   // (a click on nothing: everyone — or, the digits picking the men, nothing: who was picked stays picked)
+        else if (!shift && K.planClear) { if (now.length) PLAN_STATS.picked++; S.who = 'all'; P.pick = []; }   // (… or, planClear, nobody: an empty set, until a man is picked or 5 is everyone)
       } else {
         const x0 = Math.min(D.x0, D.x1), x1 = Math.max(D.x0, D.x1), y0 = Math.min(D.y0, D.y1), y1 = Math.max(D.y0, D.y1);
         const inside = S.men('all').filter(m => { const [sx, sy, front] = cam.project(m.char.pos, w, h); return front && sx >= x0 && sx <= x1 && sy >= y0 && sy <= y1; });

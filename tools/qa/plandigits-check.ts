@@ -31,7 +31,7 @@ export async function plandigitsCheck(): Promise<boolean> {
   console.log(`plan mode's digits (src/game/planmode.ts, CMDRING.planDigits)${BREAK ? ' — PLANDIGITS_BREAK=1: the switch left off, lines 1 to 5 must fail' : ''}`);
   try {
     const R: any = await rig(3), O = R.O, g = R.game, P = R.P, input = R.input, T = (): any[] => R.team;
-    K.planDigits = !BREAK; R.home();
+    K.planDigits = !BREAK; K.planClear = false; R.home();   // (line 4 asks the ground click as the digits were built: the click that deselects has its own check, planclear-check.ts)
     const digit = (d: number, shift = false) => { if (shift) input.keys.add('ShiftLeft'); R.press(`Digit${d}`); if (shift) { input.keys.delete('ShiftLeft'); R.step(); } };
     const names = () => R.names().join();
     // 1
