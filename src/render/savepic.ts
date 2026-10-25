@@ -5,7 +5,7 @@
 // Here the frame is boxed down to the picture's own size ON the GPU (one small pass sampling the canvas's texture, 4 × 4 taps to a pixel) and that small
 // target is copied to a buffer and mapped: the page never waits, and the pixels arrive a frame or a few later. The canvas's texture must be one a pass may
 // sample (gpu/device.ts initGpu `canvasRead`); without that, or until the pipeline is built, the host takes the picture the old way.
-import { makeShader, renderPipelineOrNull } from '../gpu/device';
+import { makeShader } from '../gpu/device';
 
 const WGSL = /* wgsl */`
 struct V { @builtin(position) p: vec4f, @location(0) uv: vec2f };
@@ -34,8 +34,9 @@ export class SavePicture {
   taken = 0; lost = 0;
   constructor(private device: GPUDevice, private samp: GPUSampler) {
     const mod = makeShader(device, WGSL, 'savepic');
-    renderPipelineOrNull(device, { label: 'save picture', layout: 'auto', vertex: { module: mod, entryPoint: 'vs' }, fragment: { module: mod, entryPoint: 'fs', targets: [{ format: 'rgba8unorm' }] }, primitive: { topology: 'triangle-list' } }, 'a save\'s picture is read off the canvas as it was')
-      .then(p => { this.pipe = p; });
+    // (made by the device's own call, off the boot's count of pipelines: one small optional pass must not read as one of the programs a boot or a cut waits on)
+    device.createRenderPipelineAsync({ label: 'save picture', layout: 'auto', vertex: { module: mod, entryPoint: 'vs' }, fragment: { module: mod, entryPoint: 'fs', targets: [{ format: 'rgba8unorm' }] }, primitive: { topology: 'triangle-list' } })
+      .then(p => { this.pipe = p; }, e => { console.warn(`save picture: the pass was not built (${e?.message ?? e}); the picture is taken the old way`); });
   }
   /** built, and so able to take one */
   get ready(): boolean { return !!this.pipe; }

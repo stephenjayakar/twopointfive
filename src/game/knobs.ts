@@ -299,8 +299,9 @@ export const NOT_KNOBS: Record<string, readonly string[]> = { SLOTS: ['ok', 'why
  *  every registry table and its player puts each back over the page's (replay/engineplay.ts) — all but these: MUSIC (audio/pieces.ts) is read at every deal of
  *  a piece, so a tape made with the pieces on would play them to a viewer who opened it with `?onetheme`, and one made under `?onetheme` would take the pieces
  *  from everybody who plays it. FIXEDSTEP and TWEEN (host/loop.ts, host/tween.ts) are how this page's frame loop steps and draws: a tape replays the updates it
- *  holds whatever stepped them, and the viewer's loop is the viewer's. SAVEPIC (host/savepic.ts) is how this page takes a save's picture: the canvas is
- *  configured for it at boot, before a tape is read, and a tape that set it after would leave the page on a road its canvas was not made for. */
+ *  holds whatever stepped them, and the viewer's loop is the viewer's. SAVEPIC (host/savepic.ts) is how this page takes a save's picture: this page's canvas is
+ *  configured for it once, at boot, and a tape that set it would configure a viewer's canvas by the page somebody else recorded on (its address word,
+ *  `savepic`, is the visit's for the same reason: ui/replaykey.ts VISIT_FLAGS). */
 export const VISIT_OWN: string[] = ['MUSIC', 'FIXEDSTEP', 'TWEEN', 'SAVEPIC'];
 
 /** every knob table by name — made on each call (see the head: never at module load) */

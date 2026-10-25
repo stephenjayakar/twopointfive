@@ -420,20 +420,28 @@ async function main() {
   // switch off, the canvas not readable or the pass not built yet: the canvas drawn into the 2D one in this frame, as it was — which makes the page wait for
   // the GPU to hand the whole frame back.)
   const savePic = gpu.canvasRead ? new SavePicture(gpu.device, gpu.linearSampler) : null;
-  const picLate = () => !!savePic?.ready && SAVEPIC.on;
+  let picLost = false;   // (a late picture came to nothing on this page: the old road from here, which always gave one)
+  const picLate = () => !!savePic?.ready && SAVEPIC.on && !picLost;
+  let lateCanvas: HTMLCanvasElement | null = null;
   const takeSavePictures = () => {
     const due = picsDue.splice(0);
     try {
       const W = Math.max(16, Math.round(saveMod.SAVETIMELINE.picPx)), H = Math.max(9, Math.round(W * canvas.height / Math.max(1, canvas.width)));
-      const jpeg = (draw: (cx: CanvasRenderingContext2D) => void) => {
-        picCanvas ??= document.createElement('canvas'); picCanvas.width = W; picCanvas.height = H;
-        const cx = picCanvas.getContext('2d'); if (!cx) return;
-        draw(cx);
-        const url = picCanvas.toDataURL('image/jpeg', saveMod.SAVETIMELINE.picQ);
+      const jpeg = (c: HTMLCanvasElement, cx: CanvasRenderingContext2D | null, draw: (cx: CanvasRenderingContext2D) => void) => {
+        if (!cx) return; draw(cx);
+        const url = c.toDataURL('image/jpeg', saveMod.SAVETIMELINE.picQ);
         for (const info of due) if (game.saves.setPicture(info, url)) menu.pictureCame(info, url);
       };
-      if (savePic && picLate()) { savePic.take(gpu.ctx.getCurrentTexture(), W, H).then(px => { if (px) try { jpeg(cx => { const im = cx.createImageData(W, H); im.data.set(px); cx.putImageData(im, 0, 0); }); } catch { /* no picture */ } }); return; }
-      jpeg(cx => cx.drawImage(canvas, 0, 0, W, H));
+      if (savePic && picLate()) {
+        // (its own small canvas, kept on the CPU: the pixels are put in and read straight out as a JPEG, and a canvas the browser backs with the GPU would wait for it again)
+        savePic.take(gpu.ctx.getCurrentTexture(), W, H).then(px => {
+          if (!px) { if (!picLost) console.warn('save picture: the late road came to nothing; pictures are taken the old way from here'); picLost = true; picsDue.push(...due); return; }   // (…and these saves' pictures are the next presented frame's, a moment late)
+          try { const c = lateCanvas ??= document.createElement('canvas'); c.width = W; c.height = H; jpeg(c, c.getContext('2d', { willReadFrequently: true }), cx => { const im = cx.createImageData(W, H); im.data.set(px); cx.putImageData(im, 0, 0); }); } catch { /* no picture */ }
+        });
+        return;
+      }
+      picCanvas ??= document.createElement('canvas'); picCanvas.width = W; picCanvas.height = H;
+      jpeg(picCanvas, picCanvas.getContext('2d'), cx => cx.drawImage(canvas, 0, 0, W, H));
     } catch { /* no picture: the save stands without one */ }
   };
   { const host = game.saves.onPutBack; game.saves.onPutBack = info => { host?.(info); cutToHim(); vRun = null; }; }   // (…and the run's books below start over: the Mission is the same OBJECT put back, and a load is another try, as a file's is — an end already filed must not stand for the end to come)
@@ -451,6 +459,8 @@ async function main() {
     /** a save's picture (host/savepic.ts SAVEPIC): is the late road up, how many are in flight / were handed back / came to nothing, and a slot's picture */
     pic: () => ({ late: picLate(), canvasRead: !!gpu.canvasRead, pending: savePic?.pending ?? 0, taken: savePic?.taken ?? 0, lost: savePic?.lost ?? 0 }),
     pictureOf: (info: saveMod.SlotInfo) => game.saves.pictureOf(info),
+    /** for a check: the late road's takes come to nothing from here, as on a device that refuses the pass (tools/qa/savepic-page.cjs) */
+    picLose: () => { if (savePic) savePic.take = () => Promise.resolve(null); },
     save: (label = 'by hand', force = false) => { automated = true; return game.saves.write(game, 'manual', label, force); },
     load: (what?: string | object) => { automated = true; const key = typeof what === 'string' ? what : what ? null : game.saves.newest(false)?.key; if (what && typeof what === 'object') return loadCheckpoint2(what); return key ? loadCheckpoint(key) : 'nothing stored'; },
     slots: () => game.saves.slots(), newest: () => game.saves.newest(false),

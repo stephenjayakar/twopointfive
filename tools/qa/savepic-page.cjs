@@ -5,7 +5,9 @@
 //         was not taken inside it), it is there once the GPU has handed the small target back, it is the size asked for, not flat, and it is the picture
 //         the old road takes of the same frame (the mean difference a channel under 10 of 255: two filters and a JPEG apart); a second save, with the
 //         camera turned to another view, has its OWN picture (its own frame's, and further from the first frame than from its own) and the first save
-//         still reads the first frame's; no page error
+//         still reads the first frame's; a card laid with a save's tile still plain shows the picture on that same tile once it arrives; a late picture
+//         that comes to nothing (the device refusing the pass, stood in by __save.picLose) puts the page on the old road and that save's picture is the
+//         next frame's; no page error
 //   off   the same page under ?savepic=0: the switch reads off, the canvas is configured as it always was, and the picture is there when the frame's own
 //         task ends — taken the old way, nothing handed to the late road
 // exit 0 = both, with no page error · 1 = otherwise. SAVEPIC_BREAK=1 opens the `on` page with the switch off: it must fail.
@@ -59,9 +61,26 @@ const READ = async (label) => {
     await page.evaluate(() => { const p = window.__game.player.char.pos; window.__stage({ look: [p[0], 1, p[2]], yaw: 2.4, pitch: 0.7, dist: 7 }); });   // (another view of the room: the second save's frame is not the first's)
     const b = await page.evaluate(SAVE, 'second'); const rb = b.err ? null : await page.evaluate(READ, 'second'); log('a second save, the camera turned:', JSON.stringify(b), JSON.stringify(rb));
     const again = a.err ? null : await page.evaluate(READ, 'first');
+    // a card up when the picture arrives: the save, its frame and the pause card in one task — the tile is laid plain and is the same node when it has its picture
+    const card = await page.evaluate(async () => { const S = window.__save, M = window.__menu, dev = window.__engine.device;
+      const r = S.save('third'); if (!r || !r.ok) return { err: `save refused: ${r && r.why}` };
+      window.__runFrames(1, 1 / 60); M.openRun();
+      const all = [...document.querySelectorAll('.saves .tile')], tile = all.find(t => t.dataset.save === `${r.info.key}@${r.info.savedAt}`), plain = !!tile && !tile.style.backgroundImage;
+      for (let i = 0; i < 200 && S.pic().pending > 0; i++) { await dev.queue.onSubmittedWorkDone(); await new Promise(r => setTimeout(r, 20)); }
+      const got = !!tile && tile.isConnected && tile.style.backgroundImage.length > 100; M.close();
+      return { tiles: all.length, found: !!tile, plain, got, pic: S.pic() }; });
+    log('a save with the pause card opened in its frame:', JSON.stringify(card));
+    // a late picture that comes to nothing: the old road from there, and that save's picture is the next frame's
+    const lose = await page.evaluate(async () => { const S = window.__save; S.picLose();
+      const r = S.save('fourth'); if (!r || !r.ok) return { err: `save refused: ${r && r.why}` };
+      window.__runFrames(1, 1 / 60); const inTask = !!S.pictureOf(r.info); await new Promise(r => setTimeout(r, 50));
+      const late = S.pic().late, before = !!S.pictureOf(r.info); window.__runFrames(1, 1 / 60);
+      return { inTask, late, before, there: !!S.pictureOf(r.info), pic: S.pic() }; });
+    log('a late picture that came to nothing:', JSON.stringify(lose));
     const good = boot.pipes.failed === 0 && boot.pic.late && boot.pic.canvasRead && !a.err && !a.inTask && !!ra && ra.there && ra.w === a.W && ra.h === a.H && ra.dev > 2 && ra.diff >= 0 && ra.diff < 10 && ra.pic.taken === 1 && ra.pic.lost === 0 && ra.pic.pending === 0
-      && !b.err && !!rb && rb.there && rb.pic.taken === 2 && rb.pic.lost === 0 && rb.diff >= 0 && rb.diff < 10 && rb.fromFirst > rb.diff + 3 && b.key !== a.key && !!again && again.there && again.diff >= 0 && again.diff < 10;
-    log(`on: the late road up ${boot.pic.late} · not taken inside the frame's task ${!a.inTask} · there once the GPU handed it back ${!!ra && ra.there} · ${ra ? `${ra.w}×${ra.h}, spread ${ra.dev}, ${ra.diff} of 255 a channel from the old road's picture of the same frame` : '—'} · two taken, none lost ${!!rb && rb.pic.taken === 2 && rb.pic.lost === 0} · the second save's is its own frame's (${rb ? `${rb.diff} from its own, ${rb.fromFirst} from the first` : '—'}) and the first still reads the first's (${again ? again.diff : '—'}) — ${good ? 'PASS' : 'FAIL'}`);
+      && !b.err && !!rb && rb.there && rb.pic.taken === 2 && rb.pic.lost === 0 && rb.diff >= 0 && rb.diff < 10 && rb.fromFirst > rb.diff + 3 && b.key !== a.key && !!again && again.there && again.diff >= 0 && again.diff < 10
+      && !card.err && card.found && card.plain && card.got && !lose.err && !lose.inTask && !lose.late && !lose.before && lose.there;
+    log(`on: the late road up ${boot.pic.late} · not taken inside the frame's task ${!a.inTask} · there once the GPU handed it back ${!!ra && ra.there} · ${ra ? `${ra.w}×${ra.h}, spread ${ra.dev}, ${ra.diff} of 255 a channel from the old road's picture of the same frame` : '—'} · two taken, none lost ${!!rb && rb.pic.taken === 2 && rb.pic.lost === 0} · the second save's is its own frame's (${rb ? `${rb.diff} from its own, ${rb.fromFirst} from the first` : '—'}) and the first still reads the first's (${again ? again.diff : '—'}) · a card laid before the picture shows it on the same tile ${!!card.got && !!card.plain} · a late picture lost: the old road from there and the picture the next frame's ${!lose.late && !!lose.there && !lose.before} — ${good ? 'PASS' : 'FAIL'}`);
     ok = ok && good; await page.close();
   }
   if (!BREAK) { // the switch off: the picture as it was taken
