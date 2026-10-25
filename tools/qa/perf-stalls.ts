@@ -14,7 +14,7 @@ export type StallTake = { frames: PerfFrame[]; events: PerfEvent[] };
 export interface Stall { i: number; t: number; dt: number; gpu: number; cpu: number; beat: number | null; verdict: 'in the frame' | 'thread held' | 'thread free' | 'unknown'; long: string[]; /** what else the take says happened in the stall's own stretch: a checkpoint written, the ladder's step, a resize */ beside: string[] }
 export interface StallRead { usual: number; stalls: Stall[]; bursts: number; every: number; /** long lines of the browser's that fall in no stall */ loose: number; held: number; free: number; inFrame: number; unknown: number; hidden: number; hasBeat: boolean; /** the slowest ten seconds of the take and the take's usual frame, both in frames a second (null on a take under twenty seconds) */ slow: { fps: number; at: number; all: number } | null }
 const median = (a: number[]) => { if (!a.length) return 0; const s = [...a].sort((x, y) => x - y); return s[Math.floor(0.5 * (s.length - 1))]; };
-const QUIET = new Set(['long', 'longcap', 'tab', 'start', 'stop', 'sweep', 'bench', 'settings']);
+const QUIET = new Set(['long', 'longcap', 'tab', 'start', 'stop', 'sweep', 'bench', 'settings']), SHORT: Record<string, RegExp> = { held: / with the thread held outside the frame/ };
 const WINDOW = 40, TIMES = 2, FLOOR_MS = 35, BURST_MS = 400, HELD = 0.3;
 /** a stall = a frame over 2 × the usual frame on BOTH sides of it (the median of the forty before and of the forty after) and over 35 ms: a slower stretch (a
  *  heavier preset, a row of a sweep, a page its browser holds at 30) is that stretch's usual frame, not a run of stalls */
@@ -34,7 +34,7 @@ export function readStalls(D: StallTake): StallRead {
     const cpu = cpuOf(F[i - 1]), gpu = Math.max(...F.slice(Math.max(0, i - 1), i + 5).map(x => x.gpuUnion ?? x.gpuSum ?? 0)), beat = typeof f.beat === 'number' ? f.beat : null;
     const verdict = cpu > 0.5 * f.dt || gpu > 0.8 * f.dt ? 'in the frame' : beat === null ? 'unknown' : beat > HELD * (f.dt - cpu) ? 'thread held' : 'thread free';   // (the beat is the longest ONE silence: a gap eaten by two holds shows under half of it, and a free thread answers every 4 ms or so)
     const mine = long.filter(l => !l.used && l.e.t >= from - 20 && l.e.t <= to); for (const l of mine) l.used = true;   // (each line of the browser's beside one stall only: the first it falls in)
-    const beside = D.events.filter(e => !QUIET.has(e.kind) && e.t >= from - 20 && e.t <= to + 5).slice(0, 3).map(e => `${e.kind}: ${e.text.slice(0, 70)}`);
+    const beside = D.events.filter(e => !QUIET.has(e.kind) && e.t >= from - 20 && e.t <= to + 5).slice(0, 3).map(e => `${e.kind}: ${e.text.replace(SHORT[e.kind] ?? /$^/, '').slice(0, 90)}`);
     stalls.push({ i, t: f.t, dt: f.dt, gpu, cpu, beat, verdict, long: mine.map(l => l.e.text), beside });
   });
   // bursts: stalls under 400 ms apart are one burst (the page catching up between them); how often = the median wait from one burst's start to the next
@@ -54,6 +54,10 @@ export function stallLines(D: StallTake, list = 12): string[] {
   const R = readStalls(D), L: string[] = [], N = R.stalls.length;
   L.push(`\nSTALLS (frames over ${TIMES} × the frames around them and over ${FLOOR_MS} ms; the usual frame of the take is ${R.usual.toFixed(1)} ms): ${N}${N ? ` in ${R.bursts} burst${R.bursts === 1 ? '' : 's'}${R.every ? `, a burst about every ${R.every.toFixed(R.every < 10 ? 1 : 0)} s` : ''}` : ''}${R.hidden ? ` (and ${R.hidden} long frame${R.hidden === 1 ? '' : 's'} with the tab out of sight, not counted)` : ''}`);
   if (R.slow && R.slow.fps < 0.85 * R.slow.all) L.push(`  the slowest ten seconds (from ${R.slow.at.toFixed(0)} s) ran at ${R.slow.fps.toFixed(1)} frames a second where the take's usual frame is ${R.slow.all.toFixed(1)}: a slow stretch, which can read as stutter with no stall in it`);
+  const holds = D.events.filter(e => e.kind === 'held');
+  if (holds.length) { const by = new Map<string, { n: number; ms: number }>();
+    for (const e of holds) { const who = /page's (\w+) handlers/.exec(e.text)?.[1] ?? (/hid their end/.test(e.text) ? 'an input whose handlers hid their end' : 'no input handler'), ms = parseFloat(e.text) || 0, o = by.get(who) ?? { n: 0, ms: 0 }; o.n++; o.ms = Math.max(o.ms, ms); by.set(who, o); }
+    L.push(`  holds of the thread outside the frame, 20 ms or more: ${holds.length} · ${[...by].sort((a, b) => b[1].n - a[1].n).map(([who, o]) => `${/^(no|an) /.test(who) ? who : `${who} handlers`} ${o.n} (longest ${o.ms.toFixed(0)} ms)`).join(' · ')}`); }
   const tail = () => { if (R.loose) L.push(`  (${R.loose}${N ? ' more' : ''} long frames or tasks the browser reported fall in no stall: the take's file has them, kind 'long')`); return L; };
   if (!N) return tail();
   L.push(`  where the time went: ${R.inFrame} in the frame (the step before it, or the GPU) · ${R.held} with the page's thread held between frames · ${R.free} with the thread free (the browser handed over no frame) · ${R.unknown} unreadable`);

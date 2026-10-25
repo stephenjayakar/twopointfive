@@ -86,7 +86,7 @@ class FrameRing {
   lastT(): number { return this.n ? this.num[(this.n - 1) * NUM_COLS + C.t] : 0; }
 }
 
-const LONG_CAP = 300;
+const LONG_CAP = 300, HOLD_MS = 20, HELD_CAP = 300, IN_TYPES = ['wheel', 'pointermove', 'pointerdown', 'pointerup', 'keydown', 'keyup'];
 /** what the recorder reads of a PerformanceLongTaskTiming ('longtask') or a PerformanceLongAnimationFrameTiming ('long-animation-frame') */
 export interface LongEntry { startTime: number; duration: number; name?: string; blockingDuration?: number;
   attribution?: { containerType?: string; containerName?: string; containerSrc?: string }[];
@@ -112,7 +112,7 @@ export class PerfRecorder {
   cpuUpdate = 0; cpuRender = 0; private frameStart = 0;
   /** written by the page as a frame's step begins: also where the gap since the frame before ends, for the beat */
   get cpuFrameStart(): number { return this.frameStart; }
-  set cpuFrameStart(now: number) { this.frameStart = now; if (this.beatAt >= 0) { this.gapBeat = Math.max(this.beatMax, now - this.beatAt); this.beatMax = 0; this.beatAt = now; } }
+  set cpuFrameStart(now: number) { this.frameStart = now; if (this.beatAt >= 0) { this.gapBeat = Math.max(this.beatMax, this.silence(now)); this.beatMax = 0; this.beatAt = now; this.inMax = 0; } }
   // THE PAGE'S OWN THREAD, WATCHED WHILE A TAKE RUNS (the page only: nothing of it in a headless take, and `watch = false` before a take leaves it out there too). Three
   // things a frame's own marks cannot see, because they happen BETWEEN frames: (1) the beat, a 4 ms timer whose longest silence in the gap before a frame is the
   // frame's `beat`; (2) what the browser itself reports as a long frame, with the scripts it blames, and as a long task of another frame of this page's process, as
@@ -120,7 +120,8 @@ export class PerfRecorder {
   // answer about once a second: its frames are no stall)
   watch = true;
   private beatAt = -1; private beatMax = 0; private gapBeat = -1; private beatTimer: ReturnType<typeof setInterval> | null = null;
-  private longSeen: { type: string; o: PerformanceObserver }[] = []; private longN: Record<string, number> = {}; private longFrames = false; private dtUsual = 0; private onVis: (() => void) | null = null;
+  private longSeen: { type: string; o: PerformanceObserver }[] = []; private longN: Record<string, number> = {}; private longFrames = false; private dtUsual = 0;
+  private heldN = 0; private inOpen: { type: string; at: number } | null = null; private inMax = 0; private inMaxType = ''; private onIn: [(e: Event) => void, (e: Event) => void] | null = null; private onVis: (() => void) | null = null;
   constructor(private engine: Engine, private game: Game, private cam: FollowCamera, private quality: Quality, private hudNote: (s: string) => void) {}
   /** frames recorded so far (the ring's count) */
   get frameCount(): number { return this.ring.n; }
@@ -129,7 +130,7 @@ export class PerfRecorder {
   start(note = '', frames = MAX_FRAMES): void {
     this.ring.reset(Math.max(1, Math.floor(frames))); this.events = []; this.t0 = performance.now(); this.startedAt = new Date().toISOString(); this.recording = true;
     if (this.commit === undefined && typeof document !== 'undefined') try { void fetch('/qa/commit', { cache: 'no-store' }).then(r => r.ok ? r.text() : '').then(t => { const c = t.trim(); if (/^[0-9a-f]{7,40}$/.test(c)) this.commit = c; }).catch(() => {}); } catch { /* no dev server */ }   // (asked on the first recording, as the session journal asks: ui/sessionrec.ts)
-    this.settings0 = this.snapSettings(); this.lastSettingsKey = JSON.stringify(this.settings0);
+    this.settings0 = this.snapSettings(); this.lastSettingsKey = this.settingsKey();
     this.lastSaves = -1; this.lastLoads = -1;
     this.lastPreset = this.quality.label; this.lastEff = this.engine.effectiveScale; this.lastEsc = -1; this.lastQualityNote = this.quality.lastChange ?? ''; this.lastReallocs = this.engine.passes.reallocs;
     this.event('start', note || 'recording started (F9 stops; the dump downloads and goes to the shot server if it is up)');
@@ -159,17 +160,34 @@ export class PerfRecorder {
     this.events.push({ t: +t.toFixed(1), frame: at === undefined ? this.ring.n : this.ring.firstAfter(t), kind, text });
   }
   /** one answer of the heartbeat's timer (and what a check calls by hand) */
-  beatTick(now = performance.now()): void { if (this.beatAt >= 0) this.beatMax = Math.max(this.beatMax, now - this.beatAt); this.beatAt = now; }
+  beatTick(now = performance.now()): void { if (this.beatAt >= 0) this.beatMax = Math.max(this.beatMax, this.silence(now)); this.beatAt = now; this.inMax = 0; }
+  /** the silence that ends now. One of HOLD_MS or more is a hold of the page's thread outside the frame: an event of kind 'held' at the moment it began, with the
+   *  input handler that took most of it where one did (the browser names a script only from 50 ms up, and a hold of 30 ms is two frames lost on a fast display) */
+  private silence(now: number): number {
+    const gap = now - this.beatAt;
+    if (gap >= HOLD_MS && this.recording && !(typeof document !== 'undefined' && document.hidden) && this.heldN++ < HELD_CAP) {   // (a tab out of sight has its timers slowed to one a second: that is no hold)
+      const who = this.inMax >= 0.4 * gap ? `the page's ${this.inMaxType} handlers took ${Math.round(this.inMax)} ms of it` : this.inOpen && this.inOpen.at >= this.beatAt ? `a ${this.inOpen.type} came in it and its handlers hid their end` : 'no input handler in it';
+      this.event('held', `${Math.round(gap)} ms with the thread held outside the frame · ${who}`, this.beatAt);
+    }
+    return gap;
+  }
   private watchThread(on: boolean): void {
     if (this.beatTimer !== null) { clearInterval(this.beatTimer); this.beatTimer = null; }
     for (const { type, o } of this.longSeen) try { for (const e of o.takeRecords()) this.seen(type, e as unknown as LongEntry); o.disconnect(); } catch { /* */ }   // (what the browser had queued and not yet handed over still belongs to the take)
     if (this.onVis) { try { document.removeEventListener('visibilitychange', this.onVis); } catch { /* */ } this.onVis = null; }
+    if (this.onIn) { try { for (const t of IN_TYPES) { window.removeEventListener(t, this.onIn[0], true); window.removeEventListener(t, this.onIn[1]); } } catch { /* */ } this.onIn = null; }
+    this.inOpen = null; this.inMax = 0;
     this.longSeen = []; this.longFrames = false; this.beatAt = -1; this.beatMax = 0; this.gapBeat = -1;
     if (!on) return;
-    this.longN = {}; this.dtUsual = 0;
+    this.longN = {}; this.dtUsual = 0; this.heldN = 0;
     if (!this.watch || typeof document === 'undefined') return;
     this.beatAt = performance.now(); this.beatTimer = setInterval(() => this.beatTick(), 4);
     (this.beatTimer as unknown as { unref?: () => void }).unref?.();   // (a harness with a stand-in document: the timer must not hold its process open)
+    // how long the page's own handlers take for an input: a listener that hears each one first and one that hears it last (both passive, neither touches it)
+    if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+      this.onIn = [e => { this.inOpen = { type: e.type, at: performance.now() }; }, e => { const o = this.inOpen; if (!o || o.type !== e.type) return; const ms = performance.now() - o.at; if (ms > this.inMax) { this.inMax = ms; this.inMaxType = o.type; } this.inOpen = null; }];
+      for (const t of IN_TYPES) { window.addEventListener(t, this.onIn[0], { capture: true, passive: true }); window.addEventListener(t, this.onIn[1], { passive: true }); }
+    }
     if (typeof document.addEventListener === 'function') { this.onVis = () => this.event('tab', document.hidden ? 'hidden' : 'shown'); document.addEventListener('visibilitychange', this.onVis); if (document.hidden) this.event('tab', 'hidden'); }
     if (typeof PerformanceObserver === 'undefined') return;
     const kinds = PerformanceObserver.supportedEntryTypes ?? [];
@@ -216,7 +234,7 @@ export class PerfRecorder {
     cols[C.resW] = E.width; cols[C.resH] = E.height; cols[C.eff] = +E.effectiveScale.toFixed(3); cols[C.adaptive] = this.quality.adaptive ? 1 : 0;
     cols[C.cam0] = +(c.target?.[0] ?? 0).toFixed(2); cols[C.cam1] = +(c.target?.[2] ?? 0).toFixed(2); cols[C.cam2] = +(c.yaw ?? 0).toFixed(3); cols[C.cam3] = +(c.pitch ?? 0).toFixed(3); cols[C.cam4] = +(c.distance ?? 0).toFixed(2);
     cols[C.lights] = E.lights.activeCount; cols[C.dyn] = (E.world as unknown as { dynamics: unknown[] }).dynamics?.length ?? 0; cols[C.particles] = P?.stats?.alive ?? 0; cols[C.smoke] = smoke?.stats?.live ?? 0;
-    cols[C.beat] = this.beatAt < 0 || this.gapBeat < 0 ? -1 : +this.gapBeat.toFixed(1); this.gapBeat = -1; this.dtUsual = this.dtUsual ? this.dtUsual * 0.95 + dtWall * 50 : dtWall * 1000; if (this.beatAt >= 0) { this.beatMax = 0; this.beatAt = now; }   // (the frame's own step is not the gap: the next beat starts here)
+    cols[C.beat] = this.beatAt < 0 || this.gapBeat < 0 ? -1 : +this.gapBeat.toFixed(1); this.gapBeat = -1; this.dtUsual = this.dtUsual ? this.dtUsual * 0.95 + dtWall * 50 : dtWall * 1000; if (this.beatAt >= 0) { this.beatMax = 0; this.beatAt = now; this.inMax = 0; }   // (the frame's own step is not the gap: the next beat starts here)
     cols[C.decals] = decals?.count ?? decals?.list?.length ?? 0; cols[C.rain] = +(wx?.rainRate ?? 0).toFixed(2); cols[C.stroke] = +((wx as { strokeT?: number } | undefined)?.strokeT ?? 0).toFixed(2);
     this.ring.push(cols, gpu, union === undefined, this.quality.label, Object.entries(guardsByState).map(([k, v]) => `${k}:${v}`).join(' ') + ` lit:${lit}`, (g as unknown as { qrf?: { state?: string } }).qrf?.state ?? '-');
     // events it can see for itself
@@ -229,9 +247,12 @@ export class PerfRecorder {
     if (nLoad !== this.lastLoads) { if (this.lastLoads >= 0 && nLoad > this.lastLoads) this.event('load', 'a checkpoint was put back'); this.lastLoads = nLoad; }
     if (E.passes.reallocs !== this.lastReallocs) { this.event('targets', E.passes.lastRealloc); this.lastReallocs = E.passes.reallocs; }   // render targets re-made (resize / divisor flip / explicit history restart): what was pooled, resampled, cleared
     const esc = (g as unknown as { escalation?: number }).escalation ?? -1; if (esc !== this.lastEsc) { if (this.lastEsc >= 0) this.event('alarm', `escalation ${this.lastEsc} → ${esc}`); this.lastEsc = esc; }
-    if ((this.ring.n & 31) === 0) { const k = JSON.stringify(this.snapSettings()); if (k !== this.lastSettingsKey) { this.event('settings', diffKeys(this.lastSettingsKey, k)); this.lastSettingsKey = k; } }
+    if ((this.ring.n & 31) === 0) { const k = this.settingsKey(); if (k !== this.lastSettingsKey) { this.event('settings', diffKeys(this.lastSettingsKey, k)); this.lastSettingsKey = k; } }
   }
 
+  /** the settings as the `settings` events compare them: two of the keys are eased every frame (the goggles coming on, the flash of a hit) and are no setting
+   *  anybody changed, so the goggles count as on or off and the flash is left out */
+  private settingsKey(): string { const s = { ...this.snapSettings() }; if (typeof s.nvAmount === 'number') s.nvAmount = s.nvAmount > 0.5 ? 1 : 0; delete s.hitFlash; return JSON.stringify(s); }
   private snapSettings(): Record<string, unknown> {
     const S = this.engine.settings as unknown as Record<string, unknown>; const out: Record<string, unknown> = {};
     for (const k of Object.keys(S)) { const v = S[k]; if (typeof v === 'number' || typeof v === 'boolean' || typeof v === 'string') out[k] = v; }

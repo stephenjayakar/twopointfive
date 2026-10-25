@@ -77,6 +77,24 @@ const page = (vis: any = {}) => { (globalThis as any).document = vis; };
   GAME.saves.stats.loads++; now += 15; step(r, 16); const d = r.stop(false)!, ev = d.events.filter(e => e.kind === 'save' || e.kind === 'load'), R = readStalls(d as any);
   check(ev.length === 2 && ev[0].kind === 'save' && /4 by the game/.test(ev[0].text) && ev[1].kind === 'load' && R.stalls.length === 1 && R.stalls[0].verdict === 'in the frame' && /^save: a checkpoint was written/.test(R.stalls[0].beside[0] ?? '') && /beside it: save/.test(stallLines(d as any).join('\n')),
     `a save the game made before the take is no event; one made during it is, and stands beside the stall its step made (${R.stalls[0]?.beside[0]})`); }
+// 3d · a hold of the thread outside the frame is an event with the input handler that took it; goggles easing on and a hit's flash are no settings changed
+{ page(); const L: Record<string, ((e: any) => void)[]> = {}, hadWin = 'window' in globalThis, win0 = (globalThis as any).window;
+  (globalThis as any).window = { addEventListener: (t: string, f: any, o: any) => { (L[t] ??= [])[o?.capture ? 0 : 1] = f; }, removeEventListener: (t: string, f: any) => { L[t] = (L[t] ?? []).map(x => x === f ? undefined as any : x); } };
+  const r = mk(); Object.assign((r as any).engine.settings, { nvAmount: 0, hitFlash: 0 }); r.start('holds'); const tick = (ms: number) => { now += ms; if (!BREAK) r.beatTick(); };
+  for (let i = 0; i < 50; i++) { tick(4); tick(4); tick(4); now += 2; step(r, 15); }
+  tick(4); L.wheel[0]({ type: 'wheel' }); now += 34; L.wheel[1]({ type: 'wheel' }); tick(1); now += 2; step(r, 42);          // a wheel handler holds 34 ms
+  for (let i = 0; i < 10; i++) { tick(4); tick(4); tick(4); now += 2; step(r, 15); }
+  tick(4); tick(27); now += 2; step(r, 34);                                                                             // 27 ms held with no input
+  tick(4); L.keydown[0]({ type: 'keydown' }); tick(31); now += 2; step(r, 38);                                           // a keydown whose handlers stopped it going on
+  tick(4); L.pointermove[0]({ type: 'pointermove' }); now += 1; L.pointermove[1]({ type: 'pointermove' }); tick(3); tick(4); now += 2; step(r, 15);   // a quick handler, no hold
+  const E = (r as any).engine; for (let i = 0; i < 70; i++) { E.settings.nvAmount = i / 70; E.settings.hitFlash = (i % 9) / 9; tick(4); now += 9; step(r, 14); } E.settings.renderScale = 0.9; for (let i = 0; i < 40; i++) { tick(4); now += 9; step(r, 14); }
+  const wired = !!L.wheel?.[0] && !!L.wheel?.[1]; const d = r.stop(false)!, H = d.events.filter(e => e.kind === 'held').map(e => e.text), ST = d.events.filter(e => e.kind === 'settings').map(e => e.text);
+  check(H.length === 3 && /^35 ms with the thread held outside the frame · the page's wheel handlers took 34 ms of it$/.test(H[0]) && /^27 ms .* no input handler in it$/.test(H[1]) && /^31 ms .* a keydown came in it and its handlers hid their end$/.test(H[2]),
+    `three holds, each with whose it was: a wheel handler, nothing of the page's input, an input whose end the page hid (${H.join(' | ')})`);
+  check(wired && !L.wheel[0] && !L.wheel[1] && ST.length === 2 && /^nvAmount 0 → 1$/.test(ST[0]) && !/hitFlash/.test(ST.join()) && /renderScale 1 → 0.9/.test(ST[1]), `the listeners leave with the take; goggles easing on for seventy frames are one line, a hit's flash none, a setting changed is said (${ST.join(' | ')})`);
+  const lines = stallLines(d as any).join('\n');
+  check(/holds of the thread outside the frame, 20 ms or more: 3 · /.test(lines) && /wheel handlers 1 \(longest 35 ms\)/.test(lines) && /beside it: held: 35 ms · the page's wheel handlers took 34 ms of it/.test(lines), 'the report counts the holds by whose they were and sets each beside its stall');
+  if (hadWin) (globalThis as any).window = win0; else delete (globalThis as any).window; }
 // 4 · the report's reading
 { const f = (t: number, dt: number, o: any = {}) => ({ t, dt, cpu: { update: 0, render: 0.5, other: 0.5 }, gpuSum: 15, gpuUnion: 15, ...o }) as any;
   const run = (n: number, t0: number, o: any = {}, dt = 16.7) => Array.from({ length: n }, (_, i) => f(t0 + i * dt, dt, o));
