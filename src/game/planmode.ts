@@ -187,7 +187,7 @@ function pause(S: SquadOrders, C: PlanChain, phase: 'wait' | 'held'): void {
 /** every chain moved on as far as its men have got (once a tick, ahead of the keys) */
 function tick(S: SquadOrders): void {
   const P = S.plan, g = S.g;
-  if (P.pick && !menOf(S, P.pick).length) P.pick = null;
+  if (P.pick?.length && !menOf(S, P.pick).length) P.pick = null;   // (an EMPTY pick is nobody on purpose, CMDRING.planClear: it stands)
   if (P.back && !(g.time - P.back.t0 >= 0 && g.time - P.back.t0 < CMDRING.planBackSecs)) P.back = null;   // (the view is back on him)
   if (P.up && !S.men('all').length) down(S, null);   // (nobody left to order: the mouse is Sam's)
   if (planKnee(S) && !g.player.crouch) { if (P.stood === null) P.stood = true; g.player.crouch = true; }   // (the mode up and he is not down on the knee — a restart stood a new man up, an older file: down he goes)
@@ -335,7 +335,8 @@ function down(S: SquadOrders, input: Input | null): void {
   const P = S.plan, g = S.g; if (!P.up) return;
   if (CMDRING.planKnee && P.look) P.back = { from: v3c(P.look), t0: g.time };   // (the view eases back to him: planLook)
   if (P.stood !== null) { if (P.stood && !g.player.dragging && canStand(g)) g.player.crouch = false; P.stood = null; }   // (… and he gets up off the knee, if he was standing before and there is room)
-  P.up = false; P.drag = null; P.pick = null; P.showT = g.time; P.look = null; P.aim = null; P.rmbT = -1; P.rdown = null;
+  P.up = false; P.drag = null; P.pick = null; if (CMDRING.wholeSquad && S.sams) S.who = 'all'; P.showT = g.time;   // (wholeSquad: the mode's pick does not outlive it)
+  P.look = null; P.aim = null; P.rmbT = -1; P.rdown = null;
   if (input) { input.clicked &= ~5; input.buttons &= ~5; if (input === g.seat.input) g.seat.swallow(5); }
 }
 /** a memory save put back with the mode up in it (savestate.ts loadMem): the mode is not the saved moment's to bring back — it is put down as the
@@ -435,6 +436,7 @@ export function planInput(S: SquadOrders, input: Input, cam: FollowCamera, canva
         if (stop) { if (!wordLocked(S)) cycle(S, stop.C, stop.i); }   // (a stop of a chain: its waits, not a choice of men)
         else if (man) { PLAN_STATS.picked++; choose(S, !shift ? [man] : now.includes(man) ? now.filter(m => m !== man) : [...now, man]); }
         else if (!shift && planGroundAll(S)) choose(S, []);   // (a click on nothing: everyone — or, the digits picking the men, nothing: who was picked stays picked)
+        else if (!shift && K.planClear) { if (now.length) PLAN_STATS.picked++; S.who = 'all'; P.pick = []; }   // (… or, planClear, nobody: an empty set, until a man is picked or 5 is everyone)
       } else {
         const x0 = Math.min(D.x0, D.x1), x1 = Math.max(D.x0, D.x1), y0 = Math.min(D.y0, D.y1), y1 = Math.max(D.y0, D.y1);
         const inside = S.men('all').filter(m => { const [sx, sy, front] = cam.project(m.char.pos, w, h); return front && sx >= x0 && sx <= x1 && sy >= y0 && sy <= y1; });
