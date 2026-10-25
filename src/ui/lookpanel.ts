@@ -5,6 +5,7 @@ import { lookAmounts, lookSync, LOOK_DEFAULTS } from '../render/gbuffer';
 import type { PerfRecorder, PerfDump } from './perfrec';
 import type { PerfSweep } from './perfsweep';
 import { takeRead, takeWords, sendTake } from './perfsend';
+import { sharpForce } from './quality';
 
 const ROWS: readonly [keyof typeof lookAmounts, string, string, number][] = [
   ['clarity', 'Clarity', 'one number over Relief, Cavities, Edges and Snow relief: how hard neighbouring detail is set against each other. Lower = calmer surfaces', 1.5],
@@ -103,7 +104,13 @@ export function buildLookPanel(engine: Engine, fps: () => number, shapes?: { on:
       const box = document.createElement('textarea'); box.readOnly = true; box.hidden = true; box.style.cssText = 'width:100%;height:70px;margin-top:4px;box-sizing:border-box;font:10px/1.3 ui-monospace,Menlo,monospace;background:#161b1a;color:#cfd6d2;border:1px solid #3a4441;border-radius:3px';
       const cp = btn('Copy the read'); cp.hidden = true;
       cp.addEventListener('click', () => { const done = () => { cp.textContent = 'Copied'; setTimeout(() => { cp.textContent = 'Copy the read'; }, 1500); }; const old = () => { box.focus(); box.select(); }; if (navigator.clipboard?.writeText) navigator.clipboard.writeText(box.value).then(done, old); else old(); });
-      pf.append(play, price, said, box, cp);
+      // SHARP DIRECT OFF, for a take to set beside one with it on (the costliest single row on the maintainer's laptop, 10-25: 4.9 ms of 15.5 at High). What ?nosharp
+      // does (main.ts), from a button, since a hosted page's address takes no flags: forced off for every preset the ladder puts on, and the preset put on again
+      // so that its other resolve rows follow. The debugger's own row only holds until the next preset.
+      const Q = w.__quality as { apply(name: string): void; current: string } | undefined;
+      const sharp = btn('Sharp direct: as the preset', 'direct light drawn at the screen\'s full size: the costliest single feature on a laptop. Off = a softer picture and a cheaper frame, whatever the quality goes to. For a recording to set beside one with it on');
+      sharp.addEventListener('click', () => { if (!Q || sweep.active || rec.recording) return; sharpForce.v = sharpForce.v === false ? null : false; Q.apply(Q.current); sharp.textContent = sharpForce.v === false ? 'Sharp direct: off' : 'Sharp direct: as the preset'; });
+      pf.append(play, price, sharp, said, box, cp);
       const OFF: (keyof typeof lookAmounts)[] = ['size', 'sky', 'air', 'clarity', 'untile', 'lamps'];   // (not layers with a cost of their own to switch off)
       sweep.extra = [
         { id: 'look.all', label: 'look: every layer off (plain boxes)', flip: () => kept ? 'the boxes are shown plain already' : { from: { look: 1 }, to: { look: 0 }, apply: () => { plain(true); return () => plain(false); } } },
