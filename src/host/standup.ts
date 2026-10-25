@@ -437,6 +437,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_PLANKNEE')) CMDRING.planKnee = CMDRING.plan && CMDRING.planRts && String((globalThis as any).process?.env?.TPS_PLANKNEE ?? '') === '1';   // … the knee at the radio and the view easing back: off; TPS_PLANKNEE=1 raises it (the page: ?planknee=0 off)
     if (pinned('TPS_PLANONE')) CMDRING.planOne = CMDRING.plan && String((globalThis as any).process?.env?.TPS_PLANONE ?? '') === '1';   // … one word freeing two or more doors of a plan puts their entries on one signal: off; TPS_PLANONE=1 raises it (the page: ?planone=0 off)
     if (pinned('TPS_PLANNEAR')) CMDRING.planNear = CMDRING.plan && CMDRING.planRts && String((globalThis as any).process?.env?.TPS_PLANNEAR ?? '') === '1';   // … plan mode's view held within a few metres of Sam: off; TPS_PLANNEAR=1 raises it (the page: ?plannear=0 off)
+    if (pinned('TPS_PLANNEARFLAT')) CMDRING.planNearFlat = CMDRING.planNear && String((globalThis as any).process?.env?.TPS_PLANNEARFLAT ?? '') === '1';   // … the same reach at any zoom
     if (pinned('TPS_PLANDIGITS')) CMDRING.planDigits = CMDRING.plan && String((globalThis as any).process?.env?.TPS_PLANDIGITS ?? '') === '1';   // … plan mode's digits pick the men, a click on bare ground picks nobody new: off; TPS_PLANDIGITS=1 raises it (the page: ?plandigits=0 off)
     if (pinned('TPS_PLANCLEAR')) CMDRING.planClear = CMDRING.planDigits && String((globalThis as any).process?.env?.TPS_PLANCLEAR ?? '') === '1';   // … a click on bare ground leaves nobody picked
     if (pinned('TPS_WHOLESQUAD')) CMDRING.wholeSquad = CMDRING.plan && String((globalThis as any).process?.env?.TPS_WHOLESQUAD ?? '') === '1';   // … with plan mode down every order is everyone's
@@ -448,6 +449,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (!CMDRING.on) { CMDRING.stay = false; CMDRING.stayDigit = false; CMDRING.pin = false; CMDRING.plan = false; CMDRING.planRts = false; CMDRING.planRun = false; CMDRING.hands = false; CMDRING.only = false; }
     if (!CMDRING.only) CMDRING.flat = false;
     if (!CMDRING.plan) { CMDRING.planLook = false; CMDRING.planWaits = false; CMDRING.planKnee = false; CMDRING.planOne = false; CMDRING.planNear = false; CMDRING.planDigits = false; CMDRING.wholeSquad = false; CMDRING.planClear = false; }   // (TPS_QRING=0 on the page's stand is the page's ?qring=0: what rides on the ring goes with it)
+    if (!CMDRING.planNear) CMDRING.planNearFlat = false;
     if (!CMDRING.planDigits) CMDRING.planClear = false;   // (the ground click that deselects goes with the digits)
     if (pinned('TPS_SEENWALK')) SEENWALK.on = String((globalThis as any).process?.env?.TPS_SEENWALK ?? '') === '1';   // an ordered walk keeps off lit floor in view of an uncleared room (src/game/seenwalk.ts): off, the walks as every frozen tally walked them
     if (pinned('TPS_BANGINTO')) DOORTOOLS.bangInto = String((globalThis as any).process?.env?.TPS_BANGINTO ?? '') === '1';   // a bang and clear's can thrown into the room from the hand (src/game/doortools.ts bangSpot): off, the can as every frozen tally threw it

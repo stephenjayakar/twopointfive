@@ -366,9 +366,9 @@ function pan(S: SquadOrders, input: Input, cam: FollowCamera, dt: number): void 
   const l = Math.hypot(mx, mz); if (l > 1e-6) { L[0] += mx / l * K.planPanMps * dt; L[2] += mz / l * K.planPanMps * dt; }
   const p = S.g.player.char.pos;
   // (planNear: inside the box where HE is still on the screen — a room's worth, not the level's. The box is the camera's: `right` and `fwd` are the
-  // screen's across and up, and it shrinks as the camera comes in. A point outside it by more than a stride of the pan is walked in, not jumped)
+  // screen's across and up, and it shrinks as the camera comes in, or with planNearFlat it does not. A point outside it by more than a stride of the pan is walked in, not jumped)
   if (planNear(S)) {
-    const k = Math.min(1, cam.distance / 21), dx = L[0] - p[0], dz = L[2] - p[2], r = dx * right[0] + dz * right[2], f = dx * fwd[0] + dz * fwd[2];
+    const k = K.planNearFlat ? 1 : Math.min(1, cam.distance / 21), dx = L[0] - p[0], dz = L[2] - p[2], r = dx * right[0] + dz * right[2], f = dx * fwd[0] + dz * fwd[2];
     const r1 = Math.max(-K.planNearSideM * k, Math.min(K.planNearSideM * k, r)), f1 = Math.max(-Math.max(0, (K.planNearBackM + BODY_M) * k - BODY_M), Math.min(K.planNearAwayM * k, f));
     const cx = p[0] + right[0] * r1 + fwd[0] * f1, cz = p[2] + right[2] * r1 + fwd[2] * f1, out = Math.hypot(L[0] - cx, L[2] - cz), step = 2 * K.planPanMps * dt;
     if (out <= step || !(dt > 0)) { L[0] = cx; L[2] = cz; } else { L[0] += (cx - L[0]) / out * step; L[2] += (cz - L[2]) / out * step; }

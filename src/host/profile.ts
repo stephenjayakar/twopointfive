@@ -456,6 +456,7 @@ export function pageSwitches(q: URLSearchParams): void {
   CMDRING.planKnee = CMDRING.plan && CMDRING.planRts && q.get('planknee') !== '0';   // …he takes a knee at the radio while the mode is up, and the view eases back to him when it comes down (`?planknee=0` = he stands, the view's point jumps)
   CMDRING.planOne = CMDRING.plan && q.get('planone') !== '0';   // …one word that frees two or more doors of a plan puts their entries on one signal: the doors open together and two cans wait each other's burst (`?planone=0` = each chain's entry on its own clock, as it was)
   CMDRING.planNear = CMDRING.plan && CMDRING.planRts && q.get('plannear') !== '0';   // …the view of plan mode stays within a few metres of Sam, a room's worth and not the level's (`?plannear=0` = the reach as it was: 25 m past him and every teammate)
+  CMDRING.planNearFlat = CMDRING.planNear && q.get('plannearflat') !== '0';   // …and that reach is the same metres at any zoom (`?plannearflat=0` = it shrinks as the camera comes in, as it was built)
   CMDRING.planDigits = CMDRING.plan && q.get('plandigits') !== '0';   // …and with plan mode up the digits pick the men: 1 to 4 a man, 5 everyone, and a click on bare ground picks nobody new (`?plandigits=0` = no digit is the mode's and a click on nothing is everyone, as it was)
   CMDRING.planClear = CMDRING.planDigits && q.get('planclear') !== '0';   // …and a click on bare ground leaves nobody picked (`?planclear=0` = the click picks nobody new and who was picked stays picked)
   CMDRING.wholeSquad = CMDRING.plan && q.get('qonly') !== '0' && q.get('wholesquad') !== '0';   // …and with plan mode down every order from the squad's key or its ring is everyone's: only plan mode picks a part of the squad (`?wholesquad=0` = the choice is stepped and kept outside the mode, as it was built; `?qonly=0`, the older keys with T back, takes it off too)
@@ -797,6 +798,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'CMDRING.planKnee': 'TPS_PLANKNEE=1 (needs TPS_QPLAN=1)',
   'CMDRING.planOne': 'TPS_PLANONE=1 (needs TPS_QPLAN=1)',
   'CMDRING.planNear': 'TPS_PLANNEAR=1 (needs TPS_QPLAN=1)',
+  'CMDRING.planNearFlat': 'TPS_PLANNEARFLAT=1 (needs TPS_PLANNEAR=1)',
   'CMDRING.planDigits': 'TPS_PLANDIGITS=1 (needs TPS_QPLAN=1)',
   'CMDRING.planClear': 'TPS_PLANCLEAR=1 (needs TPS_PLANDIGITS=1)',
   'CMDRING.wholeSquad': 'TPS_WHOLESQUAD=1 (needs TPS_QPLAN=1)',

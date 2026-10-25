@@ -169,6 +169,12 @@ export const CMDRING = {
    *  16:10 screen runs 8.4 m to either side of its middle (7.4 along its bottom edge), 5.5 m toward the camera and 7.8 m away: these leave his body
    *  on it. What is drawn from an edge then runs to about 15 m from him */
   planNearSideM: 6.5, planNearAwayM: 4.5, planNearBackM: 6,
+  /** PLAN MODE'S REACH IS THE SAME AT ANY ZOOM (planmode.ts pan; the maintainer, 10-25: "max distance for plan mode seems to be based on the zoom
+   *  level? should be zoom invaraitn"): the box above is its metres whatever the camera's distance. It was made smaller as the camera came in, so
+   *  that he stayed on the screen; zoomed in he can now be off the screen's edge with the view at the box's. false: the box shrinks with the
+   *  camera's distance, as `planNear` was built. Off here and on the frozen stand (`TPS_PLANNEARFLAT=1`, beside `TPS_PLANNEAR=1`); the page
+   *  raises it with `planNear` (`?plannearflat=0` off) */
+  planNearFlat: false,
   /** PLAN MODE: THE DIGITS PICK THE MEN (planmode.ts planInput; the maintainer, 10-24: "1 2 3 4 in plan mode should select the appropriate squad
    *  members, and 5 selects all of them? and then we should remove clicking on the ground selects all"): with the mode up and no ring or menu up, a
    *  digit 1 to 4 picks that man of the squad alone (the squad's own order: a man keeps his digit when another is down), Shift + the digit puts him in

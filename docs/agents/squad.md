@@ -429,6 +429,16 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `wheelidle-check`, `orders-probes`, `orderui-probes`, `pressorders-probes`. MEASURED: one deal of the office room clear, squad of four; the rule has no die in it. NOT
   DONE: Options still offers "Order who" for the Tab key and a key for "who" on its Controls page, and both now do nothing outside plan mode.
   Nobody has played it; no part of it is a picture.
+- **Plan mode's reach is the same at any zoom** (2026-10-25; `CMDRING.planNearFlat`, `planmode.ts pan`). The maintainer: "max distance for plan
+  mode seems to be based on the zoom level? should be zoom invaraitn". The box `planNear` holds the view's point in (6.5 m to either side of him,
+  4.5 m up the screen, 6 m down it) was scaled by the camera's distance over 21 when zoomed in, so that he stayed on the screen: at the camera's
+  12 the view stopped 3.7 m to the side. ON: the box is its own metres at every zoom, and zoomed in he can be off the screen's edge with the view
+  at the box's. SWITCH: ON in the page with `planNear` (`?plannearflat=0` = the box shrinks as the camera comes in, as built), OFF in the module
+  and on the frozen stand (`TPS_PLANNEARFLAT=1`, beside `TPS_PLANNEAR=1`); a recording from before the key replays with it off; debugger tick
+  "Tab ▸ plan mode ▸ the same reach at any zoom". CHECK: `probes.ts plannearflat` (family squadorders; `tools/qa/plannearflat-check.ts`), four
+  lines on both stands with the camera at 8, 12, 21 and 40; `PLANNEARFLAT_BREAK=1` fails lines 1 and 2. `plannear-check` holds the switch off
+  (its line 3 asks the smaller box zoomed in). MEASURED: one deal of the office room clear. Nobody has played it; never seen on a GPU, and
+  whether he reads as lost off the screen's edge when zoomed in is for the maintainer's eyes.
 - **Plan mode: a click on bare ground deselects** (2026-10-25; `CMDRING.planClear`, `planmode.ts planInput`). The maintainer, with the digits
   picking the men and the ground click doing nothing: "clicking on the ground to deselect is pretty key". ON, with `planDigits`: a left click on
   bare ground leaves NOBODY picked (`plan.pick = []`, an empty set that `tick` lets stand): no circle is drawn as picked, a right click orders
