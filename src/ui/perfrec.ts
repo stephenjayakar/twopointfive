@@ -107,7 +107,7 @@ export class PerfRecorder {
   private ring = new FrameRing(); private events: PerfEvent[] = [];
   private t0 = 0; private startedAt = ''; private settings0: Record<string, unknown> = {};
   commit: string | undefined;
-  private lastPreset = ''; private lastEff = 0; private lastEsc = -1; private lastQualityNote = ''; private lastSettingsKey = ''; private lastReallocs = 0;
+  private lastPreset = ''; private lastEff = 0; private lastEsc = -1; private lastQualityNote = ''; private lastSettingsKey = ''; private lastReallocs = 0; private lastSaves = -1; private lastLoads = -1;
   /** CPU section marks written by main.ts's step() each frame (ms) */
   cpuUpdate = 0; cpuRender = 0; private frameStart = 0;
   /** written by the page as a frame's step begins: also where the gap since the frame before ends, for the beat */
@@ -130,6 +130,7 @@ export class PerfRecorder {
     this.ring.reset(Math.max(1, Math.floor(frames))); this.events = []; this.t0 = performance.now(); this.startedAt = new Date().toISOString(); this.recording = true;
     if (this.commit === undefined && typeof document !== 'undefined') try { void fetch('/qa/commit', { cache: 'no-store' }).then(r => r.ok ? r.text() : '').then(t => { const c = t.trim(); if (/^[0-9a-f]{7,40}$/.test(c)) this.commit = c; }).catch(() => {}); } catch { /* no dev server */ }   // (asked on the first recording, as the session journal asks: ui/sessionrec.ts)
     this.settings0 = this.snapSettings(); this.lastSettingsKey = JSON.stringify(this.settings0);
+    this.lastSaves = -1; this.lastLoads = -1;
     this.lastPreset = this.quality.label; this.lastEff = this.engine.effectiveScale; this.lastEsc = -1; this.lastQualityNote = this.quality.lastChange ?? ''; this.lastReallocs = this.engine.passes.reallocs;
     this.event('start', note || 'recording started (F9 stops; the dump downloads and goes to the shot server if it is up)');
     this.watchThread(true);
@@ -222,6 +223,10 @@ export class PerfRecorder {
     if (this.quality.label !== this.lastPreset) { this.event('preset', `${this.lastPreset} → ${this.quality.label}`); this.lastPreset = this.quality.label; }
     if (Math.abs(E.effectiveScale - this.lastEff) > 0.004) { this.event('scale', `effective ×${this.lastEff.toFixed(2)} → ×${E.effectiveScale.toFixed(2)} = ${E.width}×${E.height} (render scale ×${E.settings.renderScale.toFixed(2)} of the cap; ${E.settings.keepHistories ? 'histories resampled, targets from the pool' : 'keepHistories OFF: histories restarted, targets reallocated → expect one slow frame'})`); this.lastEff = E.effectiveScale; }
     const qn = this.quality.lastChange ?? ''; if (qn && qn !== this.lastQualityNote) { this.event('ladder', qn); this.lastQualityNote = qn; }
+    // a checkpoint written or put back in this step (game/savestate.ts Checkpoints.stats): a save walks the whole game and, on the page, takes its picture off the canvas
+    const sv = (g as unknown as { saves?: { stats?: { autosaves?: number; manual?: number; loads?: number } } }).saves?.stats, nSave = (sv?.autosaves ?? 0) + (sv?.manual ?? 0), nLoad = sv?.loads ?? 0;
+    if (nSave !== this.lastSaves) { if (this.lastSaves >= 0 && nSave > this.lastSaves) this.event('save', `a checkpoint was written (${sv?.autosaves ?? 0} by the game, ${sv?.manual ?? 0} by hand in this run)`); this.lastSaves = nSave; }
+    if (nLoad !== this.lastLoads) { if (this.lastLoads >= 0 && nLoad > this.lastLoads) this.event('load', 'a checkpoint was put back'); this.lastLoads = nLoad; }
     if (E.passes.reallocs !== this.lastReallocs) { this.event('targets', E.passes.lastRealloc); this.lastReallocs = E.passes.reallocs; }   // render targets re-made (resize / divisor flip / explicit history restart): what was pooled, resampled, cleared
     const esc = (g as unknown as { escalation?: number }).escalation ?? -1; if (esc !== this.lastEsc) { if (this.lastEsc >= 0) this.event('alarm', `escalation ${this.lastEsc} → ${esc}`); this.lastEsc = esc; }
     if ((this.ring.n & 31) === 0) { const k = JSON.stringify(this.snapSettings()); if (k !== this.lastSettingsKey) { this.event('settings', diffKeys(this.lastSettingsKey, k)); this.lastSettingsKey = k; } }
