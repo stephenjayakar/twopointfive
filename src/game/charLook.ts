@@ -7,7 +7,7 @@ import type { Game } from './game';
 import type { Character } from './character';
 import type { Team } from './teams';
 import type { Vec3 } from '../math/vec';
-import { sneakSuit } from './cast';   // (called inside charSides only)
+import { sneakSuit, castVariantOf } from './cast';   // (called inside charSides only)
 export { sneakSuit };   // (who is in the sneaking suit: the console's __charmat.get reads it beside sideOfTeam)
 import { CHAR_MAT_FLOATS, CharSide, CharSlotData, charMatsVersion, charSlots, proxyAlbedos, writeCharPalette } from '../render/charMaterials';
 
@@ -53,7 +53,7 @@ const FRAME: CharLookFrame = {
 /** Every man's SIDE this frame — whose table he wears, and (render/charMaterials.ts placeholderTints) which way round the cast's placeholder takes his two tints with the
  *  tables off. The getter answers for anybody on the floor when it was called; a body the game holds no record of reads as the staff's, as game/cast.ts dresses him. */
 export function charSides(g: Game): (c: Character) => CharSide {
-  sides.set(g.player.char, 'operator'); suits.set(g.player.char, sneakSuit(g, g.player.char));
+  sides.set(g.player.char, castVariantOf(g, g.player.char)?.side ?? 'operator'); suits.set(g.player.char, sneakSuit(g, g.player.char));   // (his own variant is the first operator's; another side's only when the console or the character lab dressed him in it: cast.ts castWear)
   for (const gd of g.guards) { sides.set(gd.char, sideOfTeam(gd.team, gd.trained)); suits.set(gd.char, sneakSuit(g, gd.char)); }
   for (const gd of g.civilians) sides.set(gd.char, 'civilian');
   return FRAME.side;

@@ -537,6 +537,24 @@ fn snowSparkleLobe(Nf: vec3f, L: vec3f, V: vec3f) -> f32 {
 }
 fn snowSparkleFresh(rough: f32) -> f32 { return smoothstep(SNOW_SPARKLE_ROUGH.x, SNOW_SPARKLE_ROUGH.y, rough) * (1.0 - smoothstep(SNOW_SPARKLE_ROUGH.z, SNOW_SPARKLE_ROUGH.w, rough)); }
 
+/** THE LOOK PROTOTYPE — EYES ADJUST TO SHADE (frame.shadeCfg, engine.ts lookShade; the panel's row): how many times brighter the light this pixel sends
+ *  back is shown. One exposure for a sunlit yard and the inside of a shed leaves the shed black, as a camera does and an eye does not. Two readings, no ray:
+ *  THE PLACE — the radiance cache's mean radiance in the air here, against what open air holds from the sky alone: (open ∕ here)^x, never under 1, never over
+ *  z. The MOST of five reads (here, and 0.6 of a cell to each side in plan): a probe buried in a container or a thick wall holds nothing, and must not make
+ *  the ground beside it read as a dark place (a glow round every big thing). The price is on the other side and is the kinder one: within a cell of a bright
+ *  neighbour (the inside of a shed's outer wall, a doorway) less is brought up, which reads as the shade a wall's foot has anyway. It is the light of the
+ *  place, not of the pixel, so a shadow's edge, a crease and a man's own shading keep their contrast.
+ *  THE PIXEL — its own light (Epix: the irradiance the picture shades it with) against what open ground gets from the sky alone (w): a pixel at or over that
+ *  is left as it is (sunlit ground, a sun patch on a shed's floor, the pool under a lamp: and no read is made for it), and under it the gain rolls off as the
+ *  pixel nears it — place ∕ (1 + (place − 1)·Epix ∕ w) — so brighter stays brighter all the way up and nothing lands on one flat level.
+ *  The caller scales what the surface sends back (its diffuse and its mirror share): a lamp's own face, the air in front of it and a section cap are not. */
+fn lookShadeGain(P: vec3f, N: vec3f, Epix: f32) -> f32 {
+  if (Epix >= frame.shadeCfg.w) { return 1.0; }
+  let X = P + N * 0.3; let s = c0Spacing() * 0.6; let dx = vec3f(s.x, 0.0, 0.0); let dz = vec3f(0.0, 0.0, s.z);
+  let here = max(max(luminance(diceMeanRadiance(X)), max(luminance(diceMeanRadiance(X + dx)), luminance(diceMeanRadiance(X - dx)))), max(luminance(diceMeanRadiance(X + dz)), luminance(diceMeanRadiance(X - dz))));
+  let place = clamp(pow(frame.shadeCfg.y / max(here, 1e-4), frame.shadeCfg.x), 1.0, frame.shadeCfg.z);
+  return place / (1.0 + (place - 1.0) * Epix / frame.shadeCfg.w);
+}
 fn linearToSrgb(c: vec3f) -> vec3f {
   return select(1.055 * pow(c, vec3f(1.0 / 2.4)) - 0.055, c * 12.92, c <= vec3f(0.0031308));
 }
@@ -859,14 +877,16 @@ fn compositePixel(pix0: vec2f) -> vec3f {
         if (SNOW_SPARKLE) { sparkle = snowSparkleL * (sa * snowSparkleFresh(textureLoad(gMat, sPix, 0).x)); }
       }
     }
+    var shadeG = 1.0;   // (1 anywhere but the look page by day: every × below is then the number it was)
+    if (LOOK) { if (frame.shadeCfg.x > 0.0 && ((id >> 29u) & 1u) == 0u) { shadeG = lookShadeGain(P, N, luminance(Ed + Ei)); dif *= shadeG; } }   // THE LOOK PROTOTYPE: eyes adjust to shade (above) — the surface's reflected light only
     if (metalK > 0.0) { dif *= 1.0 - 0.7 * metalK; }   // metalK: 0 unless the reflections are traced AND this is a metal under the cutoff
     color = (dif + emissive) * glassT + crackL;
     var spec = vec3f(0.0);                      // glossy floors (FLAG_GLOSS) / glass (FLAG_GLASS): the reflection radiance, added as it is — specular is not tinted by the diffuse albedo; both flags off = never read, colour untouched
     var refl = vec3f(0.0);                      // the ray-traced reflections (frame.rtCfg.w > 0; the host never raises FLAG_GLOSS with them): outgoing radiance, BRDF already applied by the pass — added as it is × the cutoff fade × the decals' gloss-keep (soot does not mirror), through the pane's transmission if one stands in front
-    if (reflK > 0.0) { refl = upsampleRefl(sPixf) * (reflK * albedo4.a); color += refl * glassT; }
-    if ((frame.flags & FLAG_GLOSS) != 0u && glossPix) { spec = upsampleSpecular(pix, pin, zg, Ng) * select(albedo4.a, specK, glassPix); color += spec; }   // × the decals' gloss-keep: soot on the lino does not mirror the ceiling panel (1.0 wherever no mark lies) — except through a pane, whose texels carry the floor's AND the pane's reflection in one read: the pane's must not vanish over a scorch behind it, so the keep is waived there (and the cracks' boost applies)
-    else if (glassPix) { spec = upsampleSpecAny(pix, pin, zg, Ng) * specK; color += spec; }
-    if ((id & 0x50000000u) == 0x50000000u) { let ws = wetCoatSpec(id, P, N, z, EdS, EdB, Ei); spec += ws; color += ws * glassT; }   // a WET character pixel (bits 30 + 28: gbuffer.wgsl fsSkin — never a dry man's, never with the setting off): the clear coat's light, through the pane like the rest of him if he stands behind one
+    if (reflK > 0.0) { refl = upsampleRefl(sPixf) * (reflK * albedo4.a * shadeG); color += refl * glassT; }
+    if ((frame.flags & FLAG_GLOSS) != 0u && glossPix) { spec = upsampleSpecular(pix, pin, zg, Ng) * (select(albedo4.a, specK, glassPix) * shadeG); color += spec; }   // × the decals' gloss-keep: soot on the lino does not mirror the ceiling panel (1.0 wherever no mark lies) — except through a pane, whose texels carry the floor's AND the pane's reflection in one read: the pane's must not vanish over a scorch behind it, so the keep is waived there (and the cracks' boost applies)
+    else if (glassPix) { spec = upsampleSpecAny(pix, pin, zg, Ng) * (specK * shadeG); color += spec; }
+    if ((id & 0x50000000u) == 0x50000000u) { let ws = wetCoatSpec(id, P, N, z, EdS, EdB, Ei) * shadeG; spec += ws; color += ws * glassT; }   // a WET character pixel (bits 30 + 28: gbuffer.wgsl fsSkin — never a dry man's, never with the setting off): the clear coat's light, through the pane like the rest of him if he stands behind one
     if (SNOW_SPARKLE) { spec += sparkle; color += sparkle * glassT; }   // SNOW SPARKLE: light, not paint — added as it is
     if (((id >> 29u) & 1u) == 1u) { color = mix(frame.capColor.rgb, albedo * frame.capColor.rgb * 4.0, frame.capColor.a); }
     if (dbg == 1u) { color = select(albedo, albedo * glassT + vec3f(0.0, 0.08, 0.06), glassPix); }   // (albedo view: pixels behind glass carry the tint and a faint teal wash, so the panes can be found)

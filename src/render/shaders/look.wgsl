@@ -34,7 +34,11 @@ const LOOK_MIN_TILT: f32 = 0.02;   // … and under this the pixel is the face, 
 fn lookMarkSoft() -> f32 { return lookCfg.g.x; }
 struct LookOut { albedo: vec3f, n: vec3f, rough: f32, tilted: bool };
 struct LookTap { a: vec4f, b: vec4f };
-fn lookTap(layer: i32, st: vec2f, dx: vec2f, dy: vec2f) -> LookTap {
+/** a map coordinate or its slope as the sampler may be handed it: 0 where the number is no number (a face with no size, a normal with no length: the maths
+ *  upstream is the picture's, and a slope that is not a number leaves the mip the sampler picks up to the GPU). A guard, not a cure for anything seen */
+fn lookFin(v: vec2f) -> vec2f { return select(vec2f(0.0), clamp(v, vec2f(-4096.0), vec2f(4096.0)), abs(v) < vec2f(1e30)); }
+fn lookTap(layer0: i32, st0: vec2f, dx0: vec2f, dy0: vec2f) -> LookTap {
+  let layer = clamp(layer0, 0, i32(textureNumLayers(lookA)) - 1); let st = lookFin(st0); let dx = lookFin(dx0); let dy = lookFin(dy0);
   var t: LookTap; t.a = textureSampleGrad(lookA, lookSamp, st, layer, dx, dy); t.b = textureSampleGrad(lookB, lookSamp, st, layer, dx, dy); return t;
 }
 fn lookBase(layer: i32) -> f32 { if (layer < 4) { return lookCfg.c[layer]; } if (layer < 8) { return lookCfg.d[layer - 4]; } return lookCfg.e[layer - 8]; }

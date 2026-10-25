@@ -126,6 +126,9 @@ export class PerfSweep {
   oneAir: (() => SweepFlip | string) | null = null;
   /** the wisps' row, the same way */
   wispMotes: (() => SweepFlip | string) | null = null;
+  /** rows of the PAGE's own, flipped after the list's (the look prototype hands in its panel's layers, ui/lookpanel.ts): each with the hook that arms it, as oneAir's does.
+   *  Empty on every other page: the take is then the list's alone */
+  extra: { row: SweepRow; flip: () => SweepFlip | string }[] = [];
   /** the world holds still for the take (host/loop.ts frozen: no game step, the picture stays live) */
   get freezing(): boolean { return this.active && !this.opts.live; }
   get progress(): string { return this.active ? `${this.at + 1}/${this.plan.length}` : this.last; }
@@ -143,7 +146,7 @@ export class PerfSweep {
     for (const row of SWEEP_ROWS) for (const k of Object.keys(row.set ?? {})) if (k in S) this.base[k] = copy(S[k]);
     this.base.renderScale = S.renderScale;
     const armed: Armed[] = [], skipped: { id: string; why: string }[] = [];
-    for (const row of SWEEP_ROWS) {
+    for (const row of [...SWEEP_ROWS, ...this.extra.map(x => x.row)]) {
       if (this.opts.only && !this.opts.only.includes(row.id)) continue;
       const a = this.arm(row); if (typeof a === 'string') skipped.push({ id: row.id, why: a }); else armed.push(a);
     }
@@ -235,7 +238,7 @@ export class PerfSweep {
       try {
         const c = a.row.custom;
         if (c === 'preset') continue;   // (the preset he picked is the page's now, not the one this row was to put back)
-        if (c && !c.startsWith('scale')) { undo(); continue; }   // (every custom row but the scale rows writes something that is not a setting: its own undo is the only way back)
+        if ((c && !c.startsWith('scale')) || this.extra.some(x => x.row.id === a.row.id)) { undo(); continue; }   // (every custom row but the scale rows, and every row of the page's own, writes something that is not a setting: its own undo is the only way back)
         for (const k of Object.keys(a.to)) if (!wrote.has(k) && same(S[k], a.to[k])) S[k] = copy(a.from[k]);   // (plain rows and the scale rows: from / to are keyed by the setting)
       } catch { /* */ }
     }
@@ -266,6 +269,8 @@ export class PerfSweep {
   /** a row made ready against this page's state: its flip and undo, or the reason it does not apply here */
   private arm(row: SweepRow): Armed | string {
     const S = this.settings, E = this.engine;
+    const own = this.extra.find(x => x.row === row);
+    if (own) { const f = own.flip(); if (typeof f === 'string') return f; return { row: f.settleMs ? { ...row, settleMs: f.settleMs } : row, label: row.label, from: f.from, to: f.to, apply: f.apply }; }
     if (row.set) {
       for (const k of Object.keys(row.set)) if (!(k in S)) return `this build has no setting '${k}'`;
       const other = !!row.or && Object.keys(row.set).every(k => same(S[k], row.set![k])), to = other ? row.or!.set : row.set, label = other ? row.or!.label : row.label, from: Record<string, unknown> = {};

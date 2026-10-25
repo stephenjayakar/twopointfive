@@ -754,6 +754,81 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   (`hourLight`); the moon's is NOT carried, and `guards.ts lightEstimateAt` skips every directional light but the hour's sun, so a raised moon moves the
   picture and the GPU's meter and not the headless stand-in or the team's light rules. A moon worth playing under needs that stand-in to count it (the
   sun's one segment test is the model) and a level's own number: a rule of the game, for a switch of its own.
+- **THE LOOK PANEL'S CLARITY ROW** (`render/gbuffer.ts setLook`; the maintainer on his GPU, 10-25: "it does feel a bit too "high frequency" for me, like
+  edges are cranked up (e.g. "clarity" knob in lightroom)"). One number over the four layers that set a surface against its own neighbourhood: Relief,
+  Cavities, Edges and Snow relief are each sent × Clarity (their rows keep their own numbers). Default 0.7; 1 = the layers as their rows say. Plain boxes
+  set it to 1 with the snow's relief, and Snow relief at exactly 1 (the game's own snow, what the sweep's row flips to) is sent as 1 whatever Clarity
+  says. Nobody has seen 0.7 on a GPU.
+- **THE LOOK PANEL'S SKY LIGHT ROW** (`lookConfig.sky`, `engine.ts` where the frame block is written; a MEASURING row, asked for by the maintainer's
+  midday note, 10-25: "we need much more ambient light coming from the sky. it shouldn't be so dark underneath the shed here"). The sky's zenith and
+  horizon as the picture and its rays have them × the row (0 to 4, default 1). It is the same lever as the debugger's sky brightness, put where the look
+  is judged, and it reaches the GPU only: what the game reads off the sky on the CPU (`hours.ts skyLum`, so the headless light meter) does not see it.
+  Not a fix and not a default to move: MEASURED with it (the plain page, the pass at midday, snow weather, software adapter): the lorry bay's floor
+  holds 3 to 12 % of the open yard's light, which is what one open side lets in (a view factor of 0.03 to 0.05 at five metres in, 0.12 at three), so the
+  sky's light arrives about right. The bay read black for three other reasons: one exposure set for sunlit snow (1.7), the tone curve's toe (scene ×
+  exposure 0.01 comes out at code 18, 0.05 at 59), and dirt whose paint is very dark (luminance about 0.1). Hence the next row.
+- **THE LOOK PANEL'S "EYES ADJUST TO SHADE" ROW** (`lookConfig.shade`, 0.7 on the look page, 0 = off; `engine.ts lookShade` writes `frame.shadeCfg`
+  @832, `composite.wgsl lookShadeGain` reads it; the maintainer, 10-25: "it shouldn't be so dark underneath the shed here", then "let's make sure the
+  ambient occlusion fix is general and fits nicely with our lighting pipeline. i want it to feel quite realistic!"). No light is added. By day, the
+  light a pixel SENDS BACK (its diffuse and its mirror share) is shown up to ×6 brighter where the place it is in holds less light than open air, as an
+  eye opens up looking into a shed. THE PLACE is read off the radiance cache (`diceMeanRadiance`, no ray) against what open air holds from the sky
+  alone, raised to the row's amount. It is the MOST of five reads (here and 0.6 of a cell to each side in plan), because a probe buried in a container
+  or a thick wall holds nothing and would make the ground beside it read as a dark place: a glow round every big thing. The price is on the kinder
+  side: within a cell of a bright neighbour (the inside of a shed's outer wall, a doorway) less is brought up, which reads as the shade a wall's foot
+  has anyway; a room under two cells wide with a bright yard on both sides is hardly brought up at all. THE PIXEL's own light bounds it: a pixel at or
+  over what open ground gets from the sky alone is left as it is (sunlit ground, a sun patch on a shed's floor, the pool under a lamp), and under that
+  the gain rolls off as the pixel nears it (place ∕ (1 + (place − 1)·Epix ∕ w)), so brighter stays brighter and nothing lands on one flat level. A
+  lamp's own face, a section cap, snow sparkle, beams, fire, the air, the weather and the lit GPU particles (casings, chips) are NOT scaled: a chip on a
+  shed's floor reads darker than the floor by the gain. It fades out as the sky's mean radiance falls from 0.35 to 0.08: dusk gets a little, night gets
+  none (the dark is the game's). "Hold: plain boxes" and the sweep's `look.all` row put it at 0. The two sky constants in `lookShade` (0.8 / 0.2 and
+  0.947 / 0.053) are the hemisphere integrals of `common.wgsl skyRadiance`'s ramp: retune one, redo the other.
+  **THE PICTURE ONLY**: guards, teammates and the light meter read the light as it is, so by day a shed LOOKS brighter than it hides you. That is a
+  break of "what the AI senses is what the picture shows" by the amount of the gain, ON by default on the prototype page because the maintainer asked
+  to see it, and to be settled before any of it goes to the build (the honest version is one exposure for the picture, chosen by where the camera
+  looks, which the game can read too). Seen on the software adapter only (the bay at midday); never seen on a GPU, never played.
+- **THE LOOK PAGE WITH A GEOMETRY TRIAL ON IS COMPILED WITHOUT THE ROUND TEST** (`main.ts urlFlagsBeforeEngine`: `roundConfig.gpu` is false when
+  `lookConfig.on` and a trial has put `cutConfig.swap` off; `?round=1` compiles it in; 10-25). After the build's round things came in by merge, the look
+  page lost its SOFTWARE device on its first drawn frame ("A valid external Instance reference no longer exists") where the plain page at the same
+  quality drew. Runs that settled it: look with every trial off and `round=0` draws; look with every trial on and `round=0` draws; look with every
+  trial on and rounds compiled in dies. The reading (the software adapter's room, above; not bisected further): a trial keeps the cut twin of every ray
+  walk live from the first frame and `ROUND_BOXES` adds the round test to each copy. `ROUND.on` (the game's own switch, the debugger's row) is NOT
+  moved: only the shader's half. On the pass nothing is lost, because the trial turns the kit's octagons into its own cut prisms before a round thing
+  is looked for. NOT so everywhere: the trial takes only octagons stepped 2 mm ± 1 mm (`geoTry.ts octagonAt`) where `round.ts` takes 0.5 to 4.5 mm, so
+  on a level whose octagons are stepped otherwise (block, consulate, records) and wherever the panel's Shapes row leaves an octagon alone, a round
+  thing is drawn and traced as its square box on this page while the game plays it round. The one-file hosted page takes no address flags, so it
+  cannot ask for `round=1`. Whether `?look&round=1` draws on a real GPU: never tried.
+- **THE LOOK PANEL'S PERFORMANCE ROWS** (`ui/lookpanel.ts perfRows`, `ui/perfsend.ts`; the maintainer, 10-25: "it'd be good to have a way to collect a lot
+  of perf data so you can see how it runs on my laptop", "i do worry that we have a few stuttering frames even if overall fps is pretty high"). The
+  measuring is the F9 recorder and the F8 sweep as they are (`ui/perfrec.ts`, `ui/perfsweep.ts`); the panel adds two buttons and a way out of a page that
+  cannot download. Record play = `rec.start` / `rec.stop` round his own play. Price the layers = the sweep over its own rows plus the look's:
+  `PerfSweep.extra` is a list of rows a PAGE owns (`{ row, flip }`, the flip made when the sweep arms, undone by its own undo when the sweep is kept
+  back), and the panel gives it `look.all` (plain boxes) and one `look.<row>` a layer (not Size, Sky light, Air, Clarity or Untile; Snow relief flips
+  to 1, its plain value). On a stop the recorder's own way out runs first, then `takeRead` makes the short read (frame time at the middle, the 95th and
+  99th and the worst; counts over 20 / 25 / 33 / 50 / 100 ms; the forty slowest frames outside a sweep's warm-up and settles, each with its CPU parts,
+  its GPU cost, the passes that ran over their own middle and what was logged within 0.4 s; every pass as mean and 95th) and shows it in a box with a
+  Copy button. A sweep's rows are NOT priced on the page: `tools/qa/perf-report.ts` prices them off the whole take. `sendTake` hands the read and the
+  whole take (gzipped, base64, 180,000-character parts) to `window.__takeStore.put(path, doc)` as `takes/<id>` and `takes/<id>/parts/<n>`, one take at a
+  time, a failed write tried once more. No page of this repo sets `__takeStore`: a page that hosts the one-file build hands it in, and without it nothing
+  is sent and the read sits in the box. `takeRead` was tried headless on made-up takes only; no take has left a page yet.
+- **POSTS SEATED IN A WALL'S END** (`scene/lookMend.ts seatPosts`, the look page only, `?seat=0` off; the maintainer, 10-25: "seems like a sorting issue
+  that's flickering to right of the red door"). The pass's gate post (0.34 m square) stands with one face exactly in the end face of the yard wall it
+  closes, so two faces shared a plane and the depth test flipped between the post's render and the wall's stone plinth. On the look page a post (tall,
+  8 to 30 cm half both ways, square to the world, drawn, no glass) with a face in the END face on the SAME side of a wall whose section is inside the
+  post's grows 4 mm in x and z when the level loads, and rises 4 mm where the two tops are level. A post that only stands AGAINST a wall is not matched.
+  Over every level file: 12 posts (pass 2, gwot-yard 2, police-post 2, tut-sky 2, snatch 2, depot 1, depot-gwot 1); the console says how many. The level
+  file is not touched: the right mend is in the level's own numbers, found by `tools/qa/zfight-check.ts` (`levels.md`). Never seen on a GPU.
+- **THE CHARACTER LAB** (`host/charlab.ts`, opened from the look panel; the maintainer, 10-25: "men up close look pretty good, but not perfect. IMO we
+  should just iterate on the characters in a character lab or the workbench"). Not a page of its own: on the running look page the camera is pinned on
+  YOU at a man's height (`FollowCamera.setPin` every frame; Angle, Height, Distance, Looks at, or turning slowly), you wear any variant of the cast
+  (`cast.ts castWear`, two arrows) and are painted as the SIDE of that outfit (`charLook.ts`), except in a mission that has you in the sneaking suit,
+  where every outfit is the suit. Nobody notices or hurts you while it is open: `playerInvisible` and `godMode` are raised once on Open, only where they
+  were down, and Leave puts down only what the lab raised, with your own outfit and the free camera back. You walk the mannequin into the light you want
+  to judge him in. THE EYE STAYS ON YOUR SIDE OF A WALL (`charLabFrame`: `col.segmentBlocked` from the look point to the eye and to a point 0.25 m to
+  either side of it, the distance bisected and 0.25 m kept off the wall); where that leaves it nearer than 1.2 m it looks from the nearest angle, a
+  twelfth of a turn at a time to either side, that gives room. Coming in is at once, going back out is eased. `quietUtility` is raised with the two
+  flags, as a show has it, so NO CHECKPOINT is written while the lab is open (`savestate.ts runNo`): a file with the lab's unseen player in it could
+  be loaded later with nothing to put the flag down. `window.__charlab` = `{ state, open, leave, wear, worn, outfits }`. Sam keeps his own
+  weapon in any outfit. Never seen on a GPU.
 - **A HOUSE FRONT DRESSED BY HAND, A TRIAL** (`src/scene/frontTry.ts dressFront`; the look page only; the maintainer, 10-23, of the pass's tea house seen
   from over its yard: "this looks a bit too "regular" -- especially the face of the building we're looking at", and a minute before "the art style just
   needs a lot of iteration. right now it does look a bit procedural"). The answer tried is AUTHORING, not another layer of noise: one wall gone over
@@ -895,3 +970,9 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   round, no steps) and a crate; never on a GPU. TRAP: the corner test first read its eight cells in two chains of `&&` over `markCell` calls, and
   with that the software adapter never finished the look page's first frame (three boots of three; every pipeline compiled, no error). It is one
   call site in a loop over `MK_BRIDGE` now. A page boot that reports its pipelines says nothing until a frame is drawn.
+  **NOT WORKING ON THE MAINTAINER'S GPU (10-25: "turning on and off painted marks doesn't seem to do anything?")**: his crops of the gate's diamond are
+  square cells with sharp corners at both ends of the row, where the software adapter at the same quality brushes them. Cause not found (the crisp path,
+  which is right on his GPU, writes a component picked per pixel too, so that is not it; `markSoftRead` was reworked to whole-vector sums anyway, the
+  same maths). A TEST PICTURE for his GPU: the row all the way up (2, `soft > 1.75`) paints each mark's patch red = how near the soft read counts the
+  pixel, green = the soft read's cover (a smooth ramp between cells where it works, flat squares where it does not), blue = the record has an entry that
+  burns. One screenshot of it says which term is wrong.

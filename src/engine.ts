@@ -526,8 +526,9 @@ export class Engine {
         | (s.gridSkip ? FrameFlags.GridSkip : 0) | (s.gridYCull ? FrameFlags.GridYCull : 0) | (s.axisBoxFast ? FrameFlags.AxisBox : 0) | (s.gridSlabs ? FrameFlags.GridSlabs : 0) | (s.gloss && !rtOn ? FrameFlags.Gloss : 0) | (meshOn ? FrameFlags.MeshShadows : 0)
         | (decalsOn ? FrameFlags.Decals : 0) | (partOn ? FrameFlags.Particles : 0) | (s.glass ? FrameFlags.Glass : 0) | (cardSlots.length > 0 ? FrameFlags.BounceCards : 0) | (s.directSeedHold ? FrameFlags.DirectSeedHold : 0) | (s.giAdaptiveHistory ? FrameFlags.GiAdaptiveHist : 0)
         | (froxOn ? FrameFlags.FroxelVol : 0) | (s.restir ? FrameFlags.Restir : 0),
+      shadeCfg: lookConfig.on && lookConfig.shade > 0 ? lookShade(s.skyZenith, s.skyHorizon, lookConfig.sky, lookConfig.shade) : undefined,
       exposure: s.exposure,   // tileCull / softTileSkip / gridSkip / gridYCull / axisBoxFast / gridSlabs / gloss / meshShadows / decals / gpuParticles / glass / torchBounceCards / directSeedHold / giAdaptiveHistory: the boolean settings are the single source of truth for their bits (frame.ts FrameFlags is the one table; the cards bit only while a card light is actually up, the decals bit only while a mark exists)
-      skyZenith: s.skyZenith, skyHorizon: s.skyHorizon, hazeDensity: lookConfig.on ? s.hazeDensity * lookConfig.air : s.hazeDensity,
+      skyZenith: lookConfig.on && lookConfig.sky !== 1 ? [s.skyZenith[0] * lookConfig.sky, s.skyZenith[1] * lookConfig.sky, s.skyZenith[2] * lookConfig.sky] : s.skyZenith, skyHorizon: lookConfig.on && lookConfig.sky !== 1 ? [s.skyHorizon[0] * lookConfig.sky, s.skyHorizon[1] * lookConfig.sky, s.skyHorizon[2] * lookConfig.sky] : s.skyHorizon, hazeDensity: lookConfig.on ? s.hazeDensity * lookConfig.air : s.hazeDensity,
       rcInterval0: this.rc.cfg.interval0, rcC0Dims: [this.rc.cfg.nx, this.rc.cfg.ny, this.rc.cfg.nz], rcNumCascades: this.rc.cfg.cascades, rcD0: this.rc.cfg.d0, rcFrameParity: this.frameIdx & 1,
       numSmoke: this.smoke.count, debugView: s.debugView, indirectScale: s.indirectScale, emissiveScale: s.emissiveScale, volSteps: s.volSteps,
       capColor: s.capColor, post: [s.nvAmount, s.nvGain, s.hitFlash, Math.tan(cam.fov / 2)],
@@ -643,3 +644,13 @@ export class Engine {
 }
 
 export { FrameFlags };
+
+/** THE LOOK PROTOTYPE, eyes adjust to shade (frame.shadeCfg; composite.wgsl lookShadeGain): the row's amount by DAY only (a night's dark is the game's, and is left
+ *  as it falls: the amount fades out as the sky's own mean radiance falls from 0.35 to 0.08), and the two things a shaded place is measured against, both from the
+ *  sky ALONE as common.wgsl skyRadiance paints it (horizon to zenith over the first 0.4 of height): the mean radiance open air holds (half the upper hemisphere's
+ *  mean, 0.8 zenith + 0.2 horizon) and the irradiance open ground gets (π × (0.947 zenith + 0.053 horizon)). Never more than ×6 */
+function lookShade(zen: ArrayLike<number>, hor: ArrayLike<number>, skyK: number, amount: number): [number, number, number, number] {
+  const lum = (a: number, b: number) => skyK * (0.2126 * (a * zen[0] + b * hor[0]) + 0.7152 * (a * zen[1] + b * hor[1]) + 0.0722 * (a * zen[2] + b * hor[2]));
+  const up = lum(0.8, 0.2), t = Math.min(1, Math.max(0, (up - 0.08) / 0.27)), day = t * t * (3 - 2 * t);
+  return [Math.min(1, amount) * day, 0.5 * up, 6, Math.PI * lum(0.947, 0.053)];
+}

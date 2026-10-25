@@ -10,6 +10,7 @@ import { BACKKEY } from './game/backkey';
 import { loadoutFromQuery, wireMissions } from './ui/loadout';
 import { sneakLabAsked, sneakLabBoot, sneakLabFrame } from './host/sneaklab';
 import { fireLabAsked, fireLabBoot, fireLabFrame } from './host/firelab';
+import { CHARLAB, charLabOpen, charLabLeave, charLabWear, charLabWorn, charLabOutfits, charLabFrame } from './host/charlab';
 import { kitSoloIf, kitFresh, kitShow, kitPlayer, kitGun, kitLessonPage, kitLoad, kitRows, KIT, ISSUE, SUITS, TRIMS } from './game/kit';
 import { kitBoot } from './ui/kitPreview';
 import { missionsBusy, reopenMissionsAfterLoad, openMissionsIfAsked, OFFLIST_UI } from './ui/missions';
@@ -52,6 +53,7 @@ import * as cutMod from './scene/cut';
 import { cutConfig, initCutSwitch, type CutPlane } from './scene/cut';
 import { geoTryLevel } from './scene/geoTry';
 import { dressFront } from './scene/frontTry';
+import { seatPosts } from './scene/lookMend';
 import { dressLorry } from './scene/lorryTry';
 import { charLookSides } from './render/charMaterials';
 import { groundRayConfig } from './scene/groundField';
@@ -410,8 +412,8 @@ async function main() {
     // ← / → and [ / ] over the open panel walk its systems, a typed letter opens its search — before the game reads the key
   (window as any).__panel = panel;
   // the look's amounts for a scripted picture (the panel's sliders are the player's way; they do not follow this)
-  if (lookConfig.on) (window as any).__look = { get: () => ({ ...lookAmounts }), set: (o: Partial<typeof lookAmounts>) => { for (const [k, v] of Object.entries(o)) if (Object.hasOwn(lookAmounts, k) && typeof v === 'number' && isFinite(v)) (lookAmounts as Record<string, number>)[k] = Math.min(4, Math.max(0, v)); engine.gbuffer.setLook(); lookConfig.air = lookAmounts.air; } };
-  if (lookConfig.on) { lookConfig.air = lookAmounts.air; const gq = new URLSearchParams(location.search), gOn = geoTryOn(gq); buildLookPanel(engine, () => fpsSm, cutConfig.on && !gq.has('geo') ? { on: gOn, flip: () => { try { localStorage.setItem(GEO_KEY, gOn ? '0' : '1'); } catch { /* no storage: the trial stays as it is */ } location.reload(); } } : undefined, gq.has('hills') ? undefined : { on: groundRayConfig.on, flip: () => { try { localStorage.setItem(HILLS_KEY, groundRayConfig.on ? '0' : '1'); } catch { /* no storage: the trial stays as it is */ } location.reload(); } }, cutConfig.on && !gq.has('front') ? { on: frontTryOn(gq), flip: () => { try { localStorage.setItem(FRONT_KEY, frontTryOn(gq) ? '0' : '1'); } catch { /* no storage: the trial stays as it is */ } location.reload(); } } : undefined,
+  if (lookConfig.on) (window as any).__look = { get: () => ({ ...lookAmounts }), set: (o: Partial<typeof lookAmounts>) => { for (const [k, v] of Object.entries(o)) if (Object.hasOwn(lookAmounts, k) && typeof v === 'number' && isFinite(v)) (lookAmounts as Record<string, number>)[k] = Math.min(4, Math.max(0, v)); engine.gbuffer.setLook(); lookConfig.air = lookAmounts.air; lookConfig.sky = lookAmounts.sky; lookConfig.shade = lookAmounts.shade; } };
+  if (lookConfig.on) { lookConfig.air = lookAmounts.air; lookConfig.sky = lookAmounts.sky; lookConfig.shade = lookAmounts.shade; const gq = new URLSearchParams(location.search), gOn = geoTryOn(gq); buildLookPanel(engine, () => fpsSm, cutConfig.on && !gq.has('geo') ? { on: gOn, flip: () => { try { localStorage.setItem(GEO_KEY, gOn ? '0' : '1'); } catch { /* no storage: the trial stays as it is */ } location.reload(); } } : undefined, gq.has('hills') ? undefined : { on: groundRayConfig.on, flip: () => { try { localStorage.setItem(HILLS_KEY, groundRayConfig.on ? '0' : '1'); } catch { /* no storage: the trial stays as it is */ } location.reload(); } }, cutConfig.on && !gq.has('front') ? { on: frontTryOn(gq), flip: () => { try { localStorage.setItem(FRONT_KEY, frontTryOn(gq) ? '0' : '1'); } catch { /* no storage: the trial stays as it is */ } location.reload(); } } : undefined,
     cutConfig.on && !gq.has('lorry') && /^pass\b/.test(gq.get('levelFile') ?? '') ? { on: lorryTryOn(gq), flip: () => { try { localStorage.setItem(LORRY_KEY, lorryTryOn(gq) ? '0' : '1'); } catch { /* no storage: the trial stays as it is */ } location.reload(); } } : undefined); }
   const hud = document.getElementById('hud')!;
   const tourVeil = document.getElementById('veil')!;   // black fade the tour raises around its cuts
@@ -604,6 +606,7 @@ async function main() {
     () => bench.active && !bench.sweeping ? 'the benchmark is running' : quality.calibrating ? 'auto quality is still measuring this machine' : menu.isOpen && menu.mode === 'start' && !bench.sweeping ? 'start a run first' : null);
   perfsweep.oneAir = () => oneAirFlip(game); perfsweep.wispMotes = () => wispMotesFlip(game);
   (window as any).__perfsweep = perfsweep;
+  if (lookConfig.on) (window as any).__charlab = { state: CHARLAB, open: () => charLabOpen(game), leave: () => charLabLeave(game, cam), wear: (pick: string | number) => charLabWear(game, pick), worn: () => charLabWorn(game), outfits: () => charLabOutfits(game) };   // (host/charlab.ts: the look panel's Character lab rows drive it)
   window.addEventListener('keydown', e => { if (e.code === 'F8' && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey && !/^(INPUT|TEXTAREA|SELECT)$/.test((e.target as HTMLElement | null)?.tagName ?? '')) { e.preventDefault(); perfsweep.toggle(e.shiftKey); } });
   // THE BENCHMARK (ui/bench.ts; title ▸ Extras ▸ Benchmark, or ?bench on the address): hands off, a page per scene of host/benchScenes.ts (ui/benchrun.ts carries the run
   // from page to page), each a real mission played through the game's own keys by host/handsoff.ts. The first page's opening picture is timed, every scene live, and the
@@ -829,6 +832,7 @@ async function main() {
   function step(dt: number, lastOfBurst = true) {
     sneakLabFrame(game, cam);   // (?sneaklab: the lab's two sandbox flags as its panel has them; a return on its first line otherwise)
     fireLabFrame(game);   // (?firelab: its two sandbox flags; a return on its first line otherwise)
+    charLabFrame(game, cam);   // (the look prototype's character lab, opened from its panel: the camera on you; a return on its first line otherwise)
     lastOfBurstNow = lastOfBurst;
     stressTick(game);   // (?extra=N / the panel's stress row: the asked-for extra enemies stood again after a restart — a return on its first line while off)
     lookTidy(engine.world);   // (picture only: a dado / damp foot the default look laid on a wall goes with that wall when it is holed — scene/lookTidy.ts)
@@ -918,7 +922,7 @@ function urlFlagsBeforeEngine(q: URLSearchParams) {
   if (glassMod.glassFxBoot() && (q.has('glassbreak') ? q.get('glassbreak') !== '0' : glassBreakPersisted())) glassBreakConfig.on = true;   // GLASS BREAKING (game/glassbreak.ts): the renderer's half is the scene prelude's compile-time const — raised here, before the Engine builds a pipeline, from the switch kept on this machine (Tab ▸ Destruction ▸ Glass; ?glassbreak / ?glassbreak=0 force it for one boot without touching the stored switch); off = every shader is main's program   // ?trace=N: the ray-traversal lab's compile-time variant const in every scene shader (render/frame.ts traceConfig, docs/internal/trace-perf.md; only 0 = today's walk exists on main) — must be set before the Engine builds any pipeline
   groundRayConfig.on = hillRaysOn(q); if (groundRayConfig.on && q.has('roll')) { const r = Number(q.get('roll')); if (Number.isFinite(r)) groundRayConfig.roll = Math.max(0, Math.min(0.25, r)); }   // (?roll=<m>: the open ground's snow swells this deep — the trial's second half, off unless asked)
   initCutSwitch(); if (geoTryOn(q) || frontTryOn(q) || lorryTryOn(q)) cutConfig.swap = false;   // (A GEOMETRY TRIAL, scene/geoTry.ts: its cut boxes stand from the first frame to the last, so the one set of ray programs with the cut rule is compiled at boot)
-  roundConfig.gpu = ROUND.on && cutConfig.on;   // (ROUND THINGS, scene/round.ts: the GPU's half — the prelude's ROUND_BOXES const, the round bit, the prism's rows — set once, before the first pipeline. It needs the cut switch, whose table and pipeline draw a round: without that one a round is drawn and traced as the box round it, and the game meets the cylinder all the same)   // CUT BOXES (scene/cut.ts): on in the page unless ?nocutboxes / ?cutboxes=0 / localStorage twopointsix.cutboxes = '0' — the scene prelude's CUT_BOXES const, the cut table's rows in boxMat and the second g-buffer pipeline all follow it, so it is read before the Engine exists (a reload flips it)
+  roundConfig.gpu = ROUND.on && cutConfig.on && !(lookConfig.on && !cutConfig.swap && q.get('round') !== '1');   // (ROUND THINGS, scene/round.ts: the GPU's half — the prelude's ROUND_BOXES const, the round bit, the prism's rows — set once, before the first pipeline. It needs the cut switch, whose table and pipeline draw a round: without that one a round is drawn and traced as the box round it, and the game meets the cylinder all the same. THE LOOK PROTOTYPE with a geometry trial on (the cut rule in every ray program from boot, the line above) is compiled WITHOUT the round test unless `?round=1` asks: with it on top the software adapter lost its device on the first drawn frame where the plain page drew, docs/agents/render.md. `ROUND.on` is not moved: the game still plays a round thing round)   // CUT BOXES (scene/cut.ts): on in the page unless ?nocutboxes / ?cutboxes=0 / localStorage twopointsix.cutboxes = '0' — the scene prelude's CUT_BOXES const, the cut table's rows in boxMat and the second g-buffer pipeline all follow it, so it is read before the Engine exists (a reload flips it)
   { const ds = Number(q.get('decalStress')); if (ds > 1) decalDebug.repeat = Math.min(64, ds | 0); }   // measurement only (?decalStress=N): the decal lookup N× per g-buffer fragment (render/decals.ts decalDebug), so its cost can be read above the timer's noise; must be set before the Engine builds the g-buffer shader
 }
 
@@ -971,6 +975,7 @@ async function bootLevel(q: URLSearchParams, engine: Engine, tick: () => Promise
   if (geoTryOn(q)) { const gt = geoTryLevel(level); console.info(`geometry trial: ${gt.rounds} round things, ${gt.walls} broken wall tops (?geo=0 = the level as its file has it)`); }   // A GEOMETRY TRIAL (scene/geoTry.ts; the look page only): the level's octagons as round prisms, a bite out of each yard wall's top — cut boxes, before the boxes go to the world
   if (frontTryOn(q)) { const n = dressFront(level); if (n) console.info(`house front: ${n} pieces placed by hand (?front=0 = the wall as its file has it)`); }   // A HOUSE FRONT DRESSED BY HAND, A TRIAL (scene/frontTry.ts; the look page only, and only the pass's tea house)
   if (lorryTryOn(q)) { const n = dressLorry(level); console.info(n ? `lorry: ${n} pieces placed by hand (?lorry=0 = the lorry as its file has it)` : 'lorry: not the lorry scene/lorryTry.ts knows (the generator moved a box?): nothing touched'); }   // A LORRY WITH CURVES, A TRIAL (scene/lorryTry.ts; the look page only, and only the pass's lorry)
+  if (lookConfig.on && new URLSearchParams(location.search).get('seat') !== '0') { const n = seatPosts(level); if (n) console.info(`look: ${n} post${n === 1 ? '' : 's'} seated a hair proud of the wall end they stand in (?seat=0 leaves them)`); }   // (scene/lookMend.ts — the look page only)
   if (level.markTexel) engine.settings.markingTexel = level.markTexel;   // the base texel the level's marking bitmaps were generated for (absent = 2.5 cm)
   populateHost(engine, level);   // the level's boxes into the world, its lights into the set (src/host/standup.ts — the same two loops the harness runs)
   engine.settings.skyZenith = level.sky.zenith; engine.settings.skyHorizon = level.sky.horizon;

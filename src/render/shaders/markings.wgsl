@@ -107,6 +107,7 @@ fn markNear(m: MarkRec, x: f32, y: f32, wT: vec2f) -> bool { let r = max(wT, vec
 fn mkHash(p: vec2f) -> f32 { let q = fract(p * vec2f(0.1031, 0.1030)); let r = q + dot(q, q.yx + 33.33); return fract((r.x + r.y) * r.x); }
 fn mkNoise(p: vec2f) -> f32 { let i = floor(p); let f = p - i; let u = f * f * (3.0 - 2.0 * f); return mix(mix(mkHash(i), mkHash(i + vec2f(1.0, 0.0)), u.x), mix(mkHash(i + vec2f(0.0, 1.0)), mkHash(i + vec2f(1.0, 1.0)), u.x), u.y); }
 const MK_BRIDGE = array<vec2i, 6>(vec2i(-1, 0), vec2i(0, -1), vec2i(2, 1), vec2i(1, 2), vec2i(2, 0), vec2i(0, 2));
+fn mkEntry(e: u32) -> vec3f { return vec3f(f32(e == 1u), f32(e == 2u), f32(e == 3u)); }   // (a cell's entry as a weight vector: none for a bare cell)
 /** THE LOOK PROTOTYPE, the soft read of a marking: ONE read of the block of four cells around (x, y), blended as a plain bilinear ramp between their
  *  centres (markTaps at a one-cell footprint is not that: it is already a quarter into its minified mean, which puts a step back on every cell edge and
  *  keeps a staircase a staircase), plus THE BRIDGE of a stroke that runs CORNER TO CORNER: where two cells of one paint meet only at a corner and the other
@@ -119,11 +120,8 @@ fn markSoftRead(m: MarkRec, x: f32, y: f32) -> vec3f {
   let i0 = i32(floor(x - 0.5)); let j0 = i32(floor(y - 0.5));
   let u = x - 0.5 - f32(i0); let v = y - 0.5 - f32(j0);
   let a = markCell(m, i0, j0); let b = markCell(m, i0 + 1, j0); let c = markCell(m, i0, j0 + 1); let d = markCell(m, i0 + 1, j0 + 1);
-  var o = vec3f(0.0);
-  if (a != 0u) { o[a - 1u] += (1.0 - u) * (1.0 - v); }
-  if (b != 0u) { o[b - 1u] += u * (1.0 - v); }
-  if (c != 0u) { o[c - 1u] += (1.0 - u) * v; }
-  if (d != 0u) { o[d - 1u] += u * v; }
+  // (whole-vector sums: the same maths as a write to o[entry] a cell)
+  var o = mkEntry(a) * ((1.0 - u) * (1.0 - v)) + mkEntry(b) * (u * (1.0 - v)) + mkEntry(c) * ((1.0 - u) * v) + mkEntry(d) * (u * v);
   var e = 0u; var flip = false;
   if (a != 0u && a == d && b == 0u && c == 0u) { e = a; } else if (b != 0u && b == c && a == 0u && d == 0u) { e = b; flip = true; }
   if (e == 0u || ((m.emask >> (e - 1u)) & 1u) != 0u) { return o; }
@@ -135,18 +133,20 @@ fn markSoftRead(m: MarkRec, x: f32, y: f32) -> vec3f {
     let q = MK_BRIDGE[t];
     if (markCell(m, i0 + select(q.x, 1 - q.x, flip), j0 + q.y) == e) { if (t < 4u) { nb++; } else { nl++; } }
   }
-  if (nb < 4u && nl < 2u) { o[e - 1u] += 5.0 * u * (1.0 - u) * v * (1.0 - v); }
+  if (nb < 4u && nl < 2u) { o += mkEntry(e) * (5.0 * u * (1.0 - u) * v * (1.0 - v)); }
   return o;
 }
 /** THE LOOK PROTOTYPE (soft > 0 only on that page: gbuffer.wgsl hands lookMarkSoft()): a marking drawn as PAINT, not as cells. The bitmap is read as a soft
  *  picture a cell wide (markSoftRead above: a bilinear ramp between cell centres, with its corner bridge) and cut back at half cover along a line the brush left ragged,
  *  so a staircase of cells is a slanted stroke, a lone cell a dab, a corner round; between two colours the stronger takes the pixel; the paint is thin in
- *  patches where it was rubbed. An entry that BURNS keeps its cells (an LED is a square). `w` = the crisp weights; returns the weights to use. */
-fn markSoft(m: MarkRec, x: f32, y: f32, wT: vec2f, w: vec3f, soft: f32, salt: f32) -> vec3f {
-  let foot = max(wT.x, wT.y); let near = 1.0 - smoothstep(0.75, 1.75, foot);      // (far off it is the plain coverage again: a tint, never noise)
+ *  patches where it was rubbed. An entry that BURNS keeps its cells (an LED is a square). `w` = the crisp weights, `ws` = the soft read (the caller's: markSoftRead has ONE call
+ *  site in the module, on purpose); returns the weights to use. */
+/** how much of the soft read a pixel takes by its footprint in cells: far off it is the plain coverage again (a tint, never noise) */
+fn markSoftNear(wT: vec2f) -> f32 { return 1.0 - smoothstep(0.75, 1.75, max(wT.x, wT.y)); }
+fn markSoft(m: MarkRec, x: f32, y: f32, wT: vec2f, w: vec3f, soft: f32, salt: f32, ws: vec3f) -> vec3f {
+  let foot = max(wT.x, wT.y); let near = markSoftNear(wT);
   let amt = min(soft, 1.0) * near;
   if (amt <= 0.0) { return w; }
-  let ws = markSoftRead(m, x, y);
   let s = ws.x + ws.y + ws.z;
   if (s <= 0.0) { return w * (1.0 - amt); }
   let eg = clamp(0.5 * foot, 0.07, 0.5);
@@ -155,7 +155,7 @@ fn markSoft(m: MarkRec, x: f32, y: f32, wT: vec2f, w: vec3f, soft: f32, salt: f3
   let p4 = ws * ws * ws * ws; let share = p4 / max(p4.x + p4.y + p4.z, 1e-6);
   let thin = 1.0 - 0.4 * near * smoothstep(0.55, 0.8, 0.6 * mkNoise(vec2f(x, y) * 0.21 + vec2f(3.0, 9.0 + salt)) + 0.4 * mkNoise(vec2f(x, y) * 1.1 + vec2f(salt, 5.0)));
   var o = share * cover * thin;
-  for (var k = 0u; k < 3u; k++) { if (((m.emask >> k) & 1u) != 0u) { o[k] = w[k]; } }
+  o = select(o, w, vec3<bool>((m.emask & 1u) != 0u, (m.emask & 2u) != 0u, (m.emask & 4u) != 0u));
   o = mix(w, o, amt);
   let tot = o.x + o.y + o.z; if (tot > 1.0) { o /= tot; }
   return o;
@@ -180,7 +180,18 @@ fn markSurfaceGB(slot: u32, bi: u32, wp: vec3f, n: vec3f, dwx: vec3f, dwy: vec3f
       let x = uv.x - f32(m.U0); let y = uv.y - f32(m.V0);
       if (markNear(m, x, y, wT)) {
         var w = markTaps(m, x, y, wT);
-        if (soft > 0.0) { w = markSoft(m, x, y, wT, w, soft, f32((bi * 7u + k) % 61u)); }
+        if (soft > 0.0) {
+          let near = markSoftNear(wT);
+          if (near > 0.0 || soft > 1.75) {
+            let ws = markSoftRead(m, x, y);   // (the module's one call site: the software adapter builds a copy of the walk for each)
+            // A TEST PICTURE (the panel's Painted marks row all the way up, 2): on the maintainer's GPU the marks stayed square cells where the software
+            // adapter brushed them, and nobody has found why. Here the mark's own patch is painted with what this GPU finds on the way: RED = how much of
+            // the soft read the pixel takes by its footprint (black = "too far, keep the cells"), GREEN = the soft read's cover (a smooth ramp between
+            // cells if it works, flat squares if it does not), BLUE = this record has an entry that burns (those keep their cells by rule).
+            if (soft > 1.75) { o.albedo = vec3f(near, ws.x + ws.y + ws.z, select(0.0, 1.0, m.emask != 0u)); o.rough = 1.0; return o; }
+            w = markSoft(m, x, y, wT, w, soft, f32((bi * 7u + k) % 61u), ws);
+          }
+        }
         let sum = w.x + w.y + w.z;
         if (sum > 0.0) {
           var alb = o.albedo * (1.0 - sum); var rgh = o.rough * (1.0 - sum);

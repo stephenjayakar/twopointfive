@@ -63,6 +63,7 @@ const writers: [string, RegExp][] = [
   ['giCfg', /f\[(\d+)\] = gc\[0\];/],   // (written through `gc = p.giCfg ?? ZERO4`)
   ['weatherE', /f\[(\d+)\] = nf\[0\];/],   // (written through `nf = w.nearFade ?? ZERO4` — the particle-rain experiment's disc)
   ['weatherF', /f\[(\d+)\] = pf\[0\];/],   // (written through `pf = w.phase ?? ZERO4` — its v2 phase for the lattice)
+  ['shadeCfg', /f\[(\d+)\] = sh\[0\];/],   // (written through `sh = p.shadeCfg ?? ZERO4`: the look prototype's shade row)
 ];
 { const rows: string[] = []; let bad = 0, missing = 0;
   for (const [name, re] of writers) {

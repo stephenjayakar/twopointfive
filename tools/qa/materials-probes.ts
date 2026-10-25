@@ -154,7 +154,7 @@ export async function materialsFrame() {
     const m = await import(file); mainWrite = m.writeFrame; mainBytes = m.FRAME_BYTES;
   } catch (e: any) { why = String(e?.message ?? e).split('\n')[0]; }
   if (!mainWrite) { console.log(`  (skipped: main's writeFrame — git show ${MAIN_REF}:src/render/frame.ts — is not reachable from this checkout: ${why || 'no such object'}; the byte comparison needs the private repo's history)`); done('materials-frame'); return; }
-  verdict(mainBytes === MAIN_FRAME_BYTES && FRAME_BYTES === MAIN_FRAME_BYTES + 128, `main's Frame is ${mainBytes} B, this branch's ${FRAME_BYTES} B (sharpCfg + sharpCfgB + sharpCfgC, then the SDF rig's rigCfg + rigCfgB, then giCfg, then weatherE + weatherF — appended, nothing moved)`);   // (+ weatherE @800 / weatherF @816: the particle-rain experiment's near-field disc + its v2 phase)
+  verdict(mainBytes === MAIN_FRAME_BYTES && FRAME_BYTES === MAIN_FRAME_BYTES + 144, `main's Frame is ${mainBytes} B, this branch's ${FRAME_BYTES} B (sharpCfg + sharpCfgB + sharpCfgC, then the SDF rig's rigCfg + rigCfgB, then giCfg, then weatherE + weatherF, then the look prototype's shadeCfg — appended, nothing moved)`);   // (+ weatherE @800 / weatherF @816: the particle-rain experiment's near-field disc + its v2 phase)
   const ident = (n: number) => { const a = new Float32Array(16); for (let i = 0; i < 16; i++) a[i] = ((i * 7 + n) % 11) / 11 - 0.3; return a; };
   const base: any = {
     viewProj: ident(1), invViewProj: ident(2), prevViewProj: ident(3), camPos: [20, 6, 14], camDir: [0, -0.7, -0.7], time: 12.5, dt: 1 / 60, width: 1777, height: 1000,
@@ -179,6 +179,7 @@ export async function materialsFrame() {
   verdict(f[188] === 45 && f[189] === 20 && f[190] === 1 && f[191] === Math.fround(0.006) && f[192] === 1 && f[193] === 24 && f[194] === Math.fround(0.0015) && f[195] === Math.fround(0.012), 'and rigCfg @752 + rigCfgB @768 (the SDF character rig: bits + soft-query numbers, blend / trace numbers)', `f[188..195] = ${Array.from(f.subarray(188, 196)).map(v => +v.toFixed(4)).join(', ')}`);
   verdict(f[196] === 3 && f[197] === 9376 && f[198] === 4 && f[199] === 0, 'and giCfg @784 (GI in motion: young-history rays k, cap, young length)', `f[196..199] = ${Array.from(f.subarray(196, 200)).join(', ')}`);
   verdict(f[200] === 0 && f[201] === 0 && f[202] === 0 && f[203] === 0 && f[204] === 0 && f[205] === 0 && f[206] === 0 && f[207] === 0, 'and weatherE @800 + weatherF @816 (particle rain\'s near-field disc + its v2 phase: zeros from a WeatherFrame that never rains particles) last', `f[200..207] = ${Array.from(f.subarray(200, 208)).join(', ')}`);
+  verdict(f[208] === 0 && f[209] === 0 && f[210] === 0 && f[211] === 0, 'and shadeCfg @832 (the look prototype\'s shade row: zeros from a frame that gives none = the picture as it was)', `f[208..211] = ${Array.from(f.subarray(208, 212)).join(', ')}`);
   done('materials-frame');
 }
 

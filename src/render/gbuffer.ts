@@ -56,7 +56,7 @@ fn lookSnow(cls: u32, wp: vec3f, gn: vec3f, bi: u32, lc: vec3f, hf: vec4f, paint
 `;
 }
 /** the look page's panel numbers, as look.wgsl's LookCfg takes them (a, b: the eight amounts; the layers' base roughness follows, and `snow` after it) */
-export const LOOK_DEFAULTS = { paint: 1, relief: 1, shine: 1, weather: 1, untile: 1, edges: 1, cavity: 1, size: 1, snow: 1, air: 1, ground: 1.5, crust: 1, men: 1, stone: 1, marks: 1, tailor: 1, print: 1 };   // (`air` is not the shader's: × settings.hazeDensity, ui/lookpanel.ts)
+export const LOOK_DEFAULTS = { paint: 1, relief: 1, shine: 1, weather: 1, untile: 1, edges: 1, cavity: 1, size: 1, snow: 1, air: 1, ground: 1.5, crust: 1, men: 1, stone: 1, marks: 1, tailor: 1, print: 1, sky: 1, clarity: 0.7, shade: 0.7 };   // (`clarity` is × relief, edges, cavity and ground as they go up, setLook below; `air` and `sky` are not the shader's: × settings.hazeDensity and × the frame's sky, ui/lookpanel.ts)
 export const lookAmounts = { ...LOOK_DEFAULTS };
 /** the cast's part ids the look's men are drawn by (look.wgsl manWeb), each 1 + its index in the cast's part list, 0 = this cast has none: the operators' suit
  *  (it carries the plate carrier) and the canvas chest rig. The page says them once its cast is loaded (main.ts). */
@@ -168,8 +168,8 @@ export class GBuffer {
   /** the panel moved a number (lookAmounts): the uniform block again. Nothing on a page without the look. */
   setLook() {
     if (!this.lookCfg) return;
-    const k = lookAmounts;
-    this.device.queue.writeBuffer(this.lookCfg, 0, new Float32Array([k.paint, k.relief, k.shine, k.weather, k.untile, k.edges, k.cavity, k.size, ...LOOK_ROUGH.slice(0, 11), k.snow, k.ground, k.crust, k.men, k.stone, k.marks, k.tailor, k.print, lookParts.suit + 64 * lookParts.rig]));
+    const k = lookAmounts, c = k.clarity;   // CLARITY: one number over the layers that add contrast between neighbours (the relief's depth, the shadow in joints, the rubbed edges, the snow's prints). The maintainer, 10-25, on a GPU: the look "does feel a bit too 'high frequency' for me, like edges are cranked up (e.g. 'clarity' knob in lightroom)"
+    this.device.queue.writeBuffer(this.lookCfg, 0, new Float32Array([k.paint, k.relief * c, k.shine, k.weather, k.untile, k.edges * c, k.cavity * c, k.size, ...LOOK_ROUGH.slice(0, 11), k.snow, k.ground === 1 ? 1 : k.ground * c, k.crust, k.men, k.stone, k.marks, k.tailor, k.print, lookParts.suit + 64 * lookParts.rig]));
   }
   // ---- THE SNOW'S SURFACE (render/snowField.ts, shaders/snow.wgsl): the field's texture, its uniform block, and the hills' mesh — one (tx, tz) per lattice quad, six corners each
   private snowTex: GPUTexture; private snowView: GPUTextureView; private readonly snowCfg: GPUBuffer;

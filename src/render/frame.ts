@@ -41,8 +41,9 @@ import smokeReadSrc from './shaders/smoke_read.wgsl' with { type: 'text' };
  *    784  giCfg      vec4f              (f[196‥199])  GI-in-motion (docs/internal/gi-motion.md): x = the final gather's ray multiplier for YOUNG-history texels (settings.giYoungRays; ≤ 1 = off: the gather as it was), y = the cap on how many texels a frame may take it (count; the rest first-come), z = the history length under which a texel counts as young (frames), w spare
  *    800  weatherE   vec4f              (f[200‥203])  PARTICLE RAIN (game/rainFx.ts, EXPERIMENT): the near-field particle layer's disc — centre x, z, radius (m), and the share 0‥1 of the lattice rain it replaces inside it (on a snow level, where there is no lattice rain: 0, or NEGATIVE the metres past the level's rim the snow goes on falling — particles_common.wgsl snowPast) (volumetrics.wgsl rainNearKeep); w 0 = no particle layer: the lattice exactly as it was
  *    816  weatherF   vec4f              (f[204‥207])  PARTICLE RAIN v2: the drop's PHASE the lattice rain shares with the particles (volumetrics.wgsl rainLight) — x = isotropic floor, y = forward-lobe weight, z = its Henyey-Greenstein g, w = × gain; w 0 = the lattice's isotropic sum exactly as it was
- *    832  = FRAME_BYTES. Every member is 16-byte aligned; adding one = a row here + the struct member in common.wgsl (same order) + its writer in writeFrame + FRAME_BYTES. tools/qa/frame-layout.ts checks the three agree. */
-export const FRAME_BYTES = 832;
+ *    832  shadeCfg   vec4f              (f[208‥211])  THE LOOK PROTOTYPE, eyes adjust to shade (composite.wgsl lookShadeGain): x = the exponent a place darker than the open air is brought up by (0 = off), y = open air's mean radiance from the sky alone, z = the most a pixel is brought up (×), w = open ground's irradiance from the sky alone (luminances). Zeros = the picture as it was
+ *    848  = FRAME_BYTES. Every member is 16-byte aligned; adding one = a row here + the struct member in common.wgsl (same order) + its writer in writeFrame + FRAME_BYTES. tools/qa/frame-layout.ts checks the three agree. */
+export const FRAME_BYTES = 848;
 /** at most this many torch bounce cards a frame (cards.wgsl workgroups; fgather.wgsl stages 4 rows each in workgroup memory and keeps the exclusion set in 8 bits) */
 export const MAX_CARDS = 8;
 
@@ -157,6 +158,7 @@ export interface FrameParams {
   /** GI-IN-MOTION (fgather.wgsl `main`): [young-history ray multiplier k (≤ 1 = off — the gather byte for byte as it was), the per-frame cap on texels that may take it (count), the history length (frames)
    *  under which a texel is 'young', 0] */
   giCfg?: [number, number, number, number];   // (optional: fixtures / probes built before it wrote nothing there — zeros = off)
+  shadeCfg?: [number, number, number, number];   // (THE LOOK PROTOTYPE's shade row, engine.ts lookShade: optional — absent = zeros = off)
 }
 
 const ZERO4: [number, number, number, number] = [0, 0, 0, 0];
@@ -210,6 +212,7 @@ export function writeFrame(dst: ArrayBuffer, p: FrameParams) {
   f[200] = nf[0]; f[201] = nf[1]; f[202] = nf[2]; f[203] = nf[3];   // weatherE @800 (particle rain's near-field disc; a WeatherFrame written before the field existed reads as zeros)
   const pf = w.phase ?? ZERO4;
   f[204] = pf[0]; f[205] = pf[1]; f[206] = pf[2]; f[207] = pf[3];   // weatherF @816 (particle rain v2: the drop's phase for the lattice; zeros = isotropic as it was)
+  const sh = p.shadeCfg ?? ZERO4; f[208] = sh[0]; f[209] = sh[1]; f[210] = sh[2]; f[211] = sh[3];   // shadeCfg @832 (the look prototype's shade row; absent = zeros = off)
 }
 
 /** The OUTPUT-screen twin of a frame block already written by writeFrame: the same bytes with screen / invScreen (f[56‥59]) replaced by the output size — what the passes that run at the OUTPUT
@@ -305,7 +308,7 @@ export const surfTryConfig = { on: false };
  *  false on every other page (the g-buffer module gets a stub, its bind group no new entry). A switch of the picture: nothing in the update or the light meter
  *  reads it. `bounce` = how far the relief leans the bounced light (composite.wgsl); `air` = × the haze the frame block carries (engine.ts: the panel's Air row —
  *  the setting itself is the hour's to write). Never seen on a GPU. */
-export const lookConfig = { on: false, bounce: 0.7, air: 1 };
+export const lookConfig = { on: false, bounce: 0.7, air: 1, sky: 1, shade: 0.7 };   // (sky: × the sky's radiance, what every ray that leaves the level brings back: the panel's Sky light row)
 /** A METAL NEVER MIRRORS THE ROOM BEHIND A WALL (the maintainer, 10-23, the solo night's manager's office: "some weird light leakage on bookshelf? seems like
  *  irradiance cache leak through wall? and showing up in specular?"). A ray-traced reflection shades its hit with the radiance cache read a probe spacing along
  *  the hit's normal. For a hit on a wall that is sound. For a hit on a shelf board, a desk top or the floor within half a cell of a partition the spacing runs
