@@ -970,8 +970,10 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   10-24; the maintainer, of a rifle that read 31 / 60 at a mission's start: "we should say 31/30 and then two spare magazines on the side"). The box
   of what is in his hands read the rounds in the gun over the rounds in ALL the spares, so a full rifle said 31 / 60 and the 60 read as a magazine's
   size. NOW the second number is what one magazine holds (31/30: thirty and the one in the chamber) and each spare magazine is a little upright box
-  beside it, fullest first, filled as far as that magazine is (the old column's own `.mags` drawing); one put back part used is a part-full box, an
-  empty one a dim outline. Nothing of the guns changed: the rifle's row is still thirty rounds and two spares (`weapons.ts`), the same on every
+  beside it, fullest first, filled as far as that magazine is (the old column's own `.mags` drawing); one put back part used is a part-full box, and
+  one fired dry is dropped, so its box goes. A GUN FED A SHELL AT A TIME (the shotguns) keeps its two numbers: what it carries is loose shells and
+  the second number is the only count of them. A row that never runs dry has no boxes. Mid reload the magazine in his hand is a box too, for the
+  second it is out. The debugger's Gun setup section has its box. Nothing of the guns changed: the rifle's row is still thirty rounds and two spares (`weapons.ts`), the same on every
   level. The strip's small number (the rounds ready) and the old column (`?slotsetup=0`) are as they were. SWITCH: `SLOTSETUP.mags`, the box's
   alone (nothing in the game reads it), OFF in the module and on the frozen stand (`standGame` pins it off; `FROZEN_HOLDS` row with no word), ON in
   the page (`?magboxes=0` = 31 / 60, as it was); a recording from before the key replays with it off. CHECK: `probes.ts magboxes`
