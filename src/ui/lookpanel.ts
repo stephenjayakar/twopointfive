@@ -26,7 +26,7 @@ const ROWS: readonly [keyof typeof lookAmounts, string, string, number][] = [
 
 export function buildLookPanel(engine: Engine, fps: () => number, shapes?: { on: boolean; flip: () => void }, hills?: { on: boolean; flip: () => void }, front?: { on: boolean; flip: () => void }, lorry?: { on: boolean; flip: () => void }): void {
   const el = document.createElement('div');
-  el.style.cssText = 'position:fixed;right:10px;top:10px;z-index:50;width:232px;padding:10px 12px;background:rgba(12,14,16,.86);color:#cfd6d2;font:11px/1.35 ui-monospace,Menlo,monospace;border:1px solid #2c3432;border-radius:4px;user-select:none';
+  el.style.cssText = 'position:fixed;right:10px;top:10px;z-index:50;width:232px;padding:10px 12px;background:rgba(12,14,16,.86);color:#cfd6d2;font:11px/1.35 ui-monospace,Menlo,monospace;border:1px solid #2c3432;border-radius:4px;user-select:none;max-height:calc(100vh - 20px);box-sizing:border-box;overflow-y:auto;overscroll-behavior:contain';   // (it is taller than a laptop's window: it scrolls by itself, and the wheel over it never reaches the game — the listeners below)
   for (const ev of ['mousedown', 'click', 'pointerdown', 'wheel', 'contextmenu', 'dblclick']) el.addEventListener(ev, e => e.stopPropagation());   // (never the releases: the game clears a held button on the window's mouseup)
   const head = document.createElement('div'); head.textContent = 'Materials prototype'; head.style.cssText = 'font-weight:700;color:#e8efe9;margin-bottom:2px'; el.append(head);
   const cost = document.createElement('div'); cost.style.cssText = 'color:#8fa39a;margin-bottom:8px'; el.append(cost);
