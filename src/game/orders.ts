@@ -646,6 +646,8 @@ export class SquadOrders {
     const i = ring.indexOf(this.who);   // (a man of a squad in pairs is not on the ring: −1 → gold, either way)
     return this.who = i < 0 ? 'all' : ring[(i + dir + ring.length) % ring.length];
   }
+  /** CMDRING.wholeSquad, the player's own squad with plan mode down: every order of his is everyone's, and nothing he does narrows it */
+  private whole(): boolean { return CMDRING.wholeSquad && !this.cast && !this.plan.up; }
   /** T with the cursor on a teammate: the orders go to that one man until T is pressed again (false: not a living man of the squad) */
   address(gd: Guard): boolean { const k = this.squad().indexOf(gd); if (k < 0 || gd.state === 'dead') return false; this.who = k; return true; }
   /** who these men are, in a word or two: 'gold' (the whole of a squad in pairs; 'all' for the one pair), 'red' / 'blue' (a whole pair of it), else their callsigns */
@@ -727,6 +729,10 @@ export class SquadOrders {
    *  is not a door and the cursor is on a door's own leaf, or on the room seen THROUGH a doorway (doorOnRay), that door: what is DRAWN under the cursor (a
    *  teammate's body, Sam's own, a leaf, a doorway) comes before what is only near its point (a teammate within manM, Sam's feet). */
   targetUnder(input: Input, cam: FollowCamera, canvas: View): OrderTarget {
+    const t = this.targetUnderOf(input, cam, canvas);
+    return t.kind === 'none' && t.man && this.whole() ? { kind: 'none', at: t.at } : t;   // (CMDRING.wholeSquad: a teammate under the cursor is the squad itself, never a man the order is his alone)
+  }
+  private targetUnderOf(input: Input, cam: FollowCamera, canvas: View): OrderTarget {
     const g = this.g, K = ORDERS; if (g.puppet?.aim) return this.targetAt(g.aimPoint);
     { const m = g.rails?.markUnder(input, cam, canvas); if (m) return this.targetAt(m); }   // (a tutorial mission's ring on the screen is the place it marks — rails.ts; null off such a level)
     const ray = cam.ray(input.mouseX / Math.max(1, canvas.clientWidth), input.mouseY / Math.max(1, canvas.clientHeight));
@@ -994,7 +1000,8 @@ export class SquadOrders {
     if (!this.active || g.player.down) { this.menu = null; this.cmdRing = null; this.cmdPress = null; this.plan.drag = null; planTorn(this); this.plan.up = false; v.input = v.cam = v.canvas = null; return; }
     v.input = input; v.cam = cam; v.canvas = canvas;
     if (this.lay.laid.length) layPrune(g);   // (planlay.ts: a man who is down is off the plan)
-    if (input.hit(K.whoKey)) this.stepWho(1, this.targetUnder(input, cam, canvas));   // who: the man under the cursor, else the next element
+    if (this.whole()) { if (this.who !== 'all' || this.plan.pick) { this.who = 'all'; this.plan.pick = null; } }   // (CMDRING.wholeSquad: with plan mode down the orders are everyone's, however the choice was left)
+    else if (input.hit(K.whoKey)) this.stepWho(1, this.targetUnder(input, cam, canvas));   // who: the man under the cursor, else the next element
     planInput(this, input, cam, canvas, dt);   // (planmode.ts: the chains move on; Shift + the ring's key, the word's key at a chain's pause, and — the mode up — the mouse; a return on its first line with the switch off)
     if ((CMDRING.on || this.cmdRing || this.cmdPress) && this.ringInput(input, cam, canvas)) return;   // (cmdring.ts: the ring's key — this frame's order input is the ring's)
     const key = input.hit(K.key), mid = K.mouseOpens && !CMDRING.only && input.mmbHit();   // (cmdring.ts `only`: the middle button opens nothing)
@@ -1083,7 +1090,7 @@ export class SquadOrders {
     if (R.more && !this.seats(M, null).over.length) { R.more = false; R.lit = 0; R.armed = false; }   // ('more' with nothing left for it: the page's own wedges, none lit)
     if (rmb) { if (R.more) { R.more = false; R.lit = 0; R.armed = false; } else if (!this.pageBack()) { away(); CMDRING_STATS.cancelled++; } return true; }   // (turn(): a page turned lights nothing · 'more' steps back to the page it is the rest of)
     if (lmb) {   // on a man: the orders are his (again: everyone's), and the ring starts again for him · anywhere else it is Sam's trigger, and the ring goes
-      const k = this.manAt(input, cam, canvas);
+      const k = this.whole() ? -1 : this.manAt(input, cam, canvas);   // (CMDRING.wholeSquad: outside plan mode a click on a man picks nobody: it is the ring's own click)
       if (k < 0 && stay) { input.clicked &= ~1; input.buttons &= ~1; if (input === g.seat.input) g.seat.swallow(1); click = true; }   // (a ring that stays: the click gives the lit wedge, below — it is not his trigger)
       else if (k < 0) { if (this.plan.up || (CLOSE.heldClicks && g.player.holding?.variant === 'arm')) input.clicked &= ~1;   // (close.ts: with a man in the arm the click is the knife — the click that puts the ring away is not that click as well)
         away(); CMDRING_STATS.fired++; return true; }
@@ -1095,7 +1102,7 @@ export class SquadOrders {
       if (!this.menu) { this.cmdRing = null; return true; }
       R.more = false; R.lit = 1; R.armed = false; this.ringSel();   // (the cursor is out on him: it lights nothing until it has come back to the ring's middle)
       }
-    } else if (wheel) { this.stepWho(wheel as 1 | -1, null); CMDRING_STATS.who++; if (!this.menu) { this.cmdRing = null; return true; } }
+    } else if (wheel && !C.wheelIdle) { this.stepWho(wheel as 1 | -1, null); CMDRING_STATS.who++; if (!this.menu) { this.cmdRing = null; return true; } }
     // a digit, or the cursor gone out of the ring's middle one way: that wedge is lit — a wedge that opens a page turns the ring to it and lights nothing.
     // The cursor counts from the ring's own middle, and only once it has been back there since the ring last changed under it (a page, a digit, a man)
     const want0 = ringWant(R, input, digit, g.time, loneKey(() => this.ringKeys())), want = still && !digit && want0 !== R.lit ? 0 : want0; let turned = false;
@@ -2438,7 +2445,7 @@ export class SquadOrders {
   private whoTag(): { tag: string; one: boolean } {
     const t = this.menu?.target, man = t?.kind === 'none' && t.man ? t.man : typeof this.who === 'number' ? this.squad()[this.who] : null;
     if (man) return { tag: man.callsign, one: true };
-    const picked = planMen(this); if (picked) return { tag: this.whoWords(picked), one: true };   // (planmode.ts: a set picked by hand — T goes back to everyone)
+    const picked = planMen(this); if (picked) return { tag: picked.length ? this.whoWords(picked) : 'nobody', one: true };   // (planmode.ts: a set picked by hand — T goes back to everyone)
     return { tag: this.who === 'all' ? (this.paired ? 'GOLD' : 'all') : String(this.who).toUpperCase(), one: false };
   }
   /** the panel's line for T: its choices in the order it steps them, the standing one in brackets — '[GOLD] · red · blue'; with one man of a squad in pairs

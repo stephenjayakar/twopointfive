@@ -53,6 +53,7 @@ import { dustTint } from './dustLook';   // look only, and only with the destruc
 import { EdgeLook, EDGE } from './edgeLook';
 import { Furniture, chargeSource, type BlastSource } from './furnblast';   // furniture under a blast: thrown, broken — its own knob FURNBLAST.on (see that file's head)
 import { Breaks } from './breakTable';
+import { barFlags0 } from './winbars';   // (called inside flags0 only: src/game is one import cycle)
 import { messBurst } from './floormess';   // what a blast leaves on the floor (CHAOS.mess; called inside blast only: src/game is one import cycle)
 import { civiliansShown, civilianSeated } from './civilians';   // (kicked rubble: who is on his feet)
 
@@ -481,7 +482,7 @@ export class Destruction {
    *  which lands on the frame blast() already ran and is merged there). Nothing with THE ONE SWITCH off or at chaos 0. */
   furnBlast(at: Vec3, src: BlastSource, who: number = NOBODY_ID) { const chaos = chaosOf(this.g); if (chaos > 0 && DESTRUCTION.on) this.furn.blast(at, src, who, chaos); }
   /** the flags static `i` was AUTHORED with if this lane has hidden it (its own items, the walls' boxes and what hung from them), else undefined */
-  flags0(i: number): number | undefined { return this.hidden.get(i) ?? this.walls.flags0(i); }
+  flags0(i: number): number | undefined { return this.hidden.get(i) ?? this.walls.flags0(i) ?? barFlags0(this.g, i); }   // (…or a window bar a round took: winbars.ts)
   /** Be told of every blast (the plain call list for whatever else a blast should reach): called first, before doors, glass and walls are judged. Returns the unsubscribe. */
   onBlast(fn: (b: BlastEvent) => void): () => void { this.blastListeners.push(fn); return () => { const i = this.blastListeners.indexOf(fn); if (i >= 0) this.blastListeners.splice(i, 1); }; }
   private blastListeners: ((b: BlastEvent) => void)[] = [];

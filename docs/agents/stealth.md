@@ -1650,6 +1650,17 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   listener does, and follows no press begun off the view (a lab slider). The `outside` line drives it on a window of lists. The page
   drive drags the real mouse in the lab (on the real page the drag goes over the panel: 139 px of 140 read with the listener, 46 without). No hand has held it and nobody has
   seen it on a GPU.
+- **Weight in it: his trunk and arms go with his legs (10-25; `STALK.heft`, numbers `heft*` in `stalk.ts`, springs in `character.ts CREEP.heft`; `?stalkheft=0`,
+  `TPS_STALKHEFT=1`; acts only under `STALK.wide`).** The maintainer, of the arms in the creep on a GPU: "(1) looks weird, but (2) also just looks like very static. the chaos
+  theory animations have some real weight but also smoothness and precision to them". Read frame by frame off the footage (Nos. 24 and 59): the back bows hard, the shoulders
+  come round against each step, the arms hang long with a soft elbow and swing against their own foot, the hips go over the standing foot, a stop holds mid step. `creepLayer`
+  reads all of it off his own feet, so a stop holds where the step stopped: the stride and the foot's lift feed springs, the trunk a beat behind the feet and the arms a beat
+  behind the trunk (measured 0.23 s), which also carries the hands past a stop and settles them. Off leaves the arms of `STALK.wide` as they were; the new hang is `heftOut`,
+  `heftDown`, `heftFwd`, `heftLead`, `heftPole`, read in `close.ts`. /sneaklab has the toggle ('weight in the step') and eight numbers. THE CHECK is `stalkheft-check.ts`
+  (`probes.ts stalkheft`, the grab and stealth families; `STALKHEFT_BREAK=1` reds step, behind, stop and alive), both stands: under 1.9 m the shoulders turn over 34° (key
+  down 3°, fit to the stride 0.97), the hands swing against the feet (fit 0.93), a stop carries the hands 0.2 m on past the feet and settles, the shoulders rise and fall 1 cm at
+  rest, no arm is pulled straight (0.96 of its reach), the feet slip no more than with the key down, the grab lands on the same frame. One run, one seed, the lobby. THE CLIP is
+  `close-stills.ts --scene stalk-clip` then `tools/qa/pose-clip.py`, drawn on the CPU. NOBODY has seen it on a GPU or played it; the footage's back still bows further than ours.
 - **Round him: the keys and the stick orbit the man (10-24; `STALK.orbit`, `orbitK` 3, `orbitEdge` 0.05, `orbitSnap` 0.3; `stalk.ts orbited`;
   `?stalkorbit=0`, `TPS_STALKORBIT=1`).** The maintainer: "when you're clicking on an enemy and moving around them, you should really be
   "orbiting" them". THE RULE: with the button held on a man, a move key no longer ends the creep. The way it points is split, as it is

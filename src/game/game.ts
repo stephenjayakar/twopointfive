@@ -47,6 +47,7 @@ import type { Shell } from './he40';
 import { updateShells, shellBoxes } from './he40';
 import { updateGlass, glassSummary, crackTest, resetGlass, loadGlassFx } from './glass';
 import { glassPenLive, shotPasses, resetGlassPen, loadGlassPen, GLASSPEN_HOOKS } from './glasspen';
+import { bootBars, resetBars } from './winbars';
 import type { WeaponId, RifleAttachment } from './weapons';
 import { Doors, Door, DoorEvent, DoorContact, FLOOR_KEY, DOORWAY } from './doors';
 import { dealSwings, swingsNow, type SwingDeal } from './doorswing';
@@ -1287,6 +1288,7 @@ export class Game {
     this.destr = new Destruction(this);   // the destructible statics indexed by shape (paper stacks, screens + housings, desk clutter) — after the targets and devices exist: a lit screen dies through its target
     this.glassBreak = new GlassBreak(this);   // glass breaking (glassbreak.ts): attaches its cell-table / open-cell / walkable hooks to the world and the collision; its shards go into destr's debris pool — inert until tune.glassBreak
     loadGlassPen(); this.col.glassPen = { live: () => glassPenLive(this), passes: (a, rd, panes, energy) => shotPasses(this, a, rd, panes, energy) };   // rounds through glass (glasspen.ts): the line of FIRE asks the round's own toll at each pane — behind GLASSPEN.on (off: shotBlocked is the solid walk it was)
+    bootBars(this);   // a window's bar breaks from one round (winbars.ts): the line of fire's own question and the blasts' call list — nothing while WINBARS.on is off
     this.shards = new GlassShards(this);      // broken glass after it lets go (shards.ts): takes the debris pool's glass door (and the fracture model's release hook where there is one) — inert until glass breaking is live
     GLASSPEN_HOOKS.crossed = (g, x, who) => { g.shards.crossed(x, who); };   // a round THROUGH a sheet: the exit jet off its far face (shards.ts crossed; nothing unless the falling-glass model is live)
     this.wind = new Wind(this);          // the air (wind.ts): the level's vents + the storm + a source per exterior door — after the doors exist
@@ -1508,6 +1510,7 @@ export class Game {
     if (this.initialOn) for (const [t, on] of this.initialOn) t.on = on;
     for (const d of this.doors.list) d.reset();
     this.decals.clear(); resetGlass(this); resetGlassPen(this);   // the marks go with the encounter that made them (a restart, the tour's hand-over) — and the glass's count / log of the crack stars among them (glass.ts, review U9.10)
+    resetBars(this);       // …and every window's bar a round or a blast took stands again (winbars.ts) — before the destruction's own reset, like the panes
     this.glassBreak.reset();   // …and every pane is whole again (glassbreak.ts: impact lists, dropped cells, gust sources — the shards went with the debris pool above)   // (BEFORE the destruction's: the walls' nav re-bake in there must see whole panes)
     this.destr.reset();    // …and so does the destruction: scattered paper stacks / knocked-off clutter / dead screens back as authored, debris and heat gone (destruction.ts)
     this.shards.reset();       // …and no glass is pending, lying about or underfoot (shards.ts; its plates went with the debris pool, its particles with the particle system's clear)

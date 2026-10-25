@@ -12,6 +12,7 @@ import { buildLevel } from '../scene/level';
 import { UNDERFOOT } from '../scene/collision';
 import { ROUND, roundLevel } from '../scene/round';
 import { thinClear, thinLevel } from '../scene/thin';
+import { barClear, barLevel } from '../scene/bars';
 import { lightFromDef } from '../render/lights';
 import { loadGltfCharacter } from '../anim/gltf';
 import { Game } from '../game/game';
@@ -151,10 +152,11 @@ import { glassPenHarness } from '../game/glasspen';
 import { glassFxForced, GLASS } from '../game/glass';
 import { WALLPEN } from '../game/wallpen';
 import { DOORSHOT } from '../game/doorblast';
+import { WINBARS } from '../game/winbars';
 import { FRAG } from '../game/frag';
 import { HOUR, applyHour } from '../game/hours';
 import { DOORPATH } from '../game/doorpath';
-import { HOLD, MOVES, TURN, TURN_FEEL, THROW_BY, HARDBREATH } from '../game/character';
+import { HOLD, MOVES, TURN, TURN_FEEL, THROW_BY, HARDBREATH, RUNREADY } from '../game/character';
 import { WOUND } from '../game/wounds';
 import { DOORSTAY, DOORWAY, DOORTHROW } from '../game/doors';
 import { FollowCamera } from '../game/camera';
@@ -199,9 +201,10 @@ export function nullSmoke(): SmokeSystemLike & { params?: Record<string, unknown
 
 /** the level's statics into the host's box world and its lights into the light set — the two loops main.ts and headless.ts ran before `new Game` */
 export function populateHost(host: HostApi, level: Level): void {
-  thinClear(level.boxes);   // (a level stood up a second time: last time's thin marks off before the round things are looked for)
+  thinClear(level.boxes); barClear(level.boxes);   // (a level stood up a second time: last time's thin marks off before the round things are looked for)
   roundLevel(level.boxes, ROUND.on, level.markTexel);   // ROUND THINGS (scene/round.ts): the kit's octagons as one round box each, or every box put back as its file has it — before a box goes to the world and before the Game's collision is built from the list
   thinLevel(level.boxes, level.doors);   // THIN THINGS THAT STAND FREE (scene/thin.ts): marked for the fog of war's own eyes (FOG.thin) and a teammate's (FOG.mates), on the list as it now is
+  barLevel(level.boxes);   // A WINDOW'S BARS (scene/bars.ts): marked for the one rule that reads them (game/winbars.ts WINBARS)
   for (const b of level.boxes) host.world.addStatic(b);
   for (const ld of level.lights) host.lights.add(lightFromDef(ld));
 }
@@ -267,7 +270,6 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_FOGOURS')) FOG.ours = String((globalThis as any).process?.env?.TPS_FOGOURS ?? '') === '1';   // what the team does is always shown (src/game/fogofwar.ts FOG.ours; the picture only): off, so every light's class and the list of loose boxes handed to the renderer are the ones every stored frame was drawn with
     if (pinned('TPS_FOGTHIN')) FOG.thin = String((globalThis as any).process?.env?.TPS_FOGTHIN ?? '') === '1';   // thin things that stand free do not cut the fog's sight (src/game/fogofwar.ts FOG.thin: what the squad's eyes have and the picture's): off, so every stored run and frame has the sight it was recorded with
     if (pinned('TPS_FOGTRACKS')) FOG.tracks = String((globalThis as any).process?.env?.TPS_FOGTRACKS ?? '') === '1';   // a man nobody sees leaves his tracks in the snow, found when the team sees it (src/game/fogofwar.ts FOG.tracks): off, so every stored frame and print count is the one it was
-    if (pinned('TPS_FOGMATES')) FOG.mates = String((globalThis as any).process?.env?.TPS_FOGMATES ?? '') === '1';   // a teammate's own eye passes the thin things the fog's lines pass (src/game/fogofwar.ts FOG.mates): off, so every frozen run has the men noticing whom they noticed
     if (pinned('TPS_FOGFILED')) FOG.filed = String((globalThis as any).process?.env?.TPS_FOGFILED ?? '') === '1';   // a checkpoint carries what the fog holds another way than the world stands (src/game/fogofwar.ts FOG.filed): off, so every stored file and run is the one it was
     if (pinned('TPS_FOGKEPT')) FOG.kept = String((globalThis as any).process?.env?.TPS_FOGKEPT ?? '') === '1';   // what others left behind stays as last seen in the fog's picture (src/game/fogofwar.ts FOG.kept — a lamp's face, litter at rest): off, so every stored frame is the one it was
     if (pinned('TPS_FOGEYES')) FOG.eyes = String((globalThis as any).process?.env?.TPS_FOGEYES ?? '') === '1' ? FOG_EYES_ON : FOG_EYES_WAS;   // how many eyes lift the fog (src/game/fogofwar.ts FOG.eyes: 7 in the page, 5 as it was): 5, so a squad of four leaves a camera no place, as every stored run had it
@@ -336,6 +338,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_CARDBEAT')) RAILS.cardBeat = String((globalThis as any).process?.env?.TPS_CARDBEAT ?? '') === '1';   // the step before a card settles (rails.ts RAILS.cardBeat): off, so on a frozen run that raises the frame each step comes up the tick the deed before it is done, as every frozen tutorial fixture was recorded
     if (pinned('TPS_RAILFLAT')) RAILS.flatRing = String((globalThis as any).process?.env?.TPS_RAILFLAT ?? '') === '1';   // a mission takes the flat ring (rails.ts RAILS.flatRing): off, so a frozen run that raises the frame and the flat tree still has the menu's pages on a tutorial mission, as its fixtures pressed them
     if (pinned('TPS_SPAREDOWN')) RAILS.spareDown = String((globalThis as any).process?.env?.TPS_SPAREDOWN ?? '') === '1';   // a spared teammate is a man down to the enemy (rails.ts RAILS.spareDown): off, so on a frozen run that raises the frame a defender goes on firing at a man on his knee, as every frozen tutorial fixture was recorded
+    if (pinned('TPS_RAILDIGITS')) RAILS.planDigits = String((globalThis as any).process?.env?.TPS_RAILDIGITS ?? '') === '1';   // plan mode's digits pass a tutorial's gate and picks wait for their lesson (rails.ts RAILS.planDigits): off, so on a frozen run that raises the frame and plan mode a digit is a locked slot's key and a click picks from the first tick, as every frozen tutorial fixture was recorded
     if (pinned('TPS_NOSHOVE')) NOSHOVE.on = String((globalThis as any).process?.env?.TPS_NOSHOVE ?? '') === '1';   // teammates falling in never shove the player (src/game/noshove.ts): off, so a follower walks into him and the squad reads the shove as his walking, as every frozen probe, digest and tape has it
     if (pinned('TPS_SPRINTDOOR')) SPRINTDOOR.on = String((globalThis as any).process?.env?.TPS_SPRINTDOOR ?? '') === '1';   // a sprint into a door has weight (src/game/sprintdoor.ts): off, so a scripted player who runs through a door is where every frozen probe, digest and tape has him a second later
     if (pinned('TPS_AIMWEIGHT')) AIMWEIGHT.on = String((globalThis as any).process?.env?.TPS_AIMWEIGHT ?? '') === '1';   // the player's gun turns at a limited rate and trails the cursor (src/game/aimweight.ts): off, so a scripted player who puts the cursor on a man and clicks on the same frame hits him as every frozen probe, digest and tally expects; `TPS_AIMWEIGHT=1` turns it on
@@ -439,14 +442,20 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_PLANKNEE')) CMDRING.planKnee = CMDRING.plan && CMDRING.planRts && String((globalThis as any).process?.env?.TPS_PLANKNEE ?? '') === '1';   // … the knee at the radio and the view easing back: off; TPS_PLANKNEE=1 raises it (the page: ?planknee=0 off)
     if (pinned('TPS_PLANONE')) CMDRING.planOne = CMDRING.plan && String((globalThis as any).process?.env?.TPS_PLANONE ?? '') === '1';   // … one word freeing two or more doors of a plan puts their entries on one signal: off; TPS_PLANONE=1 raises it (the page: ?planone=0 off)
     if (pinned('TPS_PLANNEAR')) CMDRING.planNear = CMDRING.plan && CMDRING.planRts && String((globalThis as any).process?.env?.TPS_PLANNEAR ?? '') === '1';   // … plan mode's view held within a few metres of Sam: off; TPS_PLANNEAR=1 raises it (the page: ?plannear=0 off)
+    if (pinned('TPS_PLANNEARFLAT')) CMDRING.planNearFlat = CMDRING.planNear && String((globalThis as any).process?.env?.TPS_PLANNEARFLAT ?? '') === '1';   // … the same reach at any zoom
     if (pinned('TPS_PLANDIGITS')) CMDRING.planDigits = CMDRING.plan && String((globalThis as any).process?.env?.TPS_PLANDIGITS ?? '') === '1';   // … plan mode's digits pick the men, a click on bare ground picks nobody new: off; TPS_PLANDIGITS=1 raises it (the page: ?plandigits=0 off)
+    if (pinned('TPS_PLANCLEAR')) CMDRING.planClear = CMDRING.planDigits && String((globalThis as any).process?.env?.TPS_PLANCLEAR ?? '') === '1';   // … a click on bare ground leaves nobody picked
+    if (pinned('TPS_WHOLESQUAD')) CMDRING.wholeSquad = CMDRING.plan && String((globalThis as any).process?.env?.TPS_WHOLESQUAD ?? '') === '1';   // … with plan mode down every order is everyone's
     if (pinned('TPS_QONLY')) CMDRING.only = CMDRING.on && String((globalThis as any).process?.env?.TPS_QONLY ?? '') === '1';   // … and the ring carrying every order, the letters nobody's while it is up: off; TPS_QONLY=1 raises it (the page: ?qonly=0 off)
     if (pinned('TPS_RINGFLAT')) CMDRING.flat = CMDRING.only && String((globalThis as any).process?.env?.TPS_RINGFLAT ?? '') === '1';   // … and the ring two rings deep at most: off; TPS_RINGFLAT=1 raises it beside TPS_QRING=1 TPS_QONLY=1 (the page: ?ringflat=0 off)
     if (pinned('TPS_PLAINHINT')) CMDRING.plainHint = String((globalThis as any).process?.env?.TPS_PLAINHINT ?? '') === '1';   // … no glyph at the cursor: off; TPS_PLAINHINT=1 raises it (the page: ?plainhint=0 off)
     if (pinned('TPS_BAREHINT')) CMDRING.bareHint = String((globalThis as any).process?.env?.TPS_BAREHINT ?? '') === '1';   // … no outline at the cursor either: off; TPS_BAREHINT=1 raises it (the page: ?barehint=0)
+    if (pinned('TPS_WHEELIDLE')) CMDRING.wheelIdle = String((globalThis as any).process?.env?.TPS_WHEELIDLE ?? '') === '1';   // … a scroll with the ring up changes nobody's choice
     if (!CMDRING.on) { CMDRING.stay = false; CMDRING.stayDigit = false; CMDRING.pin = false; CMDRING.plan = false; CMDRING.planRts = false; CMDRING.planRun = false; CMDRING.hands = false; CMDRING.only = false; }
     if (!CMDRING.only) CMDRING.flat = false;
-    if (!CMDRING.plan) { CMDRING.planLook = false; CMDRING.planWaits = false; CMDRING.planKnee = false; CMDRING.planOne = false; CMDRING.planNear = false; CMDRING.planDigits = false; }   // (TPS_QRING=0 on the page's stand is the page's ?qring=0: what rides on the ring goes with it)
+    if (!CMDRING.plan) { CMDRING.planLook = false; CMDRING.planWaits = false; CMDRING.planKnee = false; CMDRING.planOne = false; CMDRING.planNear = false; CMDRING.planDigits = false; CMDRING.wholeSquad = false; CMDRING.planClear = false; }   // (TPS_QRING=0 on the page's stand is the page's ?qring=0: what rides on the ring goes with it)
+    if (!CMDRING.planNear) CMDRING.planNearFlat = false;
+    if (!CMDRING.planDigits) CMDRING.planClear = false;   // (the ground click that deselects goes with the digits)
     if (pinned('TPS_SEENWALK')) SEENWALK.on = String((globalThis as any).process?.env?.TPS_SEENWALK ?? '') === '1';   // an ordered walk keeps off lit floor in view of an uncleared room (src/game/seenwalk.ts): off, the walks as every frozen tally walked them
     if (pinned('TPS_BANGINTO')) DOORTOOLS.bangInto = String((globalThis as any).process?.env?.TPS_BANGINTO ?? '') === '1';   // a bang and clear's can thrown into the room from the hand (src/game/doortools.ts bangSpot): off, the can as every frozen tally threw it
     if (pinned('TPS_HALTBACK')) DOORTOOLS.haltBack = String((globalThis as any).process?.env?.TPS_HALTBACK ?? '') === '1';   // a pair halted on a door the other pair is charging steps back off it (src/game/doortools.ts haltBack): off, so every frozen probe's halted pair stands where it stood; TPS_HALTBACK=1 raises it
@@ -471,6 +480,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_DOORSHOT')) DOORSHOT.on = String((globalThis as any).process?.env?.TPS_DOORSHOT ?? '') === '1';   // gunfire splinters a door leaf apart (src/game/doorblast.ts DOORSHOT): off, so a leaf hangs whatever is fired into it, as in every frozen probe, digest and tally; TPS_DOORSHOT=1 raises it
     if (String((globalThis as any).process?.env?.TPS_DOORCOST ?? '') === '0') { DOORSHOT.toll = 1; DOORSHOT.flat = false; }   // … and what shooting one out costs: the module's own twelve rifle rounds at any destruction scale on either stand; TPS_DOORCOST=0 = six, riding the scale, the build as it was (the page's ?doorcost=0)
     if (pinned('TPS_DOORTHROW')) DOORTHROW.on = String((globalThis as any).process?.env?.TPS_DOORTHROW ?? '') === '1';   // a door opened into a man moves and startles him, one slammed or booted throws him (src/game/doors.ts DOORTHROW): off, so a leaf stops against a standing man, as in every frozen probe, tally and digest
+    if (pinned('TPS_WINBARS')) WINBARS.on = String((globalThis as any).process?.env?.TPS_WINBARS ?? '') === '1';   // a window's bar breaks from one round (src/game/winbars.ts): off, so a bar stops every round and every line of fire, as in every frozen probe, digest and tally; TPS_WINBARS=1 raises it
     if (pinned('TPS_WALLPEN')) WALLPEN.on = String((globalThis as any).process?.env?.TPS_WALLPEN ?? '') === '1';   // rounds through thin walls and doors (src/game/wallpen.ts): off, so a round stops in the first built thing it meets, as in every frozen probe, digest and tally; TPS_WALLPEN=1 raises it
     if (pinned('TPS_TAKEDOWN')) TAKEDOWN.on = String((globalThis as any).process?.env?.TPS_TAKEDOWN ?? '') === '1';   // takedowns as moves (src/game/takedown.ts): off, so a man taken down falls and lies as every stored digest has him
     if (pinned('TPS_HAUL')) TAKEDOWN.haul = String((globalThis as any).process?.env?.TPS_HAUL ?? '') === '1';   // the choke's haul (character.ts HOLD.haul; a half of TAKEDOWN with a switch of its own): off, so the choke is posed as it was
@@ -478,9 +488,11 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_STALKKEY')) STALK.key = String((globalThis as any).process?.env?.TPS_STALKKEY ?? '') === '1';   // …the row's key finishing a stalk (stalk.ts STALK.key): off, so the hold becomes the grab by itself as on the stalk's own recordings
     if (pinned('TPS_STALKLOW')) STALK.low = String((globalThis as any).process?.env?.TPS_STALKLOW ?? '') === '1';   // …and the lower, hands-down way in (STALK.low): off, the arm up and the rise
     if (pinned('TPS_STALKDRAG')) STALK.drag = String((globalThis as any).process?.env?.TPS_STALKDRAG ?? '') === '1';   // …and the mouse as a stick in the creep (STALK.drag, a prototype: down in the plain page too)
+    if (pinned('TPS_STALKHEFT')) STALK.heft = String((globalThis as any).process?.env?.TPS_STALKHEFT ?? '') === '1';   // …and his trunk and arms carried by his legs (STALK.heft): off, so a creep's body is as it was
     if (pinned('TPS_STALKORBIT')) STALK.orbit = String((globalThis as any).process?.env?.TPS_STALKORBIT ?? '') === '1';   // …and his keys taking him round the man in the creep (STALK.orbit): off, so a move key ends it as in every frozen probe and digest; `TPS_STALKORBIT=1` turns it on
     if (pinned('TPS_STALKWIDE')) STALK.wide = String((globalThis as any).process?.env?.TPS_STALKWIDE ?? '') === '1';   // …and his arms out wide and low as he creeps (STALK.wide, under STALK.low): off, his hands by his knees
     if (pinned('TPS_STALKPOLISH')) stalkPolish(String((globalThis as any).process?.env?.TPS_STALKPOLISH ?? '') === '1');   // …and the stalk's polish (stalk.ts stalkPolish, with the hold's share in character.ts): down, so a frozen run raised with TPS_STALK=1 is the stalk as it first stood; acts only under STALK.on
+    if (pinned('TPS_RUNREADY')) RUNREADY.on = String((globalThis as any).process?.env?.TPS_RUNREADY ?? '') === '1';   // the sprint with the pistol (src/game/character.ts RUNREADY): off, so the gun rides a pumping fist
     if (pinned('TPS_CROUCHRUN')) CROUCHRUN.on = String((globalThis as any).process?.env?.TPS_CROUCHRUN ?? '') === '1';   // Shift in a crouch (src/game/player.ts CROUCHRUN): off, so it stands him up into the sprint
     if (pinned('TPS_SAMLOOK')) SAMLOOK.on = String((globalThis as any).process?.env?.TPS_SAMLOOK ?? '') === '1';   // his head on a man (src/game/samlook.ts): off
     if (pinned('TPS_SAMSLIP')) SAMLOOK.slip = String((globalThis as any).process?.env?.TPS_SAMSLIP ?? '') === '1';   // the room he gives a man in passing (src/game/samlook.ts): off
