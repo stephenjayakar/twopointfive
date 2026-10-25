@@ -745,6 +745,47 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   do not rise); the check holds `FURN.mouth.base` off so that his breach keeps the sacks its line asks about. A hauled body and a
   shoved chair are asked lower than a walker and still meet such a thing (a body dragged behind its carrier catching there: not looked at); a thing whose
   top is 0.25 m or more is a wall to feet and grid alike, as before. Never seen on a GPU; nobody has played it.
+- **A window's bar breaks from one round** (`src/game/winbars.ts`, `src/scene/bars.ts`; the maintainer, 2026-10-25, of The Pass's windows: "for gameplay
+  it'd be nice if they broke off with the glass and just as fast. so each bar breaks up with just a single bullet?"; page rebuild/window-bars/read-first.md).
+  SWITCH `WINBARS.on`: ON in the page (`?winbars=0` = a bar stops every round like the piece of wall it was), OFF in the module and on the frozen stand
+  (`TPS_WINBARS=1` raises it; `FROZEN_HOLDS` row; journal: a recording with no `WINBARS` table replays with it off), inert while a showcase runs. No panel
+  row. WHAT A BAR IS (`bars.ts barLevel`, run as a level is stood up beside `thinLevel`; the mark is `BoxFlag.Bar`, CPU-only, stripped on export): an upright
+  no more than 10 cm across and 25 cm deep, at least 40 cm high, plain (not glass, lit, tilted, cut or a picture), standing on a sill at least 20 cm off the
+  floor and under a lintel, each a piece of a wall the bar is 0.72 to 0.88 times as deep as (the kit builds 0.8: `levelKit.ts` mullions). By the box alone,
+  glazed or not: 180 bars over the level files as they stand, every upright the kit stood in a window and nothing else (the check counts them against the
+  kit's own paint; The Pass 4, the barracks 22, some of them in windows with no glass). NOT bars: posts, table legs, jambs, and the office
+  conference wall's four floor-to-ceiling uprights (they stand on the floor and hold the wall's head: left as structure, a call for the maintainer).
+  THE RULE, one for Sam, the squad and the defenders: a round that would stop in a standing bar takes it and flies on — no toll, no turn, any gun, one
+  pellet of buck as much as a rifle round (`combat.ts fireWeapon`: the bar is hidden for the rest of that round's flight and the flight asked again, panes
+  and thin walls and all, up to `perRound` 4 bars; once the round's end is known every bar it reached is broken and one behind a man or a chair on the near
+  side stands as it stood). A line of FIRE passes a standing bar (`collision.ts shotBlocked`, `firePass`): a man shoots at what is behind a bar exactly when
+  his round would get there. Sight, sound, feet, a thrown thing and a gun pushed against one meet a standing bar as before. A BROKEN bar is hidden the way the
+  lane hides everything (NoPrimary | NoShadow; the geometry serial moves, sound routes and the smoke's obstacles are asked again; no nav change — a bar
+  stands on a sill), so guards, aim, sight, the fog's eye and sound all treat it as gone. It leaves as `pieces` 3 uneven lengths in the debris pool, thrown the
+  way the round went (they land and are heard by the pool's rule, hurt nobody, stop nothing), plus chips where GPU particles run; the round's impact sound
+  plays at the bar. A blast the destruction lane judges takes every standing bar inside its radius (× `blastK` 1) that it has a clear line to — asked at
+  the bar's middle and toward each end (a burst at the wall's foot has no line to a bar's foot past its own sill), every bar in reach judged as if the
+  others were not there, the pieces thrown out from the blast — before the walls are judged. A burst's lethal line (`frag.ts burstBlocked`) asks the line of
+  fire, so it too passes a standing bar while the rule is live. Deterministic (`hash01` of the bar's index and the height struck). A restart stands every bar again; a checkpoint files which are gone
+  (`savestate.ts` slice `bars`, absent when none is: the file is then what it was) and refuses a slice that names a static that is no bar.
+  A GLAZED BAR: the kit's panes meet inside the bar, so with rounds through glass off (the frozen stand) the round that takes the bar stops in the glass where
+  it stood; on the page it goes on through. NOT built: `wallpen.ts thinLine` (a man firing through a thin wall at a man he knows is behind it) still reads a
+  standing bar as the end of his round; a round that enters a pane at a slant so close beside a bar that it would leave the glass inside the bar is spent
+  in the pane, as before, and the bar stands for the next one; no sound of its own; every number in `WINBARS` is a constant nobody has played.
+  CHECKS, both stands: `probes.ts winbars` (also in the `glass` family) = `winbars-check` (the inventory against the kit's paint on every level and each
+  GWOT twin's count; off: the round stops in the bar and the line of fire is blocked; on: the line of fire is clear across a standing bar while sight and a
+  plain ray still meet it, one rifle round / one pistol round / one shell takes the bar, the round kills the man 1.3 m behind it, three pieces come to rest
+  below the sill; the near-side man spares it; a glazed bar on The Pass; a blast with the lane on, and with the rule off; restart; checkpoint into a fresh
+  game and the refused slice; the journal row, the page's flag, the showcase inert; `WINBARS_BREAK=1` must fail, on each stand). ONE CHECK OF ANOTHER RULE HOLDS IT OFF, with the reason in place:
+  `glasspen-probes.ts` glasspen-lines (it asks that the line of fire and glasspen's `roundPath` agree line for line; with bars live the line passes a
+  standing bar that `roundPath` alone stops in — red on the shipped stand until held: 94.28 % of 2640 lines against the 99.5 % asked).
+  ON THE REAL PAGE, software adapter: `node tools/qa/winbars-page.cjs` (The Pass as it opens and with `?winbars=0`: one clicked round and the bar is gone
+  and in pieces / the round ends at the bar and it stands; no console error).
+  MEASURED 2026-10-25, headless: off = the base by run digest — the frozen stand on The Pass and the barracks × seeds 1-2, and the shipped stand with
+  `--set '{"WINBARS":{"on":false}}'` on The Pass, the barracks, the registry and the consulate × seeds 1-3, each run's digest the base build's own. The same
+  12 shipped runs with the rule on: 8 differ by digest (bars are shot in play), 11 of 12 won on both arms, squad men standing 28 → 27 of 42, defenders
+  left 2 → 2 of 84. Twelve runs say the rule plays through, nothing about balance.
+  NEVER SEEN ON A GPU, never played: how the pieces and chips look, whether a bar going reads at a glance, and how a window fight feels without them.
 - **Rounds through thin walls and doors** (`src/game/wallpen.ts`; the maintainer, 2026-10-16: "a rifle round carries on through drywall, partitions and
   wooden doors with the energy it has left, as it already does through glass"; page rebuild/thin-walls/read-first.md). SWITCH `WALLPEN.on`: ON in the page
   (`?wallpen=0` = a round stops in the first built thing it meets, as it did), OFF in the module and on the frozen stand (`TPS_WALLPEN=1` raises it;
