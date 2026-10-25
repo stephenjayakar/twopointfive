@@ -28,7 +28,7 @@ const up = () => !BREAK, f2 = (x: number) => x.toFixed(2);
 /** the lobby's floor, the rifleman facing east with Sam 3.2 m behind him, hands empty, the rest parked */
 async function world(wide: boolean, crouch = true) {
   const W: any = await quiet(() => standUp({ seed: 11 } as any)), g = W.game;
-  HOLD.dropGun = true; HOLD.disarm = true; CLOSE.on = true; CLOSE.noKnife = true; STALK.on = STALK.key = STALK.low = true; STALK.wide = wide; stalkPolish(true);   // (the frozen stand's pins write them at every stand-up)
+  HOLD.dropGun = true; HOLD.disarm = true; CLOSE.on = true; CLOSE.noKnife = true; STALK.on = STALK.key = STALK.low = true; STALK.wide = wide; STALK.heft = false; stalkPolish(true);   // (the frozen stand's pins write them at every stand-up)
   g.godMode = true; g.aiEnabled = false; g.playerInvisible = true; g.player.slot = 'pistol'; g.player.holstered = true;
   g.tune.carbineGuards = 'reyes'; for (let i = 0; i < 5; i++) W.step(DT);
   const A = g.guards.find((x: any) => x.callsign === 'Reyes'), rest = g.guards.filter((x: any) => x !== A);
