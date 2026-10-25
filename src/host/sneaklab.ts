@@ -1,5 +1,6 @@
 // THE SNEAK LAB — a place to play the close-in on a man and move its numbers while playing. The page opened with ?sneaklab (the dev server's /sneaklab: the
-// level levels/sneak-lab.json, six men each walking one case — tools/levels/sneak-lab.ts) gets its own system in the panel, open from the first frame:
+// level levels/sneak-lab.json, eleven men each walking one case — tools/levels/sneak-lab.ts) gets its own system in the panel, open from the first frame:
+//   the five scenarios to tune (SCENES), a button each, and nothing that says what to do but one line at the top of the page
 //   every number of the stalk (game/stalk.ts) and the few of the close-in mode it leans on, as live sliders · the build's numbers back by a button · the
 //   numbers as they stand copied out as one line of text, to hand back
 //   the men put back on their beats by a button · 'they can't notice you' and 'nothing hurts' (both on to begin with: the lab is for the motion) · a man sat down
@@ -16,7 +17,17 @@ import { SAMLOOK } from '../game/samlook';
 import { WATCH, DASH, HOLD } from '../game/character';
 import { STALKVIZ } from '../ui/stalkviz';
 
-export const SNEAKLAB = { on: false, unseen: true, safe: true, clear: true };
+export const SNEAKLAB = { on: false, unseen: true, safe: true, clear: true, scene: 0 };
+/** THE FIVE THINGS TO TUNE, as he named them. A button puts every man back and Sam where the scenario starts, hands empty and low, and says nothing else: no steps, no
+ *  cards. `sam` and `yaw` are his start, `seen` whether the men can see him there (the walks through the dark are nothing without it), `end` the far end of such a walk, `line` the line at the top of the
+ *  page, `tip` what to look for. The men are the level's own (tools/levels/sneak-lab.ts): every man is on his beat in every scenario, and walls keep the others out of it. */
+export const SCENES: { name: string; sam: Vec3; yaw: number; seen: boolean; end?: Vec3; line: string; tip: string }[] = [
+  { name: 'man standing', sam: [10.4, 0, 16.5], yaw: 1.03, seen: false, line: 'Sneak up behind him and grab him', tip: 'a man who stands with his back to you. Look at the whole of it: the walk in, the stop, the grab' },
+  { name: 'man walking', sam: [13.2, 0, 13.6], yaw: Math.PI / 2, seen: false, line: 'Catch up with him from behind and grab him', tip: 'a man who walks away from you down the yard, waits, and turns back. Look for: can you match his pace and stay behind him?' },
+  { name: 'dark room', sam: [34.2, 0, 25.9], yaw: Math.PI, seen: true, end: [36.2, 0, 7.4], line: 'Get to the far end of the room without being seen', tip: 'three men among the shelves, and they can see you. Look for: does slipping between them feel careful and quick to read?' },
+  { name: 'dark corridor', sam: [9.4, 0, 3.2], yaw: Math.PI / 2, seen: true, end: [33.0, 0, 3.2], line: 'Get to the far end of the corridor without being seen', tip: 'two men walking up and down, three niches, and they can see you. Look for: does ducking into a niche as one comes feel good?' },
+  { name: 'corner', sam: [10.7, 0, 12.45], yaw: 0, seen: false, line: 'Wait at the corner and grab him as he comes past', tip: 'your back is on the wall, and a man comes round the corner past you. Look for: is the moment to grab easy to feel?' },
+];
 export const SNEAKLAB_SYSTEM = 'Sneak lab';
 type Table = Record<string, unknown>;
 type Grp = 'start' | 'pace' | 'pose' | 'grab' | 'rmb' | 'pass' | 'run' | 'corner' | 'turn' | 'old';
@@ -70,6 +81,8 @@ const NUMS = (): Num[] => [
   { g: 'pose', t: STALK, name: 'STALK', key: 'heftSurge', label: 'start and stop', min: 0, max: 2, step: 0.1, tip: 'how much his back and hands feel him setting off and stopping. Look for: a small tip forward and a settle as he stops. 0 for none' },
   { g: 'pose', t: STALK, name: 'STALK', key: 'heftOut', label: 'hanging arms out m', min: 0, max: 0.4, step: 0.01, tip: 'with "weight in the step" on: how far outside his shoulder each hand hangs. Look for: arms balancing him, not wings. Try 0.08 against 0.25' },
   { g: 'pose', t: STALK, name: 'STALK', key: 'heftDown', label: 'hanging arms down m', min: 0.2, max: 0.6, step: 0.01, tip: 'how far under his shoulder each hand hangs. Look for: long arms with a soft elbow. Near 0.6 the arm goes straight' },
+  { g: 'pose', t: STALK, name: 'STALK', key: 'heftFwd', label: 'hanging arms ahead m', min: -0.35, max: 0.2, step: 0.01, tip: 'how far ahead of his shoulder each hand hangs: under 0 is behind it, by his hip. Look for: from the side, his hands under him and never out past his face' },
+  { g: 'pose', t: STALK, name: 'STALK', key: 'heftLead', label: 'left hand ahead m', min: 0, max: 0.2, step: 0.01, tip: 'how much further ahead his left hand hangs than his right. Look for: one hand a little ahead, without both reaching' },
   { g: 'pose', t: STALK, name: 'STALK', key: 'wideOut', label: 'arms out m', min: 0, max: 0.45, step: 0.01, tip: 'with "arms out" on: each hand is this far outside its own shoulder. Look for: from the game\'s camera, do his arms read as ready or as wings? Try 0.05 against 0.2' },
   { g: 'pose', t: STALK, name: 'STALK', key: 'wideDown', label: 'arms down m', min: 0.1, max: 0.55, step: 0.01, tip: 'how far under his shoulders his hands hang. More = nearer the floor. Look for: hands by his knees read as picking something up, hands at his ribs read as hands up' },
   { g: 'pose', t: STALK, name: 'STALK', key: 'wideFwd', label: 'arms ahead m', min: -0.1, max: 0.4, step: 0.01, tip: 'how far ahead of his shoulders his hands are. More = his hands lead him toward the man' },
@@ -172,10 +185,11 @@ export function sneakLabBoot(game: Game, panel: Panel) {
   panel.text(now, () => `${STALK_STATS.grabs} grabs from ${STALK_STATS.begun} holds · the last one ended with: ${WHY[STALK_STATS.last] ?? STALK_STATS.last}`);
   const dark = new Set<Game['targets'][number]>();   // (the lamps the 'lights out' box put out: only those come back on)
   panel.buttons(now, 'the men', [
-    { text: 'put everyone back', run: () => { dark.clear(); game.restart(); hands(game); }, title: 'every man back on his beat, you back at the gate with empty hands (also Shift+Enter)' },
+    { text: 'start over', run: () => { dark.clear(); game.restart(); }, title: 'every man back on his beat, you back at the start of this scenario with empty hands (also Shift+Enter)' },
     { text: 'sit / stand one', run: () => { const gd = stander(game); if (!gd) return; if (closeSeated(game, gd)) closeUnseat(game, gd, true); else closeSeat(game, gd); }, title: 'the man who stands by the wall sits where he is, to try the creep on a seated man' },
-    { text: 'two men, a gap', run: () => gap(game), title: 'two of the walkers stop side by side, a little over two metres apart and facing the same way, so you can slip between them ("put everyone back" sends them walking again)' },
+    { text: 'two men, a gap', run: () => gap(game), title: 'two of the walkers stop side by side, a little over two metres apart and facing the same way, so you can slip between them ("start over" sends them walking again)' },
   ]);
+  panel.buttons(now, 'try', SCENES.map((c, i) => ({ text: c.name, run: () => { SNEAKLAB.scene = i; dark.clear(); game.restart(); }, title: c.tip })));
   panel.toggleBox(now, 'they can\'t notice you', () => SNEAKLAB.unseen, v => { SNEAKLAB.unseen = v; }, 'on: nobody sees or hears you, so you can work on the motion. Off: the real guards, and the creep ends when one is onto you');
   panel.toggleBox(now, 'nothing hurts you', () => SNEAKLAB.safe, v => { SNEAKLAB.safe = v; }, 'god mode while the lab is open');
   panel.toggleBox(now, 'lights out', () => dark.size > 0, v => { if (v) { for (const t of game.targets) if (t.on && !t.broken) { t.on = false; dark.add(t); } } else { for (const t of dark) if (!t.broken) t.on = true; dark.clear(); } }, 'every lamp that is lit goes off, to try all of this in the dark (the moon stays). Off = those lamps come back on');
@@ -195,12 +209,19 @@ export function sneakLabBoot(game: Game, panel: Panel) {
   const out = panel.section('Hand the numbers back', { open: true });
   panel.buttons(out, 'numbers', [{ text: 'copy them', run: () => { copied = asText(); try { void navigator.clipboard?.writeText(copied); } catch { /* no clipboard here: the line below shows them */ } }, title: 'the numbers as they stand, as one line of text on the clipboard (and shown below)' }]);
   panel.text(out, () => copied || 'Move the sliders until it feels right, then copy the numbers and paste them where you send notes.');
-  game.objectiveText = () => STALK.on && STALK.drag ? 'sneak lab ▸ press left click on a man from behind and drag the way you want to sneak, then press [Space] to grab him' : STALK.on && STALK.key ? 'sneak lab ▸ hold left click behind a man to sneak up, then press [Space] to grab him' : 'sneak lab ▸ hold left click on a man from behind';   // (the level has no mission of its own: the HUD's line says what the floor is for)
-  hands(game); sneakLabFrame(game);
+  game.objectiveText = () => `sneak lab ▸ ${SCENES[SNEAKLAB.scene].line}`;   // (the level has no mission of its own: the HUD's line says what the scenario asks, and no more)
+  { const back = game.restart.bind(game); game.restart = (said?: string) => { back(said); stage(game); }; }   // (Shift+Enter is the game's own restart: the scenario comes back with it)
+  { const n = typeof location === 'undefined' ? NaN : Number(new URLSearchParams(location.search).get('scene')); if (n >= 1 && n <= SCENES.length) SNEAKLAB.scene = n - 1; }
+  stage(game); sneakLabFrame(game);
   panel.show(SNEAKLAB_SYSTEM);
 }
 /** empty hands and low: how a creep begins */
 function hands(game: Game) { game.player.holstered = true; game.player.crouch = true; }
+/** Sam at the start of the scenario SNEAKLAB.scene names, and whether the men can see him there */
+export function stage(game: Game) {
+  const c = SCENES[SNEAKLAB.scene], p = game.player.char; SNEAKLAB.unseen = !c.seen;
+  game.teleportPlayer([...c.sam]); p.bodyYaw = p.aimYaw = c.yaw; p.vel = [0, 0, 0]; hands(game);
+}
 /** ONCE A PAGE FRAME, before the game's update: the lab's two flags */
 export function sneakLabFrame(game: Game, cam?: FollowCamera) {
   if (!SNEAKLAB.on) return; game.playerInvisible = SNEAKLAB.unseen; game.godMode = SNEAKLAB.safe;

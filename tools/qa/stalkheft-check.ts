@@ -11,7 +11,7 @@
 //   feet      the foot he stands on stays where it stands, as with the key down.
 //   grab      the key takes the man out of the stance as it did: he is `held` within a frame of where the key down has him.
 //   harness   down on the frozen stand, up in the page, ?stalkheft=0 puts it down; it rides a recording's tables, and a recording from before it replays with it down.
-// STALKHEFT_BREAK=1 = the key left down where step, behind, stop and alive ask for it up: each must FAIL.   exit 0 = all hold · 1 = one does not
+// STALKHEFT_BREAK=1 = the key left down where step, behind, stop, alive and ahead ask for it up: each must FAIL.   exit 0 = all hold · 1 = one does not
 // THE HARNESS HAS NO GPU: nothing here says how it LOOKS (tools/qa/close-stills.ts scene stalk-clip, then tools/qa/pose-clip.py, draws it moving on the CPU).
 import { standUp, ROOT } from './headless.ts';
 

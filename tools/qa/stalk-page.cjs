@@ -164,6 +164,17 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
     const s = await page.evaluate(() => { const S = window.__knobs.registry().STALK, was = S.pace, el = [...document.querySelectorAll('#panel .row')].find(r => /top speed/.test(r.textContent))?.querySelector('input[type=range]'); if (!el) return { was, now: was, found: false };
       el.value = '1.2'; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); const now = S.pace; S.pace = was; return { was, now, found: true }; });
     say(s.found && Math.abs(s.now - 1.2) < 1e-6, `the lab's 'top speed' slider moved to 1.2 writes the stalk's top speed (${s.was} → ${s.now})`);
+    { // (src/host/sneaklab.ts SCENES: the five buttons, each putting Sam at its own start and the line at the top of the page to its own; SHOTS=<dir> keeps a picture of each)
+      const names = ['man standing', 'man walking', 'dark room', 'dark corridor', 'corner'], got = [];
+      for (const name of names) {
+        got.push(await page.evaluate(async n => { const b = [...document.querySelectorAll('#panel button')].find(x => x.textContent.trim() === n); if (!b) return null; b.click(); await window.__runFrames(40, 1 / 60, [], 'none');
+          const g = window.__game, p = g.player.char.pos; return { at: `${p[0].toFixed(1)},${p[2].toFixed(1)}`, line: g.objectiveText(), seen: !g.playerInvisible, bare: !!g.player.holstered, low: !!g.player.crouch }; }, name));
+        if (process.env.SHOTS) await page.screenshot({ path: `${process.env.SHOTS}/${name.replace(/ /g, '-')}.png` });
+      }
+      const ok = got.every(Boolean), seen = ok ? got.map(c => c.seen) : [];
+      say(ok && new Set(got.map(c => c.at)).size === 5 && new Set(got.map(c => c.line)).size === 5 && got.every(c => c.bare && c.low) && seen.join() === 'false,false,true,true,false',
+        `the lab's five scenario buttons each put Sam at his own start, hands empty and low, with their own line, and only the dark ones let the men see him (${ok ? got.map(c => c.at).join(' · ') : 'a button is missing'})`);
+    }
   }
   if (errors.length) { rows.push(false); console.log(`- FAIL — page errors: ${errors.join(' | ')}`); }
   await browser.close();

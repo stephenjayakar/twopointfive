@@ -1217,6 +1217,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   test can no longer come true (no shipped step asks it). NOT MENDED, other owners': a grabbed civilian's 'he had a KNIFE at me' line (`dialogue.ts`), the
   knife as an item of kit (`character.ts KitItem`, `kitanim.ts`: never asked for with the key up), the debrief's 'the knife' wording for old runs. The
   bare-handed tell and hold are seen only as CPU mesh stills; never in the page by a person, never on a GPU.
+- **The lab's five scenarios (10-25; `SCENES` in `src/host/sneaklab.ts`, `?sneaklab&scene=N`).** The maintainer: "let's also rework sneaklab a bit to be more like our tutorials.
+  no hand holding but just a few curated scenarios we want to tune": a man standing, a man walking, a dark room, a dark corridor, a corner. A button in Right now restarts the
+  floor and puts Sam at that scenario's start, hands empty and low, with one line at the top of the page and nothing else; 'start over' and Shift+Enter bring the same one back.
+  The dark room and corridor are new floor outside the yard's walls (`tools/levels/sneak-lab.ts`: nothing joins them to it, the button puts Sam in), with three and two men of
+  their own, five dim pools and 'they can't notice you' off. The level's fingerprint moved: old recordings of it are refused. THE CHECK is `sneaklab-check.ts` (the five starts,
+  the held click closing on the walker, a way through each dark place, nobody seeing him at either start for twelve seconds, the corner man coming past) and `stalk-page.cjs`
+  (the five buttons on the real page). THE HARNESS'S METER HAS NO MOON: how dark they are was seen only on the software adapter, never on a GPU, and nobody has played them.
 - **The sneak lab (`/sneaklab` on the dev server = `?levelFile=sneak-lab.json&solo&sneaklab`; `src/host/sneaklab.ts`, `tools/levels/sneak-lab.ts`).** The
   maintainer, 10-23: "can you make a debug level / workbench where we can play with this and tweak it? … make it workbench like where we can tweak things
   live". The level is the kit yard's floor, lit, with six men each walking one case (a man who stands · a long straight beat · a loop round a block · through
@@ -1226,7 +1233,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   notice you' (`playerInvisible`) and 'nothing hurts you' (god mode), both on to begin with and written every page step, a line that says what the stalk is
   doing and why the last one ended (`STALK_STATS.last`), and the stalk's geometry on the floor (`src/ui/stalkviz.ts`, `STALKVIZ.on`: the two range rings, the
   arc's edges, the station point, the grab's ring, Sam's line). Not a row of the start card, no mission of its own (the plain night on that floor). CHECK:
-  `bun run tools/qa/sneaklab-check.ts` (probe `sneaklab`; the file is its generator's, six men of whom five walk and all stay calm over 40 s, the held click
+  `bun run tools/qa/sneaklab-check.ts` (probe `sneaklab`; the file is its generator's, eleven men of whom ten walk and all stay calm over 40 s, the held click
   takes the man who stands in 2.52 s with the real guards running, every number of `STALK` has its row); `SNEAKLAB_BREAK=1` must fail men and creep. The
   page: `tools/qa/stalk-page.cjs`. The panel covered the middle of the page, where Sam stands, so a press on the man landed on a slider: with 'keep Sam
   clear of this panel' (`SNEAKLAB.clear`, on) the view's follow point is shifted (`camera.ts hostShift`, host only, null in a game) so he stands in the
@@ -1658,7 +1665,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   reads all of it off his own feet, so a stop holds where the step stopped: the stride and the foot's lift feed springs, the trunk a beat behind the feet and the arms a beat
   behind the trunk (measured 0.23 s), which also carries the hands past a stop and settles them. Off leaves the arms of `STALK.wide` as they were; the new hang is `heftOut`,
   `heftDown`, `heftFwd`, `heftLead`, `heftPole`, read in `close.ts`. /sneaklab has the toggle ('weight in the step') and eight numbers. THE CHECK is `stalkheft-check.ts`
-  (`probes.ts stalkheft`, the grab and stealth families; `STALKHEFT_BREAK=1` reds step, behind, stop and alive), both stands (numbers from the first pass): under 1.9 m the shoulders turn over 34° (key
+  (`probes.ts stalkheft`, the grab and stealth families; `STALKHEFT_BREAK=1` reds step, behind, stop, alive and ahead), both stands (numbers from the first pass): under 1.9 m the shoulders turn over 34° (key
   down 3°, fit to the stride 0.97), the hands swing against the feet (fit 0.93), a stop carries the hands 0.2 m on past the feet and settles, the shoulders rise and fall 1 cm at
   rest, no arm is pulled straight (0.96 of its reach), the feet slip no more than with the key down, the grab lands on the same frame. One run, one seed, the lobby. THE CLIP is
   `close-stills.ts --scene stalk-clip` then `tools/qa/pose-clip.py`, drawn on the CPU. His first look on a GPU (10-25): "it's better but I still think sams arms look weird in motion. it's almost zombie like where he's just holding them out forward", and "the sneaking actually looks better from the camera angle where you're behind sam": the footage only ever shows Sam from behind, and hands hung under a bowed back read from the side as arms held out past his face. So the hands sit back by his hips (`heftFwd` -0.2), the elbow bends, the back bows 4° more, not 16°, and the clip draws him from all four sides at the game's pitch: JUDGE ANY POSE OF HIS FROM ALL OF THEM. `ahead` in the check holds a hand behind his head. NOBODY has seen this second pass on a GPU or played it.
