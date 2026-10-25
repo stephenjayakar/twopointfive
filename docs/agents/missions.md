@@ -1036,25 +1036,42 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   - **The men are picked with the digits, and no line names a click on bare ground** (2026-10-24; the maintainer: "we should also remove the
     'click on the ground to select everyone' in plan mode, and change the tutorial to teach using 1, 2, 3, 4, and 5 to select squad members").
     THE LINES: 'pick' "Press [1] to pick a teammate, then hold [Shift] and press [2] to add another" (its card gains "Every teammate has a number
-    next to them, and you press that number to pick them."), 'pick2' "Now press [3], then hold [Shift] and press [4] to pick the other two", 'all'
-    and 'all2' "Press [5] to pick your whole squad again". The hall and the gates still say only "pick two": a box or the digits, his choice. No
-    step, list, mark or test changed (`picked` asks how many an order would go to, however they were picked), so the level's lived row stands.
-    THE FRAME HAD TO LET THE DIGITS THROUGH: on a tutorial mission the gate dropped every digit as a locked slot's key, the mode up or not (run on
-    the build before this: five presses, five dropped, nobody picked). The switch is the frame's, `RAILS.planDigits` (ON in the page,
-    `?raildigits=0` off; with the frame, so no frozen word of its own beyond `TPS_RAILS=1` and plan mode's `TPS_QPLAN=1 TPS_PLANDIGITS=1`;
-    `journal.ts applyKnobs` puts it off for a recording from before the key). It does two things. (1) With the mode up on a mission that gives
-    `plan`, a digit PRESS passes exactly when `planInput` will take it that tick (`planmode.ts planTakesDigits`, asked by the gate: no menu, no
-    ring, the ring's key neither down nor pressed, no back key on a mission where it closes the mode), so a digit let through never reaches a
-    slot; a digit held, and a digit with the mode down, are dropped as before. That reaches the squad mission's plan steps too: its digits pick
-    men while the mode is up, and are his slots, locked or his, once it is down. (2) PICKS WAIT FOR THEIR LESSON: on a mission where a step's
-    test is `picked` (this one alone), until the first such step is up neither a digit nor the left button picks anybody, so 'view' and 'send'
-    always order all four. Before it, a stray left click on a man there left one man picked and "send your squad" sent one; the way back was the
-    click on bare ground, which is out of the mode. CHECKS: `rails-check` has the line (both levels that have the mode: this one's seat, the
-    squad mission's floor; `RAILDIGITS_BREAK=1` must fail it; its plan-on-the-move rig holds the switch off, that frame having no pick lesson);
-    `tutplan-check` line 3 asks that a box before 'pick' picks nobody and line 8 lets [Shift] be named and bans a click on bare ground from the
-    text; the scripted player presses the digits for 'pick', 'pick2', 'all' and 'all2' and still boxes its pairs at the hall and the gates;
-    `tut-plan-page.cjs` does the same on the real keyboard. MEASURED: see the numbers under this bullet's commit in the git log's message for the
-    hand-in; nobody has played it, and the digits by the men's circles have never been seen on a GPU.
+    next to them, and you press that number to pick them."), 'pick2' "Now pick the other two the same way, with their numbers" (not "[3] and
+    [4]": 'pick' passes on ANY two men, and a line that named two digits was wrong after any other first pair), 'all' and 'all2' "Press [5] to
+    pick your whole squad again". The hall and the gates still say only "pick two": a box or the digits, his choice. No step, list, mark or test
+    changed (`picked` asks how many an order would go to, however they were picked), so the level's lived row stands.
+    THE FRAME'S SWITCH, `RAILS.planDigits` (ON in the page, `?raildigits=0` off; OFF in the module and held on the frozen stand,
+    `TPS_RAILDIGITS=1` beside `TPS_RAILS=1 TPS_QPLAN=1 TPS_PLANDIGITS=1`, a `FROZEN_HOLDS` row; `journal.ts applyKnobs` puts it off for a
+    recording from before the key). It does two things. (1) THE DIGITS PASS THE GATE: on a tutorial mission the gate dropped every digit as a
+    locked slot's key, the mode up or not (run on the build before this: five presses, five dropped, nobody picked), so no line could teach one.
+    With the mode up on a mission that gives `plan`, a digit PRESS now passes exactly when `planInput` will take it that tick
+    (`planmode.ts planTakesDigits`, asked by the gate: no menu, no ring, the ring's key neither down nor pressed, no back key on a mission where
+    it closes the mode), so a digit let through never reaches a slot; a digit held, and a digit with the mode down, are dropped as before.
+    (2) PICKS WAIT FOR THEIR LESSON (`rails.locksPicks`, asked by `planmode.ts` as the word's lock is): until a step whose test is `picked` is
+    up, no digit, no click on a man, no box and no ground click changes who is picked, and no man's digit is drawn by his circle. So 'view' and
+    'send' always order all four: before it a stray left click on a man there left one man picked and "send your squad" sent one. A MISSION WITH
+    THE MODE AND NO PICK LESSON NEVER PICKS: that is the squad mission's two plan steps, where [1] and [2] (his slots, let through as such) used
+    to pick a man; there a digit is now taken and picks nobody and his slot stays, and with the mode down the digits are his slots as before.
+    THE GROUND CLICK: `planGroundAll` no longer keeps "a click on bare ground is everyone" for tutorial missions; with the squad thread's
+    `CMDRING.planClear` a ground click deselects there as everywhere, once picking is taught, and [5] is everyone again.
+    CHECKS: `rails-check`'s last line (both levels that have the mode: this one's seat, the squad mission's floor; what is picked, what is
+    drawn, what he holds, the menu over the mode, the ground click before and after the lesson, the page's word, the stand's hold, an old
+    recording; `RAILDIGITS_BREAK=1` must fail it); `tutplan-check` line 3 asks that a box before 'pick' picks nobody and that the same box picks
+    once 'pick' is up, and line 8 lets [Shift] be named and bans a click on the ground from the text; the scripted player presses the digits for
+    'pick', 'pick2', 'all' and 'all2' and still boxes its pairs at the hall and the gates; `tut-plan-page.cjs` does the same on the real
+    keyboard. KNOWN GAPS: with `?plandigits=0` the four lines name keys that do nothing (a box still does the steps); a digit pressed on the one
+    tick the orders skip plan mode's input (the player down, the squad gone) is let through as a slot's key.
+    MEASURED (`lesson-run tut-plan`, the page's stand, the digits pressed): 17 of 17 on seeds 1 to 4, 110.5 to 111.1 s, and on hard seeds 1 and
+    2, 110.8 s; the guardroom's first men 0.1 s apart and the hall's 0.0 s on every one, no teammate dazzled, none on a knee; the wrong plan
+    (`TUTPLAN_ALONE=1`, seed 1) ends in 99.3 s with three teammates put on a knee. `lesson-gate` over all six tutorial missions passes (36
+    checks, the reader's pace among them); `rails-check` and `tutplan-check` pass on both stands with their breaks red; the squad thread's
+    `plandigits`, `planclear` and `wholesquad` pass on the page's stand. THE REAL PAGE with real keys (`tut-plan-page.cjs`, the software
+    adapter, held between frames): all 17 steps, 38 lines pass — before 'pick', [1] and a left click on a teammate pick nobody; [1] then Shift +
+    [2] picks two; [3] then Shift + [4] the other two, and so does a box; [5] is everyone; one F sends both stacks, twice — and its one red line
+    was the check's own ban on the word [Shift], mended after that run and not played again here. `tut-squad-page.cjs` was played by the demo
+    build's own run on a tree with this change (41 lines, green), not by this thread. NOT DONE: nobody has played it; the digits by the men's
+    circles and the circles of nobody picked have never been seen on a GPU; how "the same way, with their numbers" reads to a first-timer is a
+    person's to say.
   - **NOT taught, on purpose** (a first prototype): waits on the word added to and taken off a stop (no place where they earn their keep was found), Shift + right click to chain stops,
     the ring by the right button kept down. **Nobody has played it and nothing of it has been seen on a GPU**: the software adapter draws the level and the mode's marks; how the night
     reads, how the plan's lines look over it, and whether nineteen lines feel like a mission or a list are a person's to say.

@@ -194,9 +194,9 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
   await run(120); R = await read();
   log('end', JSON.stringify({ ...R, men: R.men.map(m => `${m.cs}:${m.order}`) }));
   if (STEPS >= steps.length) check(R.done, 'the mission is finished', `finished ${R.done} at t ${R.t}`);
-  // (the mode was up as every step came up and is up at the end; no line of the mission named a key that opens or closes it, or a walk of his)
-  { const named = steps.filter(s => [s.line, s.planLine, s.explain?.title, s.explain?.text, s.after?.line, s.after?.word].some(x => typeof x === 'string' && /\[Tab\]|\[Shift\]|\[B\]|walk to|walk into the|yourself/i.test(x))).map(s => s.id);
-    if (STEPS >= steps.length) check(!downAt.length && R.plan && !named.length, 'plan mode was up as every step came up and at the end, and no line or card names Tab, Shift, the command key, a walk of his or "yourself"', `down at: ${downAt.join(', ') || 'never'} · at the end ${R.plan ? 'up' : 'DOWN'} · lines that name them: ${named.join(', ') || 'none'}`); }
+  // (the mode was up as every step came up and is up at the end; no line of the mission named a key that opens or closes it, a walk of his or a click on the ground — [Shift] is named: it adds a man to the picked)
+  { const named = steps.filter(s => [s.line, s.planLine, s.explain?.title, s.explain?.text, s.after?.line, s.after?.word].some(x => typeof x === 'string' && /\[Tab\]|\[B\]|walk to|walk into the|yourself|click[^.]*\bground\b|\bground to pick/i.test(x))).map(s => s.id);
+    if (STEPS >= steps.length) check(!downAt.length && R.plan && !named.length, 'plan mode was up as every step came up and at the end, and no line or card names Tab, the command key, a walk of his, "yourself" or a click on the ground', `down at: ${downAt.join(', ') || 'never'} · at the end ${R.plan ? 'up' : 'DOWN'} · lines that name them: ${named.join(', ') || 'none'}`); }
   check(!errors.length, 'no page error and no console error', errors.length ? errors.slice(0, 6).join('\n    ') : 'none');
   console.log(`pictures: ${OUT}`);
   if (!held) await browser.close();
