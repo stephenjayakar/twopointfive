@@ -79,4 +79,4 @@ def main():
         for r, (_, basis) in enumerate(VIEWS): sheet.paste(draw(P, C, slot, F, basis, tile, centre), (pad + k * (tile + pad), top + r * (tile + pad)))
         dr.text((pad + k * (tile + pad) + 2, top + len(VIEWS) * (tile + pad) + 4), label[:int(tile / 6.2)], fill=(30, 30, 30))
     sheet.save(out); print(out)
-main()
+if __name__ == '__main__': main()
