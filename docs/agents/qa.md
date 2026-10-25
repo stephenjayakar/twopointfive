@@ -206,10 +206,26 @@ but synthetic writes still work.
     its line there, or is a `HostOwned` no snapshot touches (the GPU light meter's buffers and count book are: `render/probe.ts` `Plumbing`, `docs/agents/replays.md`; its line here only drops the answers still out, `IrradianceProbe.putBack`). A check of 'a save put back drops X' runs the real hook headless through `tools/qa/putback-host.ts hostPutBack(g)` (it stands in the GPU calls the harness's engine lacks), never a hand on the host's field. (`putback.ts` imports game modules as TYPES only, and `player.ts` imports nothing of `savestate.ts` — `askSave` reads the switch: a value
     import in either was one more door into the game's import cycle and broke a tool whose first import was `digest.ts`.) The page adds the camera cut and drops held keys. Enter once down goes through `loadInStep` (a memory save is put back at the END of that update,
     never under the modules still running; one that will not load is refused in the step and the restart happens, as with a file).
-  · **A picture per save**, taken by the page, never by the game: `Checkpoints.picture(info)` is a seam the page fills (main.ts: after the next PRESENTED frame, the canvas
-    drawn 256 px wide into a JPEG, `setPicture`). A file save's picture is one more store key (`twopointsix.save.pic.<slot>`, stamped with its save's time so a stale one is
+  · **A picture per save**, taken by the page, never by the game: `Checkpoints.picture(info)` is a seam the page fills (main.ts: after the next PRESENTED frame, that
+    frame 256 px wide as a JPEG, `setPicture` — a few frames later on the page: see below). A file save's picture is one more store key (`twopointsix.save.pic.<slot>`, stamped with its save's time so a stale one is
     never shown); a memory save's stays in memory. Every store write is in a `try` (`put`): a full store drops the pictures and writes the save again, a store that throws
     leaves the game running with the save refused. No picture (the harness, a hidden tab) = a plain tile.
+    THE PICTURE DOES NOT MAKE THE PAGE WAIT (10-25; `SAVETIMELINE.picAsync`, the host's alone: ON in the page, `?picasync=0`; OFF in the module and on the
+    frozen stand, `TPS_PICASYNC=1`, a `FROZEN_HOLDS` row and a stand word kept only so the stands' books are whole — no picture is taken headless, nothing in
+    the simulation reads it and a run is the same run either way). WHY: on the maintainer's machine a save with a squad up was a 64 ms frame, twice in a
+    minute of play, of which 38 to 46 ms lay outside the update and the render (a performance take of 10-25, read by the performance work: an inference
+    from the timings, not yet a `save` row in a take). The picture was `drawImage(the WebGPU canvas)` into a 2D canvas straight after the frame was drawn,
+    which makes the browser read the WHOLE canvas back and wait for the frame it was just handed. NOW (`render/savepic.ts SavePicture`): one small pass
+    samples the canvas's texture down to the picture's size (4 × 4 taps a pixel), the small target is copied to a buffer and mapped, and the JPEG is made
+    from those pixels when they arrive, a frame or a few later; `setPicture` already drops a picture whose save has left its slot. For that the canvas is
+    configured so a pass may sample it (`gpu/device.ts initGpu({ canvasRead })`: asked only by the game page and only with the switch on — off, the
+    canvas is configured exactly as it was). Until the pass is built, or with the switch off, the old road. `window.__save.pic()` reads which road is up
+    and how many were taken / lost / are in flight. CHECK: `PORT=5199 node tools/qa/savepic-page.cjs` (headless Chromium, the software adapter): on, the
+    picture is not there when the frame's own task ends, is there once the GPU hands it back, is the size asked and the old road's picture of the same
+    frame; off, the old road; `SAVEPIC_BREAK=1` fails. NOT KNOWN: what either road costs on a GPU — the late road has never run on one, and whether a
+    canvas a pass may sample presents any slower there is not measured (it should not: the usage is a permission, not a copy). A pause card opened inside
+    the few frames after a save shows that save's tile plain. The whole-game snapshot of a squad save (`writeMem`, in the update) is untouched: 17 to 57
+    ms headless on the cloud box for the orders yard's pair, 9 to 21 ms when taken `since` the save before (`takeSnapshot(g, since)`; not wired in).
   · **The strip** (`menu.ts saveStrip`, `#menu .saves` in index.html): on the pause card and the DOWN card, this run's saves in time order — picture, age, a small diamond
     on one made by hand, a regretted autosave dimmed, one that is ahead of the mission clock marked. One stop for the keys (Left / Right or A / D walk it, Enter loads),
     or a click. Fewer than two saves = no strip. `Restart from checkpoint`, Enter once down and `newest()` are as they were: the newest sound one.

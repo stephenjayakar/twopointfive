@@ -356,6 +356,10 @@ export const SAVETIMELINE = {
   turn: false,
   /** the long side of a save's picture in pixels, and its JPEG quality (the host's numbers: main.ts takes the picture) */
   picPx: 256, picQ: 0.6,
+  /** the host takes a save's picture WITHOUT WAITING for the GPU (render/savepic.ts: the frame boxed down on the GPU, read back a frame or a few later) where
+   *  it took it by drawing the whole canvas into a 2D one in the save's own frame, which stalls the page while the GPU finishes and hands the frame back.
+   *  The host's alone: nothing in the simulation reads it, and a run is the same run either way. false = the picture as it was taken. */
+  picAsync: false,
 };
 const KEY_PREFIX = 'twopointsix.save.';
 const KEY_INDEX = KEY_PREFIX + 'index', KEY_MANUAL = KEY_PREFIX + 'manual', KEY_AUTO = (i: number) => `${KEY_PREFIX}auto.${i}`, KEY_AUTOSAVE_ON = 'twopointsix.autosave';
