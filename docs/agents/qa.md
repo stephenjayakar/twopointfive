@@ -323,7 +323,9 @@ but synthetic writes still work.
   a page too) a 4 ms timer answers, and each frame's `beat` is the longest it went silent in the GAP before the frame: from the end of the step before to
   the start of this one, so neither frame's own work is in it. What the browser itself reports as a long task or a long frame becomes a `long` event at the
   moment it began, with the script it blames by file name (300 of a kind a take, then one `longcap` line; they start at 50 ms, so the beat is the finer of
-  the two; on a page whose usual frame is itself long only one well over it is kept), and the tab going out of sight and coming back are `tab` events. Mind the frame time's own shape: a frame's `dt` runs from the start of the
+  the two; on a page whose usual frame is itself long only one well over it is kept), and the tab going out of sight and coming back are `tab` events. A checkpoint written or put back during a take is a `save` / `load` event of the step it
+  happened in (a save with a squad up walks the whole game and takes its picture off the canvas), and the report sets what the take says happened in a
+  stall's own stretch beside it (a save, the ladder's step, a resize). Mind the frame time's own shape: a frame's `dt` runs from the start of the
   step before to the start of this one, so a slow step shows in the NEXT frame's `dt`, and the reader looks at the row before for it. Reading: a long
   frame after a long step, or under a long GPU frame = IN THE FRAME; with a beat over three tenths of the gap = the thread was HELD between frames (a timer, a collection, another
   script; also what the page itself does in its callback after the step is recorded: a sweep's flip, a benchmark's scene change); with a short beat = the thread was FREE and the browser handed the page no frame (its compositor, the GPU's queue, the page around an embedded

@@ -11,9 +11,10 @@
 // Used by tools/qa/perf-report.ts; checked by tools/qa/perfrec-check.ts
 import type { PerfFrame, PerfEvent } from '../../src/ui/perfrec';
 export type StallTake = { frames: PerfFrame[]; events: PerfEvent[] };
-export interface Stall { i: number; t: number; dt: number; gpu: number; cpu: number; beat: number | null; verdict: 'in the frame' | 'thread held' | 'thread free' | 'unknown'; long: string[] }
+export interface Stall { i: number; t: number; dt: number; gpu: number; cpu: number; beat: number | null; verdict: 'in the frame' | 'thread held' | 'thread free' | 'unknown'; long: string[]; /** what else the take says happened in the stall's own stretch: a checkpoint written, the ladder's step, a resize */ beside: string[] }
 export interface StallRead { usual: number; stalls: Stall[]; bursts: number; every: number; /** long lines of the browser's that fall in no stall */ loose: number; held: number; free: number; inFrame: number; unknown: number; hidden: number; hasBeat: boolean; /** the slowest ten seconds of the take and the take's usual frame, both in frames a second (null on a take under twenty seconds) */ slow: { fps: number; at: number; all: number } | null }
 const median = (a: number[]) => { if (!a.length) return 0; const s = [...a].sort((x, y) => x - y); return s[Math.floor(0.5 * (s.length - 1))]; };
+const QUIET = new Set(['long', 'longcap', 'tab', 'start', 'stop', 'sweep', 'bench', 'settings']);
 const WINDOW = 40, TIMES = 2, FLOOR_MS = 35, BURST_MS = 400, HELD = 0.3;
 /** a stall = a frame over 2 × the usual frame on BOTH sides of it (the median of the forty before and of the forty after) and over 35 ms: a slower stretch (a
  *  heavier preset, a row of a sweep, a page its browser holds at 30) is that stretch's usual frame, not a run of stalls */
@@ -33,7 +34,8 @@ export function readStalls(D: StallTake): StallRead {
     const cpu = cpuOf(F[i - 1]), gpu = Math.max(...F.slice(Math.max(0, i - 1), i + 5).map(x => x.gpuUnion ?? x.gpuSum ?? 0)), beat = typeof f.beat === 'number' ? f.beat : null;
     const verdict = cpu > 0.5 * f.dt || gpu > 0.8 * f.dt ? 'in the frame' : beat === null ? 'unknown' : beat > HELD * (f.dt - cpu) ? 'thread held' : 'thread free';   // (the beat is the longest ONE silence: a gap eaten by two holds shows under half of it, and a free thread answers every 4 ms or so)
     const mine = long.filter(l => !l.used && l.e.t >= from - 20 && l.e.t <= to); for (const l of mine) l.used = true;   // (each line of the browser's beside one stall only: the first it falls in)
-    stalls.push({ i, t: f.t, dt: f.dt, gpu, cpu, beat, verdict, long: mine.map(l => l.e.text) });
+    const beside = D.events.filter(e => !QUIET.has(e.kind) && e.t >= from - 20 && e.t <= to + 5).slice(0, 3).map(e => `${e.kind}: ${e.text.slice(0, 70)}`);
+    stalls.push({ i, t: f.t, dt: f.dt, gpu, cpu, beat, verdict, long: mine.map(l => l.e.text), beside });
   });
   // bursts: stalls under 400 ms apart are one burst (the page catching up between them); how often = the median wait from one burst's start to the next
   const starts: number[] = []; let last = -1e9; for (const s of stalls) { if (s.t - last > BURST_MS) starts.push(s.t); last = s.t; }
@@ -56,7 +58,7 @@ export function stallLines(D: StallTake, list = 12): string[] {
   if (!N) return tail();
   L.push(`  where the time went: ${R.inFrame} in the frame (the step before it, or the GPU) · ${R.held} with the page's thread held between frames · ${R.free} with the thread free (the browser handed over no frame) · ${R.unknown} unreadable`);
   if (!R.hasBeat) L.push('  (this take has no beat: it was recorded headless or before the recorder kept one, so a stall between frames cannot be told apart here)');
-  for (const s of R.stalls.slice(0, list)) L.push(`  ${(s.t / 1000).toFixed(1).padStart(6)} s #${String(s.i).padEnd(5)} ${s.dt.toFixed(0).padStart(4)} ms | step before ${s.cpu.toFixed(1)} GPU ${s.gpu.toFixed(1)} beat ${s.beat === null ? '—' : s.beat.toFixed(0)} | ${s.verdict}${s.long.length ? ` | ${s.long.join(' · ').slice(0, 220)}` : ''}`);
+  for (const s of R.stalls.slice(0, list)) L.push(`  ${(s.t / 1000).toFixed(1).padStart(6)} s #${String(s.i).padEnd(5)} ${s.dt.toFixed(0).padStart(4)} ms | step before ${s.cpu.toFixed(1)} GPU ${s.gpu.toFixed(1)} beat ${s.beat === null ? '—' : s.beat.toFixed(0)} | ${s.verdict}${s.beside.length ? ` | beside it: ${s.beside.join(' · ')}` : ''}${s.long.length ? ` | ${s.long.join(' · ').slice(0, 220)}` : ''}`);
   if (N > list) L.push(`  … ${N - list} more`);
   return tail();
 }
