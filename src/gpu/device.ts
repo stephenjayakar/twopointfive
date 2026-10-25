@@ -8,6 +8,8 @@ export interface Gpu {
   canvas: HTMLCanvasElement;
   ctx: GPUCanvasContext;
   format: GPUTextureFormat;
+  /** the canvas's texture may be sampled by a pass (initGpu `canvasRead`) */
+  canvasRead?: boolean;
   hasTimestamps: boolean;
   linearSampler: GPUSampler;
 }
@@ -50,8 +52,10 @@ function onLost(info: GPUDeviceLostInfo, retry: boolean) {
   showFatal(GPU_LOST.on ? lostWords(info.message, info.reason, retry ? tries : 0) : 'GPU device lost: ' + info.message);
 }
 
-/** `retry`: a real loss of the device loads the page again once before the card goes up (the game page asks for it; a tool page with work in it does not) */
-export async function initGpu(canvas: HTMLCanvasElement, opts: { retry?: boolean } = {}): Promise<Gpu> {
+/** `retry`: a real loss of the device loads the page again once before the card goes up (the game page asks for it; a tool page with work in it does not).
+ *  `canvasRead`: the canvas's own texture may be SAMPLED by a pass as well as drawn into (render/savepic.ts boxes a frame down to a save's picture on the GPU);
+ *  not asked = the canvas configured exactly as it always was. */
+export async function initGpu(canvas: HTMLCanvasElement, opts: { retry?: boolean; canvasRead?: boolean } = {}): Promise<Gpu> {
   if (!('gpu' in navigator)) throw new Error('WebGPU not available (navigator.gpu missing). Use a current Chrome/Edge/Safari.');
   const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
   if (!adapter) throw new Error('No WebGPU adapter available.');
@@ -75,11 +79,11 @@ export async function initGpu(canvas: HTMLCanvasElement, opts: { retry?: boolean
   device.addEventListener('uncapturederror', (ev) => { console.error('WebGPU error:', (ev as GPUUncapturedErrorEvent).error.message); });
   const ctx = canvas.getContext('webgpu') as GPUCanvasContext;
   const format = navigator.gpu.getPreferredCanvasFormat();
-  ctx.configure({ device, format, alphaMode: 'opaque' });
+  ctx.configure({ device, format, alphaMode: 'opaque', ...(opts.canvasRead ? { usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING } : {}) });
   const info = adapter.info;
   gpuStory.adapter = `${info.vendor} ${info.architecture} ${info.description}`.trim();
   return {
-    device, canvas, ctx, format,
+    device, canvas, ctx, format, canvasRead: !!opts.canvasRead,
     adapterInfo: gpuStory.adapter,
     adapterFallback: (info as { isFallbackAdapter?: boolean }).isFallbackAdapter === true,
     hasTimestamps: feats.includes('timestamp-query'),
