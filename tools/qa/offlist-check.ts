@@ -1,24 +1,27 @@
 // THE ROWS CUT FROM THE MISSION LIST ARE DRAWN ON NO LIST, AND STILL OPEN BY THEIR OWN ADDRESS — scene/scenarios.ts `offList`, ui/missions.ts OFFLIST_UI /
 // listedMissions. The maintainer's tap, 2026-10-13 ('Three'): the four-man office room clear and both yard rows leave the list, and one of the two block rows
 // when the block's rebuild says which (it said: the three squads); their rows, level files and
-// every check that names them stay. Headless: the lists as data and the two screens on the fake DOM (tools/qa/scenario-picker-probes.ts El / withDom).
+// every check that names them stay. The night breach joined them 2026-10-24 (the maintainer: "let's also remove "night breach" since it's unnecessary now"):
+// its row, its address and the checks that stage it stay, and it is on the short list no more (line 6). Headless: the lists as data and the two screens on the fake DOM (tools/qa/scenario-picker-probes.ts El / withDom).
 //   bun run tools/qa/probes.ts offlist        (family missions)        bun run tools/qa/offlist-check.ts
 //   1. the table: the rows that carry `offList` are exactly the ones his tap named, and each is still a row of the table with its own address
 //   2. the module's default is OFF (the page's entry puts it on — main.ts): in a harness the lists hold every row, as every list probe pins them
 //   3. on: listedMissions and the start page's list hold every other row once, in the order they stood, and none of the cut ones; so do both screens' rows
 //   4. on: a cut row still reads back from its own address (missionOfQuery), and a visit that names one (`?loadout=<id>`, a `select`) has it drawn that once
 //   5. off (?offlist=0): the lists are the whole table again
+//   6. no row of the short list (scene/picks.ts PICKS) starts a cut row: a card would offer what the list has dropped
 //   OFFLIST_BREAK=1  the switch is left off where the lines above want it on: the check must FAIL (exit 1) — the proof that it can
 // exit 0 = all hold · 1 = one does not
 import { ROOT } from './headless.ts';
 
 /** his tap: these and no other (the block's row joined when its rebuild said which of the two it was for) */
-const CUT = ['room-clear-four', 'block-squads', 'quiet-yard-alone', 'quiet-yard-two'];
+const CUT = ['night-breach', 'room-clear-four', 'block-squads', 'quiet-yard-alone', 'quiet-yard-two'];
 
 export async function offlistCheck(): Promise<boolean> {
   const { El, withDom } = await import('./scenario-picker-probes.ts');
   const M = await import(`${ROOT}/src/ui/missions.ts`), SP = await import(`${ROOT}/src/ui/startpage.ts`);
   const { ALL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
+  const { PICKS } = await import(`${ROOT}/src/scene/picks.ts`);
   const brk = process.env.OFFLIST_BREAK === '1', was = M.OFFLIST_UI.on;
   type Mi = { id: string; scenario: { offList?: boolean } | null };
   let failed = false, checks = 0;
@@ -46,6 +49,8 @@ export async function offlistCheck(): Promise<boolean> {
 
     M.OFFLIST_UI.on = false;
     line(same(ids(M.listedMissions()), ids(all)) && same(await drawn(false), ids(all)), 'off (?offlist=0): the lists are the whole table again', `${all.length} rows`);
+    { const picks = (PICKS as { id: string; mission: string }[]).map(p => p.mission), onCut = (brk ? [...picks, CUT[0]] : picks).filter(id => CUT.includes(id));   // (OFFLIST_BREAK: the night breach's pick stood back on the short list)
+      line(onCut.length === 0, 'the short list starts no row that is cut from the list', onCut.length ? `STARTS A CUT ROW: ${onCut.join(', ')}` : `${picks.length} picks: ${picks.join(', ')}`); }
   } catch (e) { failed = true; console.log(`- FAIL — threw: ${e instanceof Error ? e.stack ?? e.message : String(e)}`); }
   finally { M.OFFLIST_UI.on = was; }
   const ok = !failed && checks > 0;

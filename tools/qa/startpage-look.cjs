@@ -78,7 +78,7 @@ const cardOf = page => page.evaluate(() => ({ buttons: [...document.querySelecto
   // ---- the page: everything on it
   await page.click('#menu .actions button.primary'); await page.waitForSelector('#missions.one.on', { timeout: 20000 }); await page.waitForTimeout(500);
   const s0 = await stateOf(page);
-  const first = ['compound-four', 'rescue-registry', 'warehouse-four', 'depot-four', 'barracks-four', 'night-breach', 'solo-night'];
+  const first = ['compound-four', 'rescue-registry', 'warehouse-four', 'depot-four', 'barracks-four', 'solo-night'];
   const GROUPS = ['Tutorial', 'Raids', 'Strongholds', 'On the clock', 'Quiet, alone', 'Quiet, as two'], inGroup = (s, h) => s.rows.filter(id => s.under[id] === h);
   check(s0.up && s0.heads.join('|') === GROUPS.join('|') && s0.rows.length > first.length && new Set(s0.rows).size === s0.rows.length && s0.rows.every(id => GROUPS.includes(s0.under[id]))
     && GROUPS.every((h, k) => s0.counts[k] === inGroup(s0, h).length && s0.counts[k] >= 1 && s0.counts[k] <= 8) && GROUPS.every(h => { const g = inGroup(s0, h), p = first.filter(id => g.includes(id)); return p.every((id, i) => g[i] === id); }),

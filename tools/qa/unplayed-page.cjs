@@ -40,7 +40,7 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
   const lay = rows => groupsOf(rows).map(g => { const of = rows.filter(r => r.group === g); return `${g || '(no group)'} ${of.length} (${of.filter(r => r.quiet).length} unplayed${of.some(r => r.first) ? ', break at ' + of.find(r => r.first).id : ''})`; }).join(' · ');
 
   // ---- the start page's cards, the switch on
-  const CUT = ['room-clear-four', 'block-squads', 'quiet-yard-alone', 'quiet-yard-two'];   // (the rows cut from the list — scene/scenarios.ts offList; the page's entry puts OFFLIST_UI on)
+  const CUT = ['night-breach', 'room-clear-four', 'block-squads', 'quiet-yard-alone', 'quiet-yard-two'];   // (the rows cut from the list — scene/scenarios.ts offList; the page's entry puts OFFLIST_UI on)
   let wordsOn = '', boxesOn = [], gOn = ''; const sorted = t => t.split(/\n+/).map(x => x.trim()).filter(Boolean).sort().join('\n');   // (the page's words as a bag of lines: a row that moves adds no word)
   { const { page, errors, own } = await open('', false), A = await read(page); wordsOn = A.words;
     line(/\bone\b/.test(A.root) && /\btiles\b/.test(A.root) && A.rows.length > 0 && errors.length === 0, `the title's Play opens the Mission step as cards with no page error (${A.rows.length} cards)${errors.length ? ' — ' + errors.join(' ; ').slice(0, 400) : ''}`);
