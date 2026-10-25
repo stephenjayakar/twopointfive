@@ -795,8 +795,9 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   disc the hour's small one (hard shadows) and the sky 1.66 of its own. It moves the real light: the guards and both meters read it. The night is not
   touched by cloud. NOT carried by a save or a recording (a take made on the look page re-runs elsewhere under the game's 0.9). Whether the GAME's
   snow should fall from broken cloud by day is the weather's owner's and the maintainer's call; nothing outside the look page has moved. Checked on
-  the software adapter by the numbers only (the page's boot check reads the sun at midday under 0.5 and 0.9); my earlier bay stills were made with the
-  sun forced to 1 by hand, so the picture at 0.5 has never been looked at, on any adapter.
+  the software adapter: the page's boot check reads the sun at midday under 0.5 and 0.9, and one still each of the gate at midday
+  (`rebuild/graphics-next/gate-midday-cloud.png`): under 0.9 open snow code 146 / 161 / 184 and the gate's shadow a vague 109 / 127 / 159; under 0.5
+  snow 205 / 210 / 219 (not clipped) and a hard-edged shadow 101 / 122 / 159. Never seen on a GPU.
 - **THE LOOK PANEL'S "LAMPS BY DAY" ROW** (`lookConfig.lamps`, 0.6 on the look page, 0 = as authored; `engine.ts lookLamps` sets
   `LightSet.localK`, `render/lights.ts upload` applies it; the maintainer, 10-25, of the pass at midday: "we don't have consistent, physically accurate
   light values (lumens?) across the image … a lamp on the ground looks way too bright in daytime mode … same for the flashlight"). He is right, by the
