@@ -106,9 +106,9 @@ export const STALK = {
    *  weight but also smoothness and precision to them"). With `heft` up his trunk and arms are carried by his legs (character.ts CREEP.heft): his back bowed `heftLean` °
    *  further, his shoulders `heftTwist` ° against each step, his weight `heftSide` m over the foot he is on and his hips `heftDip` m lower through the wide of a step,
    *  each hand swung `heftSwing` m ahead and back against its own foot a beat behind the trunk, and `heftSurge` of his setting off and stopping in his back and his hands.
-   *  The arms hang long from the shoulders: `heftOut` m out, `heftDown` m under, `heftFwd` m ahead (the left `heftLead` m further), the elbow soft (`heftPole`), where the
-   *  footage (No. 24 frame by frame) has a balancing arm and ours had a held pose. ON in the page (?stalkheft=0: the arms as they were), OFF here and on the frozen stand. */
-  heft: false, heftTwist: 20, heftSwing: 0.13, heftSide: 0.04, heftLean: 16, heftDip: 0.02, heftSurge: 1, heftOut: 0.16, heftDown: 0.45, heftFwd: 0.12, heftLead: 0.02, heftPole: [0.55, -0.25, -0.8] as Vec3,
+   *  The arms hang from the shoulders with a bent elbow (`heftPole`): `heftOut` m out, `heftDown` m under, `heftFwd` m ahead (behind, so the hands sit by his hips; the left
+   *  `heftLead` m further). Ahead of the shoulder they read from the game's camera, side on, as arms held out (his note on a GPU: "almost zombie like"), though not from behind. ON in the page (?stalkheft=0: the arms as they were), OFF here and on the frozen stand. */
+  heft: false, heftTwist: 20, heftSwing: 0.11, heftSide: 0.04, heftLean: 4, heftDip: 0.02, heftSurge: 1, heftOut: 0.18, heftDown: 0.4, heftFwd: -0.2, heftLead: 0, heftPole: [0.6, 0, -0.8] as Vec3,
   /** THE STICK (the maintainer: "you click on the guy and then you can drag towards him to move in that direction. like a joystick centered on the guy.
    *  that would make things feel more controlled than right now which feels automatic"). With `drag` up, the press on a man still begins the creep, and the
    *  point on the screen it was made at is the stick's middle: while the button is held, the mouse's way from there is the way Sam creeps (screen up = the

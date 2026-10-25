@@ -53,6 +53,7 @@ import { CLOSE } from '../game/close';
 import { FOOTFALL, TWOGEARS, CROUCHRUN } from '../game/player';
 import { SAMLOOK } from '../game/samlook';
 import { STALK, stalkPolish } from '../game/stalk';
+import { TAPSTEP } from '../game/tapstep';
 import { KITANIM } from '../game/kitanim';
 import { HANDS } from '../game/hands';
 import { WORK } from '../game/workthings';
@@ -489,6 +490,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_STALKKEY')) STALK.key = String((globalThis as any).process?.env?.TPS_STALKKEY ?? '') === '1';   // …the row's key finishing a stalk (stalk.ts STALK.key): off, so the hold becomes the grab by itself as on the stalk's own recordings
     if (pinned('TPS_STALKLOW')) STALK.low = String((globalThis as any).process?.env?.TPS_STALKLOW ?? '') === '1';   // …and the lower, hands-down way in (STALK.low): off, the arm up and the rise
     if (pinned('TPS_STALKDRAG')) STALK.drag = String((globalThis as any).process?.env?.TPS_STALKDRAG ?? '') === '1';   // …and the mouse as a stick in the creep (STALK.drag, a prototype: down in the plain page too)
+    if (pinned('TPS_TAPSTEP')) TAPSTEP.on = String((globalThis as any).process?.env?.TPS_TAPSTEP ?? '') === '1';   // …and the crouch's keys as steps (tapstep.ts, a prototype: down in the plain page too)
     if (pinned('TPS_STALKHEFT')) STALK.heft = String((globalThis as any).process?.env?.TPS_STALKHEFT ?? '') === '1';   // …and his trunk and arms carried by his legs (STALK.heft): off, so a creep's body is as it was
     if (pinned('TPS_STALKORBIT')) STALK.orbit = String((globalThis as any).process?.env?.TPS_STALKORBIT ?? '') === '1';   // …and his keys taking him round the man in the creep (STALK.orbit): off, so a move key ends it as in every frozen probe and digest; `TPS_STALKORBIT=1` turns it on
     if (pinned('TPS_STALKWIDE')) STALK.wide = String((globalThis as any).process?.env?.TPS_STALKWIDE ?? '') === '1';   // …and his arms out wide and low as he creeps (STALK.wide, under STALK.low): off, his hands by his knees

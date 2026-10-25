@@ -70,6 +70,7 @@ import { handleGate } from './handleside';
 import { gunHoldSee, gunHoldFeet, gunHoldFree, gunHoldKeeps, gunHoldRuns, gunHoldPhase } from './gunhold';
 import { teamCap, teamRunLegs, teamAccel, teamTread } from './teampace';   // (teampace.ts: a teammate's walk is a share of the player's, and he runs only for a reason — all read inside functions)
 import { loadPace, loadPaceOn, loadSprintOn, loadGait, loadSeen, loadHeard } from './kitload';   // what a man's card weighs: his pace, the notice he builds, his footfall (1 each with its switch off)
+import { TAPSTEP, tapHears } from './tapstep';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import { railsDown } from './rails';   // (a tutorial mission's spared teammate is a man down to the enemy's eye: asked inside acquireFoe only)
 
@@ -2484,6 +2485,7 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
   attachFlashlight(g, gd, dt);
   const prevPhase = gd.stepPhase; gd.stepPhase = c.anim.phase;
   if (moveSpeed > 0.4 && ((prevPhase < 0.5) !== (gd.stepPhase < 0.5))) {
+    if (TAPSTEP.on) tapHears(g, c.pos);   // (tapstep.ts: Sam can step under it)
     const loud = tread(g, c.pos, teamTread(g, gd, moveSpeed, 0.33), false);   // (kitload.ts: a teammate's card — the gait he was asked for, × what he rattles)   // (walking steps carry the walk clip's retime — 1.06 m/s natural, ~1.4x the steps per metre — at the old per-second loudness: 0.45 x 0.73; the run's cadence is unchanged; × the floor he is on, floor.ts — presentation only, nobody hears a guard)
     if (!staff) g.events.push({ kind: 'step', pos: v3.copy(c.pos), time: g.time, loud: false, level: loud, who: c.id });   // …but a UNIT's footfall is a sound in the world for the side that hunts him (teams: hearingCheck stepIsThreat) — the staff's stay presentation, as ever
   }
