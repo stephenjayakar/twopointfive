@@ -23,7 +23,7 @@
 //           the mouse moved, a Ctrl drag, a Ctrl + Shift drag — and a right drag keeps its own way (engineplay.ts ctrlTurn)
 //   open    the page with no `paused`, as a person opens it: it stands on the tape's first step, the men drawn, and plays on as recorded
 //   lab     a run of its own in the sneak lab (?sneaklab — a page that writes the two sandbox flags itself on every frame, host/sneaklab.ts): a scenario the
-//           men can notice him in is picked on the lab's panel, he is stood in front of a man who notices, and the replay of it, PLAYED — on a page whose lab stands on the address's
+//           men can notice him in is picked on the lab's panel, he runs about in front of a man who hears him, and the replay of it, PLAYED — on a page whose lab stands on the address's
 //           scenario, where nobody notices him — is still the recording's: the flags a tape's step runs under are the tape's
 // exit 0 = all of it with no page error · 1 = otherwise. ONLY=record,play,… runs fewer; FILE=<path to a replay .json[.gz]> walks that file instead of recording
 // one (its drift is REPORTED, not judged: a tape of another build may part).
@@ -624,11 +624,11 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
       // …and he is put in front of the nearest man, a metre and a half off (a move made between two steps: the tape's 'pose' row)
       const p = at(); let to = null, near = Infinity; for (const x of live()) { const d = Math.hypot(x.char.pos[0] - p[0], x.char.pos[2] - p[2]); if (d < near) { near = d; to = x; } }
       if (!to) return { why: 'no man on the lab\'s floor' }; const y = to.char.bodyYaw; g.teleportPlayer([to.char.pos[0] + Math.sin(y) * 1.5, 0, to.char.pos[2] + Math.cos(y) * 1.5]);
-      quick(360);
+      for (let k = 0; k < 3; k++) { quick(50, ['KeyW', 'ShiftLeft']); quick(50, ['KeyS', 'ShiftLeft']); } quick(200);   // (…where he runs up and down: steps a man hears, unless the sandbox has made him unnoticed)
       const f = window.__replay.file('lab'), id = await window.__replay.save('lab'), kinds = {}; for (const r of f?.rerun?.x ?? []) kinds[r[1]] = (kinds[r[1]] || 0) + 1;
       return { id, ticks: f?.rerun?.ticks ?? null, dead: f?.rerun?.dead ?? null, search: f?.rerun?.recipe?.search ?? null, was, picked, near: +near.toFixed(2), states: states(), unseen: g.playerInvisible, kinds, pos: at().map(v => +v.toFixed(3)), men: g.guards.map(x => [...x.char.pos].map(v => +v.toFixed(3))) }; });
     const stirred = L.states && L.was && L.states !== L.was.states;
-    line(!L.why && L.id !== null && L.ticks > 400 && !L.dead && L.was.unseen === true && L.picked.unseen === false && (L.kinds.flags || 0) >= 1 && stirred && !A.errors.length, 'lab: a scenario picked on the panel puts the men\'s eyes on him, he is stood in front of one who notices, and the run is on the shelf with its tape',
+    line(!L.why && L.id !== null && L.ticks > 400 && !L.dead && L.was.unseen === true && L.picked.unseen === false && (L.kinds.flags || 0) >= 1 && stirred && !A.errors.length, 'lab: a scenario picked on the panel puts the men\'s eyes on him, he runs about in front of one who hears him, and the run is on the shelf with its tape',
       L.why ? L.why : `id ${L.id} · ${L.ticks} steps · the lab opened unseen ${L.was.unseen}, the pick made it ${L.picked.unseen} (he stands at ${L.picked.pos}) · put in front of a man who stood ${L.near} m off · the men before: ${L.was.states} · after: ${L.states} · tape rows ${JSON.stringify(L.kinds)} · tape query ${L.search}${A.errors.length ? ' · ERRORS ' + A.errors.join(' | ') : ''}`);
     await A.page.close();
     if (!L.why && L.id !== null) {
