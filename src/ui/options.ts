@@ -15,7 +15,7 @@
 import { saveSandbox } from '../game/sandbox';
 import { gearText } from '../game/gear';
 import { menuTheme } from './theme';
-import { TABKEY, tabChoices, setTabKey, tabSettle, tabKept, tabLoad } from './tabkey';
+import { TABKEY, tabChoices, tabNow, setTabKey, tabSettle, tabKept, tabLoad } from './tabkey';
 import { BACKKEY } from '../game/backkey';
 import { TWOGEARS, CROUCHRUN } from '../game/player';
 import { WALLSNAP } from '../game/wallsnap';
@@ -58,6 +58,11 @@ const ACT_WHAT = 'Do the highlighted action', WHISTLE_WHAT = 'Whistle';
 const RING_SMALL = 'hold it a moment for a ring of everything you can do here, then pick with 1 to 5 or a click', WHISTLE_SMALL = 'the nearest guard will come to look. the whistle is on the ring';
 /** the auto camera's row (host/autocam.ts): the camera's key tapped twice */
 const AUTO_WHAT = 'Tap twice for the auto camera';
+/** THE WHO ROW (the orders' who key, code 'KeyT'). While quick orders are the whole squad's (game/cmdring.ts `wholeSquad`: outside plan mode the key steps
+ *  nobody) a row with no key is not listed, so there is no dashed cap to put a dead key on; one the player gave a key earlier stays his to see and move,
+ *  and says where it still works. `?wholesquad=0` = the row as it was */
+const WHO_WHAT = 'Who takes the next order', WHO_PLAN = 'this only works in plan mode. it switches between everyone, red, blue or the teammate under your cursor';
+const whoRowGone = () => CMDRING.wholeSquad && !keysOf('KeyT').length;
 const PACE_WHAT = 'Walking pace', SPRINT_WHAT = 'Sprint';
 /** the sprint's row while Shift in a crouch is a fast crouch walk (game/player.ts CROUCHRUN): what the same key does crouched, and that it is heard
  *  (each footfall louder than a walk's: it is no sneak) */
@@ -97,7 +102,7 @@ const KEYS: { group: string; rows: [string[], string, string?][] }[] = [
   { group: 'Squad', rows: [
     [['X'], 'Orders, on what the cursor is on', 'or use the middle mouse button, then press 1 to 5 to pick an order'],
     [['B'], 'The usual order for that spot, at once'],
-    [['T'], 'Who takes the next order', 'everyone, red, blue or one teammate'],
+    [['T'], WHO_WHAT, 'everyone, red, blue or one teammate'],
     [['F'], 'Go', 'tells a waiting squad to go, and blows a charge the squad set'],
     [['H'], 'With the orders up: the big tool on a door, smoke on the floor'],
     [['G'], 'With the orders up: frag and clear'],
@@ -240,7 +245,7 @@ function render(S: Screen) {
   const desc = el('div', 'op-desc'); box.appendChild(desc);
   const foot = el('div', 'op-foot'); box.appendChild(foot);
   const back = el('button', 'op-btn primary', 'Back') as HTMLButtonElement; back.dataset.act = 'back'; back.onclick = () => closeOptions(); foot.appendChild(back);
-  const paints: (() => void)[] = [];
+  const paints: (() => void)[] = [], whoGone0 = whoRowGone();
   const row = (parent: HTMLElement, label: string, describe: () => string) => {
     const e = el('div', 'op-row'), i = S.rows.length; e.appendChild(el('div', 'op-label', label));
     const R: Row = { el: e, label, desc: describe, left() {}, right() {}, press() {} }; S.rows.push(R);
@@ -317,7 +322,7 @@ function render(S: Screen) {
     if (!CMDRING.bareHint) flip(body, 'Order mark at the cursor', () => CMDRING.hint, v => { CMDRING.hint = v; hintKept = v; hintUrl = false; keep(); }, keyText(CMDRING.plainHint ? 'Show an outline on the floor for what B would order there.' : 'Show a small mark beside the cursor and an outline on the floor for what B would order there.'));
     if (CMDRING.plan) range(body, 'Plan mode circles', 0, 100, 5, () => Math.round(planRings() * 100), v => setPlanRings(v / 100), v => `${v.toFixed(0)} %`, 'Set how bright the circles at your squad\'s feet are while plan mode is up.');   // (ui/planlook.ts: a picture only, kept on this machine)
     const tabOpts = tabChoices(BACKKEY.tab);   // (while Tab is the back key the first choice reads 'Nothing more' and every line says so: ui/tabkey.ts)
-    seg(body, 'Tab key', tabOpts, () => TABKEY.does, v => { setTabKey(v); TABKEY.kept = v; TABKEY.picked = true; TABKEY.url = false; keep(); }, () => tabOpts.find(c => c.v === TABKEY.does)?.line ?? '');
+    seg(body, 'Tab key', tabOpts, () => tabNow(), v => { setTabKey(v); TABKEY.kept = v; TABKEY.picked = true; TABKEY.url = false; keep(); }, () => tabOpts.find(c => c.v === tabNow())?.line ?? '');
     const findReset = findMeRows({ sec, flip, seg, range }, body);   // (ui/findme.ts: finding your own man on the screen and how the camera answers the hand — twelve rows on trial, kept by host/findme.ts)
     sec(body, 'Cheats');
     flip(body, 'God mode', () => game.godMode, v => { game.godMode = v; saveSandbox(game, 'god'); }, 'Enemies still see you and shoot you, but hits don\'t hurt. This is saved on this machine.', ['On', 'Off']);
@@ -330,6 +335,7 @@ function render(S: Screen) {
   foot.appendChild(el('div', 'op-hint', S.tab === 'controls' && S.rows.length ? '1 2 3 4 tabs · W S keys · Enter a new key · Esc back' : S.rows.length ? '1 2 3 4 tabs · W S rows · A D change · Esc back' : '1 2 3 4 tabs · W S scroll · Esc back'));
   S.sel = Math.max(0, Math.min(S.rows.length - 1, S.sel));
   S.paint = () => {
+    if (S.tab === 'controls' && whoRowGone() !== whoGone0) { render(S); return; }   // (the who row lost its key, or the rule was ticked: the list is built once, so it is built again)
     for (const p of paints) p();
     S.rows.forEach((R, i) => R.el.classList.toggle('sel', i === S.sel));
     const R = S.rows[S.sel]; desc.innerHTML = '';
@@ -342,7 +348,7 @@ function render(S: Screen) {
 /** the row Tab adds to the list while it is on trial (ui/tabkey.ts): under the group it belongs to, after the key it doubles where it doubles one */
 function tabRow(): { group: string; after?: string; row: [string[], string, string?] } | null {
   const on = 'on trial: Options, Game, Tab key';
-  switch (TABKEY.does) {
+  switch (tabNow()) {
     case 'who': return { group: 'Squad', after: 'T', row: [['Tab'], 'Who takes the next order, as T', on] };
     case 'run': return { group: 'Game', after: 'Esc', row: [['Tab'], 'Pause on the run so far, and back', on] };
     case 'keys': return { group: 'Game', after: 'Esc', row: [['Tab'], 'Pause on this list of keys, and back', on] };
@@ -383,9 +389,10 @@ function controls(body: HTMLElement, host: KeyHost) {
     const low = sprintSmall(), paced = !low ? geared : geared.map(r => r[1] === SPRINT_WHAT ? [r[0], r[1], low] as typeof r : r);   // (CROUCHRUN: Shift is not only the sprint)
     const rows = !slotNow() ? paced : g.group === 'Kit' ? [SLOT_ROW, ...paced] : paced.filter(r => r[1] !== E_WHAT || keysOf('KeyE').length > 0);   // (E's row put on a key by hand is still his to see and move)
     for (const [caps, what, small0] of rows) {
-      const small1 = !HANDRING.on ? small0 : what === ACT_WHAT ? RING_SMALL : what === WHISTLE_WHAT ? WHISTLE_SMALL : small0;
+      const small1 = what === WHO_WHAT && CMDRING.wholeSquad ? WHO_PLAN : !HANDRING.on ? small0 : what === ACT_WHAT ? RING_SMALL : what === WHISTLE_WHAT ? WHISTLE_SMALL : small0;
       if (caps[0] === 'F5' && !SAVETIMELINE.on) continue;   // (the save by hand is the save timeline's key: game/savestate.ts)
       if (what === AUTO_WHAT && !AUTOCAM.on) continue;   // (the camera that runs itself: host/autocam.ts)
+      if (what === WHO_WHAT && whoRowGone()) continue;   // (quick orders are the whole squad's: game/cmdring.ts wholeSquad)
       const r = el('div', 'op-krow'), c = el('div', 'op-caps');
       caps.forEach((k, i) => { if (i > 0 && caps.length < 4) c.appendChild(el('u', '', '+')); c.appendChild(k === 'Ctrl' ? camCapEl(host) : keyCapEl(k, gearText(wallLine(what)), host, seen)); });
       const w = el('div', 'op-what', gearText(wallLine(what))), wt = w.firstChild, small = () => setupSmall(caps[0], small1) ?? '', sm = small1 || (SLOTSETUP.on && SETUP_SMALL[caps[0]]) ? el('small', '', gearText(wallLine(small()))) : null; if (sm) w.appendChild(sm);   // (asked at every paint: a row that gets its key back has its own words again)
