@@ -323,7 +323,10 @@ but synthetic writes still work.
   a page too) a 4 ms timer answers, and each frame's `beat` is the longest it went silent in the GAP before the frame: from the end of the step before to
   the start of this one, so neither frame's own work is in it. What the browser itself reports as a long task or a long frame becomes a `long` event at the
   moment it began, with the script it blames by file name (300 of a kind a take, then one `longcap` line; they start at 50 ms, so the beat is the finer of
-  the two; on a page whose usual frame is itself long only one well over it is kept), and the tab going out of sight and coming back are `tab` events. A checkpoint written or put back during a take is a `save` / `load` event of the step it
+  the two; on a page whose usual frame is itself long only one well over it is kept), and the tab going out of sight and coming back are `tab` events. A hold of 20 ms or more outside the frame is a `held` event (300 a take), with whose it was where the recorder can tell: for the
+  length of a take two passive listeners hear each wheel, pointer and key event first and last, so the time the page's own handlers took is known (the
+  browser names a script only from 50 ms up, and the holds seen on the maintainer's display were 26 to 41 ms). `settings` events leave the two eased
+  keys alone (the goggles count as on or off, a hit's flash is left out). A checkpoint written or put back during a take is a `save` / `load` event of the step it
   happened in (a save with a squad up walks the whole game and takes its picture off the canvas), and the report sets what the take says happened in a
   stall's own stretch beside it (a save, the ladder's step, a resize). Mind the frame time's own shape: a frame's `dt` runs from the start of the
   step before to the start of this one, so a slow step shows in the NEXT frame's `dt`, and the reader looks at the row before for it. Reading: a long
