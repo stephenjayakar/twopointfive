@@ -2,9 +2,9 @@
 // `wholeSquad`, `?wholesquad=0`). The maintainer, 10-24: "quick Q mode should always do the whole squad. you should only be able to issue commands to
 // parts of the squad in plan mode". With that rule on, as the page opens:
 //   · Options ▸ Controls lists no "Who takes the next order" row (no dashed cap to put a dead key on); a machine that gave the row a key earlier keeps
-//     its row, which says it works only in plan mode;
+//     its row, which says it works only in plan mode, until Reset takes the key off it;
 //   · Options ▸ Game, where it is drawn (it needs the game stood up: without a WebGPU adapter the line says so and is not counted), offers no
-//     'Order who' for the Tab key, and a machine that kept that choice opens on the first one;
+//     'Order who' for the Tab key (a kept choice is tabwho-check.ts's line, not this page's);
 //   · `?wholesquad=0`: the row with its dashed cap and its own words, and the choice, as they were.
 //   node tools/qa/tabwho-page.cjs      env: PORT (the dev server's, default 5199) · TABWHO_BREAK=1 (the rule off on every page: must FAIL)
 // PASS / FAIL lines, exit 1 on a FAIL or a page error. The module's half: tools/qa/tabwho-check.ts.
@@ -40,10 +40,12 @@ const game = page => page.evaluate(() => { const row = [...document.querySelecto
     if (!g.drawn) console.log("- NOTE — Options, Game: the Tab key row is not drawn on this page (no game stood up without a WebGPU adapter): the choices are held by tabwho-check.ts");
     else check(!g.opts.includes('Order who') && g.opts.length === 4, "Game: the Tab key's choices do not offer 'Order who'", g.opts.join(' · '));
     await ctx.close(); }
-  // ── a machine that gave the who row a key, and kept 'Order who' for Tab ──
+  // ── a machine that gave the who row a key ──
   { const { ctx, page } = await fresh({ 'twopointsix.keys': '{"KeyT":"KeyT"}' }); await page.goto(url(), { waitUntil: 'domcontentloaded' });
     await openTab(page, 'controls'); const c = await controls(page);
-    check(c.row && c.cap === 'T' && /only in plan mode/.test(c.small), 'a machine that gave the who row a key keeps its row, which says it works only in plan mode', `the who row ${c.row ? 'listed' : 'NOT LISTED'} · cap '${c.cap}' · "${c.small}"`);
+    check(c.row && c.cap === 'T' && /only works in plan mode/.test(c.small), 'a machine that gave the who row a key keeps its row, which says it works only in plan mode', `the who row ${c.row ? 'listed' : 'NOT LISTED'} · cap '${c.cap}' · "${c.small}"`);
+    await page.click('#options [data-act="reset"]'); const d = await controls(page);   // (the list is built once: a row that loses its key must not stay as a dashed cap)
+    check(!d.row && d.cap === null, 'Reset to defaults takes that row off the list with its key', `the who row ${d.row ? 'STILL LISTED' : 'not listed'} · its cap ${d.cap === null ? 'none' : `'${d.cap}'`}`);
     await ctx.close(); }
   // ── the rule off: as it was ──
   if (!BREAK) { const { ctx, page } = await fresh(); await page.goto(url('wholesquad=0'), { waitUntil: 'domcontentloaded' });

@@ -1936,7 +1936,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `PORT=<port> node tools/qa/unplayed-page.cjs` (no adapter under it: 31 cards, none the night breach's; 36 under `?offlist=0`; no page error) and its
   still of the Raids group, six cards. `tools/qa/card-digest.ts` asks its pause card of the depot's pick now, and `startpage-look.cjs` and the verify
   notes list six. Nobody has opened the page on a GPU since.
-- **Options offers no dead "order who" control** (10-25; `src/ui/tabkey.ts` `TABKEY.whoGone` / `tabNow()`, `src/ui/options.ts` the who row). It
+- **Options offers no dead order who control** (10-25; `src/ui/tabkey.ts` `TABKEY.whoGone` / `tabNow()`, `src/ui/options.ts` the who row). It
   follows the squad's rule and has no switch of its own: `game/cmdring.ts` `wholeSquad` (the maintainer, 10-24: "quick Q mode should always do the
   whole squad. you should only be able to issue commands to parts of the squad in plan mode"; `?wholesquad=0`, and off on the frozen stand, where
   everything here is as it was). With the rule on the orders' who key steps nobody outside plan mode, so: THE TAB KEY's choices (Options ▸ Game)
@@ -1945,9 +1945,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   rule in as a question (`main.ts`: `TABKEY.whoGone = () => CMDRING.wholeSquad`), so `tabkey.ts` still imports nothing and the debugger's tick is
   followed live. THE WHO ROW on Options ▸ Controls ("Who takes the next order", key id `KeyT`, a dashed cap since Q and F became the squad's only
   keys) is not listed while it has no key: there is no cap to put a dead key on. A row the player gave a key earlier stays his to see and move,
-  and its small words say "only in plan mode". NOT TOUCHED: the old start card's key list (`ui/menu.ts` `CONTROLS`, the row 'X · B · T · F') still
+  and its small words say "this only works in plan mode" (the list is built again when the row loses its key: Reset, Backspace on its cap). NOT TOUCHED: the old start card's key list (`ui/menu.ts` `CONTROLS`, the row 'X · B · T · F') still
   words T as "who gets it", as it did when T lost its key. CHECKS: `bun run tools/qa/tabwho-check.ts` (also `probes.ts tabwho`, family ui: the
-  choices with the rule off and on, a kept 'who', `?tab=who`, the others untouched; `TABWHO_BREAK=1` must fail) and
+  choices with the rule off and on, a kept 'who', `?tab=who`, the others untouched, and the page's own wire read as text: `main.ts` hands the rule in and nothing under `src` reads `TABKEY.does` but `tabkey.ts`; `TABWHO_BREAK=1` must fail) and
   `PORT=<dev server> node tools/qa/tabwho-page.cjs` (Options ▸ Controls on the real page: no row, a hand-bound row, the row under
   `?wholesquad=0`; `TABWHO_BREAK=1` must fail); `tools/qa/keybinds-page.cjs` has one line brought up to date. SEEN: the Controls tab in headless
   Chromium with no adapter. NOT SEEN: Options ▸ Game as drawn (it needs the game stood up, which this machine cannot do in useful time), a GPU, a

@@ -61,7 +61,7 @@ const AUTO_WHAT = 'Tap twice for the auto camera';
 /** THE WHO ROW (the orders' who key, code 'KeyT'). While quick orders are the whole squad's (game/cmdring.ts `wholeSquad`: outside plan mode the key steps
  *  nobody) a row with no key is not listed, so there is no dashed cap to put a dead key on; one the player gave a key earlier stays his to see and move,
  *  and says where it still works. `?wholesquad=0` = the row as it was */
-const WHO_WHAT = 'Who takes the next order', WHO_PLAN = 'only in plan mode, between everyone, red, blue and one teammate';
+const WHO_WHAT = 'Who takes the next order', WHO_PLAN = 'this only works in plan mode. it switches between everyone, red, blue or the teammate under your cursor';
 const whoRowGone = () => CMDRING.wholeSquad && !keysOf('KeyT').length;
 const PACE_WHAT = 'Walking pace', SPRINT_WHAT = 'Sprint';
 /** the sprint's row while Shift in a crouch is a fast crouch walk (game/player.ts CROUCHRUN): what the same key does crouched, and that it is heard
@@ -245,7 +245,7 @@ function render(S: Screen) {
   const desc = el('div', 'op-desc'); box.appendChild(desc);
   const foot = el('div', 'op-foot'); box.appendChild(foot);
   const back = el('button', 'op-btn primary', 'Back') as HTMLButtonElement; back.dataset.act = 'back'; back.onclick = () => closeOptions(); foot.appendChild(back);
-  const paints: (() => void)[] = [];
+  const paints: (() => void)[] = [], whoGone0 = whoRowGone();
   const row = (parent: HTMLElement, label: string, describe: () => string) => {
     const e = el('div', 'op-row'), i = S.rows.length; e.appendChild(el('div', 'op-label', label));
     const R: Row = { el: e, label, desc: describe, left() {}, right() {}, press() {} }; S.rows.push(R);
@@ -335,6 +335,7 @@ function render(S: Screen) {
   foot.appendChild(el('div', 'op-hint', S.tab === 'controls' && S.rows.length ? '1 2 3 4 tabs · W S keys · Enter a new key · Esc back' : S.rows.length ? '1 2 3 4 tabs · W S rows · A D change · Esc back' : '1 2 3 4 tabs · W S scroll · Esc back'));
   S.sel = Math.max(0, Math.min(S.rows.length - 1, S.sel));
   S.paint = () => {
+    if (S.tab === 'controls' && whoRowGone() !== whoGone0) { render(S); return; }   // (the who row lost its key, or the rule was ticked: the list is built once, so it is built again)
     for (const p of paints) p();
     S.rows.forEach((R, i) => R.el.classList.toggle('sel', i === S.sel));
     const R = S.rows[S.sel]; desc.innerHTML = '';

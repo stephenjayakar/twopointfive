@@ -426,8 +426,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `TPS_QPLAN=1`); a recording from before the key replays with it off; debugger tick "Tab ▸ plan mode ▸ only plan mode picks a part of the squad".
   CHECK: `probes.ts wholesquad` (family squadorders; `tools/qa/wholesquad-check.ts`), eight lines on plan mode's rig on both stands;
   `WHOLESQUAD_BREAK=1` fails lines 1 to 5 on both. HELD OFF in the rigs of the checks that step who outside plan mode on purpose: `cmdring-check`,
-  `wheelidle-check`, `orders-probes`, `orderui-probes`, `pressorders-probes`. MEASURED: one deal of the office room clear, squad of four; the rule has no die in it. NOT
-  DONE: Options still offers "Order who" for the Tab key and a key for "who" on its Controls page, and both now do nothing outside plan mode.
+  `wheelidle-check`, `orders-probes`, `orderui-probes`, `pressorders-probes`. MEASURED: one deal of the office room clear, squad of four; the rule has no die in it. OPTIONS
+  no longer offers "Order who" for the Tab key or a keyless "who" row on its Controls page while the rule is on (`menus.md`, "Options offers no dead order who control").
   Nobody has played it; no part of it is a picture.
 - **Plan mode's reach is the same at any zoom** (2026-10-25; `CMDRING.planNearFlat`, `planmode.ts pan`). The maintainer: "max distance for plan
   mode seems to be based on the zoom level? should be zoom invaraitn". The box `planNear` holds the view's point in (6.5 m to either side of him,
