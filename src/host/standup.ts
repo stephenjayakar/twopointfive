@@ -12,6 +12,7 @@ import { buildLevel } from '../scene/level';
 import { UNDERFOOT } from '../scene/collision';
 import { ROUND, roundLevel } from '../scene/round';
 import { thinClear, thinLevel } from '../scene/thin';
+import { barClear, barLevel } from '../scene/bars';
 import { lightFromDef } from '../render/lights';
 import { loadGltfCharacter } from '../anim/gltf';
 import { Game } from '../game/game';
@@ -151,6 +152,7 @@ import { glassPenHarness } from '../game/glasspen';
 import { glassFxForced, GLASS } from '../game/glass';
 import { WALLPEN } from '../game/wallpen';
 import { DOORSHOT } from '../game/doorblast';
+import { WINBARS } from '../game/winbars';
 import { FRAG } from '../game/frag';
 import { HOUR, applyHour } from '../game/hours';
 import { DOORPATH } from '../game/doorpath';
@@ -199,9 +201,10 @@ export function nullSmoke(): SmokeSystemLike & { params?: Record<string, unknown
 
 /** the level's statics into the host's box world and its lights into the light set — the two loops main.ts and headless.ts ran before `new Game` */
 export function populateHost(host: HostApi, level: Level): void {
-  thinClear(level.boxes);   // (a level stood up a second time: last time's thin marks off before the round things are looked for)
+  thinClear(level.boxes); barClear(level.boxes);   // (a level stood up a second time: last time's thin marks off before the round things are looked for)
   roundLevel(level.boxes, ROUND.on, level.markTexel);   // ROUND THINGS (scene/round.ts): the kit's octagons as one round box each, or every box put back as its file has it — before a box goes to the world and before the Game's collision is built from the list
   thinLevel(level.boxes, level.doors);   // THIN THINGS THAT STAND FREE (scene/thin.ts): marked for the fog of war's own eyes (FOG.thin), on the list as it now is
+  barLevel(level.boxes);   // A WINDOW'S BARS (scene/bars.ts): marked for the one rule that reads them (game/winbars.ts WINBARS)
   for (const b of level.boxes) host.world.addStatic(b);
   for (const ld of level.lights) host.lights.add(lightFromDef(ld));
 }
@@ -477,6 +480,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_DOORSHOT')) DOORSHOT.on = String((globalThis as any).process?.env?.TPS_DOORSHOT ?? '') === '1';   // gunfire splinters a door leaf apart (src/game/doorblast.ts DOORSHOT): off, so a leaf hangs whatever is fired into it, as in every frozen probe, digest and tally; TPS_DOORSHOT=1 raises it
     if (String((globalThis as any).process?.env?.TPS_DOORCOST ?? '') === '0') { DOORSHOT.toll = 1; DOORSHOT.flat = false; }   // … and what shooting one out costs: the module's own twelve rifle rounds at any destruction scale on either stand; TPS_DOORCOST=0 = six, riding the scale, the build as it was (the page's ?doorcost=0)
     if (pinned('TPS_DOORTHROW')) DOORTHROW.on = String((globalThis as any).process?.env?.TPS_DOORTHROW ?? '') === '1';   // a door opened into a man moves and startles him, one slammed or booted throws him (src/game/doors.ts DOORTHROW): off, so a leaf stops against a standing man, as in every frozen probe, tally and digest
+    if (pinned('TPS_WINBARS')) WINBARS.on = String((globalThis as any).process?.env?.TPS_WINBARS ?? '') === '1';   // a window's bar breaks from one round (src/game/winbars.ts): off, so a bar stops every round and every line of fire, as in every frozen probe, digest and tally; TPS_WINBARS=1 raises it
     if (pinned('TPS_WALLPEN')) WALLPEN.on = String((globalThis as any).process?.env?.TPS_WALLPEN ?? '') === '1';   // rounds through thin walls and doors (src/game/wallpen.ts): off, so a round stops in the first built thing it meets, as in every frozen probe, digest and tally; TPS_WALLPEN=1 raises it
     if (pinned('TPS_TAKEDOWN')) TAKEDOWN.on = String((globalThis as any).process?.env?.TPS_TAKEDOWN ?? '') === '1';   // takedowns as moves (src/game/takedown.ts): off, so a man taken down falls and lies as every stored digest has him
     if (pinned('TPS_HAUL')) TAKEDOWN.haul = String((globalThis as any).process?.env?.TPS_HAUL ?? '') === '1';   // the choke's haul (character.ts HOLD.haul; a half of TAKEDOWN with a switch of its own): off, so the choke is posed as it was
