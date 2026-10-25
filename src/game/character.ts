@@ -1701,8 +1701,8 @@ export class CharacterAnimator {
   low = 0; private lowS = 0; /** its shape as fed: [drop m, back m, lean °] */ lowShape: [number, number, number] = [0, 0, 0];
   /** STALK.wide (fed by close.ts with the sink, closing on a man from behind): his arms out wide and low, 0‥1, and the shape as fed [out, down, ahead m] — the share shown is eased */
   wide = 0; wideShape: [number, number, number, number] = [0, 0, 0, 0]; widePole: Vec3 | null = null; private wideS = 0;
-  /** TAP TO STEP (tapstep.ts): how far through this step the legs are, −1 = no steps · the step's count · the way the cycle runs. The stride is then half a cycle a step, from a plant to the next */
-  tapU = -1; tapN = 0; tapWay: 1 | -1 = 1; private tapSeen = -1; private tapBase = 0;
+  /** TAP TO STEP (tapstep.ts): how far through this step the legs are, −1 = no steps · the step's count · the way the cycle runs. The legs go from wherever they stand to the next plant, and in between stand where they are: taken over from a creep let go of, they do not move at all */
+  tapU = -1; tapN = 0; tapWay: 1 | -1 = 1; private tapSeen = -1; private tapFrom = 0; private tapTo = 0; private tapWas = -1;
   heft = 0; /** its shape as fed: [twist °, swing m, weight over the foot m, lean °, dip m, surge] */ heftShape: [number, number, number, number, number, number] = [0, 0, 0, 0, 0, 0]; private hf = { s: 0, sv: 0, a: 0, av: 0, w: 0, wv: 0, v: 0, vv: 0, t: 0 };
   /** …and with it (STALK.low): this share of the carriage's raised hands is given up, at any distance — his hands stay down by his knees, the crouch's own (0 = the carriage as it was) */ handsDown = 0;
   /** …and the SPRING out of it (close.ts closeTick, through a stalk's grab): the rate he comes up out of the crouch at (0 = the animator's own 10) */ spring = 0;
@@ -2247,7 +2247,11 @@ export class CharacterAnimator {
     if (s < 0.05) rate = 0;
     if (gH > 0) rate = lerp(rate, lerp((wWalk / (P.walkSpeed * c.Walk_Loop.duration) + wJog / (P.jogSpeed * c.Jog_Fwd_Loop.duration * Kj) + wSprint / (P.sprintSpeed * c.Sprint_Loop.duration)) / wsum, 1 / (P.crouchSpeed * c.Crouch_Fwd_Loop.duration * strideD), this.crouch) * this.crV, gH);   // (cycles per metre × the metres a second the root really made: the stride moves on with the ground and stops with it)
     this.phase = (this.phase + dt * rate * (this.reverse ? -1 : 1) + 100) % 1;
-    if (this.tapU >= 0 && gH > 0) { if (this.tapN !== this.tapSeen) { this.tapSeen = this.tapN; const p = this.creepPlant()[1]; this.tapBase = p + Math.round((this.phase - p) * 2) / 2; } this.phase = (this.tapBase + this.tapWay * 0.5 * clamp(this.tapU, 0, 1) + 100) % 1; }   // (tapstep.ts: a plant to the next, whatever the ground)
+    if (this.tapU >= 0 && gH > 0) {   // (tapstep.ts: the stride belongs to the step)
+      if (this.tapWas < 0) { this.tapSeen = this.tapN; this.tapFrom = this.tapTo = this.phase; }
+      else if (this.tapN !== this.tapSeen) { this.tapSeen = this.tapN; const p = this.creepPlant()[1], w = this.tapWay, off = ((this.phase - p) % 0.5 + 0.5) % 0.5, go = w > 0 ? 0.5 - off : off; this.tapFrom = this.phase; this.tapTo = this.phase + w * (go < 0.2 ? go + 0.5 : go); }   // (a short way to the next plant is no step: the one after)
+      this.phase = (this.tapFrom + (this.tapTo - this.tapFrom) * clamp(this.tapU, 0, 1) + 100) % 1; }
+    this.tapWas = gH > 0 ? this.tapU : -1;
     if (WALLSNAP.on && WALLSNAP.pose) {   // the wall hold's own step clock (wallBody: WALL_POSE.gait) — SIGNED along the wall (his right +), so a reversal walks the same soles back; parked it rests where the lead foot is just down and the other about to leave
       if (this.stance === 'wall') this.wallGait = (this.wallGait + dt * s * this.stackSide * (this.reverse ? -1 : 1) / (2 * lerp(WALL_POSE.gait.step[0], WALL_POSE.gait.step[1], clamp(this.crouch, 0, 1))) + 100) % 1;
       else this.wallGait = WALL_GAIT_REST;   // (stopped ON the wall it stands where it stopped until the parked spots have the feet whole — wallBody puts it back to rest then: no sole jumps under a stop)
