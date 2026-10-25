@@ -434,6 +434,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   { const T = k.tables.SLOTSETUP as Partial<typeof SLOTSETUP> | undefined;
     if (!T) SLOTSETUP.on = false;   // (a file from before the slot in hand pressed again opened its setup: its 2 pressed with the rifle up stepped the launcher's load)
     if (typeof T?.pop !== 'boolean') SLOTSETUP.pop = false;   // (…and one from before the setup was a mode with no clock on it: there it shut by itself after its seconds)
+    if (typeof T?.mags !== 'boolean') SLOTSETUP.mags = false;   // (…and one from before the box counted the gun's rounds over its magazine's size: its box said the rounds in all the spares)
     if (typeof T?.draw !== 'boolean') SLOTSETUP.draw = false; }   // (…nor has one from before a double tap off another slot opened it: there the second press was the draw and no more)
   if (!k.tables.DOORFORCE) DOORFORCE.on = false;   // (a file from before an alerted man fired through a shut door and booted it in: its defenders waited at the leaf or went to its handle)
   if (!k.tables.RAILS) RAILS.on = false;
