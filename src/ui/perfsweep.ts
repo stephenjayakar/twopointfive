@@ -364,7 +364,7 @@ export class PerfSweep {
         return { row, label: `${row.label} (${n} of them here)`, from: { irLights: n }, to: { irLights: one ? 1 : 0 }, apply: () => { const was = L.irCap; L.irCap = one ? 1 : 0; return () => { L.irCap = was; }; } };
       }
       case 'scaleDown': case 'scaleUp': case 'scaleStart': case 'scaleTop': {
-        const cur = S.renderScale as number, top = +(S.sharpDirect && S.taau !== false ? 1 - SCALE_STEP : 1).toFixed(2);   // (1.0 would drop sharp direct: quality.ts scaleTop, the ladder's own top)
+        const cur = S.renderScale as number, top = this.quality['scaleTop']();   // (1.0 would drop sharp direct: the ladder's own top, shed or not)
         const start = Math.min(top, this.quality['maxScale'] as number);   // (where this preset's scale stood before the ladder climbed)
         const to = row.custom === 'scaleTop' ? top : row.custom === 'scaleStart' ? +start.toFixed(2) : +(cur + (row.custom === 'scaleUp' ? SCALE_STEP : -SCALE_STEP)).toFixed(2);
         if (Math.abs(to - cur) < 1e-3) return 'already so';
@@ -377,9 +377,9 @@ export class PerfSweep {
         if (!to) return `no preset row from ${cur}`;
         const Q = this.quality, auto = Q.auto;
         return { row, label: `the whole ${to[0].toUpperCase()}${to.slice(1)} preset`, from: { preset: cur }, to: { preset: to }, apply: () => {
-          const back = this.snapshot(), climbed = [...Q['climbed']], failed = new Map(Q['failed']), failCount = new Map(Q['failCount']);   // apply() forgets the ladder's standing rungs; the settings they raised come back with the snapshot, so the ladder must know them again
+          const back = this.snapshot(), climbed = [...Q['climbed']], failed = new Map(Q['failed']), failCount = new Map(Q['failCount']), shed = Q.shed;   // apply() forgets the ladder's standing rungs; the settings they raised come back with the snapshot, so the ladder must know them again
           Q.auto = false; this.preset = to; this.own = true; try { Q.apply(to); } finally { this.own = false; }   // (auto off round the two applies: apply() must not file the flipped preset as this machine's pick)
-          return () => { this.preset = cur; this.own = true; try { Q.apply(cur); } finally { this.own = false; } Q.auto = auto; Q['climbed'] = climbed; for (const [k, v] of failed) Q['failed'].set(k, v); for (const [k, v] of failCount) Q['failCount'].set(k, v); back(); };
+          return () => { this.preset = cur; this.own = true; try { Q.apply(cur); } finally { this.own = false; } Q.auto = auto; Q.shed = shed; Q['climbed'] = climbed; for (const [k, v] of failed) Q['failed'].set(k, v); for (const [k, v] of failCount) Q['failCount'].set(k, v); back(); };
         } };
       }
     }

@@ -1,6 +1,6 @@
 // REPLAY THE QUALITY LADDER OVER AN F9 RECORDING — no GPU needed (rebuild/performance/auto-quality.md is the write-up).
 //
-//   bun run tools/qa/ladder-replay.ts <perf-….json>… [--aim asnow|60|90|120|display|all] [--hz N] [--paced on|off] [--held on|off] [--sweeps] [--check] [--md] [--timeline] [--hold k=v,…]
+//   bun run tools/qa/ladder-replay.ts <perf-….json>… [--aim asnow|60|90|120|display|all] [--hz N] [--paced on|off] [--held on|off] [--shed on|off] [--sharpk N] [--sweeps] [--check] [--md] [--timeline] [--hold k=v,…]
 //   bun run tools/qa/ladder-replay.ts --selftest
 //
 // An F9 dump (ui/perfrec.ts) carries, per frame, the frame time, the compute passes' GPU union, the resolution and the preset, and the ladder's own moves as events. That is everything
@@ -16,7 +16,7 @@
 //             not in a dump, so the window phase and the roomy count are tried over their few values and the best fit is named. Exit 1 if no start state reproduces the take.
 //   --selftest  synthetic closed-loop machines: what each aim must do (PASS / FAIL lines, exit 1 on a FAIL).
 import { readFileSync } from 'node:fs';
-import { PRESETS, REF, SCALE_FLOOR, LADDER, CLIMB, HOLD, PACED, AIM_DISPLAY, PLAN_BUDGET_MS, QUALITY_NAMES, ladderBands, ladderAimOf, displayRateOf, presetCost, plan, withSmoke, costTable, type QualityName, type Preset } from '../../src/ui/quality.ts';
+import { PRESETS, REF, SCALE_FLOOR, LADDER, CLIMB, HOLD, PACED, SHED, sharpForce, AIM_DISPLAY, PLAN_BUDGET_MS, QUALITY_NAMES, ladderBands, ladderAimOf, displayRateOf, presetCost, plan, withSmoke, costTable, type QualityName, type Preset } from '../../src/ui/quality.ts';
 import type { PerfDump, PerfFrame } from '../../src/ui/perfrec.ts';
 
 const G = globalThis as unknown as Record<string, any>;
@@ -34,15 +34,15 @@ const defaults = (await import('../../src/engine.ts')).defaultSettings as unknow
 /** measured on the Mac's sweep take (rebuild/performance/mac-recordings.md, take 3: High ×0.95 gather ½, 13.9 ms union): 0.95 → 0.90 gave back 0.94 ms (ratio 0.932), 0.95 → 0.77 gave
  *  3.27 ms (0.765), all of Medium 7.62 ms (0.452). presetCost alone says 0.924 / 0.747 / 0.380: its fixed part is short of what a frame carries today (fog of war, the mesh refit, the
  *  probe's traffic). `extraFixed` model-ms on every preset puts the two scale steps at 0.930 / 0.765; `under` on the presets below high puts Medium at 0.452. */
-const MODEL = { extraFixed: 1.6, under: 1.07, overheadMs: 2.8 };
-interface State { preset: QualityName; scale: number; gatherThird: boolean; volQuarter: boolean; maxH: number }
+const MODEL = { extraFixed: 1.6, under: 1.07, overheadMs: 2.8, sharpK: 1 };   // (sharpK: sharp direct's part × this — the same Mac's sweep of 10-25 priced it at 4.9 of 15.5 ms at High ×0.5, well over presetCost's share: the fog pass, the g-buffer and the composite at the output size ride with it; 1 = the model's own, as every machine here before SHARP SHED ran)
+interface State { preset: QualityName; scale: number; gatherThird: boolean; volQuarter: boolean; maxH: number; sharp: boolean }
 interface Win { cssW: number; cssH: number; dpr: number }
 const rowsOf = (s: State, w: Win) => Math.min(s.maxH, w.cssH * w.dpr) * s.scale;
 function modelCost(s: State, w: Win, base: Record<string, any>): number {
   const pc = withSmoke(PRESETS[s.preset], typeof base.smokeKeep === 'number' ? base.smokeKeep : 0);   // (a take from before SMOKE KEEP carries no such setting: its presets ran their own smoke rows)
-  const live: Preset = { ...pc, lossy: { ...pc.lossy, gatherThird: s.gatherThird, volQuarter: s.volQuarter }, maxH: s.maxH, scale: s.scale, iq: { ...pc.iq, sharp: !!base.sharpDirect && base.taau !== false } };
+  const live: Preset = { ...pc, lossy: { ...pc.lossy, gatherThird: s.gatherThird, volQuarter: s.volQuarter }, maxH: s.maxH, scale: s.scale, iq: { ...pc.iq, sharp: s.sharp && base.taau !== false } };
   const c = presetCost(live, base.oneCacheGrid === true); const rows = rowsOf(s, w); const mpx = rows * rows * (w.cssW / w.cssH) / 1e6;   // (a take from before ONE CACHE GRID carries no such setting: its low and verylow ran the coarse grid and are priced on it, as replay() has the ladder price them)
-  return (s.preset === 'high' || s.preset === 'ultra' ? 1 : MODEL.under) * (c.fixed + MODEL.extraFixed + c.pixel * mpx / REF.mpx);
+  return (s.preset === 'high' || s.preset === 'ultra' ? 1 : MODEL.under) * (c.fixed + (MODEL.sharpK - 1) * c.passes.sharp + MODEL.extraFixed + c.pixel * mpx / REF.mpx);
 }
 
 // ---- a stub engine on the recording's window ---------------------------------------------------------------------------------------------------------------------------------------------------
@@ -54,15 +54,17 @@ function mkEngine(w: Win, settings: Record<string, any>) {
   return E;
 }
 /** a Quality standing where a session stands once its boot is behind it: `preset` applied, calibration done, auto or pinned-with-adaptive, then the recording's own settings laid over */
-function mkQuality(w: Win, preset: QualityName, auto: boolean, settings: Record<string, any>, aim: number, hz: number) {
+function mkQuality(w: Win, preset: QualityName, auto: boolean, settings: Record<string, any>, aim: number, hz: number, shed0 = false) {
   store.clear();
   const E = mkEngine(w, {}); const q: any = new Quality(E as never, { params: { rbIters: 4 } } as never);
   q.auto = auto; q.apply(preset); q.adaptive = true; q.climbAllowed = true; q.calib = { ...q.calib, done: true };
   for (const k of ['renderScale', 'gatherThird', 'volQuarter', 'ladderClimb', 'capClimb', 'ladderPaced', 'ladderHeld', 'oneCacheGrid', 'smokeKeep', 'taau', 'sharpDirect', 'rcHalfRate', 'maxInternalHeight']) if (k in settings) E.settings[k] = settings[k];
+  E.settings.ladderShed = settings.ladderShed === true;   // (SHARP SHED only where a machine or a take says so: every case and every take from before the switch runs the ladder as it was)
+  if (shed0 && auto && E.settings.ladderShed && !E.settings.sharpDirect) q.shed = true;   // (a take begun with the shed standing, PerfDump.shedAtStart: the ladder knows sharp direct is its own to bring back)
   E.settings.ladderAim = aim; q.displayHzPin = hz; q.cooldown = 0; q.lastChange = '';
   return { E, q };
 }
-const stateOf = (q: any, E: any): State => ({ preset: q.current, scale: E.settings.renderScale, gatherThird: !!E.settings.gatherThird, volQuarter: !!E.settings.volQuarter, maxH: E.settings.maxInternalHeight });
+const stateOf = (q: any, E: any): State => ({ preset: q.current, scale: E.settings.renderScale, gatherThird: !!E.settings.gatherThird, volQuarter: !!E.settings.volQuarter, maxH: E.settings.maxInternalHeight, sharp: !!E.settings.sharpDirect });
 
 // ---- the replay --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 interface Move { t: number; text: string; state: State; rows: number }
@@ -85,17 +87,21 @@ let pacedForce: boolean | undefined;
 /** --held on|off: the same check under an aim (settings.ladderHeld) forced for a replay; unset = the take's own setting, and a take from before the switch (10-14) has none and replays
  *  with it OFF, as its page ran — `--held on` asks what the rule would have done with that take */
 let heldForce: boolean | undefined;
+/** --shed on|off: SHARP SHED (settings.ladderShed) forced for a replay; unset = the take's own setting, and a take from before the switch (10-25) replays with it OFF, as its page ran —
+ *  `--shed on` asks what the rule would have done with that take (`--sharpk N` = the response model's price of sharp direct, MODEL.sharpK) */
+let shedForce: boolean | undefined;
 function replay(d: PerfDump, aim: number, opts: { hz?: number; warm?: Warm } = {}): Result {
   const w = windowOf(d); const hz = opts.hz ?? hzOf(d); const S0 = d.settingsAtStart as Record<string, any>;
   const first = d.frames[0]; const { preset: p0, auto } = presetOfLabel(first.preset);
-  const { E, q } = mkQuality(w, p0, auto, S0, aim, hz); if (pacedForce !== undefined) E.settings.ladderPaced = pacedForce; if (heldForce !== undefined) E.settings.ladderHeld = heldForce; else if (!('ladderHeld' in S0)) E.settings.ladderHeld = false;
+  const { E, q } = mkQuality(w, p0, auto, S0, aim, hz, d.shedAtStart === true); if (pacedForce !== undefined) E.settings.ladderPaced = pacedForce; if (heldForce !== undefined) E.settings.ladderHeld = heldForce; else if (!('ladderHeld' in S0)) E.settings.ladderHeld = false;
+  if (shedForce !== undefined) E.settings.ladderShed = shedForce;
   if (!('smokeKeep' in S0)) E.settings.smokeKeep = 0;   // (… and before SMOKE KEEP: every preset on its own smoke rows)
   if (!('oneCacheGrid' in S0)) E.settings.oneCacheGrid = false;   // (a take from before ONE CACHE GRID: its low and verylow ran the coarse grid — the replayed ladder prices them so, as modelCost does)
   if (opts.warm) { q.sinceClimb = 99; q.acc = opts.warm.acc; q.frames = Math.max(1, Math.round(opts.warm.acc / (first.dt / 1000))); q.roomy = opts.warm.roomy; q.unionAcc = (first.gpuUnion ?? 0) * q.frames; q.unionN = first.gpuUnion ? q.frames : 0; }
   // the recorded ladder's state per frame: the scale off the resolution, the divisors off the 'settings' events, the preset off the label
-  const rec: State = { preset: p0, scale: S0.renderScale, gatherThird: !!S0.gatherThird, volQuarter: !!S0.volQuarter, maxH: S0.maxInternalHeight };
+  const rec: State = { preset: p0, scale: S0.renderScale, gatherThird: !!S0.gatherThird, volQuarter: !!S0.volQuarter, maxH: S0.maxInternalHeight, sharp: 'sharpDirect' in S0 ? !!S0.sharpDirect : !!E.settings.sharpDirect };   // (a take from before the key: as the replayed preset places it, so the two sides price alike)
   const setEv = d.events.filter(e => e.kind === 'settings'); let se = 0;
-  const applySettings = (text: string) => { for (const m of text.matchAll(/(\w+) (\S+?) → ([^\s,]+)/g)) { const [, k, , v] = m; if (k === 'gatherThird') rec.gatherThird = v === 'true'; else if (k === 'volQuarter') rec.volQuarter = v === 'true'; else if (k === 'maxInternalHeight') rec.maxH = +v; } };
+  const applySettings = (text: string) => { for (const m of text.matchAll(/(\w+) (\S+?) → ([^\s,]+)/g)) { const [, k, , v] = m; if (k === 'gatherThird') rec.gatherThird = v === 'true'; else if (k === 'volQuarter') rec.volQuarter = v === 'true'; else if (k === 'sharpDirect') rec.sharp = v === 'true'; else if (k === 'maxInternalHeight') rec.maxH = +v; } };
   // the frame's own overhead past the union, for frames the display paced (a 120 Hz frame with 4 ms of GPU work is not '4.3 ms of overhead'): the take's median over its GPU-bound frames
   // (… and not the frames something else HELD: one more than a whole refresh + HOLD.pacedMs over its union is no vsync the GPU missed — a browser holding the page to 30 fps, a CPU hitch.
   // Such a frame stays as long as it was whatever the ladder renders, until the re-priced work itself outgrows it; before 10-14 its whole wait counted as overhead that moved with the union)
@@ -114,7 +120,7 @@ function replay(d: PerfDump, aim: number, opts: { hz?: number; warm?: Warm } = {
     const key = gpuKey(f); const stale = key === prevKey; prevKey = key;
     const union = f.gpuUnion ?? 0; if (union > 0 && !stale) lastUnion = union;
     const sim = stateOf(q, E);
-    const same = sim.preset === rec.preset && Math.abs(sim.scale - rec.scale) < 0.004 && sim.gatherThird === rec.gatherThird && sim.volQuarter === rec.volQuarter && sim.maxH === rec.maxH;
+    const same = sim.preset === rec.preset && Math.abs(sim.scale - rec.scale) < 0.004 && sim.gatherThird === rec.gatherThird && sim.volQuarter === rec.volQuarter && sim.maxH === rec.maxH && sim.sharp === rec.sharp;
     let dt2 = f.dt, union2 = union;
     if (!same) {
       const R = modelCost(sim, w, S0) / modelCost(rec, w, S0); const u = union > 0 ? union : lastUnion;
@@ -148,7 +154,7 @@ function replay(d: PerfDump, aim: number, opts: { hz?: number; warm?: Warm } = {
 
 // ---- --check: as-now must make the recording's own moves ------------------------------------------------------------------------------------------------------------------------------------
 const moveKey = (text: string) => text.replace(/\s*\(.*$/, '').replace(/\s+—.*$/, '').trim();   // 'climb ↑ scale 0.80 (gpu ∪ 8.1 ms of 16.7)' → 'climb ↑ scale 0.80'
-const isStep = (text: string) => /^(climb|adaptive|auto|paced|hold \d+) [↑↓]/.test(text);   // the ladder's steps (not its 'frame pacing' notes, a calibration's line, a hand's pin)
+const isStep = (text: string) => /^(climb|adaptive|auto|paced|shed|hold \d+) [↑↓]/.test(text);   // the ladder's steps (not its 'frame pacing' notes, a calibration's line, a hand's pin)
 const laddersOf = (d: PerfDump) => d.events.filter(e => e.kind === 'ladder' && isStep(e.text)).map(e => ({ t: e.t / 1000, key: moveKey(e.text), text: e.text }));
 const aimOfTake = (d: PerfDump) => Number((d.settingsAtStart as Record<string, unknown>).ladderAim) || 0;   // (a take recorded under an aim is checked under that aim)
 /** the start state under which as-now replays closest to the recording's own moves */
@@ -210,7 +216,7 @@ function selftest(): boolean {
     }
     return { fps, moves };
   };
-  const base = modelCost({ preset: 'high', scale: PRESETS.high.scale, gatherThird: true, volQuarter: false, maxH: PRESETS.high.maxH }, w, S0);   // model-ms of high at its start on this window
+  const base = modelCost({ preset: 'high', scale: PRESETS.high.scale, gatherThird: true, volQuarter: false, maxH: PRESETS.high.maxH, sharp: true }, w, S0);   // model-ms of high at its start on this window
   const at = (ms: number) => ms / base;   // the machine factor that makes high-at-its-start cost `ms` of union
   const mk = (aim: number, hz: number, auto = false, preset: QualityName = 'high') => mkQuality(w, preset, auto, { ladderClimb: true }, aim, hz);
   const minOf = (a: number[]) => Math.min(...a);
@@ -479,21 +485,110 @@ function selftest(): boolean {
       check(d.length === 0 && x.q.climbed.length === 0, `the Tab row's by-hand step (resmoke) lands on the rows a preset put on at 1 would have, and forgets a climbed quarter-to-half rung${d.length ? `: ${d.join(' ')}` : ''}`); }
     { const x = put('medium', 1); x.q.lastCut = { from: 0.7 }; x.q.upTrial = { from: 0.55 }; x.q.apply('low'); check(x.q.lastCut === null && x.q.upTrial === null, 'a preset put on still clears the judged cut and the judged step up'); }
   }
+  console.log('\nAuto lets sharp direct go before it shrinks the picture (settings.ladderShed; the maintainer\'s pick of 10-25. His Mac\'s sweep priced sharp direct at 4.9 of 15.5 ms at High ×0.5, and the machine below is priced so):');
+  {
+    const ON = process.env.LADDERSHED_BREAK !== '1';   // LADDERSHED_BREAK=1: the 'on' machines run with the switch off and twenty lines must FAIL
+    const hi = (scale: number, sharp = true): State => ({ preset: 'high', scale, gatherThird: true, volQuarter: false, maxH: PRESETS.high.maxH, sharp });
+    const withK = <T,>(k: number, f: () => T): T => { const k0 = MODEL.sharpK; MODEL.sharpK = k; try { return f(); } finally { MODEL.sharpK = k0; } };
+    const c5 = presetCost({ ...withSmoke(PRESETS.high, 1), scale: 0.5 }, true), mpx5 = (1000 * 0.5) ** 2 * (w.cssW / w.cssH) / 1e6, share = 4.9 / 15.45;
+    const macK = share * (c5.fixed - c5.passes.sharp + MODEL.extraFixed + c5.pixel * mpx5 / REF.mpx) / (c5.passes.sharp * (1 - share));   // the sharpK that makes sharp direct that share of High ×0.5 on this window
+    const mkS = (on: boolean, o: { auto?: boolean; aim?: number; adaptive?: boolean; hz?: number } = {}) => { const x = mkQuality(w, 'high', o.auto ?? true, { ladderClimb: true, ladderShed: on }, o.aim ?? 60, o.hz ?? 120); if (o.adaptive === false) x.q.adaptive = false; return x; };
+    /** `secs` a second at a time: the moves, the fps windows, and the ladder's state at the end of every second */
+    const watch = (x: { q: any; E: any }, secs: number, k: (t: number) => number, o: { paceMs?: number; timed?: boolean; t0?: number; hz?: number; vrr?: boolean } = {}) => { const moves: string[] = [], fps: number[] = [], st: State[] = []; for (let t = 0; t < secs; t++) { const r = run(x.q, x.E, 1, o.hz ?? 120, k, { ...o, t0: (o.t0 ?? 0) + t }); moves.push(...r.moves); fps.push(...r.fps); st.push(stateOf(x.q, x.E)); } return { moves, fps, st }; };
+    const steps = (m: string[]) => m.filter(x => /↓|↑/.test(x)), tOf = (m?: string) => m ? parseFloat(m) : NaN, first = (m: string[], re: RegExp) => m.find(x => re.test(x));
+    const sharpOn = (x: { E: any }) => !!x.E.settings.sharpDirect;
+    withK(macK, () => {
+      const start = modelCost(hi(PRESETS.high.scale), w, S0), bare = modelCost(hi(PRESETS.high.scale, false), w, S0); const A = (ms: number) => ms / start;   // A(ms): the machine on which high at its start, sharp direct on, costs `ms` of union
+      // (1) a fight under auto at High: 12 → 17 → 12 ms
+      const fight = (t: number) => A(t < 20 ? 12 : t < 80 ? 17 : 12);
+      const o = mkS(false), n = mkS(ON); const ro = watch(o, 300, fight), rn = watch(n, 300, fight);
+      const lowO = Math.min(...ro.st.slice(20, 80).map(s => s.scale)), lowN = Math.min(...rn.st.slice(20, 80).map(s => s.scale)); const shedAt = tOf(first(rn.moves, /shed ↓/)), fightN = rn.fps.slice(27, 78);
+      check(lowO < PRESETS.high.scale - 0.1 && ro.st.every(s => s.sharp) && !ro.moves.some(m => /shed/.test(m)), `the switch off (the ladder as it was): the fight cuts the picture to ×${lowO.toFixed(2)} with sharp direct on throughout — ${words(steps(ro.moves).slice(0, 3))}`);
+      check(/shed ↓/.test(steps(rn.moves)[0] ?? '') && shedAt < 24.5 && Math.abs(lowN - PRESETS.high.scale) < 1e-6 && minOf(fightN) >= HOLD.cut * 60 - 0.5, `on: sharp direct goes ${(shedAt - 20).toFixed(1)} s into the fight and the picture keeps its size (×${lowN.toFixed(2)}, never under the tier's start) at ${minOf(fightN).toFixed(0)}‥${Math.max(...fightN).toFixed(0)} fps — ${words(steps(rn.moves).slice(0, 3))}`);
+      const m2 = mkS(ON); watch(m2, 30, fight);
+      check(!m2.E.settings.sharpDirect && !m2.E.settings.sharpDecouple && !m2.E.settings.gbaa && m2.q.shedState.shed, `… with its two riders (the decoupled jitter, GBAA) off too: sharpDirect ${m2.E.settings.sharpDirect}, sharpDecouple ${m2.E.settings.sharpDecouple}, gbaa ${m2.E.settings.gbaa}`);
+      // (2) what the union showed when it went is the price of having it back
+      const real = A(17) * (start - bare), seen = m2.q.shedState.seenMs as number; MODEL.sharpK = 1; const modelOnly = A(17) * bare * (modelCost(hi(PRESETS.high.scale), w, S0) / modelCost(hi(PRESETS.high.scale, false), w, S0) - 1); MODEL.sharpK = macK;
+      check(Math.abs(seen - real) < 0.15 * real && seen > 1.5 * modelOnly, `this machine's own price for it is learnt off the shed: ${seen.toFixed(1)} ms seen (it costs ${real.toFixed(1)} here; the cost model alone says ${modelOnly.toFixed(1)})`);
+      // (3) the fight over at 12 ms (9.3 without it): while it is held off the room goes to pixels, never past 0.95; then it comes back ON THE TIER'S OWN PICTURE — the climb's rungs come off for it — and stays
+      const ups = rn.moves.filter(m => /shed ↑/.test(m)), upT = tOf(ups[0]), topSc = Math.max(...rn.st.map(s => s.scale)), afterUp = rn.moves.slice(rn.moves.indexOf(ups[0]) + 1);
+      check(ups.length === 1 && upT - shedAt >= SHED.holdSecs && /rungs? off/.test(ups[0]) && topSc > PRESETS.high.scale + 0.04 && topSc <= 0.95 + 1e-6 && sharpOn(n) && Math.abs(sc(n) - PRESETS.high.scale) < 1e-6 && !afterUp.some(m => /shed ↓/.test(m)) && minOf(rn.fps.slice(84)) >= HOLD.cut * 60 - 0.5,
+        `the fight over at 12 ms: held off, the room goes to pixels (×${topSc.toFixed(2)} at the most, never past ×0.95 so there is a size left for it); at ${upT.toFixed(0)} s it is back on the tier's own picture, the rungs off for it (“${ups[0]?.split('(').pop()?.replace(/\)$/, '') ?? ''}”), and stays: ×${sc(n).toFixed(2)} with it, ${minOf(rn.fps.slice(84)).toFixed(0)} fps and up (the switch off ends ×${sc(o).toFixed(2)})`);
+      { const mk3 = (forget: boolean) => { const x = mkS(ON); const r1 = watch(x, 80, t => A(t < 20 ? 12 : 17)); if (forget) x.q.shedSeen = null; const r2 = watch(x, 900, () => A(13.5), { t0: 80 }); return { x, moves: [...r1.moves, ...r2.moves] }; }; const kept = mk3(false), lost = mk3(true);
+        const upsOf = (m: string[]) => m.filter(x => /shed ↑/.test(x)), back = tOf(upsOf(lost.moves)[0]), backK = tOf(upsOf(kept.moves)[0]), again = lost.moves.find((m, i) => i > lost.moves.indexOf(upsOf(lost.moves)[0]) && /shed ↓/.test(m));
+        check(upsOf(kept.moves).length === 1 && upsOf(lost.moves).length === 1 && backK > back + 30 && !!again && !sharpOn(kept.x) && !sharpOn(lost.x) && Math.abs(sc(kept.x) - PRESETS.high.scale) < 1e-6 && kept.x.q.shedState.seenMs > 0,
+          `… where the cost model underprices it (13.5 ms after the fight: it prices 11.8, the machine pays 13.5, over the band): ONE try in fifteen minutes — at ${backK.toFixed(0)} s, once the price read off the fight is too old to stand (that price forgotten: at ${back.toFixed(0)} s, off again at ${tOf(again).toFixed(0)} s, ${/not back for (\d+) s/.exec(again ?? '')?.[1] ?? '?'} s held) — the try reads ${(kept.x.q.shedState.seenMs as number).toFixed(1)} ms for it in a calm scene, and from there it is left off (×${sc(kept.x).toFixed(2)}, the picture its own size throughout)`); }
+      // (4) a fight that ends in a light scene: back, no sooner than the hold-off, with the tier at its own scale first
+      const b = mkS(ON); const rb = watch(b, 400, t => A(t < 20 ? 12 : t < 80 ? 22 : 9)); const dn = tOf(first(rb.moves, /shed ↓/)), up = tOf(first(rb.moves, /shed ↑/)); const upI = Math.max(0, Math.floor(up) - 1);
+      check(up - dn >= SHED.holdSecs && rb.st[upI]?.scale >= PRESETS.high.scale - 1e-6 && rb.st[upI]?.preset === 'high' && sharpOn(b) && b.E.settings.sharpDecouple && b.E.settings.gbaa && minOf(rb.fps.slice(Math.floor(up))) >= HOLD.cut * 60 - 0.5, `a fight that ends in a light scene (12 → 22 → 9 ms): off at ${dn.toFixed(0)} s, back at ${up.toFixed(0)} s with its riders — the tier at ×${rb.st[upI]?.scale.toFixed(2)} first — and never under ${minOf(rb.fps.slice(Math.floor(up))).toFixed(0)} fps after (ends ×${sc(b).toFixed(2)})`);
+      // (5) down the presets and back: the shed rides the hops
+      const slow = (t: number) => A(t < 90 ? 30 : 7); const po = mkS(false), pn = mkS(ON); const rpo = watch(po, 400, slow), rpn = watch(pn, 400, slow);
+      const idx = (r: { st: State[] }) => Math.min(...r.st.map(s => QUALITY_NAMES.indexOf(s.preset) < 0 ? 0 : -QUALITY_NAMES.indexOf(s.preset))); const hopDn = tOf(first(rpn.moves, /auto ↓/)), hopUp = tOf(first(rpn.moves, /auto ↑ high/)), back5 = tOf(first(rpn.moves, /shed ↑/));
+      const lowest = (r: { st: State[] }) => QUALITY_NAMES[-idx(r)];
+      check(/shed ↓/.test(steps(rpn.moves)[0] ?? '') && hopDn > 0 && rpn.st.slice(Math.ceil(hopDn), Math.floor(hopUp)).every(s => !s.sharp) && rpn.st[Math.floor(hopUp) + 1]?.sharp === false && back5 > hopUp && sharpOn(pn) && pn.q.current === 'high' && -idx(rpn) <= -idx(rpo),
+        `a machine too slow for High (30 ms), light again at 90 s: sharp direct first, then the cuts and ${lowest(rpn)} (the switch off goes down to ${lowest(rpo)}); it stays off across both hops (${hopDn.toFixed(0)} s down, ${hopUp.toFixed(0)} s up, priced without it) and comes back at ${back5.toFixed(0)} s on High`);
+      // (6) fights that keep coming: each shed after a give-back holds it off twice as long
+      const f = mkS(ON); const rf = watch(f, 900, t => A(t % 150 < 60 ? 17 : 10)); const holds = rf.moves.filter(m => /shed ↓/.test(m)).map(m => +(/not back for (\d+) s/.exec(m)?.[1] ?? 0));
+      check(holds.length >= 3 && holds[0] === SHED.holdSecs && holds.every((h, i) => i === 0 || h === 2 * holds[i - 1]), `a fight every 150 s: held off ${holds.join(' → ')} s — it converges on left alone instead of flipping with every fight (${rf.moves.filter(m => /shed/.test(m)).length} sheds and returns in fifteen minutes)`);
+      // (7) a page something else holds to 30 fps (13.9 ms: over the back-off band): the shed is judged with the cut after it and goes back with the pixels
+      const h = mkS(ON); const rh = watch(h, 300, () => A(13.9), { paceMs: 33.33 }); const onShare = rh.st.filter(s => s.sharp).length / rh.st.length;
+      check(sharpOn(h) && Math.abs(sc(h) - PRESETS.high.scale) < 1e-6 && rh.moves.some(m => /sharp direct with them/.test(m)) && onShare > 0.9 && h.q.shedState.sheds === 0, `held to 30 fps by something else: the shed buys no frame rate there, is taken back with the judged cut (“${first(rh.moves, /sharp direct with them/)?.split(': ').pop()?.replace(/\)$/, '') ?? ''}”) and counts for nothing — sharp direct on ${(100 * onShare).toFixed(0)} % of five minutes, the re-tests the rest`);
+      // (8) the other roads to a smaller picture: adaptive resolution off (a preset would go), no GPU timings (the rate alone), the as-now bands
+      const ad = mkS(ON, { adaptive: false }); const rad = watch(ad, 200, t => A(t < 60 ? 19 : 8));
+      check(/shed ↓/.test(steps(rad.moves)[0] ?? '') && sharpOn(ad) && ad.q.current === 'high', `adaptive resolution off: sharp direct goes before the preset does, and is back on High afterwards — ${words(steps(rad.moves))}`);
+      const bl = mkS(ON); const rbl = watch(bl, 200, t => A(t < 60 ? 19 : 8), { timed: false }); const blUp = tOf(first(rbl.moves, /shed ↑/));
+      check(/shed ↓/.test(steps(rbl.moves)[0] ?? '') && blUp >= SHED.holdSecs && sharpOn(bl), `no GPU timings: off by the rate alone, back at ${blUp.toFixed(0)} s by the rate alone (${HOLD.blindWindows} good windows after the hold-off) — ${words(steps(rbl.moves))}`);
+      const an = mkS(ON, { aim: 0 }); const ran = watch(an, 60, t => A(t < 10 ? 11 : 24));
+      check(/shed ↓/.test(steps(ran.moves)[0] ?? ''), `as now (?aim=asnow), 24 ms: the cut under 45 fps lets it go first too — ${words(steps(ran.moves).slice(0, 3))}`);
+      // (9) what it must NOT touch
+      const same = (name: string, mk: (on: boolean) => { q: any; E: any }, k: (t: number) => number, secs = 120, want = (m: string[]) => m.some(x => /↓/.test(x))) => { const a = mk(true), z = mk(false); const ra = watch(a, secs, k), rz = watch(z, secs, k); check(JSON.stringify(ra.moves) === JSON.stringify(rz.moves) && !ra.moves.some(m => /shed/.test(m)) && want(ra.moves) && sharpOn(a) === sharpOn(z), `${name}: the same ${steps(ra.moves).length} moves with the switch on and off, sharp direct ${sharpOn(a) ? 'on' : 'off'}`); };
+      same('a preset pinned by hand (High, adaptive resolution) through that fight', on => mkS(on, { auto: false }), fight);
+      same('a machine with room (8 ms: it climbs)', on => mkS(on), () => A(8), 120, m => m.some(x => /climb ↑/.test(x)));
+      sharpForce.v = false; try { same('?nosharp (sharp direct forced off for the visit)', on => { const x = mkS(on); x.q.apply('high'); x.q.cooldown = 0; x.q.lastChange = ''; return x; }, fight); } finally { sharpForce.v = null; }
+      sharpForce.v = true; try { same('?sharp (forced on)', on => { const x = mkS(on); x.q.apply('high'); x.q.cooldown = 0; x.q.lastChange = ''; return x; }, fight); } finally { sharpForce.v = null; }
+      { const a = mkS(true), z = mkS(false); delete a.E.settings.ladderShed; const ra = watch(a, 120, fight), rz = watch(z, 120, fight); check(JSON.stringify(ra.moves) === JSON.stringify(rz.moves), 'a settings object with no such key (a tool\'s mock) = the ladder as it was'); }
+      // (10) the shed ends with the switch, a pin, a new auto spell
+      const sw = mkS(ON); watch(sw, 40, fight); const was = sharpOn(sw); sw.E.settings.ladderShed = false; const rsw = watch(sw, 2, fight, { t0: 40 });
+      check(!was && sharpOn(sw) && sw.E.settings.gbaa && !sw.q.shedState.shed && rsw.moves.some(m => /shed ↑ sharp direct back \(the switch is off\)/.test(m)), `the switch put off mid-fight (the Tab row): sharp direct is back within two seconds — ${words(rsw.moves)}`);
+      const pinned = mkS(ON); watch(pinned, 40, fight); const wasP = sharpOn(pinned); pinned.q.pin('medium'); const pinOn = sharpOn(pinned); pinned.q.setAuto(); pinned.q.calib = { ...pinned.q.calib, done: true };
+      check(!wasP && pinOn && !pinned.q.shedState.shed && sharpOn(pinned) && pinned.q.shedState.sheds === 0, 'a preset pinned from the menu mid-fight has its own rows (sharp direct on), and auto chosen again starts with it on and nothing held off');
+    });
+    // (12) a spike that ends inside the second the price is read (17 ms for 3 s, then 10.2: the reading is the spike ending, not sharp direct): the reading does not stand for ever
+    { const x = mkS(ON); const r = watch(x, 400, t => at(t < 20 ? 12 : t < 23 ? 17 : 10.2)); const dn = tOf(first(r.moves, /shed ↓/)), up = tOf(first(r.moves, /shed ↑/)), reads = (x.q.shedState.seenMs as number);
+      check(dn > 0 && up - dn >= SHED.holdSecs && up - dn <= 3 * SHED.holdSecs && sharpOn(x) && r.moves.filter(m => /shed ↓/.test(m)).length === 1, `a three-second spike, then 10.2 ms: off at ${dn.toFixed(0)} s, and the price read off the spike's own end is not kept past twice the hold-off — back at ${up.toFixed(0)} s and it stays (it reads ${reads.toFixed(1)} ms for it there)`); }
+    // (13) a fixed 60 Hz display, 5.5 ms of frame past the union, 12.5 ms at High's start: inside the band, its vsync missed (30 fps). An aim's judged cut would take pixels: sharp direct goes instead
+    { const O0 = MODEL.overheadMs; MODEL.overheadMs = 5.5; try { const o = mkS(false, { hz: 60 }), n = mkS(ON, { hz: 60 }); const ro = watch(o, 200, () => at(12.5), { hz: 60, vrr: false }), rn = watch(n, 200, () => at(12.5), { hz: 60, vrr: false });
+      check(sc(o) < PRESETS.high.scale - 0.04 && sharpOn(o) && Math.abs(sc(n) - PRESETS.high.scale) < 1e-6 && !sharpOn(n) && rn.fps[rn.fps.length - 1] > 59 && ro.fps[ro.fps.length - 1] > 59, `a fixed 60 Hz display missing its vsync with the union inside the band (12.5 ms, 5.5 ms of frame past it): the switch off cuts to ×${sc(o).toFixed(2)} with sharp direct on; on, it goes instead and every pixel stays (×${sc(n).toFixed(2)}, ${rn.fps[rn.fps.length - 1].toFixed(0)} fps) — ${words(steps(rn.moves).slice(0, 2))}`); } finally { MODEL.overheadMs = O0; } }
+    // (14) down to Medium in a fight, then a light scene on a page something holds to 30 fps: the hop up can never be taken at that rate, and must not hold sharp direct off
+    { const x = mkS(ON); const r = watch(x, 90, () => at(30)); const mid = x.q.current as string; const r2 = watch(x, 500, () => at(5), { t0: 90, paceMs: 33.33 });
+      check(/shed ↓/.test(steps(r.moves)[0] ?? '') && mid !== 'high' && x.q.current === mid && sharpOn(x) && r2.moves.some(m => /shed ↑/.test(m)), `30 ms for 90 s (down to ${mid}, the shed kept), then 5 ms on a page held to 30 fps: no hop up at that rate, and sharp direct is back on ${x.q.current} at ${tOf(first(r2.moves, /shed ↑/)).toFixed(0)} s`); }
+    // (15) put back on by hand while shed (the Tab row): the ladder holds no shed against it, and may let it go again
+    { const x = mkS(ON); watch(x, 30, t => at(t < 5 ? 12 : 17)); const was = x.q.shedState.shed; x.E.settings.sharpDirect = true; watch(x, 1, () => at(12), { t0: 30 }); const cleared = !x.q.shedState.shed; const r = watch(x, 30, () => at(19), { t0: 31 });
+      check(was && cleared && /shed ↓/.test(steps(r.moves)[0] ?? ''), 'sharp direct put back on by hand while shed: the ladder forgets its shed within a second, and in the next fight lets it go again before any pixel'); }
+    // (16) a take begun with the shed standing (PerfDump.shedAtStart): the replayed ladder knows sharp direct is its own to bring back; without the stamp it is a row put off by hand, and stays off
+    { const mk = (stamp: boolean) => { const x = mkQuality(w, 'high', true, { ladderClimb: true, ladderShed: ON, sharpDirect: false }, 60, 120, stamp); const r = watch(x, 200, () => at(8)); return { x, r }; }; const a = mk(true), z = mk(false);
+      check(a.x.E.settings.sharpDirect === true && a.r.moves.some(m => /shed ↑/.test(m)) && z.x.E.settings.sharpDirect === false && !z.r.moves.some(m => /shed/.test(m)), `a take begun mid-shed replays with the shed standing (sharp direct back at ${tOf(first(a.r.moves, /shed ↑/)).toFixed(0)} s in a light scene); the same settings without the stamp = put off by hand: left off`); }
+    // (11) the cost model's own machine, a steady 14.5 ms: the picture stays at High's start where it was cut a step
+    { const o = mkS(false), n = mkS(ON); watch(o, 300, () => at(14.5)); const rn = watch(n, 300, () => at(14.5));
+      check(sc(o) < PRESETS.high.scale - 0.04 && sharpOn(o) && Math.abs(sc(n) - PRESETS.high.scale) < 1e-6 && !sharpOn(n) && steps(rn.moves).length === 1 && minOf(rn.fps.slice(5)) >= HOLD.cut * 60 - 0.5, `on the cost model's own machine, a steady 14.5 ms: ×${sc(n).toFixed(2)} without sharp direct for five minutes in one move, ${minOf(rn.fps.slice(5)).toFixed(0)} fps and up (the switch off: ×${sc(o).toFixed(2)} with it)`); }
+  }
   if (fails) console.log(`\n${fails} check(s) FAILED`); else console.log('\n=== ladder-replay selftest: ALL PASS ===');
   return fails === 0;
 }
 
 // ---- main --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 const args = process.argv.slice(2); const flag = (n: string) => args.includes(n); const opt = (n: string) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined; };
-const KNOWN = ['--aim', '--hz', '--check', '--md', '--timeline', '--selftest', '--hold', '--paced', '--held', '--sweeps'];
+const KNOWN = ['--aim', '--hz', '--check', '--md', '--timeline', '--selftest', '--hold', '--paced', '--held', '--shed', '--sharpk', '--sweeps'];
 { const p = opt('--paced'); if (p !== undefined) { if (p !== 'on' && p !== 'off') { console.error(`--paced ${p}: on | off`); process.exit(2); } pacedForce = p === 'on'; } }
 { const p = opt('--held'); if (p !== undefined) { if (p !== 'on' && p !== 'off') { console.error(`--held ${p}: on | off`); process.exit(2); } heldForce = p === 'on'; } }
+{ const p = opt('--shed'); if (p !== undefined) { if (p !== 'on' && p !== 'off') { console.error(`--shed ${p}: on | off`); process.exit(2); } shedForce = p === 'on'; } }
+{ const k = opt('--sharpk'); if (k !== undefined) { if (!(+k >= 0.2 && +k <= 10)) { console.error(`--sharpk ${k}: 0.2‥10`); process.exit(2); } MODEL.sharpK = +k; } }
 { const h = opt('--hold'); if (h) for (const kv of h.split(',')) { const [k, v] = kv.split('='); if (!(k in HOLD) || !Number.isFinite(+v)) { console.error(`--hold ${kv}: HOLD has ${Object.keys(HOLD).join(', ')}`); process.exit(2); } (HOLD as Record<string, number>)[k] = +v; } }   // tuning: replay with a HOLD constant moved (--hold restore=0.8,restoreWindows=6)
 for (const a of args) if (a.startsWith('--') && !KNOWN.includes(a)) { console.error(`unknown flag ${a} (known: ${KNOWN.join(' ')})`); process.exit(2); }
-const files = args.filter((a, i) => !a.startsWith('--') && !['--aim', '--hz', '--hold', '--paced', '--held'].includes(args[i - 1]));
+const files = args.filter((a, i) => !a.startsWith('--') && !['--aim', '--hz', '--hold', '--paced', '--held', '--shed', '--sharpk'].includes(args[i - 1]));
 let ok = true;
 if (flag('--selftest')) ok = selftest() && ok;
-if (!files.length && !flag('--selftest')) { console.error('usage: bun run tools/qa/ladder-replay.ts <perf-….json>… [--aim asnow|60|90|120|display|all] [--hz N] [--paced on|off] [--held on|off] [--sweeps] [--check] [--md] [--timeline] | --selftest'); process.exit(2); }
+if (!files.length && !flag('--selftest')) { console.error('usage: bun run tools/qa/ladder-replay.ts <perf-….json>… [--aim asnow|60|90|120|display|all] [--hz N] [--paced on|off] [--held on|off] [--shed on|off] [--sharpk N] [--sweeps] [--check] [--md] [--timeline] | --selftest'); process.exit(2); }
 const aimArg = opt('--aim') ?? 'all'; const aims = aimArg === 'all' ? [0, 60, 90, 120, AIM_DISPLAY] : aimArg.split(',').map(a => { const v = ladderAimOf(a); if (v === null) { console.error(`--aim ${a}: not one of asnow | 0 | 60 | 90 | 120 | display`); process.exit(2); } return v; });
 const hzArg = opt('--hz') ? Number(opt('--hz')) : undefined; if (hzArg !== undefined && !(hzArg >= 24 && hzArg <= 480)) { console.error(`--hz ${opt('--hz')}: a display rate, 24‥480`); process.exit(2); }
 for (const path of files) {
