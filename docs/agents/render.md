@@ -991,7 +991,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   cells), but on the look page it is not drawn as squares: the coverage is read over a one-cell footprint, cut back at half cover along a ragged line
   (noise by box and marking, so two signs do not share an edge), the shares sharpened so two colours meet in a line and not a blur, and thin rubbed
   patches let the surface through. An emissive entry keeps its cells (a lamp's face must not lose light), and past about 1.75 cells a pixel it is the
-  plain coverage again (nothing to draw). Panel row Painted marks (`look=marks:0` = square cells). The bitmaps themselves are still the level's: a
+  plain coverage again (nothing to draw). Panel row Painted marks (`look=marks:0` = square cells; what the row does today: THE ROW ON A GPU, below). The bitmaps themselves are still the level's: a
   mark that is a coarse picture stays a coarse picture with soft edges, so authored marks at a finer cell are the round after. Never seen on a GPU.
   THE SOFT READ IS ITS OWN (`markSoftRead`, 10-24), one read of the four cells around the pixel. (1) A PLAIN BILINEAR RAMP between cell centres.
   The first try read `markTaps` at a one-cell footprint, which is already a quarter into its minified mean: 0.75 of the ramp + 0.25 of the nearest
@@ -1010,9 +1010,17 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   round, no steps) and a crate; never on a GPU. TRAP: the corner test first read its eight cells in two chains of `&&` over `markCell` calls, and
   with that the software adapter never finished the look page's first frame (three boots of three; every pipeline compiled, no error). It is one
   call site in a loop over `MK_BRIDGE` now. A page boot that reports its pipelines says nothing until a frame is drawn.
-  **NOT WORKING ON THE MAINTAINER'S GPU (10-25: "turning on and off painted marks doesn't seem to do anything?")**: his crops of the gate's diamond are
-  square cells with sharp corners at both ends of the row, where the software adapter at the same quality brushes them. Cause not found (the crisp path,
-  which is right on his GPU, writes a component picked per pixel too, so that is not it; `markSoftRead` was reworked to whole-vector sums anyway, the
-  same maths). A TEST PICTURE for his GPU: the row all the way up (2, `soft > 1.75`) paints each mark's patch red = how near the soft read counts the
-  pixel, green = the soft read's cover (a smooth ramp between cells where it works, flat squares where it does not), blue = the record has an entry that
-  burns. One screenshot of it says which term is wrong.
+  **THE ROW ON A GPU (10-25).** First: "turning on and off painted marks doesn't seem to do anything?" A test picture at the top of the row (red = how
+  near the soft read counts the pixel, green = its cover, blue = an entry that burns) showed the soft read working on his GPU: red patches, smooth green
+  lines, the diamond one slanted line. Then, with the read proven: "painted marks still doesn't look like it does anything until 2 where it's really
+  overdone" (2 was that test picture, read as the effect). CAUSE: at the distance the game is played from a cell is about two pixels, so a rounded
+  corner or a ragged edge is under a pixel; only a change of tone or of a whole stroke shows. THE ROW NOW (`markSoft`, 0 to 2, 1 the default; the test
+  picture is out): the SHAPE as before (all of it by 1); the HAND, the cut wandering slowly along the stroke (`0.5 + 0.32 × row × (noise - 0.5)` over
+  20 cm, clamped 0.22 to 0.82: a stripe a cell wide is 0.85 to 1.15 of one at 1); the WEAR, paint rubbed thin in patches of 9 and 30 cm measured in
+  METRES on the face (`pm = cell × texel`: a fine mark and a coarse one wear alike), a quarter of it touched at 1 and half at 2, up to 0.85 gone, each
+  patch fading at its rim; the AGE (`markTone`), the paint's own colour 0.82 of the frame's marking contrast at 1 and 0.64 at 2. A burning entry keeps
+  cells and colour. JUDGED BY EYE on the software adapter, the pass gate at midday, 480×300 at scale 1 from 5.2 m (his cells to a pixel): 0 = crisp
+  stripes and a stepped diamond; 1 = stripes nearly straight with faded lengths and round ends, the diamond a drawn line; 2 = stripes half gone. A
+  first cut swung the stroke's width more than twice as far over half the length (0.7, 11 cm): a row of stripes read as dripped wax, so it was halved.
+  KNOWN: the wear is noise by box and marking, not by where a thing is rubbed (a gate's foot, a rug's middle); writing made of single cells loses
+  letters at 2; the far read and a reflection (`markHit`) have none of it. The reworked row has never been seen on a GPU.
