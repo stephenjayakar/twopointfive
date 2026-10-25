@@ -49,7 +49,7 @@ async function rig(seed = 1) {
     const level = loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${LEVEL}.json`, 'utf8')));
     W = await standUp({ uploadEvery: 4, level, seed });
     // (the page's own: the frame, the ring on the command key and plan mode with its three later switches — the frozen stand holds each off)
-    RAILS.on = true; RAILS.planDigits = true; Object.assign(CMDRING, { on: true, tapNow: true, stay: true, plan: true, planRts: true, planRun: true, planLook: true, planWaits: true, planKnee: true, planNear: true, planDigits: true }); AUTOPILOT.on = true;
+    RAILS.on = true; RAILS.planDigits = true; Object.assign(CMDRING, { on: true, tapNow: true, stay: true, plan: true, planRts: true, planRun: true, planLook: true, planWaits: true, planKnee: true, planNear: true, planDigits: true, planClear: true, wholeSquad: true }); AUTOPILOT.on = true;
     if (BREAK) RAILS.skyUp = false;   // (the seat does not hold the mode up: the plain sky seat, as the build was)
     started = startFromQuery(W.game, `?levelFile=${LEVEL}.json&roomclear=1&squad4`);
   } finally { console.log = log; console.warn = warn; console.error = err; }

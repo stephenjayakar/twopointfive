@@ -12,7 +12,7 @@ import { planView } from '../../../src/game/planmode';
 export const query = `?roomclear=1&squad4${process.env.TUTPLAN_HOUR ? `&hour=${process.env.TUTPLAN_HOUR}` : ''}`;   // (TUTPLAN_HOUR=dusk: the level at another hour — the page's row gives the mission its own)
 /** the frozen stand's arm of the gate: the mission is played in plan mode, which that stand holds off — the mode's own words (the gate gives them to a
  *  level whose STEPS allow `plan`; here the frame allows it for the whole mission) */
-export const raises = { TPS_QRING: '1', TPS_QPLAN: '1', TPS_PLANLOOK: '1', TPS_PLANWAITS: '1', TPS_PLANKNEE: '1', TPS_PLANDIGITS: '1', TPS_RAILDIGITS: '1' };
+export const raises = { TPS_QRING: '1', TPS_QPLAN: '1', TPS_PLANLOOK: '1', TPS_PLANWAITS: '1', TPS_PLANKNEE: '1', TPS_PLANDIGITS: '1', TPS_PLANCLEAR: '1', TPS_RAILDIGITS: '1' };
 export const ended = (g: any) => g.lesson.finished;
 /** `TUTPLAN_ALONE=1`: the wrong plan, played on purpose — all four on the hall's front door and the word. The steps still end (the room taken is every
  *  step's other way), and the line printed says what it cost: the men the gun put on a knee. It takes the hall on the step before the one that asks for the word */

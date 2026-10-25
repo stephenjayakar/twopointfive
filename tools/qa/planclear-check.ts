@@ -8,7 +8,7 @@
 //   2. a right click on the floor then orders nobody: no order is logged and no chain is laid.
 //   3. the empty set is picked out of again: a click on a man is him, Shift + a digit adds to it, 5 is everyone.
 //   4. the mode put down forgets it: up again, everyone is picked.
-//   5. CONTROL — a tutorial mission (rails live) keeps its own ground click, everyone, while its lines name it.
+//   5. a tutorial mission (rails live) has no ground click of its own any more: its lines teach the digits (rails-check asks what the click does there).
 //   6. CONTROL — the switch off: the click picks nobody new and who was picked stays picked, as the digits were built.
 //   7. CONTROL (plumbing) — a recording from before the key replays with it off; the frozen stand holds it off, the page's has it on, FROZEN_HOLDS has its row.
 // PLANCLEAR_BREAK=1 = the switch left off and the same lines asked: 1 to 3 must fail.
@@ -58,7 +58,7 @@ export async function planclearCheck(): Promise<boolean> {
     // 5
     R.home();
     { const rails0 = g.rails; g.rails = { live: true }; const taught = PM.planGroundAll(O); g.rails = { live: false }; const plain = PM.planGroundAll(O); g.rails = rails0;
-      line(taught && !plain, '5. CONTROL — a tutorial mission keeps its own ground click: everyone', `rails live: ${taught ? 'everyone' : 'the switch\'s'} · rails not live: ${plain ? 'everyone' : 'the switch\'s'}`); }
+      line(!taught && !plain, '5. a tutorial mission has no ground click of its own: the switch\'s there too', `rails live: ${taught ? 'everyone' : 'the switch\'s'} · rails not live: ${plain ? 'everyone' : 'the switch\'s'}`); }
     // 6
     set(false); R.home();
     { digit(2); const one = names(); ground(); const still = names();
