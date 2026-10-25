@@ -71,8 +71,6 @@ export const PICKS: Pick[] = [
     line: 'A lit yard watched from the dark. The mains are behind the hut that has no door on the yard.' },
   { id: 'barracks-day', mission: 'barracks-four', hour: 'midday',
     line: "Two wings round a yard, by day. A gallery post watches the doors across it. The wash room is out of its sight." },
-  { id: 'night-breach', mission: 'night-breach',
-    line: 'The short one. A pair and one held room with four doors. Hold the open door before anyone steps in.' },
   { id: 'solo', mission: SOLO_ID,
     line: 'Alone in the office after dark. Reach the server room, pull the drive, leave by the fire exit.' },
 ];
