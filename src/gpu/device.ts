@@ -79,7 +79,7 @@ export async function initGpu(canvas: HTMLCanvasElement, opts: { retry?: boolean
   device.addEventListener('uncapturederror', (ev) => { console.error('WebGPU error:', (ev as GPUUncapturedErrorEvent).error.message); });
   const ctx = canvas.getContext('webgpu') as GPUCanvasContext;
   const format = navigator.gpu.getPreferredCanvasFormat();
-  ctx.configure(opts.canvasRead ? { device, format, alphaMode: 'opaque', usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING } : { device, format, alphaMode: 'opaque' });
+  ctx.configure({ device, format, alphaMode: 'opaque', ...(opts.canvasRead ? { usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING } : {}) });
   const info = adapter.info;
   gpuStory.adapter = `${info.vendor} ${info.architecture} ${info.description}`.trim();
   return {

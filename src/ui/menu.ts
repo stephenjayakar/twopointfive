@@ -389,6 +389,10 @@ export class Menu {
   /** THE STRIP (savestate.ts SAVETIMELINE): this run's saves in the order they were made, each a tile — its picture, how long ago, a mark on the ones made by
    *  hand, a regretted autosave dimmed. A click, or Enter on the tile the arrows (A D too) have walked to, goes back to it. Null with the switch off, no loader,
    *  or fewer than two saves (one save is the button above it) unless one is asked for on this card. */
+  /** a save's picture came after its tile was laid (main.ts takes it a frame or a few after the save, host/savepic.ts): the tile on the card, if one is up, takes it — nothing is laid again */
+  pictureCame(info: { key: string; savedAt: number }, url: string) {
+    for (const t of this.root.querySelectorAll<HTMLElement>('.saves .tile')) if (t.dataset.save === `${info.key}@${info.savedAt}`) t.style.backgroundImage = `url("${url}")`;
+  }
   private saveStrip(armed: () => boolean = () => true): HTMLElement | null {
     const g = this.d.game, load = this.d.loadCheckpoint; if (!SAVETIMELINE.on || !load) return null;
     const due = this.mode === 'pause' && !!this.d.saveDue?.();   // (a save asked for on this card: its tile stands where the save will, empty until play goes on and writes it)
@@ -397,7 +401,7 @@ export class Menu {
     const strip = el('div', 'saves'); strip.setAttribute('role', 'group'); strip.setAttribute('aria-label', 'saves of this run');
     const tiles = line.map(info => {
       const t = el('button', 'tile' + (info.slot === 'manual' ? ' hand' : '') + (info.regret ? ' regret' : '') + (info.missionT > now + 0.5 ? ' ahead' : '')) as HTMLButtonElement; t.type = 'button';
-      const pic = g.saves.pictureOf(info); if (pic) t.style.backgroundImage = `url("${pic}")`;
+      const pic = g.saves.pictureOf(info); if (pic) t.style.backgroundImage = `url("${pic}")`; t.dataset.save = `${info.key}@${info.savedAt}`;
       const age = el('span', 'age'); age.textContent = tileAge(now - info.missionT); t.appendChild(age);
       if (info.slot === 'manual') t.appendChild(el('i'));
       t.title = info.label || (info.slot === 'manual' ? 'by hand' : 'autosave'); t.setAttribute('aria-label', `${info.slot === 'manual' ? 'saved by hand' : 'autosave'}, ${g.saves.ageWords(g, info)}`);
