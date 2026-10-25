@@ -164,7 +164,7 @@ function gap(g: Game) {
   const open = (x: number, z: number) => !g.col.nav.isBlocked(x, z);
   const fits = (x: number, z: number) => { for (let dz = -1.5; dz <= 1.5; dz += 0.5) for (const dx of [-GAP / 2, 0, GAP / 2]) if (!open(x + dx, z + dz)) return false; return true; };
   let at: [number, number] | null = null;   // (the open yard south of the long straight, under the west flood, clear of the man who stands)
-  for (let z = 18.5; z <= 19.5 && !at; z += 0.5) for (let x = 15; x >= 13.5 && !at; x -= 0.5) if (fits(x, z)) at = [x, z];
+  for (let z = 18.5; z <= 19.5 && !at; z += 0.5) for (let x = 16.5; x >= 15.5 && !at; x -= 0.5) if (fits(x, z)) at = [x, z];
   if (!at) return;
   men.forEach((gd, i) => { const x = at![0] + (i === 0 ? -1 : 1) * GAP / 2;
     gd.route = { name: 'gap', points: [[x, 0, at![1] - 0.5], [x, 0, at![1]]], wait: [0, 900] }; gd.wp = 1; gd.wait = 0; gd.path = []; gd.pathGoal = null;

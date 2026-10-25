@@ -169,7 +169,7 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
       for (const name of names) {
         got.push(await page.evaluate(async n => { const b = [...document.querySelectorAll('#panel button')].find(x => x.textContent.trim() === n); if (!b) return null; b.click(); await window.__runFrames(40, 1 / 60, [], 'none');
           const g = window.__game, p = g.player.char.pos; return { at: `${p[0].toFixed(1)},${p[2].toFixed(1)}`, line: g.objectiveText(), seen: !g.playerInvisible, bare: !!g.player.holstered, low: !!g.player.crouch }; }, name));
-        if (process.env.SHOTS) await page.screenshot({ path: `${process.env.SHOTS}/${name.replace(/ /g, '-')}.png` });
+        if (process.env.SHOTS) { await page.evaluate(() => window.__runFrames(4, 1 / 60, [], true)); await page.screenshot({ path: `${process.env.SHOTS}/${name.replace(/ /g, '-')}.png` }); }
       }
       const ok = got.every(Boolean), seen = ok ? got.map(c => c.seen) : [];
       say(ok && new Set(got.map(c => c.at)).size === 5 && new Set(got.map(c => c.line)).size === 5 && got.every(c => c.bare && c.low) && seen.join() === 'false,false,true,true,false',
