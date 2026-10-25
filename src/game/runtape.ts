@@ -3,13 +3,17 @@
 // game's die, the page's query, the knobs and sandbox switches as they stood), then per step its dt, the player's record (cmd.ts PlayerCmd, minus the two matrices —
 // the camera's pose is kept and they are rebuilt from it, as the session journal does) and every value the game READ off the GPU that step (Game.sensors). What
 // reaches the game from OUTSIDE a step is taped where it can be seen: a restart from a card (the player is a new object between two steps), a sandbox switch, a
-// knob moved on the Tab panel. What cannot be followed — a scenario started or quit from a menu, a checkpoint loaded between two steps, an F10 recording started — ends the tape with its reason (`dead`),
+// knob moved on the Tab panel, the player put somewhere (a 'pose' row: where he stands at the first step and after every restart — a page that stages its own scene,
+// host/sneaklab.ts, stands him there — and wherever he was moved between two steps, a debug teleport; 'posein': where a restart made INSIDE a step, Shift+Enter,
+// left him once the page's own wrap of Game.restart had staged its scene — the game's restart is wrapped on this Game's instance to see it, as the sensors' read is).
+// A control worked on the page between two steps (`touched()`: ui/replaykey.ts hears the document's input, change and click) has every table looked at before the
+// next step, so a number moved on a panel while playing is taped at the step it first acts on, not on the tables' slow round. What cannot be followed — a scenario started or quit from a menu, a checkpoint loaded between two steps, an F10 recording started — ends the tape with its reason (`dead`),
 // and the replay is then a trace only. It never touches the game: the sensors' read is WRAPPED on this Game's instance (the value passes through untouched).
 // A re-run is exact as far as the page's arithmetic and bun's agree; the tool measures that against the trace instead of promising it.
 import type { Game } from './game';
 import type { PlayerCmd } from './cmd';
 import type { RunTape, TapeInput, TapeVal } from '../replay/format';
-import { tapeF32 } from '../replay/format';
+import { tapeF32, tapeNum } from '../replay/format';
 import type { TapePiece } from '../replay/kept';
 import { envSnapshot, knobsSnapshot } from './journal';
 import { activeScenario } from './scenarioRun';
@@ -31,6 +35,36 @@ const tableKey = (k: string, T: Record<string, unknown>): string => { const skip
 const tablesNow = (): Record<string, string> => { const out: Record<string, string> = {};
   for (const [k, T] of Object.entries(knobRegistry())) out[k] = tableKey(k, T as Record<string, unknown>);
   return out; };
+/** WHERE THE PLAYER STANDS, as the tape's 'pose' row has it: his place, his velocity, the two yaws, hands empty, low. Written at the first step, after every restart
+ *  and whenever it is not what the last step left (he was put somewhere from outside one); done again by putPose */
+const POSE_N = 10;
+const poseOf = (g: Game, into: number[]): number[] => { const pl = g.player, c = pl.char, p = c.pos, v = c.vel;
+  into[0] = p[0]; into[1] = p[1]; into[2] = p[2]; into[3] = v[0]; into[4] = v[1]; into[5] = v[2]; into[6] = c.bodyYaw; into[7] = c.aimYaw; into[8] = pl.holstered ? 1 : 0; into[9] = pl.crouch ? 1 : 0; return into; };
+/** a 'pose' row done to a game walked off a tape (tools/qa/rerun.ts, src/replay/engineplay.ts): nothing where he already stands so, to the bit (a plain restart, a
+ *  first step nobody staged); else, moved, he is teleported there as the page's own staging and its debug hooks do it (what he was doing is dropped, the bones are
+ *  laid at the new spot) and then stood exactly as taped. A row with a value that is no finite number is not done (a file from anywhere can be opened as a tape). */
+export function putPose(g: Game, data: unknown): void {
+  if (!Array.isArray(data) || data.length < POSE_N) return;
+  const at = (data as TapeVal[]).slice(0, POSE_N).map(e => tapeNum(e)) as number[], now = poseOf(g, []);
+  if (at.some(v => typeof v !== 'number' || !Number.isFinite(v)) || at.every((v, i) => Object.is(v, now[i]))) return;
+  const pl = g.player, c = pl.char;
+  if (!Object.is(at[0], now[0]) || !Object.is(at[1], now[1]) || !Object.is(at[2], now[2])) { g.teleportPlayer([at[0], at[1], at[2]]); c.pos[0] = at[0]; c.pos[1] = at[1]; c.pos[2] = at[2]; pl.safe = [at[0], 0, at[2]]; }
+  c.vel[0] = at[3]; c.vel[1] = at[4]; c.vel[2] = at[5]; c.bodyYaw = at[6]; c.aimYaw = at[7]; pl.holstered = at[8] === 1; pl.crouch = at[9] === 1;
+}
+/** Game.restart wrapped on this Game's instance: `after` runs once the restart — and whatever a page had already wrapped round it — is done. Not an enumerable
+ *  key: nothing that walks the game's fields (rollback.ts) meets it. */
+const afterRestart = (g: Game, after: () => void): void => { const back = g.restart.bind(g);
+  Object.defineProperty(g, 'restart', { configurable: true, writable: true, enumerable: false, value: (said?: string) => { back(said); after(); } }); };
+/** THE TAPE'S 'pose' AND 'posein' ROWS FOR A GAME WALKED OFF IT (tools/qa/rerun.ts, src/replay/engineplay.ts; made once, when the game is stood, after anything
+ *  else that wraps its restart). `row(f, kind, data)` takes one of the two — a 'pose' is done at once, a 'posein' is kept for the restart step f makes itself and
+ *  done right behind it — and says whether the row was its to take. */
+export function tapePoses(g: Game): { row(f: number, kind: string, data: unknown): boolean } {
+  const due: [number, unknown][] = [];
+  afterRestart(g, () => { const d = due.shift(); if (d) putPose(g, d[1]); });
+  return { row(f, kind, data) { if (kind === 'pose') { putPose(g, data); return true; } if (kind !== 'posein') return false;
+    while (due.length && due[0][0] !== f) due.shift();   // (one an earlier step never used: that step did not restart here, the walk has parted already)
+    due.push([f, data]); return true; } };
+}
 /** What reached the game from OUTSIDE a step that no tape can follow, as the replay buffer saw it before the step ran (replaybuf.ts `look` — the one place it is
  *  asked, for the tape and the trace alike): a checkpoint loaded, an F10 recording started (it re-enters a checkpoint of the moment and puts its own die in). */
 export type Outside = 'load' | 'rec' | null;
@@ -64,8 +98,10 @@ export class RunTapeRec {
   private sens: RunTape['sens']['rows'] = [];
   private seq: number[] = []; private vals: (number | undefined)[] = []; private prevSeq: number[] = []; private prevVals: (number | undefined)[] = [];
   private x: RunTape['x'] = [];
-  private playerRef: object | null = null; private timeEnd = 0; private flagsKey = ''; private tuneKey = ''; private tableKeys: Record<string, string> = {}; private kitKey = ''; private reg: Record<string, Record<string, unknown>> | null = null; private tableNames: string[] | null = null; private tableAt = 0;
+  private playerRef: object | null = null; private timeEnd = 0; private flagsKey = ''; private tuneKey = ''; private tableKeys: Record<string, string> = {}; private kitKey = ''; private pose: number[] = []; private poseNow: number[] = []; private lookAll = false; private reg: Record<string, Record<string, unknown>> | null = null; private tableNames: string[] | null = null; private tableAt = 0;
 
+  /** a control was worked on the page from outside a step (ui/replaykey.ts): every table, the tune and the kit are looked at before the next one */
+  touched(): void { this.lookAll = true; }
   /** the game as it stood when the tape was handed to it: a restart between then and its first step (the start card's) is taped like any other */
   born(g: Game): void { if (!this.ticks) this.playerRef = g.player; }
   /** a step is about to run on `cmd` */
@@ -113,7 +149,7 @@ export class RunTapeRec {
     if (same) { let ch: (number | TapeVal)[] | null = null; for (let i = 0; i < V.length; i++) if (!Object.is(V[i], Q[i])) (ch ??= []).push(i, tapeF32(V[i])); if (ch) this.sens.push([f, null, ch]); }
     else this.sens.push([f, S.slice(), V.map(v => tapeF32(v))]);
     this.prevSeq = S.slice(); this.prevVals = V.slice();
-    this.ticks = f + 1; this.playerRef = g.player; this.timeEnd = g.time;
+    this.ticks = f + 1; this.playerRef = g.player; this.timeEnd = g.time; poseOf(g, this.pose);
   }
   private sensed(key: string, v: number | undefined): void {
     if (!this.inTick || this.dead) return;
@@ -129,11 +165,15 @@ export class RunTapeRec {
       tables: Object.fromEntries(Object.entries(tables).filter(([k]) => !(k in knobs.tables)).map(([k, t]) => [k, JSON.parse(t)])), kit: JSON.parse(kit) };
     this.kitKey = kit;
     if (this.playerRef && g.player !== this.playerRef) this.x.push([0, 'restart']);
+    this.x.push([0, 'pose', poseOf(g, []).map(enc)]);
     this.flagsKey = JSON.stringify(this.flagsOf(g)); this.tuneKey = JSON.stringify(g.tune);
     this.tableKeys = tables;
     if (!this.wrapped) {   // every value the game reads off the renderer passes through here on its way (sensors.ts read: its sugar calls it too)
       const S = g.sensors as unknown as { read(key: string): number | undefined }, read = S.read, self = this;
       S.read = function (this: unknown, key: string) { const v = read.call(this, key); self.sensed(key, v); return v; };
+      // …and a restart made INSIDE a step (Shift+Enter, the bare Enter once down) is followed to where it left the player: a page that wraps the restart to
+      // stage its own scene (host/sneaklab.ts, at boot — before this) has staged it by then, and nothing between two steps would show that it had
+      afterRestart(g, () => { if (self.inTick && !self.dead) self.x.push([self.ticks, 'posein', poseOf(g, []).map(enc)]); });
       this.wrapped = true;
     }
     return true;
@@ -148,17 +188,20 @@ export class RunTapeRec {
       if (g.time !== this.timeEnd) { this.kill(f, 'a checkpoint was loaded'); return false; }   // (a restart leaves the clock where the last step left it)
     } else if (g.time !== this.timeEnd) { this.kill(f, 'the game clock was moved between two steps'); return false; }
     { const k = JSON.stringify(this.flagsOf(g)); if (k !== this.flagsKey) { this.flagsKey = k; this.x.push([f, 'flags', JSON.parse(k)]); } }
-    if (fresh || f % RUNTAPE.tuneEvery === 0) { const k = JSON.stringify(g.tune); if (k !== this.tuneKey) { this.tuneKey = k; this.x.push([f, 'tune', JSON.parse(k)]); } }
+    const now = fresh || this.lookAll; this.lookAll = false;   // (a restart, or a control worked on the page since the last step: everything is looked at now)
+    if (now || f % RUNTAPE.tuneEvery === 0) { const k = JSON.stringify(g.tune); if (k !== this.tuneKey) { this.tuneKey = k; this.x.push([f, 'tune', JSON.parse(k)]); } }
     // (the tables one or so a step, round and round, each looked at once every `tablesEvery` steps: all hundred-odd on one step was most of a millisecond of
     // that step. ALL of them on the step one is found changed — what was written with it, a difficulty or a reset of the feel rows, goes on the tape together —
     // and on a restart's step, ahead of its row: a switch flipped on the pause card and read at the next staging must be re-done before the restart is)
     { const names = this.tableNames ??= Object.keys(this.reg ??= knobRegistry() as Record<string, Record<string, unknown>>), every = Math.max(1, RUNTAPE.tablesEvery);
-      let all = fresh;
+      let all = now;
       if (!all) for (let j = Math.min(names.length, Math.ceil(names.length / every)); j > 0; j--) if (this.lookTable(f, names[this.tableAt++ % names.length])) all = true;
       if (all) for (const name of names) this.lookTable(f, name);
       if (all || f % every === 0) { const k = kitNow(); if (k !== this.kitKey) { this.kitKey = k; this.x.push([f, 'kit', JSON.parse(k)]); } }   // (a card changed on the loadout screen: the next staging deals it)
     }
     if (fresh) this.x.push([f, 'restart']);
+    // (…and where he stands now, when that is not where the last step left him — after a restart always, ahead of nothing: a page that stages its own scene does it there)
+    { const P = poseOf(g, this.poseNow), Q = this.pose; let moved = fresh; for (let i = 0; !moved && i < POSE_N; i++) moved = !Object.is(P[i], Q[i]); if (moved) this.x.push([f, 'pose', P.map(enc)]); }
     return true;
   }
   private kill(f: number, why: string): void {

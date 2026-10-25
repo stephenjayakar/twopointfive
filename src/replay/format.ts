@@ -137,7 +137,9 @@ export interface RunTape {
    *  the VALUES is a 32-bit float written to nine significant digits (what the renderer hands back; read it with Math.fround: exact, and half the text), a
    *  value that is not one is [the double]. Absent (a tape from before it): every number is the double itself. Read both with `tapeNum` */
   sens: { keys: string[]; rows: [number, number[] | null, TapeVal[]][]; f32?: 1 };
-  /** from outside a step, before step f: 'restart' · 'flags' {…} · 'tune' {…} · 'table' [name, {…}] */
+  /** from outside a step, before step f: 'restart' · 'flags' {…} · 'tune' {…} · 'table' [name, {…}] · 'kit' {…} · 'pose' [the player's place x y z, velocity x y z,
+   *  body yaw, aim yaw, hands empty 0 | 1, low 0 | 1 — each a TapeVal: where he was put from outside a step] — and one row that is not from outside: 'posein', the
+   *  same ten values, where a restart made INSIDE step f left him (a page's own staging behind it). Both are done by game/runtape.ts tapePoses */
   x: [number, string, unknown?][];
 }
 
