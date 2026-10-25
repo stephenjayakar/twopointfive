@@ -406,9 +406,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   Blue Two; a man keeps his digit when another is down, and a digit with no living man is nothing), Shift + the digit puts him in the picked set or
   takes him out as a Shift click does, 5 picks everyone, and his digit is drawn up and to the right of each man's circle (`PlanView.men[].n`,
   `.planmode .pn`). A LEFT CLICK ON BARE GROUND THEN PICKS NOBODY NEW: who was picked stays picked; a click on a man and a box still pick. A digit
-  with the ring's key down is left for the ring (`stayDigit`). A TUTORIAL MISSION (rails live) KEEPS THE GROUND CLICK: mission 2's lines say
-  "Left-click on empty ground to pick your whole squad again" and its scripted player does it, the plan tutorial's own to move (told); the digits
-  work there too. ON in the page with the mode (`?plandigits=0` off), OFF in the module and on the frozen stand (`TPS_PLANDIGITS=1`, beside
+  with the ring's key down is left for the ring (`stayDigit`). ON A TUTORIAL MISSION THE SAME HOLDS since 10-24 (`planGroundAll` no longer asks whether rails are live): mission 2's
+  lines teach the digits and [5] is everyone. The frame dropped the digits there until then, whatever this bullet said; `RAILS.planDigits` lets them
+  through and holds every pick until the mission's pick lesson (`docs/agents/missions.md`, the plan mission's bullet on the digits). ON in the page with the mode (`?plandigits=0` off), OFF in the module and on the frozen stand (`TPS_PLANDIGITS=1`, beside
   `TPS_QPLAN=1`); a `FROZEN_HOLDS` row; the journal (a recording from before the key replays with it off); a tick ('Tab ▸ plan mode ▸ the digits
   pick the men'). CHECK `probes.ts plandigits` (family squadorders; 8 lines on plan mode's own rig, both stands, one deal seed 3: the rule has no die
   in it; `PLANDIGITS_BREAK=1` fails lines 1 to 5). `planmode-check`'s rig holds the switch off: its lines pick by the mouse and ask that a click on

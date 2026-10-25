@@ -71,14 +71,18 @@ export const RAILS = { on: false,
    *  mission's lesson). false: that seat is the plain sky seat — the mode down and only drawn — and a mission that asks for a box or a right click
    *  there cannot be played */
   skyUp: true,
-  /** PLAN MODE'S DIGITS ARE THE MODE'S (the maintainer, 10-24: "change the tutorial to teach using 1, 2, 3, 4, and 5 to select squad members"): with the
-   *  mode up on a mission that gives `plan`, a digit pressed is let through to it wherever the page has the digits pick the men (CMDRING.planDigits,
-   *  planmode.ts pickDigit: 1 to 4 a man, Shift + a digit adds him, 5 everyone) — and only there and then: planInput takes every such press, so none
-   *  reaches a slot. AND PICKS WAIT FOR THEIR LESSON: on a mission that teaches picking (a step's test is `picked`) nothing picks a man — no digit, no
-   *  left button — until the first such step is up, so every order before it goes to the whole squad (a stray click on a man there left one man picked,
-   *  and the way back, a click on bare ground, is out of the mode). false: a digit is a locked slot's key and is dropped and the left button is the
-   *  mode's from its first tick, as the build was — and a line that names a digit cannot be done */
-  planDigits: true,
+  /** PLAN MODE'S DIGITS ARE THE MODE'S, AND PICKS WAIT FOR THEIR LESSON (the maintainer, 10-24: "we should also remove the 'click on the ground to select
+   *  everyone' in plan mode, and change the tutorial to teach using 1, 2, 3, 4, and 5 to select squad members"). Two halves, one switch:
+   *  · with the mode up on a mission that gives `plan`, a digit pressed is let through the gate exactly when planInput will take it that tick
+   *    (planmode.ts planTakesDigits: the page has the digits pick the men — CMDRING.planDigits — and no menu, ring or closing key is in the tick), so no
+   *    such press reaches a slot. Before it every digit was a locked slot's key there, dropped, and no line could teach one;
+   *  · nothing picks a man — no digit, no click on him, no box — before a step that teaches picking is up (a step whose test is `picked`; `locksPicks`,
+   *    which planmode.ts asks as it asks for the word's lock), and his digit is not drawn by his circle until then. Every order before it goes to the
+   *    whole squad: a stray click on a man there left one man picked, and the way back, a click on bare ground, is out of the mode. A mission that has
+   *    the mode and never teaches picking (the squad mission's two plan steps) never picks.
+   *  false (the module and the frozen stand; TPS_RAILDIGITS=1 raises it, the page's ?raildigits=0 puts it off): a digit is a locked slot's key and is
+   *  dropped, a slot he HAS picks its man, and a click or a box picks from the mode's first tick, as the build was — a line that names a digit cannot be done */
+  planDigits: false,
   /** SHIFT WITH THE COMMAND KEY ON THE MOVE: where a step gives him his feet and plan mode but not his sprint, a walk key held is no sprint's — so Shift
    *  with the command key, pressed, is the mode's there too, and the walk keys are out of that one tick (the Shift that gets through never meets a walk
    *  key to run with). false: with a walk key down the pair did nothing at all until he stood still, as it was */
@@ -275,11 +279,13 @@ export class Rails {
   get planSeat(): boolean { return !BREAK && RAILS.skyUp && !!this.data?.sky?.plan; }
   /** …and the mode's own view is the picture's: the mode is up with a point of its own (CMDRING.planRts; without one the seat's view and its pan stand) */
   private get seatView(): boolean { const P = this.g.orders?.plan; return this.planSeat && !!P?.up && !!P.look; }
-  /** picks wait for their lesson (RAILS.planDigits): the mission has a step whose test is `picked`, and the first of them is not up yet */
-  private picksWait(): boolean {
-    const S = this.lesson(); if (!RAILS.planDigits || !S) return false;
+  /** PICKS WAIT FOR THEIR LESSON (RAILS.planDigits; planmode.ts asks before a digit, a click on a man or a box picks anybody, and before it draws a man's
+   *  digit): no step up to the one that is up teaches picking — its test, or a branch of it, is `picked`. Derived from the step that is up, nothing kept */
+  locksPicks(): boolean {
+    const S = this.lesson(); if (BREAK || !RAILS.planDigits || !S) return false;
     const asks = (t: unknown): boolean => !!t && typeof t === 'object' && ((t as { is?: unknown }).is === 'picked' || (Array.isArray((t as { of?: unknown }).of) && ((t as { of: unknown[] }).of).some(asks)));
-    const k = S.L.steps.findIndex(T => asks(T.done)); return k >= 0 && S.i < k;
+    for (let k = 0; k <= S.i && k < S.L.steps.length; k++) if (asks(S.L.steps[k].done)) return false;
+    return true;
   }
   private lesson(): { L: LessonData; i: number } | null { const L = this.g.lesson?.data; return L?.rails && RAILS.on ? { L, i: Math.min(this.g.lesson.index, L.steps.length) } : null; }
 
@@ -389,12 +395,11 @@ export class Rails {
     // (only where the page HAS the mode — `?qplan=0` and the frozen stand do not, and there the key with Shift is the key's own order, which stays locked. A walk
     //  key held is a sprint's only where his feet are his: on a mission that never gives them it cannot stand between Shift and the key)
     const WALK = ACTS.move.keys!, planOn = A.has('plan') && CMDRING.plan, planUp = planOn && !!g.orders?.plan.up, walking = A.has('move') && WALK.some(k => input.keys.has(k));
-    const picks = planUp && !this.picksWait();   // (RAILS.planDigits: the left button picks men, and it is the mode's only once the mission's first pick is up)
-    if (planUp) { if (RAILS.planDown) this.planTick = { buttons, shift: A.has('sprint') || enter, walk: A.has('move') }; buttons |= picks ? 5 : 4; if (CMDRING.planRts) for (const k of WALK) keys.add(k); }   // (the walk keys are the view's only in the mode as an RTS's: without it they are his feet)
-    // (RAILS.planDigits · …and its digits, where the page has them pick the men and the mission's first pick, if it has one, is up: exactly the presses
-    //  planInput will take this tick — planmode.ts planTakesDigits, its own answer, so the two cannot drift: with a menu, the ring or the ring's key up a digit
-    //  is that menu's own. Only the PRESS is let through, by its own test below and not by `ok`: a digit held is nobody's)
-    const planDigit = picks && RAILS.planDigits && !!g.orders && planTakesDigits(g.orders, input);
+    if (planUp) { if (RAILS.planDown) this.planTick = { buttons, shift: A.has('sprint') || enter, walk: A.has('move') }; buttons |= 5; if (CMDRING.planRts) for (const k of WALK) keys.add(k); }   // (the walk keys are the view's only in the mode as an RTS's: without it they are his feet)
+    // (RAILS.planDigits · …and its digits, where the page has them pick the men: exactly the presses planInput will take this tick — planmode.ts
+    //  planTakesDigits, its own answer, so the two cannot drift: with a menu, the ring or the ring's key up a digit is that menu's own. Only the PRESS is
+    //  let through, by its own test below and not by `ok`: a digit held is nobody's. Whether the press then PICKS is planInput's to say — `locksPicks`)
+    const planDigit = planUp && RAILS.planDigits && !!g.orders && planTakesDigits(g.orders, input);
     // (RAILS.planWalk · …and where his feet are his and his sprint is not, a walk key held is nobody's sprint: the pair PRESSED with the mode down is the
     //  mode's with a walk key down too, and the walk keys leave that one tick with it — planmode.ts planShift, under `planRun`, reads a walk key as a
     //  run, and a Shift that reached his feet would be one. Only on a press planInput would take: no ring up, nothing nearer for the key to back out of.

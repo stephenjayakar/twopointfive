@@ -124,11 +124,14 @@ export function planTakesDigits(S: SquadOrders, input: Input): boolean {
   const P = S.plan, K = CMDRING;
   return K.plan && K.on && P.up && !S.menu && !S.cmdRing && digitsFree(input) && !input.pressed.has(K.key) && (seat(S) || !(input.pressed.has('Escape') || input.pressed.has('Tab')));
 }
-/** a left click on bare ground picks everyone, as the mode was built — not once the digits pick the men, except on a tutorial mission, whose lines still
- *  name that click (rails live: the tutorial's own to move) */
-export const planGroundAll = (S: SquadOrders): boolean => !CMDRING.planDigits || !!S.g.rails?.live;
+/** a left click on bare ground picks everyone, as the mode was built — not once the digits pick the men, on a tutorial mission either (its lines teach
+ *  the digits now: [5] is everyone) */
+export const planGroundAll = (_S: SquadOrders): boolean => !CMDRING.planDigits;
+/** PICKS WAIT FOR THEIR LESSON on a tutorial mission (rails.ts locksPicks, RAILS.planDigits): until a step that teaches picking is up no digit, no click
+ *  on a man and no box picks anybody — the press is still taken, so it is nobody else's — and no man's digit is drawn */
+const picksLocked = (S: SquadOrders): boolean => !!S.g.rails?.locksPicks();
 /** the digit drawn by a man's circle (0: none — the digits are not the mode's, or he has none) */
-function digitOf(S: SquadOrders, m: Guard): number { if (!CMDRING.planDigits) return 0; const k = S.squad().indexOf(m) + 1; return k >= 1 && k < PLAN_ALL ? k : 0; }
+function digitOf(S: SquadOrders, m: Guard): number { if (!CMDRING.planDigits || picksLocked(S)) return 0; const k = S.squad().indexOf(m) + 1; return k >= 1 && k < PLAN_ALL ? k : 0; }
 
 /** a place for a chain, off the target the cursor was on (null: a man of the other side — an order on him is given at once and never chained) */
 function stepOf(S: SquadOrders, t: OrderTarget): PlanStep | null {
@@ -430,7 +433,8 @@ export function planInput(S: SquadOrders, input: Input, cam: FollowCamera, canva
   if (S.menu || S.cmdRing) { P.drag = null; P.rmbT = -1; P.rdown = null; return; }   // (a menu or the ring is up: the buttons are its own this frame — planAfter takes what is left of them from Sam)
   if (K.planRts) pan(S, input, cam, dt);
   // (the digits pick the men — never with the ring's key down: a digit inside that press is the ring's own wedge, CMDRING.stayDigit)
-  if (digitsFree(input)) for (let d = 1; d <= PLAN_ALL; d++) if (input.pressed.delete(`Digit${d}`)) pickDigit(S, d, shift);
+  const locked = picksLocked(S);   // (a tutorial mission before its pick lesson: the digit is taken and picks nobody, and so does the left button on a man or round men)
+  if (digitsFree(input)) for (let d = 1; d <= PLAN_ALL; d++) if (input.pressed.delete(`Digit${d}`) && !locked) pickDigit(S, d, shift);
   const held = (input.buttons & 1) !== 0, lmb = (input.clicked & 1) !== 0, rmb = (input.clicked & 4) !== 0, mx = input.mouseX, my = input.mouseY;
   const w = canvas.clientWidth, h = canvas.clientHeight, now = S.recipients();
   if (lmb) P.drag = { x0: mx, y0: my, x1: mx, y1: my };   // (a press is a box begun, wherever it lands: let go where it went down, it was a click)
@@ -443,12 +447,12 @@ export function planInput(S: SquadOrders, input: Input, cam: FollowCamera, canva
         const stop = K.planWaits ? stopUnder(S, input, cam, canvas) : null;
         const k = stop ? -1 : S.manAt(input, cam, canvas), man = k >= 0 ? S.squad()[k] : null;
         if (stop) { if (!wordLocked(S)) cycle(S, stop.C, stop.i); }   // (a stop of a chain: its waits, not a choice of men)
-        else if (man) { PLAN_STATS.picked++; choose(S, !shift ? [man] : now.includes(man) ? now.filter(m => m !== man) : [...now, man]); }
+        else if (man) { if (!locked) { PLAN_STATS.picked++; choose(S, !shift ? [man] : now.includes(man) ? now.filter(m => m !== man) : [...now, man]); } }
         else if (!shift && planGroundAll(S)) choose(S, []);   // (a click on nothing: everyone — or, the digits picking the men, nothing: who was picked stays picked)
       } else {
         const x0 = Math.min(D.x0, D.x1), x1 = Math.max(D.x0, D.x1), y0 = Math.min(D.y0, D.y1), y1 = Math.max(D.y0, D.y1);
         const inside = S.men('all').filter(m => { const [sx, sy, front] = cam.project(m.char.pos, w, h); return front && sx >= x0 && sx <= x1 && sy >= y0 && sy <= y1; });
-        if (inside.length) { PLAN_STATS.boxed++; choose(S, shift ? [...now, ...inside] : inside); }
+        if (inside.length && !locked) { PLAN_STATS.boxed++; choose(S, shift ? [...now, ...inside] : inside); }
       }
     }
   }

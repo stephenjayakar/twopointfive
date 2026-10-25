@@ -173,8 +173,8 @@ export const CMDRING = {
    *  members, and 5 selects all of them? and then we should remove clicking on the ground selects all"): with the mode up and no ring or menu up, a
    *  digit 1 to 4 picks that man of the squad alone (the squad's own order: a man keeps his digit when another is down), Shift + the digit puts him in
    *  the picked set or takes him out, 5 picks everyone — and a left click on bare ground picks nobody new: the men picked stay picked (a drag still
-   *  boxes, a click on a man is still him). His digit is drawn by each man's circle. A TUTORIAL MISSION (rails live) KEEPS THE GROUND CLICK until its
-   *  own lines stop naming it; the digits work there too. false: no digit is the mode's, and a click on nothing is everyone, as it was built. Off
+   *  boxes, a click on a man is still him). His digit is drawn by each man's circle. On a tutorial mission the same holds, once its lesson
+   *  has taught picking (rails.ts RAILS.planDigits, locksPicks: its frame lets the digits through, and nothing picks before that lesson). false: no digit is the mode's, and a click on nothing is everyone, as it was built. Off
    *  here and on the frozen stand (`TPS_PLANDIGITS=1`, beside `TPS_QPLAN=1`); the page raises it with the mode (`?plandigits=0` off) */
   planDigits: false,
   /** … how long the view's point takes to come back to him (s) */

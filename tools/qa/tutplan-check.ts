@@ -49,7 +49,7 @@ async function rig(seed = 1) {
     const level = loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${LEVEL}.json`, 'utf8')));
     W = await standUp({ uploadEvery: 4, level, seed });
     // (the page's own: the frame, the ring on the command key and plan mode with its three later switches — the frozen stand holds each off)
-    RAILS.on = true; Object.assign(CMDRING, { on: true, tapNow: true, stay: true, plan: true, planRts: true, planRun: true, planLook: true, planWaits: true, planKnee: true, planNear: true, planDigits: true }); AUTOPILOT.on = true;
+    RAILS.on = true; RAILS.planDigits = true; Object.assign(CMDRING, { on: true, tapNow: true, stay: true, plan: true, planRts: true, planRun: true, planLook: true, planWaits: true, planKnee: true, planNear: true, planDigits: true }); AUTOPILOT.on = true;
     if (BREAK) RAILS.skyUp = false;   // (the seat does not hold the mode up: the plain sky seat, as the build was)
     started = startFromQuery(W.game, `?levelFile=${LEVEL}.json&roomclear=1&squad4`);
   } finally { console.log = log; console.warn = warn; console.error = err; }
@@ -96,10 +96,13 @@ export async function tutplanCheck(): Promise<boolean> {
       R.run(4.0);   // (they walk to the spot and stand: a box round two men who are still filing past each other takes a third)
       const q = two.flatMap(m => [R.px([m.char.pos[0], 0, m.char.pos[2]]), R.px([m.char.pos[0], 1.7, m.char.pos[2]])]);
       R.button(1, [Math.min(...q.map(v => v[0])) - 10, Math.min(...q.map(v => v[1])) - 10], [Math.max(...q.map(v => v[0])) + 10, Math.max(...q.map(v => v[1])) + 10]);
-      const picked = O.recipients().length, d0 = RAILS_STATS.dropped; R.press('KeyF'); const word = RAILS_STATS.dropped - d0;
-      verdict(panned > 3 && moved < 0.05 && gave === 1 && chains === 1 && who === 4 && picked === men.length && g.rails.locks('word') && word >= 1,
+      const boxIt = () => R.button(1, [Math.min(...q.map(v => v[0])) - 10, Math.min(...q.map(v => v[1])) - 10], [Math.max(...q.map(v => v[0])) + 10, Math.max(...q.map(v => v[1])) + 10]);
+      // (CONTROL: the same box with the step that teaches picking up picks some of them — so the box above was on the men, and it was the lesson that held it)
+      const picked = O.recipients().length, i0 = g.lesson.i; g.lesson.i = (L.steps as any[]).findIndex(T => T.id === 'pick'); R.run(2 / 60); boxIt(); const taught = O.recipients().length; R.press('Digit5'); g.lesson.i = i0; R.run(2 / 60);
+      const d0 = RAILS_STATS.dropped; R.press('KeyF'); const word = RAILS_STATS.dropped - d0;
+      verdict(panned > 3 && moved < 0.05 && gave === 1 && chains === 1 && who === 4 && picked === men.length && taught >= 1 && taught < men.length && g.rails.locks('word') && word >= 1,
         'the mode\'s hands are its own: the walk keys move the view and not him, a right click on the floor is one order to all four and a chain, a box dragged with the left button picks nobody before the step that teaches picking (rails.ts RAILS.planDigits; rails-check has the digits), and the word is locked until its step',
-        `the view's point moved ${panned.toFixed(1)} m, he ${moved.toFixed(2)} m · right click: orders +${gave}, chains ${chains} of ${who} men · after the box an order would still go to ${picked} of ${men.length} (step '${g.lesson.step?.id}') · word locked ${g.rails.locks('word')}, dropped ${word}`); }
+        `the view's point moved ${panned.toFixed(1)} m, he ${moved.toFixed(2)} m · right click: orders +${gave}, chains ${chains} of ${who} men · after the box an order would still go to ${picked} of ${men.length} (step '${g.lesson.step?.id}'); the same box with 'pick' up picks ${taught} · word locked ${g.rails.locks('word')}, dropped ${word}`); }
     // ---- 7 (on the same game, last): a save put back takes the mode down as the key would; the seat has it up again on the next tick, its view on the four
     { planLoaded(O); const down = !P.up; R.run(2 / 60); const off = P.look ? flat(P.look, mid()) : NaN;
       verdict(down && P.up && off < 1.0, 'a save put back takes the mode down, and the seat has it up again on the next tick with its view on the four', `down as the save went in ${down} · up two ticks on ${P.up} · the view ${Number.isFinite(off) ? `${off.toFixed(1)} m from the four's middle` : 'has no point'}`); }
@@ -176,7 +179,7 @@ export async function tutplanCheck(): Promise<boolean> {
     // ---- 8: nothing in the lesson asks for his feet or for a key that opens or closes the mode (the file's own words and tests)
     { const steps = L.steps as any[], has = (t: any, is: string): boolean => !!t && (t.is === is || (t.of ?? []).some((x: any) => has(x, is)));
       const words = (T: any): string[] => [T.line, T.planLine, T.noTap, T.menuLine, T.pageLine, T.flatLine, T.explain?.title, T.explain?.text, T.after?.line, T.after?.word].filter((s: unknown) => typeof s === 'string');
-      const NAMES = /\[Tab\]|\[B\]|\[Escape\]|walk to|walk into the|yourself|(open|close) plan mode|(empty|bare) ground|left-click on/i;   // ([Shift] is named: it adds a man to the picked — and Shift alone opens nothing, the command key is what the pair needs)
+      const NAMES = /\[Tab\]|\[B\]|\[Escape\]|walk to|walk into the|yourself|(open|close) plan mode|click[^.]*\bground\b|\bground to pick/i;   // ([Shift] is named: it adds a man to the picked — and Shift alone opens nothing, the command key is what the pair needs)
       const feet = steps.filter(T => has(T.done, 'in') || has(T.done, 'following') || (has(T.done, 'flag') && JSON.stringify(T.done).includes('"plan"'))).map(T => T.id);
       const gives = [...(L.rails.allow ?? []), ...steps.flatMap(T => T.allow ?? [])].filter((a: string) => a === 'move' || a === 'sprint');
       const downLines = steps.filter(T => T.planLine !== undefined).map(T => T.id), named = steps.filter(T => words(T).some(s => NAMES.test(s))).map(T => T.id);

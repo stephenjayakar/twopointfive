@@ -228,7 +228,7 @@ export function build() {
       { id: 'pick', line: 'Press [1] to pick a teammate, then hold [Shift] and press [2] to add another', explain: { title: 'Hit two doors at once', text: "The guardroom has two doors, and the guards inside can't watch both.\nPut two teammates on each door, then send them all in at once.\nEvery teammate has a number next to them, and you press that number to pick them." },
         done: or({ is: 'picked', n: 2 }, stacks(['guard', 'guard_side']), taken('guardroom')), at: [13.9, 1, 8.75] },
       { id: 'door1', line: 'Right-click the marked door to stack those two on it', done: or(stacks(['guard']), taken('guardroom')), at: D_GUARD },
-      { id: 'pick2', line: 'Now press [3], then hold [Shift] and press [4] to pick the other two', done: or({ is: 'picked', n: 2, free: true }, stacks(['guard', 'guard_side']), taken('guardroom')), at: [13.9, 1, 8.75] },
+      { id: 'pick2', line: 'Now pick the other two the same way, with their numbers', done: or({ is: 'picked', n: 2, free: true }, stacks(['guard', 'guard_side']), taken('guardroom')), at: [13.9, 1, 8.75] },
       { id: 'door2', line: 'Right-click the side door to stack them on it', done: or(stacks(['guard', 'guard_side'], true), taken('guardroom')), at: D_SIDE },
       // (the word's key sends the stacks of the men who are PICKED — planmode.ts chainsOf — and the last two digits picked two: [5] is everyone again)
       { id: 'all', line: 'Press [5] to pick your whole squad again', explain: { title: 'Pick everyone again', text: "When you send them in, only the teammates you've picked will go. Pick all four again so both pairs go in together." }, done: or({ is: 'picked', n: 4 }, taken('guardroom')) },

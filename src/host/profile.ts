@@ -724,6 +724,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'RAILS.cardBeat': 'TPS_CARDBEAT=1 (acts only with the frame up: TPS_RAILS=1)',
   'RAILS.flatRing': 'TPS_RAILFLAT=1 (acts only with the frame and the flat tree up: TPS_RAILS=1 TPS_QRING=1 TPS_QONLY=1 TPS_RINGFLAT=1)',
   'RAILS.spareDown': 'TPS_SPAREDOWN=1 (acts only with the frame up: TPS_RAILS=1)',
+  'RAILS.planDigits': 'TPS_RAILDIGITS=1 (acts only with the frame and plan mode\'s digits up: TPS_RAILS=1 TPS_QPLAN=1 TPS_PLANDIGITS=1)',
   'DOORFORCE.on': 'TPS_DOORFORCE=1',
   'SLOTSETUP.on': 'TPS_SLOTSETUP=1',
   'SLOTSETUP.pop': 'TPS_SLOTSETUP=1',
