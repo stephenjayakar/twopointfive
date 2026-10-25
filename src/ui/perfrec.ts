@@ -22,6 +22,12 @@ export interface PerfFrame {
   res: [number, number]; eff: number; preset: string; adaptive: boolean;
   cam: [number, number, number, number, number];   // look x, z, yaw, pitch, dist
   n: { lights: number; dyn: number; particles: number; smoke: number; decals: number; guards: string; qrf: string; rain: number; stroke: number };
+  /** THE BEAT (ms): the longest the page's own thread went without answering the recorder's 4 ms timer BETWEEN the frame before and this one — from the end of that
+   *  frame's step to the start of this one's, so neither frame's own work is in it (PerfRecorder.beatTick). `dt` runs from the start of the frame before to the start
+   *  of this one: it holds that frame's step (ITS cpu row) and then this gap. A long dt with a long beat = something held the thread in the gap (a timer, a
+   *  collection, another script); with a short beat = the thread was free and the browser did not hand the page a frame (its compositor, the GPU's queue, the page
+   *  around an embedded one). Absent where no timer ran: a headless take, a dump from before 10-25, a take with `watch` off */
+  beat?: number;
 }
 export interface PerfEvent { t: number; frame: number; kind: string; text: string }
 export interface PerfDump {
@@ -36,8 +42,8 @@ const MAX_FRAMES = 60 * 60 * 10;   // ten minutes at 60
 /** the frame ring's columns (a compact TYPED-ARRAY store instead of a JS object per frame — the 1-hour native soak: 36 k PerfFrame objects were ~100 MB of heap; the same JSON comes
  *  out at stop(), field for field and in the same order): fixed numeric columns as f64 (the exact rounded doubles the page always wrote), the gpu passes as per-frame (id, value)
  *  rows over an interned pass-name table (the frame's own key ORDER kept), the strings (preset · guards · qrf) interned */
-const MAX_PASSES = 48, NUM_COLS = 24;
-const C = { t: 0, dt: 1, fps: 2, cpuUpdate: 3, cpuRender: 4, cpuOther: 5, gpuSum: 6, gpuUnion: 7, resW: 8, resH: 9, eff: 10, adaptive: 11, cam0: 12, cam1: 13, cam2: 14, cam3: 15, cam4: 16, lights: 17, dyn: 18, particles: 19, smoke: 20, decals: 21, rain: 22, stroke: 23 } as const;
+const MAX_PASSES = 48, NUM_COLS = 25;
+const C = { t: 0, dt: 1, fps: 2, cpuUpdate: 3, cpuRender: 4, cpuOther: 5, gpuSum: 6, gpuUnion: 7, resW: 8, resH: 9, eff: 10, adaptive: 11, cam0: 12, cam1: 13, cam2: 14, cam3: 15, cam4: 16, lights: 17, dyn: 18, particles: 19, smoke: 20, decals: 21, rain: 22, stroke: 23, beat: 24 } as const;   // (beat: −1 = no heartbeat ran, the key is left out)
 class FrameRing {
   n = 0;
   /** frames this take may hold (the F9 take: MAX_FRAMES; a caller that needs more asks for it: the benchmark, on a fast display) */
@@ -70,21 +76,51 @@ class FrameRing {
       res: [v[b + C.resW], v[b + C.resH]], eff: v[b + C.eff], preset: this.strings[this.str[f * 3]], adaptive: v[b + C.adaptive] !== 0,
       cam: [v[b + C.cam0], v[b + C.cam1], v[b + C.cam2], v[b + C.cam3], v[b + C.cam4]],
       n: { lights: v[b + C.lights], dyn: v[b + C.dyn], particles: v[b + C.particles], smoke: v[b + C.smoke], decals: v[b + C.decals], guards: this.strings[this.str[f * 3 + 1]], qrf: this.strings[this.str[f * 3 + 2]], rain: v[b + C.rain], stroke: v[b + C.stroke] } };
-    if (this.unionMissing[f]) delete (o as { gpuUnion?: number }).gpuUnion;   // (JSON.stringify skips undefined either way; the key order stays the page's: gpuSum, gpuUnion, res …)
+    if (this.unionMissing[f]) delete (o as { gpuUnion?: number }).gpuUnion;
+    if (v[b + C.beat] >= 0) o.beat = v[b + C.beat];   // (JSON.stringify skips undefined either way; the key order stays the page's: gpuSum, gpuUnion, res …)
     return o;
   }
+  /** the index of the first frame recorded after t (ms since the take began): the frame count where none was */
+  firstAfter(t: number): number { let lo = 0, hi = this.n; while (lo < hi) { const m = (lo + hi) >> 1; if (this.num[m * NUM_COLS + C.t] < t) lo = m + 1; else hi = m; } return lo; }
   /** t of the last frame (the note) */
   lastT(): number { return this.n ? this.num[(this.n - 1) * NUM_COLS + C.t] : 0; }
 }
 
+const LONG_CAP = 300;
+/** what the recorder reads of a PerformanceLongTaskTiming ('longtask') or a PerformanceLongAnimationFrameTiming ('long-animation-frame') */
+export interface LongEntry { startTime: number; duration: number; name?: string; blockingDuration?: number;
+  attribution?: { containerType?: string; containerName?: string; containerSrc?: string }[];
+  scripts?: { duration: number; invoker?: string; invokerType?: string; sourceURL?: string; sourceFunctionName?: string; forcedStyleAndLayoutDuration?: number }[] }
+/** a long entry as one line: how long, whose it was (a long task's `name`: self, or a frame around or inside this one) and, for a long frame, the three scripts that
+ *  took most of it (what called them, the function, the file's own name: never an address) */
+export function longText(type: string, e: LongEntry): string {
+  const ms = (v: number | undefined) => `${Math.round(v ?? 0)} ms`, file = (u: string | undefined) => /^blob:/i.test(u ?? '') ? 'blob' : ((u ?? '').split(/[?#]/)[0].split('/').pop() || '').slice(0, 40);
+  if (type === 'longtask') { const a = e.attribution?.[0]; const where = [a?.containerType, a?.containerName || file(a?.containerSrc)].filter(Boolean).join(' ').slice(0, 60);
+    return `task ${ms(e.duration)} · ${e.name || 'unknown'}${where ? ` (${where})` : ''}`; }
+  // (a script's own evaluation is 'invoked' by its address, and an element's handler names the element with its address inside: every address down to its file's name)
+  const who = (v: string | undefined) => (v ?? '').replace(/blob:[^\s\])'"]+/gi, 'blob').replace(/[a-z][\w+.-]*:\/\/[^\s\])'"]+/gi, u => file(u)).slice(0, 48);
+  const top = [...(e.scripts ?? [])].sort((a, b) => b.duration - a.duration).slice(0, 3).map(s => `${ms(s.duration)} ${[s.invokerType, who(s.invoker)].filter(Boolean).join(' ')}${s.sourceFunctionName ? ` ${s.sourceFunctionName.slice(0, 40)}` : ''}${file(s.sourceURL) ? ` @${file(s.sourceURL)}` : ''}`);
+  return `frame ${ms(e.duration)}${e.blockingDuration ? `, blocking ${ms(e.blockingDuration)}` : ''} · ${top.length ? top.join(' · ') : 'no script named'}`;
+}
 export class PerfRecorder {
   recording = false;
   private ring = new FrameRing(); private events: PerfEvent[] = [];
   private t0 = 0; private startedAt = ''; private settings0: Record<string, unknown> = {};
   commit: string | undefined;
-  private lastPreset = ''; private lastEff = 0; private lastEsc = -1; private lastQualityNote = ''; private lastSettingsKey = ''; private lastReallocs = 0;
+  private lastPreset = ''; private lastEff = 0; private lastEsc = -1; private lastQualityNote = ''; private lastSettingsKey = ''; private lastReallocs = 0; private lastSaves = -1; private lastLoads = -1;
   /** CPU section marks written by main.ts's step() each frame (ms) */
-  cpuUpdate = 0; cpuRender = 0; cpuFrameStart = 0;
+  cpuUpdate = 0; cpuRender = 0; private frameStart = 0;
+  /** written by the page as a frame's step begins: also where the gap since the frame before ends, for the beat */
+  get cpuFrameStart(): number { return this.frameStart; }
+  set cpuFrameStart(now: number) { this.frameStart = now; if (this.beatAt >= 0) { this.gapBeat = Math.max(this.beatMax, now - this.beatAt); this.beatMax = 0; this.beatAt = now; } }
+  // THE PAGE'S OWN THREAD, WATCHED WHILE A TAKE RUNS (the page only: nothing of it in a headless take, and `watch = false` before a take leaves it out there too). Three
+  // things a frame's own marks cannot see, because they happen BETWEEN frames: (1) the beat, a 4 ms timer whose longest silence in the gap before a frame is the
+  // frame's `beat`; (2) what the browser itself reports as a long frame, with the scripts it blames, and as a long task of another frame of this page's process, as
+  // 'long' events (they start at 50 ms, so the beat is the finer of the two); (3) the tab going out of sight and coming back, as 'tab' events (a hidden tab's timers
+  // answer about once a second: its frames are no stall)
+  watch = true;
+  private beatAt = -1; private beatMax = 0; private gapBeat = -1; private beatTimer: ReturnType<typeof setInterval> | null = null;
+  private longSeen: { type: string; o: PerformanceObserver }[] = []; private longN: Record<string, number> = {}; private longFrames = false; private dtUsual = 0; private onVis: (() => void) | null = null;
   constructor(private engine: Engine, private game: Game, private cam: FollowCamera, private quality: Quality, private hudNote: (s: string) => void) {}
   /** frames recorded so far (the ring's count) */
   get frameCount(): number { return this.ring.n; }
@@ -94,8 +130,10 @@ export class PerfRecorder {
     this.ring.reset(Math.max(1, Math.floor(frames))); this.events = []; this.t0 = performance.now(); this.startedAt = new Date().toISOString(); this.recording = true;
     if (this.commit === undefined && typeof document !== 'undefined') try { void fetch('/qa/commit', { cache: 'no-store' }).then(r => r.ok ? r.text() : '').then(t => { const c = t.trim(); if (/^[0-9a-f]{7,40}$/.test(c)) this.commit = c; }).catch(() => {}); } catch { /* no dev server */ }   // (asked on the first recording, as the session journal asks: ui/sessionrec.ts)
     this.settings0 = this.snapSettings(); this.lastSettingsKey = JSON.stringify(this.settings0);
+    this.lastSaves = -1; this.lastLoads = -1;
     this.lastPreset = this.quality.label; this.lastEff = this.engine.effectiveScale; this.lastEsc = -1; this.lastQualityNote = this.quality.lastChange ?? ''; this.lastReallocs = this.engine.passes.reallocs;
     this.event('start', note || 'recording started (F9 stops; the dump downloads and goes to the shot server if it is up)');
+    this.watchThread(true);
     this.hudNote('● REC — F9 to stop');
   }
   /** frame f of the take under way, as the dump will carry it (ui/bench.ts reads its own windows back) */
@@ -105,7 +143,8 @@ export class PerfRecorder {
   /** deliver = false: the take is dropped (a benchmark stopped before it had a number: ui/bench.ts) */
   stop(deliver = true): PerfDump | null {
     if (!this.recording) return null;
-    this.recording = false; this.event('stop', `${this.ring.n} frames`);
+    this.watchThread(false); this.recording = false; this.event('stop', `${this.ring.n} frames`);
+    this.events.sort((a, b) => a.t - b.t);   // (a long task is reported after it ends and filed at the moment it began: the list stays in the order things happened)
     const frames: PerfFrame[] = new Array(this.ring.n); for (let f = 0; f < this.ring.n; f++) frames[f] = this.ring.frameAt(f);   // (the objects exist only for the dump: built here, serialized, dropped)
     const dump: PerfDump = { version: 1, startedAt: this.startedAt, machine: this.engine.gpu?.adapterInfo ?? 'unknown', dpr: (typeof window !== 'undefined' && window.devicePixelRatio) || 1, userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'bun', ...(this.commit ? { commit: this.commit } : {}), ...(typeof location !== 'undefined' ? { query: location.search } : {}), ...(typeof (this.game as unknown as { smoke?: { stats?: { pool?: number } } }).smoke?.stats?.pool === 'number' ? { smokeUnit: 512 } : {}),
       note: `twopointsix perf recording · ${this.ring.n} frames · ${(this.ring.n ? this.ring.lastT() / 1000 : 0).toFixed(1)} s`,
@@ -113,7 +152,44 @@ export class PerfRecorder {
     if (deliver) { this.deliver(dump); this.hudNote(`REC saved — ${this.ring.n} frames`); }
     return dump;
   }
-  event(kind: string, text: string): void { this.events.push({ t: +(performance.now() - this.t0).toFixed(1), frame: this.ring.n, kind, text }); }
+  /** at = the moment the event is about, on performance.now()'s clock, where that is not now (a long task is reported after it ends): the event then carries the
+   *  index of the first frame recorded after that moment, as every event does */
+  event(kind: string, text: string, at?: number): void {
+    const t = (at ?? performance.now()) - this.t0;
+    this.events.push({ t: +t.toFixed(1), frame: at === undefined ? this.ring.n : this.ring.firstAfter(t), kind, text });
+  }
+  /** one answer of the heartbeat's timer (and what a check calls by hand) */
+  beatTick(now = performance.now()): void { if (this.beatAt >= 0) this.beatMax = Math.max(this.beatMax, now - this.beatAt); this.beatAt = now; }
+  private watchThread(on: boolean): void {
+    if (this.beatTimer !== null) { clearInterval(this.beatTimer); this.beatTimer = null; }
+    for (const { type, o } of this.longSeen) try { for (const e of o.takeRecords()) this.seen(type, e as unknown as LongEntry); o.disconnect(); } catch { /* */ }   // (what the browser had queued and not yet handed over still belongs to the take)
+    if (this.onVis) { try { document.removeEventListener('visibilitychange', this.onVis); } catch { /* */ } this.onVis = null; }
+    this.longSeen = []; this.longFrames = false; this.beatAt = -1; this.beatMax = 0; this.gapBeat = -1;
+    if (!on) return;
+    this.longN = {}; this.dtUsual = 0;
+    if (!this.watch || typeof document === 'undefined') return;
+    this.beatAt = performance.now(); this.beatTimer = setInterval(() => this.beatTick(), 4);
+    (this.beatTimer as unknown as { unref?: () => void }).unref?.();   // (a harness with a stand-in document: the timer must not hold its process open)
+    if (typeof document.addEventListener === 'function') { this.onVis = () => this.event('tab', document.hidden ? 'hidden' : 'shown'); document.addEventListener('visibilitychange', this.onVis); if (document.hidden) this.event('tab', 'hidden'); }
+    if (typeof PerformanceObserver === 'undefined') return;
+    const kinds = PerformanceObserver.supportedEntryTypes ?? [];
+    for (const type of ['long-animation-frame', 'longtask']) if (kinds.includes(type)) try {
+      const o = new PerformanceObserver(l => { for (const e of l.getEntries()) this.seen(type, e as unknown as LongEntry); });
+      o.observe({ type }); this.longSeen.push({ type, o }); if (type === 'long-animation-frame') this.longFrames = true;
+    } catch { /* a browser that lists the type and will not watch it */ }
+  }
+  /** what an observer hands over (and what it still held when the take stops). A browser that reports long frames names this page's own long tasks there, with
+   *  their scripts: its long-task line for the same hold would only say 'self' */
+  private seen(type: string, e: LongEntry): void { if (!(this.longFrames && type === 'longtask' && (e.name || 'self') === 'self')) this.long(type, e); }
+  /** one long task or long frame the browser reported, as an event at the moment it began. On a page whose every frame is long (a weak machine, the software
+   *  adapter) only one well over the page's usual frame is kept, so the lines go to the holds and not to the first seconds. A page that is slow all the time reports one a frame: LONG_CAP of a kind,
+   *  then one line (kind 'longcap', no blame in it) that says the rest are left out */
+  long(type: string, e: LongEntry): void {
+    if (!this.recording || e.startTime < this.t0 || e.duration < 1.6 * this.dtUsual) return;
+    const n = this.longN[type] = (this.longN[type] ?? 0) + 1; if (n > LONG_CAP + 1) return;
+    if (n === LONG_CAP + 1) { this.event('longcap', `more than ${LONG_CAP} of the browser's ${type === 'longtask' ? 'long tasks' : 'long frames'} in this take: the rest are not listed`); return; }
+    this.event('long', longText(type, e), e.startTime);
+  }
 
   /** call once per presented frame, after engine.render, with the wall dt (s) and the HUD's fps */
   frame(dtWall: number, fps: number): void {
@@ -140,12 +216,17 @@ export class PerfRecorder {
     cols[C.resW] = E.width; cols[C.resH] = E.height; cols[C.eff] = +E.effectiveScale.toFixed(3); cols[C.adaptive] = this.quality.adaptive ? 1 : 0;
     cols[C.cam0] = +(c.target?.[0] ?? 0).toFixed(2); cols[C.cam1] = +(c.target?.[2] ?? 0).toFixed(2); cols[C.cam2] = +(c.yaw ?? 0).toFixed(3); cols[C.cam3] = +(c.pitch ?? 0).toFixed(3); cols[C.cam4] = +(c.distance ?? 0).toFixed(2);
     cols[C.lights] = E.lights.activeCount; cols[C.dyn] = (E.world as unknown as { dynamics: unknown[] }).dynamics?.length ?? 0; cols[C.particles] = P?.stats?.alive ?? 0; cols[C.smoke] = smoke?.stats?.live ?? 0;
+    cols[C.beat] = this.beatAt < 0 || this.gapBeat < 0 ? -1 : +this.gapBeat.toFixed(1); this.gapBeat = -1; this.dtUsual = this.dtUsual ? this.dtUsual * 0.95 + dtWall * 50 : dtWall * 1000; if (this.beatAt >= 0) { this.beatMax = 0; this.beatAt = now; }   // (the frame's own step is not the gap: the next beat starts here)
     cols[C.decals] = decals?.count ?? decals?.list?.length ?? 0; cols[C.rain] = +(wx?.rainRate ?? 0).toFixed(2); cols[C.stroke] = +((wx as { strokeT?: number } | undefined)?.strokeT ?? 0).toFixed(2);
     this.ring.push(cols, gpu, union === undefined, this.quality.label, Object.entries(guardsByState).map(([k, v]) => `${k}:${v}`).join(' ') + ` lit:${lit}`, (g as unknown as { qrf?: { state?: string } }).qrf?.state ?? '-');
     // events it can see for itself
     if (this.quality.label !== this.lastPreset) { this.event('preset', `${this.lastPreset} → ${this.quality.label}`); this.lastPreset = this.quality.label; }
     if (Math.abs(E.effectiveScale - this.lastEff) > 0.004) { this.event('scale', `effective ×${this.lastEff.toFixed(2)} → ×${E.effectiveScale.toFixed(2)} = ${E.width}×${E.height} (render scale ×${E.settings.renderScale.toFixed(2)} of the cap; ${E.settings.keepHistories ? 'histories resampled, targets from the pool' : 'keepHistories OFF: histories restarted, targets reallocated → expect one slow frame'})`); this.lastEff = E.effectiveScale; }
     const qn = this.quality.lastChange ?? ''; if (qn && qn !== this.lastQualityNote) { this.event('ladder', qn); this.lastQualityNote = qn; }
+    // a checkpoint written or put back in this step (game/savestate.ts Checkpoints.stats): a save walks the whole game and, on the page, takes its picture off the canvas
+    const sv = (g as unknown as { saves?: { stats?: { autosaves?: number; manual?: number; loads?: number } } }).saves?.stats, nSave = (sv?.autosaves ?? 0) + (sv?.manual ?? 0), nLoad = sv?.loads ?? 0;
+    if (nSave !== this.lastSaves) { if (this.lastSaves >= 0 && nSave > this.lastSaves) this.event('save', `a checkpoint was written (${sv?.autosaves ?? 0} by the game, ${sv?.manual ?? 0} by hand in this run)`); this.lastSaves = nSave; }
+    if (nLoad !== this.lastLoads) { if (this.lastLoads >= 0 && nLoad > this.lastLoads) this.event('load', 'a checkpoint was put back'); this.lastLoads = nLoad; }
     if (E.passes.reallocs !== this.lastReallocs) { this.event('targets', E.passes.lastRealloc); this.lastReallocs = E.passes.reallocs; }   // render targets re-made (resize / divisor flip / explicit history restart): what was pooled, resampled, cleared
     const esc = (g as unknown as { escalation?: number }).escalation ?? -1; if (esc !== this.lastEsc) { if (this.lastEsc >= 0) this.event('alarm', `escalation ${this.lastEsc} → ${esc}`); this.lastEsc = esc; }
     if ((this.ring.n & 31) === 0) { const k = JSON.stringify(this.snapSettings()); if (k !== this.lastSettingsKey) { this.event('settings', diffKeys(this.lastSettingsKey, k)); this.lastSettingsKey = k; } }

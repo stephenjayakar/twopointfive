@@ -3,6 +3,7 @@
 //   bun run tools/qa/perf-report.ts <sweep take>.json --md      (a sweep take's feature table as markdown, nothing else)
 import { readFileSync } from 'fs';
 import { benchReport, type BenchResult } from '../../src/ui/bench';   // a BENCHMARK take (Extras ▸ Benchmark / ?bench, src/ui/bench.ts): the report its card showed, printed first, as the machine's own word
+import { stallLines, type StallTake } from './perf-stalls';   // the frames that took several usual frames, and where the file says the time went
 import { sweepText, sweepMarkdown, smokeText } from './perf-sweep';   // a SWEEP take (F8, src/ui/perfsweep.ts): a table per feature flipped — printed after the plain tables; --md = that table as markdown, alone
 // gpuSum = Σ of per-pass durations; gpuUnion (dumps from 08-10 on) = the union of the passes' intervals on the GPU timeline. Metal runs independent passes side by
 // side when the queue is full, so Σ double-counts the overlap (35–55 % of the frame at high / medium in the field — the '7–13 ms cascade bursts' were exactly that:
@@ -17,7 +18,7 @@ if (process.argv.includes('--md')) { const md = sweepMarkdown(D); console.log(md
 const RENDER = /^(gbuffer|composite|post|fxaa|pdraw)$/;
 const benchEv = D.events.find(e => e.kind === 'bench');
 if (benchEv) try { console.log(`\n── the benchmark's own report (what its card showed) ──\n${benchReport(JSON.parse(benchEv.text) as BenchResult)}`); } catch { console.log('\n(a bench event that does not parse)'); }
-const sweepLines = sweepText(D), EV = D.events.filter(e => e.kind !== 'sweep' && e.kind !== 'bench'), nSweep = D.events.filter(e => e.kind === 'sweep').length;   // (a sweep take's segment events are read into the table at the end, not listed)
+const sweepLines = sweepText(D), EV = D.events.filter(e => e.kind !== 'sweep' && e.kind !== 'bench' && e.kind !== 'long'), nLong = D.events.filter(e => e.kind === 'long').length, nSweep = D.events.filter(e => e.kind === 'sweep').length;   // (a sweep take's segment events are read into the table at the end, not listed)
 const stat = (a: number[]) => { if (!a.length) return { n: 0, mean: 0, sd: 0, p50: 0, p95: 0, max: 0, min: 0 }; const s = [...a].sort((x, y) => x - y); const m = a.reduce((x, y) => x + y, 0) / a.length; return { n: a.length, mean: m, sd: Math.sqrt(a.reduce((x, y) => x + (y - m) ** 2, 0) / a.length), p50: s[Math.floor(0.5 * (s.length - 1))], p95: s[Math.floor(0.95 * (s.length - 1))], max: s[s.length - 1], min: s[0] }; };
 const f1 = (v: number) => v.toFixed(1).padStart(6), f2 = (v: number) => v.toFixed(2).padStart(7);
 const dur = F[F.length - 1].t / 1000;
@@ -54,8 +55,10 @@ for (const i of worst) {
   const ev = EV.filter(e => Math.abs(e.t - f.t) <= 1000).map(e => `${e.kind}:${e.text}`).join(' · ').slice(0, 160);
   console.log(`  ${(f.t / 1000).toFixed(1).padStart(6)} #${String(i).padEnd(5)} | ${f2(f.dt)} ${f1(f.fps)} | Σ${f.gpuSum.toFixed(1)}${typeof f.gpuUnion === 'number' ? ` ∪${f.gpuUnion.toFixed(1)}` : ''} ${top} | ${f.preset} ${f.res.join('×')} ×${f.eff} | ${f.cam.join(',')} | L${f.n.lights} dyn${f.n.dyn} p${f.n.particles} sm${f.n.smoke} ${f.n.guards} qrf:${f.n.qrf} rain${f.n.rain} | ${ev || '—'}`);
 }
+for (const l of stallLines(D as unknown as StallTake)) console.log(l);
 for (const l of smokeText(D)) console.log(l);
 if (nSweep) console.log(`\n(a SWEEP take: its ${nSweep} segment events are left out of the list below and read into the table at the end; the tables above cover every frame, flipped ones too)`);
+if (nLong) console.log(`\n(${nLong} long frames or tasks the browser reported are left out of the list below: the STALLS block sets those that fall in a listed stall beside it and counts the rest)`);
 console.log(`\nEVENTS (${EV.length}):`); for (const e of EV.slice(0, 60)) console.log(`  ${(e.t / 1000).toFixed(1).padStart(6)} s  #${String(e.frame).padEnd(5)} ${e.kind.padEnd(9)} ${e.text}`); if (EV.length > 60) console.log(`  … ${EV.length - 60} more`);
 const changed = Object.keys(D.settingsAtEnd).filter(k => D.settingsAtStart[k] !== D.settingsAtEnd[k]);
 if (changed.length) console.log(`\nSETTINGS changed during the recording: ${changed.map(k => `${k} ${D.settingsAtStart[k]} → ${D.settingsAtEnd[k]}`).join(', ')}`);
