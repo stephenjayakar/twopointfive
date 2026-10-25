@@ -39,6 +39,8 @@ import { bindFindMe, watchCtrlTaps, FINDME, setFindMe } from './host/findme';
 import { findMeOutline } from './ui/findme';
 import { planRings, setPlanRings } from './ui/planlook';
 import { makeOutlineFrame } from './render/outline';
+import { SavePicture } from './render/savepic';
+import { SAVEPIC } from './host/savepic';
 import { TWEEN, Tween } from './host/tween';
 import { v3, Vec3, quat } from './math/vec';
 import { loadCharacterSet, castUrlFor } from './anim/gltf';
@@ -235,7 +237,7 @@ async function main() {
   await tick();
   const tGpu = performance.now();
   const rigPage = q.has('bench') || q.has(BENCH_RUN_KEY) || navigator.webdriver === true;   // a measurement or a driven page: it keeps its own page and its own timings
-  const gpu = await initGpu(canvas, { retry: !kitViewOn && !rigPage });   // (a real loss of the device loads this page again — gpu/device.ts GPU_LOST; never the kit picture's window: the start page is told below and draws its standing man; never a benchmark or a driven page, which must see the card)
+  const gpu = await initGpu(canvas, { retry: !kitViewOn && !rigPage, canvasRead: SAVEPIC.on && saveMod.SAVETIMELINE.on && !kitViewOn });   // (a real loss of the device loads this page again — gpu/device.ts GPU_LOST; never the kit picture's window: the start page is told below and draws its standing man; never a benchmark or a driven page, which must see the card)
   if (kitViewOn) void gpu.device.lost.then(() => kitViewFatal());   // (?kitview: the device's own card — gpu/device.ts — is seen by nobody in there: the start page is told there is no picture)
   boot.span('gpu', tGpu); boot.mark('gpu');
   // GPU errors during the boot: every uncaptured error still prints its own console line (gpu/device.ts); this only COLLECTS them until the pipelines are in, so the boot line
@@ -413,15 +415,33 @@ async function main() {
   const savePending = () => !!savePend && game.mission === savePend.m && game.time === savePend.time;   // (…of the SAME moment: a restart or a save loaded while the card is up drops it)
   const picsDue: saveMod.SlotInfo[] = []; let picCanvas: HTMLCanvasElement | null = null;
   game.saves.picture = info => { picsDue.push(info); if (picsDue.length > 4) picsDue.shift(); };
+  // (SAVEPIC, host/savepic.ts and render/savepic.ts: the frame is boxed down on the GPU and read back with no wait, the picture handed over a frame or a few
+  // later — setPicture drops one whose save has gone from its slot by then, and a card already showing the saves is handed the picture for its tile. With the
+  // switch off, the canvas not readable or the pass not built yet: the canvas drawn into the 2D one in this frame, as it was — which makes the page wait for
+  // the GPU to hand the whole frame back.)
+  const savePic = gpu.canvasRead ? new SavePicture(gpu.device, gpu.linearSampler) : null;
+  let picLost = false;   // (a late picture came to nothing on this page: the old road from here, which always gave one)
+  const picLate = () => !!savePic?.ready && SAVEPIC.on && !picLost;
+  let lateCanvas: HTMLCanvasElement | null = null;
   const takeSavePictures = () => {
     const due = picsDue.splice(0);
     try {
       const W = Math.max(16, Math.round(saveMod.SAVETIMELINE.picPx)), H = Math.max(9, Math.round(W * canvas.height / Math.max(1, canvas.width)));
+      const jpeg = (c: HTMLCanvasElement, cx: CanvasRenderingContext2D | null, draw: (cx: CanvasRenderingContext2D) => void) => {
+        if (!cx) return; draw(cx);
+        const url = c.toDataURL('image/jpeg', saveMod.SAVETIMELINE.picQ);
+        for (const info of due) if (game.saves.setPicture(info, url)) menu.pictureCame(info, url);
+      };
+      if (savePic && picLate()) {
+        // (its own small canvas, kept on the CPU: the pixels are put in and read straight out as a JPEG, and a canvas the browser backs with the GPU would wait for it again)
+        savePic.take(gpu.ctx.getCurrentTexture(), W, H).then(px => {
+          if (!px) { if (!picLost) console.warn('save picture: the late road came to nothing; pictures are taken the old way from here'); picLost = true; picsDue.push(...due); return; }   // (…and these saves' pictures are the next presented frame's, a moment late)
+          try { const c = lateCanvas ??= document.createElement('canvas'); c.width = W; c.height = H; jpeg(c, c.getContext('2d', { willReadFrequently: true }), cx => { const im = cx.createImageData(W, H); im.data.set(px); cx.putImageData(im, 0, 0); }); } catch { /* no picture */ }
+        });
+        return;
+      }
       picCanvas ??= document.createElement('canvas'); picCanvas.width = W; picCanvas.height = H;
-      const cx = picCanvas.getContext('2d'); if (!cx) return;
-      cx.drawImage(canvas, 0, 0, W, H);
-      const url = picCanvas.toDataURL('image/jpeg', saveMod.SAVETIMELINE.picQ);
-      for (const info of due) game.saves.setPicture(info, url);
+      jpeg(picCanvas, picCanvas.getContext('2d'), cx => cx.drawImage(canvas, 0, 0, W, H));
     } catch { /* no picture: the save stands without one */ }
   };
   { const host = game.saves.onPutBack; game.saves.onPutBack = info => { host?.(info); cutToHim(); vRun = null; }; }   // (…and the run's books below start over: the Mission is the same OBJECT put back, and a load is another try, as a file's is — an end already filed must not stand for the end to come)
@@ -436,6 +456,11 @@ async function main() {
   // __save: the checkpoints for the console / automation — save now (manual slot; force lets go of Sam's hands in the file), load the newest / a slot key / a
   // parsed state, the slot list, export (the newest slot's JSON text), import (text → the manual slot), clear, autosave on/off, the controller's line and log
   (window as any).__save = {
+    /** a save's picture (host/savepic.ts SAVEPIC): is the late road up, how many are in flight / were handed back / came to nothing, and a slot's picture */
+    pic: () => ({ late: picLate(), canvasRead: !!gpu.canvasRead, pending: savePic?.pending ?? 0, taken: savePic?.taken ?? 0, lost: savePic?.lost ?? 0 }),
+    pictureOf: (info: saveMod.SlotInfo) => game.saves.pictureOf(info),
+    /** for a check: the late road's takes come to nothing from here, as on a device that refuses the pass (tools/qa/savepic-page.cjs) */
+    picLose: () => { if (savePic) savePic.take = () => Promise.resolve(null); },
     save: (label = 'by hand', force = false) => { automated = true; return game.saves.write(game, 'manual', label, force); },
     load: (what?: string | object) => { automated = true; const key = typeof what === 'string' ? what : what ? null : game.saves.newest(false)?.key; if (what && typeof what === 'object') return loadCheckpoint2(what); return key ? loadCheckpoint(key) : 'nothing stored'; },
     slots: () => game.saves.slots(), newest: () => game.saves.newest(false),
