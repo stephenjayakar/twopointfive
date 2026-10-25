@@ -45,7 +45,7 @@ import { v3, Vec3, quat } from './math/vec';
 import { loadCharacterSet, castUrlFor } from './anim/gltf';
 import * as charMatsMod from './render/charMaterials';
 import * as charLookMod from './game/charLook';
-import { buildLookPanel } from './ui/lookpanel';
+import { buildLookPanel, LOOK_SNOW_COVER } from './ui/lookpanel';
 import { lookAmounts, lookParts, lookSync } from './render/gbuffer';
 import { scenePrelude, traceConfig, commonSource, glassBreakConfig, weatherKindConfig, weatherEdgeConfig, weatherVolConfig, rainShadowConfig, rainScaleConfig, rainWallsConfig, bounceWallsConfig, reflWallsConfig, surfTryConfig, lookConfig, snowConfig, snowLookConfig } from './render/frame';
 import { smokeGridConfig } from './smoke/smokeGrid';
@@ -130,7 +130,7 @@ import { DOORSTAY, DOORWAY } from './game/doors';
 import { HANDLE, HANDLE_STATS } from './game/handleside';
 import { DOORMANNERS } from './game/doorway';
 import { initDifficulty, difficultyNow, keptLevers } from './game/difficulty';
-import { initWeather, WX_OWN, WEATHER_BOOT, snowLevelOfQuery, SNOW_LOOK } from './game/weatherKinds';
+import { initWeather, WX_OWN, WEATHER_BOOT, WEATHER_PRESETS, snowLevelOfQuery, SNOW_LOOK } from './game/weatherKinds';
 import { SNOW_SURF, snowCfgRows } from './render/snowField';
 import { SNOWTRACKS, TRACK_RES } from './game/snowTracks';
 import { rowSettings } from './game/rowset';
@@ -990,7 +990,13 @@ function weatherHourHooks(game: Game, smoke: SmokeSystem) {
   // stand-in whole (guards.ts lightEstimateAt: what the harness and the team's rules read) — beside `__game.sensors.read('playerChest')` it is the stand-in against the renderer's own meter
   HOUR.live = () => hourOf(game);   // (the mission sheet's no-load shortcut asks which hour the page is standing at: a checkpoint or the panel may have moved it off the visit's)
   (window as any).__hour = { ids: HOUR_IDS, table: HOURS, visit: HOUR, get id() { return hourOf(game); }, set: (id: string) => { applyHour(game, HOUR_IDS.includes(id as any) ? id as any : 'night'); return hourOf(game); },
-    sun: (k?: number) => { if (k !== undefined) setSunStrength(game, k); return sunStrength(game); }, cloud: () => { sunToCloud(game); return sunStrength(game); }, light: () => hourSun(game), at: (p: [number, number, number]) => hourLightAt(game, p), est: (p: [number, number, number], skip = 0) => lightEstimateAt(game, p, skip ? (o: number) => o === skip : undefined), changed: () => hourWorldChanged(game), summary: () => hourSummary(game) };
+    sun: (k?: number) => { if (k !== undefined) setSunStrength(game, k); return sunStrength(game); }, cloud: () => { sunToCloud(game); return sunStrength(game); },
+    cover: (c?: number) => { const W = game.weather; if (!W?.kind) return null; if (c !== undefined && Number.isFinite(c)) { WEATHER_PRESETS[W.kind].cloud = Math.min(1, Math.max(0, c)); sunToCloud(game); game.engine.invalidateWorldCache?.(); } return W.cloud; },   // the picked weather's cloud cover for the VISIT (the look panel's Cloud row): the sun, its disc and the sky follow by hours.ts's own rule; null with no weather picked. Not carried by a save or a recording
+    light: () => hourSun(game), at: (p: [number, number, number]) => hourLightAt(game, p), est: (p: [number, number, number], skip = 0) => lightEstimateAt(game, p, skip ? (o: number) => o === skip : undefined), changed: () => hourWorldChanged(game), summary: () => hourSummary(game) };
+  // THE LOOK PROTOTYPE opens a snow level under BROKEN cloud (half cover: hours.ts leaves 0.70 of the hour's sun, its own small disc and the sky's colour) where the
+  // game's snow falls from a deck (0.9: 0.09 of the sun, a wide disc, no shadows). The maintainer, 10-25, of the pass at midday on that page: "i'd still expect a
+  // stronger directional light from the sun in midday". The night is not touched by cloud. The panel's Cloud row moves it.
+  if (lookConfig.on && game.weather?.kind === 'snow') (window as any).__hour.cover(LOOK_SNOW_COVER);
   // the night's moon (the level's own steady directional light: hours.ts puts it out by day). __moon.set({ k, elev, bearing }) = its strength, how high it stands and
   // where (degrees; bearing 0 = north = −z, 90 = east, the sun's convention) for the VISIT — the look panel's rows. Not carried by a save or a recording, and the
   // light meter's CPU stand-in (guards.ts lightEstimateAt) reads no directional light but the hour's sun: a raised moon moves the picture and the GPU's meter only.

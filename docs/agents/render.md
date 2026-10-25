@@ -786,6 +786,17 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   break of "what the AI senses is what the picture shows" by the amount of the gain, ON by default on the prototype page because the maintainer asked
   to see it, and to be settled before any of it goes to the build (the honest version is one exposure for the picture, chosen by where the camera
   looks, which the game can read too). Seen on the software adapter only (the bay at midday); never seen on a GPU, never played.
+- **THE LOOK PAGE OPENS A SNOW LEVEL UNDER BROKEN CLOUD, AND ITS PANEL HAS A CLOUD ROW** (`ui/lookpanel.ts LOOK_SNOW_COVER` 0.5, `main.ts`
+  `__hour.cover(c)`; the maintainer, 10-25, of the pass at midday on a GPU: "i'd still expect a stronger directional light from the sun in midday").
+  What he saw was the game's own rule, not a fault of the hour: the snow weather's cloud is 0.9 (`weatherKinds.ts`), and under that `hours.ts`
+  leaves 0.09 of the hour's sun (0.54 of midday's 6), spreads its disc to 0.23 rad and greys the sky: an overcast, with no shadows. (So on his page a
+  lantern at a metre was eight times the sun, not equal to it.) `__hour.cover(c)` writes the picked weather's cover for the VISIT and hands the sun
+  back to it, so the sun, its disc and the sky follow by the same rule (Kasten and Czeplak's fits): at 0.5 midday's sun is 0.70 of its own (4.2), the
+  disc the hour's small one (hard shadows) and the sky 1.66 of its own. It moves the real light: the guards and both meters read it. The night is not
+  touched by cloud. NOT carried by a save or a recording (a take made on the look page re-runs elsewhere under the game's 0.9). Whether the GAME's
+  snow should fall from broken cloud by day is the weather's owner's and the maintainer's call; nothing outside the look page has moved. Checked on
+  the software adapter by the numbers only (the page's boot check reads the sun at midday under 0.5 and 0.9); my earlier bay stills were made with the
+  sun forced to 1 by hand, so the picture at 0.5 has never been looked at, on any adapter.
 - **THE LOOK PANEL'S "LAMPS BY DAY" ROW** (`lookConfig.lamps`, 0.6 on the look page, 0 = as authored; `engine.ts lookLamps` sets
   `LightSet.localK`, `render/lights.ts upload` applies it; the maintainer, 10-25, of the pass at midday: "we don't have consistent, physically accurate
   light values (lumens?) across the image … a lamp on the ground looks way too bright in daytime mode … same for the flashlight"). He is right, by the

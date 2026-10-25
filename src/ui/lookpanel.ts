@@ -31,6 +31,9 @@ const ROWS: readonly [keyof typeof lookAmounts, string, string, number][] = [
   ['size', 'Map size', '× the 2 m a map covers', 2],
 ];
 
+/** the cloud cover the look page opens a snow level under (main.ts; the game's own snow is 0.9) */
+export const LOOK_SNOW_COVER = 0.5;
+
 export function buildLookPanel(engine: Engine, fps: () => number, shapes?: { on: boolean; flip: () => void }, hills?: { on: boolean; flip: () => void }, front?: { on: boolean; flip: () => void }, lorry?: { on: boolean; flip: () => void }): void {
   const el = document.createElement('div');
   el.style.cssText = 'position:fixed;right:10px;top:10px;z-index:50;width:232px;padding:10px 12px;background:rgba(12,14,16,.86);color:#cfd6d2;font:11px/1.35 ui-monospace,Menlo,monospace;border:1px solid #2c3432;border-radius:4px;user-select:none;max-height:calc(100vh - 20px);box-sizing:border-box;overflow-y:auto;overscroll-behavior:contain';   // (it is taller than a laptop's window: it scrolls by itself, and the wheel over it never reaches the game — the listeners below)
@@ -79,7 +82,8 @@ export function buildLookPanel(engine: Engine, fps: () => number, shapes?: { on:
     row.append(n, s, v); host.append(row); skyRows.push([get, s, v, digits]);
   };
   const sky = line('Sun and moon');
-  skyRow(sky, 'Sun', 'by day: how much of the hour’s own sun comes through the weather’s cloud (a snow level leaves 0.09)', 0, 1, 0.01, 2, () => w.__hour && w.__hour.id !== 'night' ? w.__hour.sun() : null, v => w.__hour?.sun(v));
+  skyRow(sky, 'Cloud', `by day: how much of the sky the weather’s cloud covers. 0 = a clear sky and a hard sun, 1 = a solid deck and no shadows. The game’s snow falls from 0.90; this page opens at ${LOOK_SNOW_COVER.toFixed(2)}. The sun, its shadows’ edge and the sky’s colour follow, and so do the guards and your light meter`, 0, 1, 0.01, 2, () => w.__hour && w.__hour.id !== 'night' ? w.__hour.cover() : null, v => w.__hour?.cover(v));
+  skyRow(sky, 'Sun', 'by day: how much of the hour’s own sun comes through that cloud (the game’s snow leaves 0.09). Set by hand it stands until Cloud is moved', 0, 1, 0.01, 2, () => w.__hour && w.__hour.id !== 'night' ? w.__hour.sun() : null, v => w.__hour?.sun(v));
   skyRow(sky, 'Moon', 'at night: the moon’s strength (the pass has 0.06, the level kit’s own is 0.9)', 0, 1.5, 0.01, 2, () => { const m = w.__moon?.get(); return m && m.up ? m.k : null; }, v => w.__moon?.set({ k: v }));
   skyRow(sky, 'Moon height', 'degrees over the horizon: low = long shadows', 5, 85, 1, 0, () => { const m = w.__moon?.get(); return m && m.up ? m.elev : null; }, v => w.__moon?.set({ elev: v }));
   skyRow(sky, 'Moon bearing', 'where it stands, in degrees round the level', 0, 359, 1, 0, () => { const m = w.__moon?.get(); return m && m.up ? m.bearing : null; }, v => w.__moon?.set({ bearing: v }));
