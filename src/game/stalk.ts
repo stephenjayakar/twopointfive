@@ -140,10 +140,10 @@ interface St { on: Guard | null; grab: Guard | null; t: number; /** on a wall wi
    *  share into the man and its share round him (+ = the way round that turns left about him) */ orbitR?: number; orbitT?: number; orbitAsk?: [number, number, number, number];
   /** the man who broke a stalk off by turning, and when: if he comes round to FACE Sam inside STALK.joltSecs, Sam ducks */ broke?: { gd: Guard; t: number; /** where Sam stood */ at: Vec3 } | null }
 const STATE = new SideMap<Game, St>('stalk.STATE');
-function stateOf(g: Game): St { let s = STATE.get(g); if (!s) { s = { on: null, grab: null, t: -1 }; STATE.set(g, s); } return s; }
-/** (the circle's keys go, not just their values: a restart's state is an untouched level's, key for key) */
-function offCircle(S: St) { delete S.orbitR; delete S.orbitT; delete S.orbitAsk; }
-function end(S: St, why: Why) { if (S.on) { S.armed = false; S.on = null; STALK_STATS.out[why]++; STALK_STATS.last = why; } offCircle(S); }
+/** every key from birth and in one order: a restart's state is compared with an untouched level's, key for key, whatever order play reached them in */
+const fresh = (): St => ({ on: null, grab: null, t: -1, wait: false, armed: false, stick: null, orbitR: undefined, orbitT: undefined, orbitAsk: undefined, broke: null });
+function stateOf(g: Game): St { let s = STATE.get(g); if (!s) { s = fresh(); STATE.set(g, s); } return s; }
+function end(S: St, why: Why) { if (S.on) { S.armed = false; S.on = null; STALK_STATS.out[why]++; STALK_STATS.last = why; } S.orbitR = S.orbitT = undefined; S.orbitAsk = undefined; }
 
 /** his bearing to a point, off his facing (0 = dead ahead of him) */
 const bearingOf = (gd: Guard, p: ArrayLike<number>): number => wrapAngle(Math.atan2(p[0] - gd.char.pos[0], p[2] - gd.char.pos[2]) - gd.char.bodyYaw);
@@ -343,7 +343,7 @@ export function stalkKeyTook(g: Game) { const S = stateOf(g); S.on = null; S.arm
 /** the man being stalked right now, for the picture and the checks */
 export function stalkOn(g: Game): Guard | null { return STATE.get(g)?.on ?? null; }
 /** a reset of the floor's men (game.ts resetGuards), a load: nothing is stalked */
-export function stalkReset(g: Game) { const S = STATE.get(g); if (S) { S.on = null; S.grab = null; S.t = -1; S.wait = false; S.armed = false; S.broke = null; offCircle(S); } }
+export function stalkReset(g: Game) { const S = STATE.get(g); if (S) Object.assign(S, fresh()); }
 
 /** the step in's ease (STALK.catchSecs), 0‥1 → 0‥1: he is off the mark over the first `P` of it (a quadratic, so the first frame is no snap) and from there
  *  it is a cubic ease-out, joined with one slope: some three fifths of the way inside a third of the time, landing gently */
