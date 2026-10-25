@@ -357,7 +357,7 @@ export const SAVETIMELINE = {
   /** a save in memory (a team on the floor) is taken SINCE the one before it — or the one last put back: rollback.ts `takeSnapshot(g, since)` goes through what
    *  that snapshot held and copies only what has changed, where a whole take walks the game and copies all of it. Less of a stall (headless: about a third
    *  of a whole take with saves a minute and a half apart, less of a gain after a load; not measured in a browser), and a load puts back the same game — plus
-   *  whatever the snapshot it was taken since held that the game has let go of, which nothing reaches. The first save of a run, after a file's load and of a
+   *  whatever the snapshot it was taken since held that the game has let go of, which nothing in the game reaches. The first save of a run, after a file's load and of a
    *  recording is a whole take either way. false = every save in memory a whole take, as it was. */
   since: false,
   /** the long side of a save's picture in pixels, and its JPEG quality (the host's numbers: main.ts takes the picture) */
@@ -851,7 +851,7 @@ export const localStore: SaveStore = {
 };
 /** the headless harness's store: a Map (nothing on disk) */
 export function memoryStore(): SaveStore & { map: Map<string, string> } { const map = new Map<string, string>(); return { map, get: k => map.get(k) ?? null, set: (k, v) => { map.set(k, v); return true; }, remove: k => { map.delete(k); } }; }
-export interface SlotInfo { key: string; slot: 'manual' | 'auto'; n: number; label: string; kind: SaveState['kind']; savedAt: number; missionT: number; stage: string; runId: string; bytes: number; /** an autosave the floor came down on inside CKPT.regretSecs (why): offered only when nothing better is stored */ regret?: string; /** kept in memory, not in the store (SAVETIMELINE with a team on the floor): this run's, gone with the page */ mem?: true; /** …and taken since the save in memory before it: only what had changed was copied (SAVETIMELINE.since) */ since?: true; }
+export interface SlotInfo { key: string; slot: 'manual' | 'auto'; n: number; label: string; kind: SaveState['kind']; savedAt: number; missionT: number; stage: string; runId: string; bytes: number; /** an autosave the floor came down on inside CKPT.regretSecs (why): offered only when nothing better is stored */ regret?: string; /** kept in memory, not in the store (SAVETIMELINE with a team on the floor): this run's, gone with the page */ mem?: true; }
 /** a save kept in memory: the whole game as rollback.ts took it, and its picture */
 interface MemSave { info: SlotInfo; snap: Snapshot; pic: string | null; /** the F10 recording it was made under (journal.ts `take`; 0 = none) */ take: number; }
 /** what a recording takes of the checkpoint store at its frame 0 and a replay's store is given (Checkpoints.tapeBegin / tapeSeed) */
@@ -920,7 +920,7 @@ export class Checkpoints {
     this.missionRef = g.mission; this.stageRef = g.mission.stage; this.roomRef = roomHere(g, g.player.char.pos); this.dragRef = null; this.pending = null;
     this.runId = a?.runId || this.runId || newRunId(); this.visited = new Set(a?.visited ?? []); this.visited.add(this.roomRef); this.quietT = fin(a?.quietT ?? 0); this.bodyFrom = null;
     this.lastSaveT = g.time;   // (a load counts as a save for the gap: no autosave on the heels of coming back)
-    this.shelf.last = null;   // (a file's load deals the floor again: the next save in memory is a whole take, not one since a snapshot of the floor that is gone)
+    this.shelf.last = null;   // (a file's load deals the floor again: the next save in memory is a whole take, not one since a snapshot of the floor that is gone — and a recording begins, and its replay, on such a load: the first save in memory of both is whole)
   }
   /** raise an autosave request (coalesced: a request already waiting keeps its clock, takes the newer label) */
   request(g: Game, why: string, label: string) {
@@ -1058,9 +1058,9 @@ export class Checkpoints {
     for (let i = 0; i < ring; i++) { const e = this.shelf.get(KEY_MEM(slot, i)); if (!e) { n = i; break; } if (e.info.savedAt < at) { at = e.info.savedAt; n = i; } }
     const key = KEY_MEM(slot, n);
     const info: SlotInfo = { key, slot, n, label, kind: slot, savedAt: Date.now(), missionT: g.mission.stats.elapsed, stage: g.mission.stage, runId: this.runId, bytes: 0, mem: true };
-    // (SAVETIMELINE.since: what has not changed since the last save in memory — or the one last put back — is shared with it, not copied again and not walked)
+    // (SAVETIMELINE.since: what has not changed since the last save in memory — or the one last put back — is shared with it, not copied again and not walked;
+    //  rollback.ts walks the whole game again by itself when that snapshot's chain has grown stale)
     const base = SAVETIMELINE.since ? this.shelf.last : null, snap = takeSnapshot(g, base ?? undefined); this.shelf.last = snap;
-    if (base && snap.chain === base.chain) info.since = true;   // (…unless rollback.ts chose to walk the whole game again: the chain had grown stale)
     this.shelf.set(key, { info, snap, pic: null, take: g.journal.take });
     if (slot === 'auto') { this.stats.autosaves++; this.flash = { text: 'CHECKPOINT', t: g.time }; this.lastAuto = { key, t: g.time }; } else { this.stats.manual++; this.flash = { text: 'CHECKPOINT SAVED', t: g.time }; }
     this.note(g, `${slot} → ${key.replace(KEY_PREFIX, '')}: ${label || '—'} (in memory)`);
@@ -1116,13 +1116,11 @@ export class Checkpoints {
   /** WHAT A RECORDING TAKES OF THE STORE at its frame 0 (journal.ts begin): the index as it stands (every row, any run's) and the autosave still inside its
    *  regret window. The Enter once down reads both (`newest`, the regret mark) and the ring's next slot is the index's: a replay that began on an empty
    *  store chose another checkpoint, or restarted, where the recording went back to one made before it. null rows = nothing stored. */
-  tapeBegin(): TapeSlots { this.shelf.last = null;   // (the recording's first save in memory is a whole take, as its replay's is: a save taken since one from before the recording would also put back what that one held and the game has let go)
-    const idx = this.index(); return { index: Object.keys(idx.slots).length || idx.next ? JSON.stringify(idx) : null, lastAuto: this.lastAuto ? { ...this.lastAuto } : null }; }
+  tapeBegin(): TapeSlots { const idx = this.index(); return { index: Object.keys(idx.slots).length || idx.next ? JSON.stringify(idx) : null, lastAuto: this.lastAuto ? { ...this.lastAuto } : null }; }
   /** …and a replay's game is given, after its checkpoint is loaded (tools/qa/replay.ts): the rows, each over an EMPTY text (a row with nothing behind it is
    *  dropped by `index`; an empty text reads as 'gone', which is what a slot nobody loaded is to the replay). The text of a slot the recording did load
    *  comes with its frame (`tapeText`). */
   tapeSeed(t: TapeSlots): void {
-    this.shelf.last = null;
     let idx: SlotIndex | null = null; try { idx = typeof t.index === 'string' ? JSON.parse(t.index) as SlotIndex : null; } catch { idx = null; }
     if (idx && idx.slots && typeof idx.slots === 'object') { for (const k of Object.keys(idx.slots)) { if (!k.startsWith(KEY_PREFIX)) delete idx.slots[k]; else if (this.store.get(k) === null) this.store.set(k, ''); } this.store.set(KEY_INDEX, JSON.stringify(idx)); }
     this.lastAuto = t.lastAuto && typeof t.lastAuto.key === 'string' && typeof t.lastAuto.t === 'number' ? { key: t.lastAuto.key, t: t.lastAuto.t } : null;

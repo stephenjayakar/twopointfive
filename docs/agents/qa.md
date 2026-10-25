@@ -237,26 +237,26 @@ but synthetic writes still work.
     10-25 with the recorder's `save` event beside each of three autosaves, 92 s apart: a frame of about 40 ms where the usual one is 16). NOW `writeMem`
     takes the snapshot SINCE the last one taken or put back (`rollback.ts takeSnapshot(g, since)`: what that one held is gone through and only what changed
     is copied, the rest shared; the game is not walked). The first save of a run is a whole take, and `rollback.ts` walks the whole game again when the
-    chain has grown stale (`WALK_AGAIN`); `SlotInfo.since` says which a save was. The base is the shelf's `last`, and the shelf is now a `HostOwned`
+    chain has grown stale (`WALK_AGAIN`: a save taken since its base stands on the base's own chain, a whole walk begins a new one). The base is the shelf's `last`, and the shelf is now a `HostOwned`
     class (`savestate.ts MemShelf`; it was closures): a snapshot's walk reads every key the Game reaches, and the first cut of this, a shelf that handed
     the walk a snapshot, put the chain inside the next save and a load rolled the chain itself back — the check threw on exactly that. The base is
-    DROPPED (the next save a whole take) at a new run, at a file's load (`adopt`), and when a recording begins or a replay is seeded (`tapeBegin` /
-    `tapeSeed`: a recording's first save in memory and its replay's are then both whole). WHAT IS NOT THE SAME: a save taken since another also holds,
-    and a load writes back, what its base held that the game has since let go of — objects nothing in the game reaches (bounded by `WALK_AGAIN`: a
-    quarter of a snapshot and 2,048 objects, then the game is walked whole again; the chain's own list of objects it has met is let go at the same
-    time). What the game reaches is put back the same either way, and the run does not change. `rollback.ts`: a take that throws half way leaves its
+    DROPPED (the next save a whole take) at a new run and at a file's load (`adopt` — a recording begins on one and so does its replay, so the first
+    save in memory of both is whole). WHAT IS NOT THE SAME: a save taken since another also holds,
+    and a load writes back, what its base held that the game has since let go of — objects nothing in the game reaches (a closure or the host still holding one would see it
+    rewound: none found, not checked). One snapshot holds at most a quarter more than a whole one and 2,048 objects of these before the game is walked
+    whole again (`WALK_AGAIN`); the chain itself — every object any save of it met — lives as long as any save of it is on a ring or is the base, so a
+    run's saves hold more dead objects alive than whole takes did (bounded by count, 8 snapshots' worth and 65,536; NOT MEASURED over a long mission). What the game reaches is put back the same either way, and the run does not change. `rollback.ts`: a take that throws half way leaves its
     chain marked (`Chain.busy`) and no snapshot of that chain is taken since again — before this every save had a chain of its own. MEASURED headless on
     the cloud box, the orders yard's pair, saves 90 s apart: 11 to 13 ms since the last against 23 to 54 ms whole (three saves); the FIRST save taken
-    since another in a process was slower than a whole take (67 ms once, the path cold), so the second save of a visit may be the slowest; in the check,
-    saves a few seconds apart with loads between, the gain is small (21 to 26 against 29 to 31 ms, medians, the box busy). NOT KNOWN: the cost in Chrome
+    since another in a process was slower than a whole take (67 ms once, the path cold), so the second save of a visit may be the slowest. NOT KNOWN: the cost in Chrome
     on the maintainer's machine, where a whole take is the 23 to 26 ms above — a take with the recorder's `save` event says, and `?savesince=0` is the
     other arm. CHECK: `probes.ts savetimeline`
-    line (5b), both stands (`SAVESINCE_BREAK=1` fails on both): seven saves into the ring of five with a team up, each of the five kept loads and plays
+    line (5b), both stands (`SAVESINCE_BREAK=1`, one man nudged after each put-back, fails on both): seven saves into the ring of five with a team up, each of the five kept loads and plays
     on as its save did with the snapshots it was taken since gone, a save made after a put-back loads and so do an older and a newer one, the run and
     the seconds after every load are, by digest, those of the same script with whole takes, and the moment before each save, taken since the shelf's own base and put back beside a
     whole take of that moment, gives the same state word (`stateHash`: to the bit, of everything the game reaches; seven of them, one after a put-back —
     the save's own snapshot cannot stand beside a whole take, the controller writes its books on both sides of it inside the one call); line (5)
-    runs with the stand's own setting, and the whole rollback check's stand-in host puts the shelf's base back with its entries. NOT CHECKED: a save
+    runs with the stand's own setting, and the whole rollback check's stand-in host puts the shelf's base back with its entries. A take made to throw half way is followed by a whole one on a new chain that is the game as it stands. NOT CHECKED: a save
     after a file's load, and one across a whole walk the chain forced (the quiet yard reaches neither).
   · **The strip** (`menu.ts saveStrip`, `#menu .saves` in index.html): on the pause card and the DOWN card, this run's saves in time order — picture, age, a small diamond
     on one made by hand, a regretted autosave dimmed, one that is ahead of the mission clock marked. One stop for the keys (Left / Right or A / D walk it, Enter loads),
