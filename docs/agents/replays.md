@@ -553,3 +553,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   on the floor" (a room clear with the four, F5, his own frag puts him down, Enter; the re-run equal to the digest), green on both stands. A load made
   BETWEEN two steps (a card, the panel) ends the tape in the words "a checkpoint was loaded", as a file's does. The F10 journal is another matter and
   not this bullet's: there the sensors' recorded stream IS inside what a restore puts back.
+- **A replay on a page that writes the sandbox flags itself** (10-25). The sneak lab and the fire lab write `playerInvisible` / `godMode` on every page
+  frame from their own panel (`host/sneaklab.ts sneakLabFrame`), and a replay boots the tape's address, so the lab boots under it on the ADDRESS's
+  scenario. A scenario picked on the panel while recording (one where the men can notice him) is a 'flags' row on the tape; the player wrote it once and the
+  lab's frame had the last word from the next frame on, so the replay ran with nobody noticing him. `engineplay.ts` now keeps the tape's flags (the
+  recipe's, then each row's) and writes them before EVERY step (`fl`, `stepOne`). No switch: the replay player only. The headless re-run boots no lab
+  and needed nothing. CHECK: `engine-replay-page.cjs`, section `lab` (ONLY=lab runs alone): the lab opened, 'dark corridor' picked on the panel, he is
+  put in front of a man and runs about, two men go suspicious; the replay is PLAYED a page frame at a time (`__tape.run` alone steps past the page's
+  frame and hides the fault). Before the mend: parted at step 151, the men on patrol, unseen true where the recording had false. After: 550 of 550
+  steps, parted never, Sam and every man where the recording left them. Software adapter; never seen on a GPU. STILL OPEN, not this bullet's: what the
+  lab's panel does to the men (a gap, a seat, the lamps) is on no tape, and a lab tape from before the 'pose' rows is staged by the address's scenario.
