@@ -9,7 +9,7 @@
 //             pace with the fog off; six a square, 6000 in all; the row put off with marks kept: dropped
 //   eyes      the game's own fog on the pass: ground a stride before Sam is seen and in a field, a hidden man's is not, the things' tally is left alone;
 //             a mark kept at that man's feet is laid once Sam stands over it
-//   played    the squad on the pass under the fog, sent at a man it hides, 30 s, two seeds, with the row and without: the same digests and dice (the picture
+//   played    the squad on the pass under the fog, sent at a man it hides (up to three more of the hidden stood on unseen snow), 30 s, two seeds, with the row and without: the same digests and dice (the picture
 //             alone), marks kept or found with the row alone
 //   switch    the address, the journal, the two stands, no row of the replay page's look
 import { standUp, ROOT } from './headless.ts';
@@ -135,13 +135,18 @@ export async function fogTracksCheck(o: { verbose?: boolean } = {}): Promise<boo
       const SECS = 30; const play = async (seed: number, tracks: boolean) => { const P = await rig(seed, true); const g = P.g; FOG.tracks = tracks;
         await quiet(() => startFromQuery(g, '?levelFile=pass.json&roomclear=0&squad4')); g.fogOfWar.on = true; const T = g.snowTracks; const ds: string[] = []; let most = 0;
         let told = '';
-        for (let i = 0; i < 60 * SECS; i++) { if (i === 40) { const far = (g.guards as any[]).filter(x => x.char.alive && g.fogOfWar.hidden(x))[0]; told = far ? String(g.orders.give('move', g.orders.targetAt([far.char.pos[0], 0, far.char.pos[2]])) ?? 'given') : 'nobody hidden'; }   // (the team is sent at a man the fog hides: the fight that follows is what moves the men nobody sees)
+        for (let i = 0; i < 60 * SECS; i++) { if (i === 40) { const hid = (g.guards as any[]).filter(x => x.char.alive && g.fogOfWar.hidden(x)), far = hid[0]; told = far ? String(g.orders.give('move', g.orders.targetAt([far.char.pos[0], 0, far.char.pos[2]])) ?? 'given') : 'nobody hidden';   // (the team is sent at a man the fog hides: the fight that follows is what moves the men nobody sees)
+            // …and up to three of the others it hides are stood on open snow no eye has, well off Sam (both arms alike): whichever way the fight goes — a later build's went indoors, and nobody unseen crossed snow in 30 s — men nobody sees do stand on snow in this run
+            const F = g.snowField, sp = g.player.char.pos, open = (x: number, z: number) => [[0, 0], [0.7, 0.1], [-0.8, -0.12], [-0.8, 0.14]].every(([dx, dz]) => SF.snowFieldAt(F, x + dx, z + dz).cover > 0.9), spots: [number, number][] = [];
+            for (let z = WORLD.min[2] + 3; z < WORLD.min[2] + WORLD.gridH * WORLD.gridCell - 3 && spots.length < 3; z += 1.25) for (let x = WORLD.min[0] + 3; x < WORLD.min[0] + WORLD.gridW * WORLD.gridCell - 3 && spots.length < 3; x += 1.25)
+              if (Math.hypot(x - sp[0], z - sp[2]) > 8 && open(x, z) && !g.col.nav.isBlocked(x, z) && g.fogOfWar.groundLook(x, z) !== 2 && spots.every(([a, b]) => Math.hypot(a - x, b - z) > 3)) spots.push([x, z]);
+            hid.slice(1, 1 + spots.length).forEach((x, k) => { const c = x.char; c.pos[0] = spots[k][0]; c.pos[2] = spots[k][1]; c.vel[0] = 0; c.vel[2] = 0; }); }
           P.W.step(DT); if (i % 30 === 29) { ds.push(JSON.stringify(digestGame(g))); most = Math.max(most, T.kept); } }
         return { told, d: ds.join('|'), draws: g.dice?.n ?? -1, kept: T.kept as number, most, found: T.found as number, lost: T.lost as number, prints: T.prints as number, fog: g.fogOfWar.active === true, hidden: (g.guards as any[]).filter(x => g.fogOfWar.hidden(x)).length }; };
       const rows: string[] = []; let same = true, some = 0, none = true, fog = true;
       for (const seed of [3, 4]) { const a = await play(seed, false), b = await play(seed, !BREAK); same &&= a.d === b.d && a.draws === b.draws; some += b.most + b.found; none &&= a.most === 0 && a.found === 0; fog &&= a.fog && b.fog;
         rows.push(`seed ${seed} (the order: ${b.told}): ${a.d === b.d ? `the same ${SECS * 2} digests` : 'digests differ'}, dice ${a.draws} / ${b.draws} · with the row: ${b.kept} kept at the end (most ${b.most}), ${b.found} found, ${b.lost} lost, ${b.prints} prints counted, ${b.hidden} men hidden · without: ${a.most} kept, ${a.found} found, ${a.prints} prints`); }
-      verdict(fog && same && some > 0 && none, 'played — the squad on the pass under the fog, sent at a man it hides, 30 s, two seeds, without the row and with it: the same run by its digest every half second and its dice (the picture alone); with the row the men nobody sees leave marks that are kept or found, without it none',
+      verdict(fog && same && some > 0 && none, 'played — the squad on the pass under the fog, sent at a man it hides with up to three more of the hidden stood on open snow no eye has, 30 s, two seeds, without the row and with it: the same run by its digest every half second and its dice (the picture alone); with the row the men nobody sees leave marks that are kept or found, without it none',
         rows.join(' ·· '));
     }
     { // ---- the switch

@@ -15,7 +15,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   boxes such as another man's muzzle flash (`cellSeenAt`: never shown unseen, even a shot at the team), resting litter (`FOG.kept`), marks
   in snow (`FOG.tracks`, `groundLook`), and all of it through a file load (`FOG.filed`). (4) TO SEE MORE, GET MORE EYES ON IT (`FOG.eyes`,
   `fogEyeCount`; a sticky camera, a peek round a wall's end, a thin thing that does not cut the sight: `FOG.thin`). BESIDE THEM: you hear
-  everything; the enemy never reads the fog; there is one fog picture. KEPT ON PURPOSE: a blown wall or broken glass shows at once (it is
+  everything; the enemy never reads the fog; there is one fog picture; a teammate's own eye passes what the fog's lines pass (`FOG.mates`). KEPT ON PURPOSE: a blown wall or broken glass shows at once (it is
   loud); a living man's last-seen mark fades in seconds. NOT YET UNDER THE PRINCIPLES: a furrow, a dent or a crater in snow made by a thing
   nobody sees (`snowMarks.ts`); broken pieces and items after a file load. THE OLDER LOOKS STAY (`FOG.full` off, `FOG.lit` 0, `FOG.flat`
   off and the rest of the fog's `FROZEN_HOLDS` rows): the frozen stand is every frozen digest's ground, so they are not retired; the page
@@ -900,7 +900,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   One test, `common.wgsl fogThinBox`, asked only of a box a ray has already hit, live only while the private `fogEyeThin` is raised by the fog's own
   rays (`fogSeenAt`, the fog pass's `main` and `pre`, the table's kernel). The lines go by the row alone (`FOG.full` stays a
   switch of the picture only); the picture's half rides the sight table, so it is under the FULL picture alone. NOT the picture alone: who the squad has seen can differ behind a pipe, so a digest can. It is
-  the FOG's sight only: a guard's eye, a teammate's own `eyeContact`, a round, a sound and a shadow meet those boxes as ever. SWITCH: ON in the module
+  the FOG's sight only: a guard's eye, a round, a sound and a shadow meet those boxes as ever (a teammate's own eye passes them too since 10-25:
+  `FOG.mates`, its bullet below). SWITCH: ON in the module
   and the page; `?fogthin=0` = every static stops the eye, as it was; the debugger's fog page has the row; frozen stand: off, `TPS_FOGTHIN=1` raises
   it (`FROZEN_HOLDS['FOG.thin']`); the journal carries it (a recording without the key replays with it off); not part of the replay page's look (the
   tape's row decides who was seen). CHECK: `probes.ts fog-thin` (family `fog`; 8 lines; `FOGTHIN_BREAK=1` red on the marks', the lines' and the
@@ -909,9 +910,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   taken away from four eyes, no line shortened, the fog's test across a stovepipe, a wall, every shut door's frame; the block, its bits and the box list they were read off (a frame drawn after a wall is rebuilt and before the
   next fill passes nothing: `FogSight.encode`);
   the shaders as written; the address; the journal; the stands; the night breach with and without, two seeds (92 marked statics on that level: the
-  same digest and dice both ways, on both stands — held: red if the row begins to move that run). The fog, replay and journal gates on both stands. NOT HELD: (a) a teammate can call a contact the
-  fog's line gave him through a window bar while his own `eyeContact` is still blocked by it — whether thin things should stop hiding anyone from
-  anyone is a game rule, the maintainer's call, not made here; (b) loose props at eye height (a shelf, a locker) still stop the PICTURE's eye and
+  same digest and dice both ways, on both stands — held: red if the row begins to move that run). The fog, replay and journal gates on both stands. NOT HELD: (a) ANSWERED 10-25 ("teammates should see whatever we see"): a teammate's own eye now passes the marks too (`FOG.mates`, its bullet below); no other side's eye does; (b) loose props at eye height (a shelf, a locker) still stop the PICTURE's eye and
   never stopped the squad's lines, and a carried box too large for the grid's cells (asked in the walk's own first loop) is not passed; (c) a host that stands boxes up another way (the viewer, the editor's stage) makes no marks: the fog there cuts on thin things as before; (d) while the sight table's program compiles (the first frames), if it fails, or under `?fogfull=0`, the picture is an older fog that does not pass
   them while the squad's lines do (a man behind a pipe is drawn on a sliver the picture still fogs); (e) the rule's numbers are code, not knobs: retuning `THIN_WIDTH` changes what an old recording's level marks; (f) the fans a window's own
   frame and wall thickness cast on Hard (each man a cone) are real sight edges and stay. **Never seen on a GPU**: the page boots with it on the
@@ -1217,6 +1216,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   test can no longer come true (no shipped step asks it). NOT MENDED, other owners': a grabbed civilian's 'he had a KNIFE at me' line (`dialogue.ts`), the
   knife as an item of kit (`character.ts KitItem`, `kitanim.ts`: never asked for with the key up), the debrief's 'the knife' wording for old runs. The
   bare-handed tell and hold are seen only as CPU mesh stills; never in the page by a person, never on a GPU.
+- **The lab's five scenarios (10-25; `SCENES` in `src/host/sneaklab.ts`, `?sneaklab&scene=N`).** The maintainer: "let's also rework sneaklab a bit to be more like our tutorials.
+  no hand holding but just a few curated scenarios we want to tune": a man standing, a man walking, a dark room, a dark corridor, a corner. A button in Right now restarts the
+  floor and puts Sam at that scenario's start, hands empty and low, with one line at the top of the page and nothing else; 'start over' and Shift+Enter bring the same one back.
+  The dark room and corridor are new floor outside the yard's walls (`tools/levels/sneak-lab.ts`: nothing joins them to it, the button puts Sam in), with three and two men of
+  their own, five dim pools and 'they can't notice you' off. The level's fingerprint moved: old recordings of it are refused. THE CHECK is `sneaklab-check.ts` (the five starts,
+  the held click closing on the walker, a way through each dark place, nobody seeing him at either start for twelve seconds, the corner man coming past) and `stalk-page.cjs`
+  (the five buttons on the real page). THE HARNESS'S METER HAS NO MOON: how dark they are was seen only on the software adapter, never on a GPU, and nobody has played them.
 - **The sneak lab (`/sneaklab` on the dev server = `?levelFile=sneak-lab.json&solo&sneaklab`; `src/host/sneaklab.ts`, `tools/levels/sneak-lab.ts`).** The
   maintainer, 10-23: "can you make a debug level / workbench where we can play with this and tweak it? … make it workbench like where we can tweak things
   live". The level is the kit yard's floor, lit, with six men each walking one case (a man who stands · a long straight beat · a loop round a block · through
@@ -1226,7 +1232,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   notice you' (`playerInvisible`) and 'nothing hurts you' (god mode), both on to begin with and written every page step, a line that says what the stalk is
   doing and why the last one ended (`STALK_STATS.last`), and the stalk's geometry on the floor (`src/ui/stalkviz.ts`, `STALKVIZ.on`: the two range rings, the
   arc's edges, the station point, the grab's ring, Sam's line). Not a row of the start card, no mission of its own (the plain night on that floor). CHECK:
-  `bun run tools/qa/sneaklab-check.ts` (probe `sneaklab`; the file is its generator's, six men of whom five walk and all stay calm over 40 s, the held click
+  `bun run tools/qa/sneaklab-check.ts` (probe `sneaklab`; the file is its generator's, eleven men of whom ten walk and all stay calm over 40 s, the held click
   takes the man who stands in 2.52 s with the real guards running, every number of `STALK` has its row); `SNEAKLAB_BREAK=1` must fail men and creep. The
   page: `tools/qa/stalk-page.cjs`. The panel covered the middle of the page, where Sam stands, so a press on the man landed on a slider: with 'keep Sam
   clear of this panel' (`SNEAKLAB.clear`, on) the view's follow point is shifted (`camera.ts hostShift`, host only, null in a game) so he stands in the
@@ -1651,6 +1657,17 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   listener does, and follows no press begun off the view (a lab slider). The `outside` line drives it on a window of lists. The page
   drive drags the real mouse in the lab (on the real page the drag goes over the panel: 139 px of 140 read with the listener, 46 without). No hand has held it and nobody has
   seen it on a GPU.
+- **Weight in it: his trunk and arms go with his legs (10-25; `STALK.heft`, numbers `heft*` in `stalk.ts`, springs in `character.ts CREEP.heft`; `?stalkheft=0`,
+  `TPS_STALKHEFT=1`; acts only under `STALK.wide`).** The maintainer, of the arms in the creep on a GPU: "(1) looks weird, but (2) also just looks like very static. the chaos
+  theory animations have some real weight but also smoothness and precision to them". Read frame by frame off the footage (Nos. 24 and 59): the back bows hard, the shoulders
+  come round against each step, the arms hang long with a soft elbow and swing against their own foot, the hips go over the standing foot, a stop holds mid step. `creepLayer`
+  reads all of it off his own feet, so a stop holds where the step stopped: the stride and the foot's lift feed springs, the trunk a beat behind the feet and the arms a beat
+  behind the trunk (measured 0.23 s), which also carries the hands past a stop and settles them. Off leaves the arms of `STALK.wide` as they were; the new hang is `heftOut`,
+  `heftDown`, `heftFwd`, `heftLead`, `heftPole`, read in `close.ts`. /sneaklab has the toggle ('weight in the step') and eight numbers. THE CHECK is `stalkheft-check.ts`
+  (`probes.ts stalkheft`, the grab and stealth families; `STALKHEFT_BREAK=1` reds step, behind, stop, alive and ahead), both stands (numbers from the first pass): under 1.9 m the shoulders turn over 34° (key
+  down 3°, fit to the stride 0.97), the hands swing against the feet (fit 0.93), a stop carries the hands 0.2 m on past the feet and settles, the shoulders rise and fall 1 cm at
+  rest, no arm is pulled straight (0.96 of its reach), the feet slip no more than with the key down, the grab lands on the same frame. One run, one seed, the lobby. THE CLIP is
+  `close-stills.ts --scene stalk-clip` then `tools/qa/pose-clip.py`, drawn on the CPU. His first look on a GPU (10-25): "it's better but I still think sams arms look weird in motion. it's almost zombie like where he's just holding them out forward", and "the sneaking actually looks better from the camera angle where you're behind sam": the footage only ever shows Sam from behind, and hands hung under a bowed back read from the side as arms held out past his face. So the hands sit back by his hips (`heftFwd` -0.2), the elbow bends, the back bows 4° more, not 16°, and the clip draws him from all four sides at the game's pitch: JUDGE ANY POSE OF HIS FROM ALL OF THEM. `ahead` in the check holds a hand behind his head. NOBODY has seen this second pass on a GPU or played it.
 - **Round him: the keys and the stick orbit the man (10-24; `STALK.orbit`, `orbitK` 3, `orbitEdge` 0.05, `orbitSnap` 0.3; `stalk.ts orbited`;
   `?stalkorbit=0`, `TPS_STALKORBIT=1`).** The maintainer: "when you're clicking on an enemy and moving around them, you should really be
   "orbiting" them". THE RULE: with the button held on a man, a move key no longer ends the creep. The way it points is split, as it is
@@ -1758,3 +1775,46 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   older choke lines of takedown-check.ts (`chokeRun`) and hold-pose-probes.ts hold-struggle (b), whose windows the haul's own motion falls in; the haul's frames
   are haul-check's. Pictures: `close-stills.ts --scene choke` (before: `--set '{"TAKEDOWN":{"haul":false}}'`). NOT SEEN: anything on a GPU or in the page; how
   it reads from the game's camera at play size; the two men's clothes and the cap through each other (bones are read, not meshes); no tally was run.
+- **A teammate sees what the picture shows (`FOG.mates`, 10-25).** The maintainer, asked whether the men's own eyes should pass thin things as
+  the fog's lines do (the open call under `FOG.thin`): "and yeah i think teammates should see whatever we see". Before, the fog's lines passed a
+  static marked thin and free while a teammate's own sight test (`guards.ts eyeContact`) stopped at it: a man behind a window's bar or a
+  stovepipe was in the picture, and could be called, while the teammate standing there did not notice or shoot him. THE RULE: an OPERATIVE's own
+  sight line is handed the mask the fog's lines use. ONE MASK: `fogofwar.ts fogThrough()` (glass, and with `FOG.thin` the thin marks) is what
+  `sightBlocked` asks; `guards.ts teamThrough()` is that under `FOG.mates` and glass alone without; `eyeThrough(gd)` is the team's for an
+  operative and glass alone for every other side. A flag the fog's line learns to pass is added in `fogThrough` and nowhere else. WHERE:
+  `canSeeChar`'s two looks (his eye, and his sights' eye in a room fight); through the bare line `guards.ts eyeBlocked(g, gd, a, b)`, the test of
+  whether a man he just lost went BEHIND something (the lead fix) and the room fight's six lines from a teammate's eye to a man's chest
+  (`roomfight.ts`: who turns to a shot, the turn point, a report's shooter in `cue` and `letGo`, a mate's target, footsteps); and the PLAYER's own
+  line that tells the squad's net of a man the picture shows him (`picture.ts lookSam`: `teamThrough()`), so a man you see past a bar is a man
+  your squad is told of. So a teammate's own test and the fog's line from his head say the same of a man across a thin thing. THE MARKS are a level's
+  (`scene/thin.ts`, made at every stand-up) AND the bare studs of a wall a charge opened (`wallbreak.ts`), as for the fog. SIGHT ONLY: his rounds
+  still meet the thing (`clearShot` holds a shot it is across: a man with a walk left walks on, a planted man waits with his gun on the man and
+  is counted in contact until one of them moves), sound and light are untouched. A WINDOW'S BAR is the exception since `WINBARS` (`winbars.ts`,
+  joined here from the build head): a line of fire passes a standing bar and the round breaks it, so past a bar he sees AND shoots; a post, a
+  stovepipe and a stud still hold the shot. NO OTHER SIDE'S EYE CHANGES: a defender, a civilian and a camera
+  stop at a thin thing as ever, so across a bar the teammate has the defender and the defender does not have him. It does not need the fog up; it
+  does need the thin row. NOT the picture alone: who a teammate has noticed is the game's, so a digest can move. SWITCH: ON in the module and the
+  page; `?fogmates=0` = his eye stops at a thin thing, as it was; the debugger's fog page has the row; frozen stand: off, `TPS_FOGMATES=1` raises
+  it BUT ACTS ONLY WITH `TPS_FOGTHIN=1` (`FROZEN_HOLDS['FOG.mates']` says so: the frozen stand pins the thin row off too); the journal carries it
+  (a recording without the key replays with it off). CHECK: `probes.ts fog-mates` (`tools/qa/fogmates-check.ts`, family `fog`; 5 lines;
+  `FOGMATES_BREAK=1` reds bar, agrees and stood) on both stands. MEASURED, headless: The Pass, one staging seed: across its 16 thin marks, 1168 pairs of
+  a teammate and a defender (sixteen bearings, nine spacings): the row gives him 707 of them, takes none, and his test differs from the fog's
+  line on none (on 707 without it); the defender's eye is the same on all 1168; with the thin row off the row gives nothing. Stood: the pair kept across one mark for 30 of the game's own frames: with the row the room fight's
+  meter on the man goes to 1.00 and he is the teammate's target on 25 frames; without, meter 0 and no target; the defender never takes the teammate. Played on The Pass,
+  the squad sent at a hidden man, 20 s: with the thin row off the run is the same by digest and dice with and without this row (seed 3), on both
+  stands; with both rows on (seeds 3 and 4) no defender's sight of a teammate differed on any sampled frame. THE ROOM CLEAR'S TALLY
+  on the shipped stand (`roomclear-tally.ts`, the office: 92 marks, 39 of them across a standing man's sight lines; four policies, seeds 1 to
+  12 = 48 runs): every run the same with the row and with `TPS_FOGMATES=0`, run for run, so on that floor the row changed no fight. THE PAGE
+  (software adapter, The Pass, the squad of four, Hard, the pair kept across the mark at (14.10, 11.00) for 30 frames): 119 of 119 pipelines, no
+  console or GPU error; the plain line between them stopped and the masked one clear; the teammate's meter on the man to 1 and the man his
+  target on 24 frames; with `?fogmates=0` the same
+  boot and lines, his meter 0 and no target (the drawn frames were the boot's and one burst: the rule draws nothing). NOT HELD: (a) never seen on a GPU and never played:
+  whether a teammate noticing a man past a bar reads as fair is the maintainer's to judge; (b) the planted man above: nothing makes him lean or
+  step for a shot past the thing; (c) a teammate's sight of things that are not men (a body, a door, a lamp) is unchanged; (d) one level's marks
+  in the sweep, one staging seed, two played seeds; `tour.ts` and `soak.ts` put no teammate on the floor, so the rule cannot act in either and
+  neither was run (the tally above is the measurement); (e) the asymmetry is by
+  the maintainer's words (teammates), not a ruling that the enemy should stay blind past a bar: giving every eye the marks is one more row if he
+  asks; (f) the room fight's turn-to lines and the player's line for the net are held only as written (the check counts the calls and asks the bare
+  line across one pair), not by a fought run that needs them; (g) `lanes.ts gunsManned` and `pointInView` (a teammate's view of a place or a
+  body) still stop at a thin thing.
+- **Tap to step (`src/game/tapstep.ts` TAPSTEP, a prototype; `tools/qa/tapstep-check.ts`, also `probes.ts tapstep`).** The maintainer, 2026-10-25: "i love the tap to step idea! curious how we can make this feel awesome. and also generalize between creeping on a guy to grab him vs slithering through guards". Crouched, the move keys are steps: a press lifts the foot, the key kept down reaches (`reachM`), let go plants it (a tap is `tapM`), and between steps he stands dead still in the held stride, half a walk cycle a step (`character.ts tapU`). After a plant his weight settles for `settle` s: a held key waits it out, so holding is always the safe pace (1.09 m/s measured); a press inside it steps at once and scuffs (up to `scuff`), and a press just after it is on the beat, a `beatM` tap. A plant just after a near man's footfall is under it (`mask`). A step toward the back of a man he could stalk, inside `landM` of the spot `STALK.keyM` behind him, bends onto that spot and goes all the way, so the last step lands in reach and the grab's key is what is left; behind a walker `follow` of his speed goes into the step. Shift is still the quick crouch walk. Switch: up in the lab and with `?tapstep=1`, `?tapstep=0` puts it down in the lab; down in the plain page and on the frozen stand (`TPS_TAPSTEP=1`), so no FROZEN_HOLDS row, as with `stalkdrag`. Rides a recording; one from before the key replays with it down. `TAPSTEP_BREAK=1` fails on both stands' lines. Every number has a row under Tap to step in the lab. Nobody has felt it and it has never been seen on a GPU; a short tap's feet may skate a little (the leg swing is the same half cycle for 0.3 m as for 0.85 m).

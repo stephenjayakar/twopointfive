@@ -118,6 +118,7 @@ import { gunWallSnapshot, gunWallRestore } from './gunwall';
 import { wallHoldSnapshot, wallHoldRestore, type WallSnap } from './player';
 import { CLOSE, closeModeSnapshot, closeModeRestore } from './close';
 import { stalkReset } from './stalk';
+import { tapReset } from './tapstep';
 import { calmTorchSnapshot, calmTorchRestore, calmTorchPosed, type CalmTorchSnap } from './calmtorch';
 import { dozeSnapshot, dozeRestore, type DozeSnap } from './doze';
 import { moraleSnapshot, moraleRestore, type MoraleSnap } from './morale';
@@ -141,6 +142,7 @@ import { lanesSnapshot, lanesRestore, type LanesSave } from './lanes';
 import type { TacticsSnap } from './tactics';
 import type { WallsSave } from './wallbreak';
 import type { FurnSave } from './furnblast';
+import { barsSnapshot, barsCheck, barsRestore, type BarsSave } from './winbars';
 import type { LaySnap } from './planlay';
 import { PLANLAY, laySnapshot, layRestore } from './planlay';
 import { CMDRING, ringRestore } from './cmdring';
@@ -269,6 +271,8 @@ export interface SaveState {
   lanes?: LanesSave;
   /** FURNITURE A BLAST BROKE (furnblast.ts FurnSave): the statics it took and the props that came apart — absent = none (every file from before the slice) */
   furn?: FurnSave;
+  /** WINDOW BARS A ROUND OR A BLAST TOOK (winbars.ts BarsSave): the statics that are gone — absent = none (every file from before the slice) */
+  bars?: BarsSave;
   /** the weather's dust in the rooms (airDust.ts): the field where it is off the leak, the openings as last asked — absent: no weather in, the switch off, or a file from before it */
   air?: AirDustSnap;
   decals: DecalSnap[]; autosave: AutosaveSnap;
@@ -590,7 +594,7 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
     events: g.events.map(e => ({ kind: e.kind, pos: c3(e.pos), time: e.time, loud: e.loud, level: e.level, id: e.id, who: e.who, weapon: e.weapon, from: e.from ? c3(e.from) : undefined, to: e.to ? c3(e.to) : undefined, announced: e.announced, cause: e.cause, ...(e.ears ? { ears: [c3(e.ears[0]), c3(e.ears[1])] as [Vec3, Vec3] } : {}), ...(e.swAt ? { swAt: c3(e.swAt) } : {}) })),
     messages: g.messages.map(m => ({ text: m.text, t: m.t })),
     rollcall: { nextAt: R.nextAt, stage: R.stage, t0: R.t0, caller: gi(R.caller), missing: gi(R.missing), answered: R.answered, checks: R.checks },
-    needs: needsSnapshot(g), whistle: whistleSnapshot(g), tactics: tacticsSnapshot(g), lanes: lanesSnapshot(g), walls: g.destr?.walls?.snapshot(), furn: g.destr?.furn?.snapshot(), dialogue: dialogueSnapshot(g), weather: g.weather?.snapshot() ?? null, ...(air ? { air } : {}), ...(g.quiet?.active ? { quiet: g.quiet.snapshot()! } : {}), ...(g.lesson?.data ? { lesson: g.lesson.snapshot() } : {}), ...(g.defuse?.active ? { defuse: g.defuse.snapshot() } : {}), ...(g.snatch?.active ? { snatch: g.snatch.snapshot() } : {}), ...(g.par?.data ? { par: g.par.snapshot() } : {}), ...(PLANLAY.on ? { lay: laySnapshot(g) } : {}), ...(CMDRING.plan ? { plan: planSnapshot(g.orders) } : {}), qrf: { loudT: g.qrf?.loudT ?? -1e9, ...(RESPONSE.on ? { word: responseWordSnapshot(g) } : {}) },
+    needs: needsSnapshot(g), whistle: whistleSnapshot(g), tactics: tacticsSnapshot(g), lanes: lanesSnapshot(g), walls: g.destr?.walls?.snapshot(), furn: g.destr?.furn?.snapshot(), bars: barsSnapshot(g), dialogue: dialogueSnapshot(g), weather: g.weather?.snapshot() ?? null, ...(air ? { air } : {}), ...(g.quiet?.active ? { quiet: g.quiet.snapshot()! } : {}), ...(g.lesson?.data ? { lesson: g.lesson.snapshot() } : {}), ...(g.defuse?.active ? { defuse: g.defuse.snapshot() } : {}), ...(g.snatch?.active ? { snatch: g.snatch.snapshot() } : {}), ...(g.par?.data ? { par: g.par.snapshot() } : {}), ...(PLANLAY.on ? { lay: laySnapshot(g) } : {}), ...(CMDRING.plan ? { plan: planSnapshot(g.orders) } : {}), qrf: { loudT: g.qrf?.loudT ?? -1e9, ...(RESPONSE.on ? { word: responseWordSnapshot(g) } : {}) },
     civilians: civiliansSnapshot(g),
     decals, ...(glassPenSnapshot(g) ? { glassPen: glassPenSnapshot(g) } : null),
     ...(dz ? { doze: dz } : null),   // (who dozes in which chair and who was woken — doze.ts; no key with its switch off)
@@ -634,6 +638,7 @@ export function canLoad(g: Game, s: SaveState | null | undefined): string | null
   { const wx = g.weather?.refuses(s.weather); if (wx) return wx; }   // (weather.ts: in the page the weather is the URL's — a file made in another is another run's)
   { const w = g.destr?.walls?.check(s.walls) ?? null; if (w) return w; }   // (a file whose holed walls are not this level's partitions: refused, never loaded as an intact lie)
   { const w = g.destr?.furn?.check(s.furn) ?? null; if (w) return w; }   // (…and the furniture a blast took)
+  { const w = barsCheck(g, s.bars); if (w) return w; }   // (…and the window bars)
   if (g.touring || g.puppet) return 'a show is running — stop it first';
   if (g.rescue?.active) return 'the hostage rescue is staged (its cast and the benched shift are no roster a checkpoint can be poured over)';
   if (g.nightBreach?.active) return 'the night breach is staged (its cast and the benched shift are no roster a checkpoint can be poured over)';
@@ -655,6 +660,7 @@ export function loadState(g: Game, s: SaveState, opts: { label?: string } = {}) 
   if (applyHour(g, hourIdOf(s.hour?.id)) || s.hour) { const k = fin(s.hour?.sun ?? 1, 1); setSunStrength(g, k, typeof s.hour?.given === 'boolean' ? s.hour.given : k !== 1); }   // the file's hour (none = the level's own night) before the slate is wiped: the restart below re-makes that hour's switches
   g.quiet?.restoreDeal(s.quiet);   // (a quiet mission: the restart below deals the FILE's start / spot / patrol set, not a fresh one — quiet.ts)
   g.restartEncounter();
+  barsRestore(g, s.bars);             // the window bars a round or a blast took (winbars.ts), gone again before the walls settle round them — the order they went in
   g.destr?.walls?.restore(s.walls);   // the level first (holed walls, chewed cover: the statics re-cut, the nav grid re-baked) — everything below is placed in it
   g.destr?.furn?.restore(s.furn);     // …then the furniture a blast took: gone again, silently (its pieces are not filed — no debris is)
   try { applyState(g, s, prevLoads, prevSaves, opts); g.lesson?.restore(s.lesson); g.defuse?.restore(s.defuse); g.snatch?.restore(s.snatch); g.par?.restore(s.par); if (PLANLAY.on) layRestore(g, s.lay); ringRestore(g); if (CMDRING.plan) planRestore(g.orders, s.plan); g.fogOfWar?.restore(s.fog); }   // (…and a training lesson's place among its steps, lesson.ts: after the mission slice — a file without it, made with the lesson off, leaves the lesson stood down for that run)
@@ -796,6 +802,7 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
   g.messages.length = 0; for (const m of (s.messages ?? []).slice(-5)) g.messages.push({ text: String(m.text), t: fin(m.t) }); g.cues.adopt(g.messages);
   gunWallRestore(g, s.gunWall);
   if (SAVETIMELINE.holds) { wallHoldRestore(g, s.wallHold); if (CLOSE.on) closeModeRestore(g, s.player.closeOn); }
+  tapReset(g);
   stalkReset(g);   // (stalk.ts: nothing is stalked after a load — the button is pressed afresh)
   needsRestore(g, s.needs); whistleRestore(g, s.whistle); tacticsRestore(g, s.tactics); lanesRestore(g, s.lanes); dialogueRestore(g, s.dialogue);   // (whistle: the blower is keyed by the fresh Player, the men's halves by roster index — both exist by now)
   civiliansRestore(g, s.civilians);   // (after the men — she runs to / tells / was found by one of them by callsign — and after eventSeq: the fresh civilians' ears were stamped off the abandoned future's count; a file without the slice keeps them fresh on their marks, ears set right)

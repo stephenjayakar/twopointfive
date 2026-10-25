@@ -220,17 +220,18 @@ export function build() {
     title: 'On the radio',
     rails: { allow: ['plan', 'camera', 'zoom'], respawn: 5, lasers: false, sky: { park: PARK, plan: true } },
     steps: [
-      // 1 · ONE PLAN: the view is the hand's, a right-click is an order, a box picks men, one word sends every stack that waits on it
+      // 1 · ONE PLAN: the view is the hand's, a right-click is an order, the digits pick men (1 to 4 a man, Shift + a digit adds him, 5 everyone: the maintainer,
+      // 10-24, "change the tutorial to teach using 1, 2, 3, 4, and 5 to select squad members"), one word sends every stack that waits on it
       { id: 'view', line: 'Use [W] [A] [S] [D] to move the view over to the guardroom', explain: { title: 'Plan mode', text: "You're not on the ground for this one either. You'll watch from above and lead your squad over the radio.\nThis time you'll plan. Tell each teammate what to do, and nobody will go through a door until you say go." },
         done: or({ is: 'planView', at: GUARD_VIEW, r: 4.5 }, taken('guardroom')), at: [18.0, 1, 8.75], checkpoint: 'the gate' },
       { id: 'send', line: 'Right-click next to the guardroom wall to send your squad there', done: or({ is: 'squad', area: { x0: 12.2, x1: 14.9, z0: 6.0, z1: 12.6 }, n: 3 }, stacks(['guard']), stacks(['guard_side']), taken('guardroom')), at: WALL },
-      { id: 'pick', line: 'Hold the left mouse button and drag a box around two teammates', explain: { title: 'Hit two doors at once', text: "The guardroom has two doors, and the guards inside can't watch both.\nPut two teammates on each door, then send them all in at once." },
+      { id: 'pick', line: 'Press [1] to pick a teammate, then hold [Shift] and press [2] to add another', explain: { title: 'Hit two doors at once', text: "The guardroom has two doors, and the guards inside can't watch both.\nPut two teammates on each door, then send them all in at once.\nEvery teammate has a number next to them, and you press that number to pick them." },
         done: or({ is: 'picked', n: 2 }, stacks(['guard', 'guard_side']), taken('guardroom')), at: [13.9, 1, 8.75] },
       { id: 'door1', line: 'Right-click the marked door to stack those two on it', done: or(stacks(['guard']), taken('guardroom')), at: D_GUARD },
-      { id: 'pick2', line: 'Now drag a box around the other two', done: or({ is: 'picked', n: 2, free: true }, stacks(['guard', 'guard_side']), taken('guardroom')), at: [13.9, 1, 8.75] },
+      { id: 'pick2', line: 'Now pick the other two the same way, with their numbers', done: or({ is: 'picked', n: 2, free: true }, stacks(['guard', 'guard_side']), taken('guardroom')), at: [13.9, 1, 8.75] },
       { id: 'door2', line: 'Right-click the side door to stack them on it', done: or(stacks(['guard', 'guard_side'], true), taken('guardroom')), at: D_SIDE },
-      // (the word's key sends the stacks of the men who are PICKED — planmode.ts chainsOf — and the last box picked two: a click on bare ground is everyone again)
-      { id: 'all', line: 'Left-click on empty ground to pick your whole squad again', explain: { title: 'Pick everyone again', text: "When you send them in, only the teammates you've picked will go. Pick all four again so both pairs go in together." }, done: or({ is: 'picked', n: 4 }, taken('guardroom')) },
+      // (the word's key sends the stacks of the men who are PICKED — planmode.ts chainsOf — and the last two digits picked two: [5] is everyone again)
+      { id: 'all', line: 'Press [5] to pick your whole squad again', explain: { title: 'Pick everyone again', text: "When you send them in, only the teammates you've picked will go. Pick all four again so both pairs go in together." }, done: or({ is: 'picked', n: 4 }, taken('guardroom')) },
       { id: 'word', line: 'Press [F] to send both pairs in at once', done: taken('guardroom'), at: [18.0, 1, 8.75], allow: ['word'] },
       // (the two cards that follow a fight he only watches, 'hall' and 'gates', are marked `quiet`: the frame holds each until his squad's fight has been
       //  still for two seconds, to its cap — rails.ts RAILS.cardBeat. The other two cards follow an order or a pick and take the plain beat)
@@ -240,7 +241,7 @@ export function build() {
       { id: 'front', line: 'Pick two teammates and right-click the front door', done: or(stacks(['hall']), taken('hall')), at: D_HALL, eye: HALL_EYE },
       { id: 'back', line: 'Pick the other two and right-click the back door', done: or(stacks(['hall', 'hall_back'], true), taken('hall')), at: D_BACK, eye: HALL_EYE },
       // (the cue says a stack stands on EACH door: from here whichever leaf moves first, the gun is on the wrong one — levels/tut-plan.script.ts)
-      { id: 'all2', line: 'Left-click on empty ground to pick your whole squad again', done: or({ is: 'picked', n: 4 }, taken('hall')), eye: HALL_EYE, cue: 'breach' },
+      { id: 'all2', line: 'Press [5] to pick your whole squad again', done: or({ is: 'picked', n: 4 }, taken('hall')), eye: HALL_EYE, cue: 'breach' },
       { id: 'word2', line: 'Press [F] to send them in through both doors', done: taken('hall'), at: [28.4, 1, 16.0], eye: HALL_EYE },   // (the lookout stays up through the word: a frame's eye is the player's picture alone — rails.ts RAILS.eyeView — so the squad picks its entry by what its own men have seen. Before that rule the eye was in the squad's fog too, the gunner seen through it made the stack given the word first take a can, and this step went without its lookout for a few builds)
       // 3 · WHICH WAY THEY FACE: more come by two gates at once. A right-click dragged is a place and a way to look
       { id: 'gates', line: 'Move the view out to the yard between the two gates', explain: { quiet: true, title: 'Cover two gates', text: "More enemies are on the way, and they'll come through the road gate and the back gate at the same time.\nRight-click and drag to send teammates to a spot and choose which way they'll face." },

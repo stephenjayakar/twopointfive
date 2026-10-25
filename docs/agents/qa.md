@@ -318,6 +318,18 @@ but synthetic writes still work.
   a frame there taking seconds and the wall's cut put out of reach, so a scene ends by the player's own cut after `CAP` game seconds and the last page's
   tail is the fake page's to prove; `STEP=script` has the check step the scenes with `__runFrames` instead; about 80 minutes at 320x180). NEVER RUN ON A GPU: no number of its report has been read on a real machine, the seven
   minutes are an estimate, and nobody has watched a scene played or looked at the card.
+- **A page's own rows in the F8 sweep** (`ui/perfsweep.ts PerfSweep.extra`, a list of `SweepExtra { id, label, flip, liveOnly?, warm? }`; the page's
+  sweep is `window.__perfsweep`). For a switch that is a page's own and no row of `SWEEP_ROWS` (a prototype page's panel): `flip({ live })` is asked once
+  as the take begins and answers `{ from, to, apply: () => undo, settleMs?, ready? }` or, as a string, why the row is skipped here (`ready` = a `warm`
+  row's own picture draws). Added rows are flipped in the same rounds as the build's own (after them in the first round; later rounds shuffle all the
+  take's rows together, so the build's rows are not in the order of a take without added rows) and named in the take's begin line like any row, so
+  `tools/qa/perf-report.ts` prints them with no change (`from` / `to` are printed as the row's change: small plain values). Skipped, each with its
+  reason under the name `added row '<id>'`, never stopping the take: an id already taken (`base` too), a flip that throws or is not one, values a line
+  cannot carry. A flip must not go through `Quality` (that reads as a hand change and stops the take). The benchmark's sweep (`SweepOpts.inside`) takes
+  the build's rows alone. None added (the game's page) = the take as it was. With these the sweep also runs EVERY undo when one throws (it stopped at
+  the first) and its closing line then says one row's way back failed. The finished take is on `window.__lastPerfDump`, and `serializeDump`
+  (`ui/perfrec.ts`) gives its JSON in parts for a page that cannot download. Check: `bun run tools/qa/perf-sweep-logic.ts` (the hand-change line for
+  a page's own row and the block at its end). Run once on a real page on the software adapter with added rows; never on a GPU.
 - **The missions gate's commander hunts first (tools/qa/missions-gate.ts; the gate only).** It passes `PT_HUNT=first` to its `ships.ts` run: with no room held the scripted
   commander goes for whoever is left before he walks the rooms again. `playthrough.ts`'s default (every room first) is unchanged, so tallies made with it still compare, and
   `ships.ts --seeds 1-2` by itself still stalls where the gate does not. Why: with the last defender standing out in the open the default ran the compound's seed 2 to the 300 s
@@ -347,3 +359,11 @@ but synthetic writes still work.
   distinct texts and their size; pipelines asynchronous and synchronous, before and after ready; how many texts and pipelines an EARLIER page of the walk had made character for
   character (the most a browser's shader cache can hand back); which boot pipelines a pass took after ready; the boot line. Exit 1 on a page that did not come ready or printed a
   GPU error. The counts are the page's; no time it prints is a price on a real machine (a page is three to seven minutes on the software adapter).
+- **The night breach's probes on the SHIPPED stand** (2026-10-25; tests only). `nightbreach-stage` and `nightbreach-stop` read 'tune CHANGED' there: the
+  rig (`tools/qa/nightbreach-probes.ts rig`) took its `before.tune` and THEN wrote `game.tune.chaos` itself, and the shipped stand stands the game up at
+  chaos 0.5 where the frozen one has 0 — the rig's own write read as the staging's. The write is before the snapshot now; both are green on both stands.
+  STILL RED THERE AND KNOWN, not mended: `nightbreach-contested` ('the man Sam's rifle pins fires no blind round; the two it cannot reach fire theirs')
+  and `nightbreach-restart` (its last line wants `blindRounds > 0`). Both are bars set on the frozen stand's fight; on the shipped stand a run has 0 to 2
+  blind rounds (`nightbreach-fight`, seeds 11‥20: none in two of ten, the room cleared in all ten), so a line that needs one fails by the seed. Whether
+  dazzled defenders SHOULD fire blind more than that on the page is the room fight's question, not a probe's. The mission itself is off the list
+  (`docs/agents/menus.md`, its foot); the staging under it is the room clear's and the rescue's.

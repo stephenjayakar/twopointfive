@@ -61,6 +61,12 @@ export const SLOTSETUP = {
   draw: false,
   /** with `draw` off: seconds a gun is in his hands before its digit opens the setup (a double-tapped digit on the draw is the draw and no more) */
   settle: 0.35,
+  /** THE BOX COUNTS THE ROUNDS IN THE GUN OVER WHAT ITS MAGAZINE HOLDS, WITH A BOX FOR EACH SPARE MAGAZINE BESIDE IT (ui/handbox.ts: 31/30 and two boxes,
+   *  each as full as that magazine is; the maintainer of the box that said 31 / 60: "we should say 31/30 and then two spare magazines on the side"). A gun
+   *  fed a shell at a time keeps its two numbers: what it carries is loose shells, and the second number is the count of them. The
+   *  box's alone: nothing in the game reads it. Off here and on the frozen stand; on in the page (`?magboxes=0` = rounds in the gun over the rounds in all
+   *  the spares, as it was); a recording from before the key replays with it off */
+  mags: false,
 };
 export type SetupGun = 'pistol' | 'rifle';
 export type SetupKind = 'mode' | 'load' | 'light';

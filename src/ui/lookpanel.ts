@@ -106,8 +106,8 @@ export function buildLookPanel(engine: Engine, fps: () => number, shapes?: { on:
       pf.append(play, price, said, box, cp);
       const OFF: (keyof typeof lookAmounts)[] = ['size', 'sky', 'air', 'clarity', 'untile'];   // (not layers with a cost of their own to switch off)
       sweep.extra = [
-        { row: { id: 'look.all', label: 'look: every layer off (plain boxes)' }, flip: () => kept ? 'the boxes are shown plain already' : { from: { look: 1 }, to: { look: 0 }, apply: () => { plain(true); return () => plain(false); } } },
-        ...ROWS.filter(([k]) => !OFF.includes(k)).map(([key, name]) => ({ row: { id: `look.${key}`, label: `look: ${name} off` }, flip: () => { const from = lookAmounts[key], to = key === 'ground' ? 1 : 0; if (kept) return 'the boxes are shown plain'; if (from === to) return 'already off';   // (the snow's relief is × the game's own: 1 is off, as plain boxes have it)
+        { id: 'look.all', label: 'look: every layer off (plain boxes)', flip: () => kept ? 'the boxes are shown plain already' : { from: { look: 1 }, to: { look: 0 }, apply: () => { plain(true); return () => plain(false); } } },
+        ...ROWS.filter(([k]) => !OFF.includes(k)).map(([key, name]) => ({ id: `look.${key}`, label: `look: ${name} off`, flip: () => { const from = lookAmounts[key], to = key === 'ground' ? 1 : 0; if (kept) return 'the boxes are shown plain'; if (from === to) return 'already off';   // (the snow's relief is × the game's own: 1 is off, as plain boxes have it)
           return { from: { [key]: from }, to: { [key]: to }, apply: () => { lookAmounts[key] = to; send(); return () => { lookAmounts[key] = from; send(); }; } }; } })),
       ];
       const deliver = rec.deliver.bind(rec);
@@ -119,7 +119,7 @@ export function buildLookPanel(engine: Engine, fps: () => number, shapes?: { on:
       };
       play.addEventListener('click', () => { if (sweep.active) return; if (rec.recording) rec.stop(); else { rec.start('look prototype: a play take (the panel)'); said.textContent = 'recording: play, then press Stop'; } });
       price.addEventListener('click', () => { if (sweep.active) { sweep.stop('the panel'); return; } if (rec.recording) return;
-        const why = sweep.start({ only: [...sweep.extra.map(x => x.row.id), 'fog', 'sharp', 'reflect', 'meshNear', 'scaleDown'] }); if (!sweep.active) said.textContent = `not started (${why})`; });
+        const why = sweep.start({ only: [...sweep.extra.map(x => x.id), 'fog', 'sharp', 'reflect', 'meshNear', 'scaleDown'] }); if (!sweep.active) said.textContent = `not started (${why})`; });
       setInterval(() => { play.textContent = rec.recording && !sweep.active ? 'Stop and send' : 'Record play'; price.textContent = sweep.active ? `Stop (${sweep.progress})` : 'Price the layers'; }, 500);
     }
     return true;

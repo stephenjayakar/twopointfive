@@ -76,7 +76,7 @@ function standsFree(a: Box, boxes: readonly Box[], width = THIN_WIDTH): boolean 
 /** every mark off (host/standup.ts, before round.ts roundLevel reads the list: it knows the kit's octagon by slabs that carry no flag) */
 export function thinClear(boxes: Box[]): void { for (const b of boxes) b.flags &= ~BoxFlag.Thin; }
 /** A LEVEL'S THIN THINGS, as it is stood up (host/standup.ts populateHost, after round.ts roundLevel: a round pipe is one box by then): every static's mark
- *  is taken off, then put on the ones that stand free. Idempotent. Marked whether or not FOG.thin is on — the mark is read only by the fog's own eyes, and
+ *  is taken off, then put on the ones that stand free. Idempotent. Marked whether or not FOG.thin is on — the mark is read only by the fog's own eyes and, under FOG.mates, a teammate's (guards.ts eyeThrough), and
  *  only while it is (so a recording's tables, laid over the knobs after its level stands, still decide). Returns how many are marked. */
 export function thinLevel(boxes: Box[], doors: readonly ThinDoor[] = [], width = THIN_WIDTH): number {
   thinClear(boxes);

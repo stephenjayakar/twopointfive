@@ -221,6 +221,7 @@ export async function glasspenLines(): Promise<boolean> {
   console.log('\n=== glasspen-lines: over a few thousand seeded lines across the office\'s glazing, col.shotBlocked(energy) says CLEAR exactly when a round of that energy fired along the line gets to its far end; eyes and feet are unchanged by the switch ===');
   const { verdict, all } = mkVerdict();
   const W = await floor(6021, [20, 0, 11.3]); const { game } = W; parkFrom(game, 0);
+  const { WINBARS } = await import(`${ROOT}/src/game/winbars.ts`); const bars0 = WINBARS.on; WINBARS.on = false;   // (held off, put back at the end: this asks that the line of fire and glasspen's roundPath agree, and with window bars live — winbars.ts, on as the page opens — the line passes a standing bar that roundPath alone stops in: fireWeapon's own flight takes the bar, which `probes.ts winbars` asks)
   const O = officePanes(game); const rnd = seeded(77);
   type L = { a: Vec3; b: Vec3; e: number };
   const lines: L[] = []; const es = [0.5, 0.6, 0.9, 1.0];
@@ -267,7 +268,7 @@ export async function glasspenLines(): Promise<boolean> {
     game.touring = true; const liveTour = glassPenLive(game); const tourSame = lines.slice(0, 400).every(l => game.col.shotBlocked(l.a, l.b, 0.02, l.e) === game.col.solidBlocked(l.a, l.b)); game.touring = false;
     verdict(!liveTour && tourSame, 'under a showcase (Game.touring) the rule is inert: shotBlocked is the solid walk again', `live ${liveTour}`);
   }, { deflectDeg: 0 });
-  return all();
+  WINBARS.on = bars0; return all();
 }
 
 // ================================================================ (e) what the pane never hears of, and the muzzle past the glass

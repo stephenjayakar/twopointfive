@@ -107,8 +107,10 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
       return s.men.every(m => men.includes(m) || !(f.get(m.cs).x >= x0 && f.get(m.cs).x <= x1 && f.get(m.cs).y >= y0 && f.get(m.cs).y <= y1)); };
     const far = men => men.reduce((t, m) => t + Math.hypot(m.p[0] - p[0], m.p[2] - p[2]), 0);
     return (ends.filter(clean).sort((x, y) => far(x) - far(y))[0] ?? ends[1]).map(m => m.cs); };
-  /** a left click on bare ground in the yard's middle */
-  const ground = async () => { const p = [20, 0, 15]; await panTo(p); const q = await at(p); await page.mouse.move(q.x, q.y); await run(2); await page.mouse.down(); await run(1); await page.mouse.up(); await run(3); return (await read()).picked; };
+  /** THE DIGITS on the real keyboard, as the lines teach them: the first alone, each one after it with Shift held. Who is picked, and what the parked player holds */
+  const digits = async (...ds) => { for (const [i, d] of ds.entries()) { if (i) { await page.keyboard.down('ShiftLeft'); await run(2); } await tap(`Digit${d}`); if (i) { await page.keyboard.up('ShiftLeft'); await run(2); } }
+    await run(3); return { got: (await read()).picked, slot: await page.evaluate(() => window.__game.player.slot) }; };
+  const SQUAD = ['Red One', 'Red Two', 'Blue One', 'Blue Two'], same = (got, want) => got.length === want.length && want.every(n => got.includes(n));
   const chains = () => page.evaluate(() => window.__game.orders.plan.chains.map(c => c.phase));
   const rclick = async p => { await panTo(p); const s = await at(p); await page.mouse.move(s.x, s.y); await run(3); await page.mouse.down({ button: 'right' }); await run(1); await page.mouse.up({ button: 'right' }); await run(4); return s; };
   const rdrag = async (a, toward) => { const l = Math.hypot(toward[0] - a[0], toward[2] - a[2]), b = [a[0] + (toward[0] - a[0]) / l * 3, 0, a[2] + (toward[2] - a[2]) / l * 3]; await panTo(a, b);
@@ -138,21 +140,27 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
   const hand = {
     view: async s => { const b = await read(); await viewTo(viewAt(s), 'view'); const a = await read();
       check(Math.hypot(a.sam[0] - b.sam[0], a.sam[1] - b.sam[1]) < 0.05 && !!a.look && !!b.look && Math.hypot(a.look[0] - b.look[0], a.look[1] - b.look[1]) > 2, 'the walk keys on the real keyboard move the view and nobody on the floor', `the view's point (${b.look}) → (${a.look}) · the parked player moved ${Math.hypot(a.sam[0] - b.sam[0], a.sam[1] - b.sam[1]).toFixed(2)} m`); },
-    send: async s => { const b = await read(); await seen(s, 'the wall\'s mark'); await rclick(s.at); const a = await read();
+    send: async s => { const b = await read(); await seen(s, 'the wall\'s mark');
+      // (picks wait for their lesson — rails.ts RAILS.planDigits: before the step that teaches them a digit and a left click on a man pick nobody)
+      { const slot0 = await page.evaluate(() => window.__game.player.slot), d = await digits(1), m = b.men[1]; await panTo(m.p); const q = await at([m.p[0], 1.0, m.p[2]]); await page.mouse.move(q.x, q.y); await run(2); await page.mouse.down(); await run(1); await page.mouse.up(); await run(3); const c = (await read()).picked;
+        check(q.vis && d.got.length === 4 && c.length === 4 && d.slot === slot0, 'before the line that teaches picking, [1] and a left click on a teammate pick nobody: the order still goes to all four', `after [1]: ${d.got.length} picked · after a left click on ${m.cs} at ${Math.round(q.x)}, ${Math.round(q.y)} (on the picture ${q.vis}): ${c.length} picked · the parked player holds his ${d.slot}`); }
+      await rclick(s.at); const a = await read();
       check(a.orders === b.orders + 1 && a.chains === 1, 'a right click on the real mouse is one order to all four (and no browser menu took it)', `orders ${b.orders} → ${a.orders} (${a.last}) · chains ${a.chains}`);
       await until(x => x.id !== 'send', 40); await run(90); },
-    pick: async s => { const got = await box(await twoOf([16, 0, 12])); check(got.length === 2, 'a left drag on the real mouse is a box that picks two men', `picked ${got.join(', ') || 'nobody'}`); },
+    pick: async s => { const slot0 = await page.evaluate(() => window.__game.player.slot), one = await digits(1), d = await digits(1, 2);
+      check(same(one.got, SQUAD.slice(0, 1)) && same(d.got, SQUAD.slice(0, 2)) && d.slot === slot0, '[1] on the real keyboard picks the first teammate alone, and Shift + [2] adds the second', `[1]: ${one.got.join(', ') || 'nobody'} · then Shift + [2]: ${d.got.join(', ') || 'nobody'} · the parked player holds his ${d.slot} (was ${slot0})`); },
     door1: async s => { await panTo(s.at); await seen(s, 'the door\'s mark'); await rclick(s.at); },
-    pick2: async () => { const s = await read(); await box(free(s.men)); },
+    pick2: async () => { const d = await digits(3, 4), click = await box(SQUAD.slice(2));   // ("the other two … with their numbers": the first pair was 1 and 2 — and a box round the same two is the same pick)
+      check(same(d.got, SQUAD.slice(2)) && same(click, SQUAD.slice(2)), '[3], then Shift + [4], picks the other two, and so does a box round them', `the digits picked ${d.got.join(', ') || 'nobody'} · the box ${click.join(', ') || 'nobody'}`); },
     door2: async s => { await panTo(s.at); await seen(s, 'the side door\'s mark'); await rclick(s.at); await until(x => x.id !== 'door2', 60); },
-    all: async () => { const got = await ground(); check(got.length === 4, 'a left click on bare ground is everyone again', `picked ${got.join(', ')}`); },
+    all: async () => { const d = await digits(5); check(d.got.length === 4, '[5] on the real keyboard is everyone again', `picked ${d.got.join(', ')}`); },
     word: async () => { const b = await chains(); await tap('KeyF'); await run(6); const a = await chains();
       check(b.length === 2 && b.every(x => x === 'wait') && a.every(x => x !== 'wait'), 'the line asks for the word when both stacks wait on it, and ONE press of F sends both', `chains before ${b.join(', ')} · after ${a.join(', ')}`);
       await fight(x => x.id !== 'word', 40); await run(90); },
     hall: async s => { await viewTo(viewAt(s), 'hall'); },
-    front: async s => { await box(await twoOf([26, 0, 12])); await panTo(s.at); await seen(s, 'the front door\'s mark'); await rclick(s.at); },
+    front: async s => { const got = await box(await twoOf([26, 0, 12])); check(got.length === 2, 'a left drag on the real mouse is still a box that picks two men (the line says only "pick two")', `picked ${got.join(', ') || 'nobody'}`); await panTo(s.at); await seen(s, 'the front door\'s mark'); await rclick(s.at); },
     back: async s => { const r = await read(); await box(free(r.men)); await panTo(s.at); await seen(s, 'the back door\'s mark'); await rclick(s.at); await until(x => x.id !== 'back', 70); },
-    all2: async () => { await ground(); },
+    all2: async () => { await digits(5); },
     word2: async () => { const c = await chains(), b = await read(); await tap('KeyF'); await run(6); const c2 = await chains(); const a = await fight(x => x.id !== 'word2', 40);
       check(c.length === 2 && c.every(x => x === 'wait') && c2.every(x => x !== 'wait'), 'the hall: one press of F sends both stacks', `chains before ${c.join(', ')} · after ${c2.join(', ')} · word at t ${b.t}, the hall taken by t ${a.t}`); await run(90); },
     gates: async s => { await viewTo(viewAt(s), 'gates'); },
@@ -186,9 +194,9 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
   await run(120); R = await read();
   log('end', JSON.stringify({ ...R, men: R.men.map(m => `${m.cs}:${m.order}`) }));
   if (STEPS >= steps.length) check(R.done, 'the mission is finished', `finished ${R.done} at t ${R.t}`);
-  // (the mode was up as every step came up and is up at the end; no line of the mission named a key that opens or closes it, or a walk of his)
-  { const named = steps.filter(s => [s.line, s.planLine, s.explain?.title, s.explain?.text, s.after?.line, s.after?.word].some(x => typeof x === 'string' && /\[Tab\]|\[Shift\]|\[B\]|walk to|walk into the|yourself/i.test(x))).map(s => s.id);
-    if (STEPS >= steps.length) check(!downAt.length && R.plan && !named.length, 'plan mode was up as every step came up and at the end, and no line or card names Tab, Shift, the command key, a walk of his or "yourself"', `down at: ${downAt.join(', ') || 'never'} · at the end ${R.plan ? 'up' : 'DOWN'} · lines that name them: ${named.join(', ') || 'none'}`); }
+  // (the mode was up as every step came up and is up at the end; no line of the mission named a key that opens or closes it, a walk of his or a click on the ground — [Shift] is named: it adds a man to the picked)
+  { const named = steps.filter(s => [s.line, s.planLine, s.explain?.title, s.explain?.text, s.after?.line, s.after?.word].some(x => typeof x === 'string' && /\[Tab\]|\[B\]|walk to|walk into the|yourself|click[^.]*\bground\b|\bground to pick/i.test(x))).map(s => s.id);
+    if (STEPS >= steps.length) check(!downAt.length && R.plan && !named.length, 'plan mode was up as every step came up and at the end, and no line or card names Tab, the command key, a walk of his, "yourself" or a click on the ground', `down at: ${downAt.join(', ') || 'never'} · at the end ${R.plan ? 'up' : 'DOWN'} · lines that name them: ${named.join(', ') || 'none'}`); }
   check(!errors.length, 'no page error and no console error', errors.length ? errors.slice(0, 6).join('\n    ') : 'none');
   console.log(`pictures: ${OUT}`);
   if (!held) await browser.close();

@@ -21,7 +21,7 @@ import { SideMap, SideSet } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import type { Game, Guard } from './game';
 import { isHostile } from './teams';
-import { canSee, canSeeChar, sightGain, sightGainOn, pointInView, bodyPos, lightEstimateAt } from './guards';
+import { canSee, canSeeChar, sightGain, sightGainOn, pointInView, bodyPos, lightEstimateAt, teamThrough } from './guards';
 import { runnerFled, runnerOwns } from './runner';
 import { squadOf } from './enemysquads';
 import { PLAYER_ID } from './consts';
@@ -183,14 +183,14 @@ function look(g: Game, P: Pic, gd: Guard) {
  *  on this run, a line to a man in front of him who stands in light (his own light meter) or close by */
 function lookSam(g: Game, P: Pic) {
   const now = g.time, c = g.player.char; if (g.player.down) return;
-  const eye = c.bones.head ?? v3.add(c.pos, [0, 1.65, 0]), fog = g.fogOfWar, fwd = c.forward();
+  const eye = c.bones.head ?? v3.add(c.pos, [0, 1.65, 0]), fog = g.fogOfWar, fwd = c.forward(), thr = teamThrough();   // (FOG.mates: his line to a man passes the thin things the picture's does)
   for (const o of g.guards) {
     if (o.civ || !isHostile('player', o.team) || !isHostile(o.team, 'operative')) continue;   // (the squad's enemies: a quiet floor's staff are Sam's own business)
     if (!up(g, o)) { if (P.ideas.has(o) && !g.col.segmentBlocked(eye, [o.char.pos[0], 0.3, o.char.pos[2]])) { P.ideas.delete(o); P.downs.set(o, now); } continue; }
     if (runnerFled(o)) continue;
     const p = o.char.pos, d = flat(p, c.pos); if (d > PICTURE.reachM) continue;
     const shown = fog?.active ? !fog.hidden(o) : d < PICTURE.madeOutM || ((p[0] - c.pos[0]) * fwd[0] + (p[2] - c.pos[2]) * fwd[2] > 0 && o.visibility >= PICTURE.madeOut);
-    if (shown && (!g.col.segmentBlocked(eye, [p[0], 1.1, p[2]]) || !g.col.segmentBlocked(eye, [p[0], 1.6, p[2]]))) learn(g, P, o, p, now, 'seen', null);
+    if (shown && (!g.col.segmentBlocked(eye, [p[0], 1.1, p[2]], 0.02, thr) || !g.col.segmentBlocked(eye, [p[0], 1.6, p[2]], 0.02, thr))) learn(g, P, o, p, now, 'seen', null);
   }
   for (const [who, I] of P.ideas) if (now - I.t > PICTURE.forgetSecs || gone(g, who)) P.ideas.delete(who);
 }

@@ -8,6 +8,17 @@ export function register(SC: Record<string, any>, CH: any) {
     const c = S.man({ rifle: true, steady: 1 }); c.anim.trained = 1; c.anim.stance = 'lowReady'; c.anim.upper = 'none'; walkTo(c, 1.3);
     S.run(2.0); const T = 0.92; for (let i = 0; i < 6; i++) { S.shot(`${(i / 6).toFixed(2)} of a cycle`); S.run(T / 6); }
   } };
+  // the player's sprint, three ways (4.7 m/s; the trunk and the legs are the sprint clip's in all three)
+  const sprinter = (S: any, set: (c: any) => void, o?: any) => { const c = S.man(o); c.anim.trained = 1; c.anim.upper = 'none'; set(c); walkTo(c, 4.7);
+    S.run(1.5); const T = 0.66; for (let i = 0; i < 6; i++) { S.shot(`${(i / 6).toFixed(2)} of a cycle`); S.run(T / 6); } };
+  SC['sprint-pistol-old'] = { title: "Sam's sprint with the pistol as it was: the gun in a pumping fist", run(S: any) { sprinter(S, c => { c.__pistol = true; }); } };
+  SC['sprint-pistol'] = { title: "Sam's sprint with the pistol: both hands on it, low", run(S: any) { sprinter(S, c => { c.__pistol = true; c.anim.runReady = true; }); } };
+  SC['sprint-pistol-turns'] = { title: "into the sprint with the pistol and out of it again: the carry, the low ready, the carry", run(S: any) {
+    const c = S.man(); c.__pistol = true; c.anim.trained = 1; c.anim.upper = 'relaxed'; walkTo(c, 1.55); S.run(1.2); S.shot('walking, the carry');
+    c.anim.upper = 'none'; c.anim.runReady = true; walkTo(c, 4.7); for (const [t, d] of [[0.05, 0.05], [0.15, 0.1], [0.3, 0.15], [0.6, 0.3]]) { S.run(d); S.shot(`${t} s into the sprint`); }
+    c.anim.upper = 'relaxed'; c.anim.runReady = false; walkTo(c, 1.55); for (const [t, d] of [[0.05, 0.05], [0.15, 0.1], [0.3, 0.15], [0.6, 0.3]]) { S.run(d); S.shot(`${t} s out of it`); }
+  } };
+  SC['sprint-rifle'] = { title: "Sam's sprint with the rifle: the long gun's low ready (what the pistol's is set beside)", run(S: any) { sprinter(S, c => { c.anim.longStance = 'lowLong'; }, { rifle: true, steady: 1 }); } };
   SC['carry-up'] = { title: 'an operator crossing a room: rifle shouldered, 1.3 m/s', run(S: any) {
     const c = S.man({ rifle: true, steady: 1 }); c.anim.trained = 1; c.anim.upper = 'aim'; walkTo(c, 1.3);
     S.run(2.0); const T = 0.92; for (let i = 0; i < 6; i++) { S.shot(`${(i / 6).toFixed(2)} of a cycle`); S.run(T / 6); }

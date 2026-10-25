@@ -966,6 +966,21 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   SEEN ON A GPU: the FIRST build's box, in the maintainer's own shots from the solo tutorial mission (what the notes above answer). NEVER SEEN ON
   A GPU: the one-line box and the panel — looked at as stills of the real page's own markup and styles, and used by real key presses on the
   software adapter with the picture not drawn; nobody has played them.
+- **The box counts the gun's rounds over its magazine's size, with a box for each spare magazine** (`SLOTSETUP.mags`, slotsetup.ts; `ui/handbox.ts`,
+  10-24; the maintainer, of a rifle that read 31 / 60 at a mission's start: "we should say 31/30 and then two spare magazines on the side"). The box
+  of what is in his hands read the rounds in the gun over the rounds in ALL the spares, so a full rifle said 31 / 60 and the 60 read as a magazine's
+  size. NOW the second number is what one magazine holds (31/30: thirty and the one in the chamber) and each spare magazine is a little upright box
+  beside it, fullest first, filled as far as that magazine is (the old column's own `.mags` drawing); one put back part used is a part-full box, and
+  one fired dry is dropped, so its box goes. A GUN FED A SHELL AT A TIME (the shotguns) keeps its two numbers: what it carries is loose shells and
+  the second number is the only count of them. A row that never runs dry has no boxes. Mid reload the magazine in his hand is a box too, for the
+  second it is out. The debugger's Gun setup section has its box. Nothing of the guns changed: the rifle's row is still thirty rounds and two spares (`weapons.ts`), the same on every
+  level. The strip's small number (the rounds ready) and the old column (`?slotsetup=0`) are as they were. SWITCH: `SLOTSETUP.mags`, the box's
+  alone (nothing in the game reads it), OFF in the module and on the frozen stand (`standGame` pins it off; `FROZEN_HOLDS` row with no word), ON in
+  the page (`?magboxes=0` = 31 / 60, as it was); a recording from before the key replays with it off. CHECK: `probes.ts magboxes`
+  (`tools/qa/magboxes-check.ts`, family `kit`; `MAGBOXES_BREAK=1` must fail) on BOTH stands, the box drawn by the real overlay code on the probes'
+  stand-in elements: the rifle at the start, six rounds fired, a reload (the magazine that came out is a box as full as it was), the pistol, the key
+  off, the journal, the stands. NOBODY HAS seen it on a GPU or in play; the picture handed to the maintainer is the box's own elements and styles
+  off the software-adapter page.
 - **Empty hands are a slot on backtick; E is spare; the debugger is on backslash** (`src/game/handslot.ts HANDSLOT {on}`, `HANDSLOT_KEY`, 10-22; the
   maintainer: "having backtick be the empty state", "when holding a guy, we can just have picking empty hands or pistol as the way to change
   equipment", "we can move the debug menu to \ or something like that", "if we have an empty equipment state, we can keep that lmb is knife, rmb is
@@ -1517,3 +1532,24 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   [noworkstow]` (the page on the software adapter). NOT HERE, other owners' two-handed jobs: a timed charge on its bench and its defusing, the drive
   out of the rack, the optical wand, a lock being picked, a thing a teammate works (`workthings.ts`); the big slot's hammer already puts the gun away;
   a keypad and the breaker's lever are one hand. NOT DONE: no tour, no soak, no fight tallies with it on; never seen on a GPU; nobody has played it.
+- **Sam sprints with both hands on the pistol** (`RUNREADY`, src/game/character.ts; asked for by src/game/player.ts `anim.runReady`; 10-25, the
+  maintainer: "sprinting with pistol animation is weird, should keep two hands on it and at low ready, like rifle sprinting animation"). WAS: a sprint
+  takes the pistol's layer off (`upper` 'none'), so the gun rode the sprint clip's pumping fist, while the rifle's sprint is the long gun's low ready
+  in both hands (`armRifle … 'lowLong'`). NOW, with the key on: while he sprints with the pistol in his hand (`pl.sprinting && pistolUp`, not while
+  the hands are busy) player.ts raises `anim.runReady`, and a figure so told that is in no stance of its own takes the pistol's LOW READY (the stance
+  every man moving between doors has, arms only, the legs and trunk the sprint's) with its spring targets drawn in to the table's (`fwd` 0.24, `up`
+  -0.185, `pitch` -50, `tuck` 0.6: a runner carries it nearer the belt than a walker). NO STANCE IS WRITTEN (nothing to own or to leave behind on a
+  checkpoint); a stance of his own (the wall's low ready from gunwall.ts, a hold) wins as before; the rifle and a holstered pistol are not asked.
+  Only Sam: no guard or teammate sprints. Switch: ON in the page (`?runready=0` puts it off; Tab ▸ the move panel ▸ 'sprint with the pistol ▸ both
+  hands on it'), OFF in the module and on the frozen stand (`FROZEN_HOLDS['RUNREADY.on']`: `TPS_RUNREADY=1`); the journal carries the table and a
+  recording from before it replays the fist. CHECK: `probes.ts runready` (family player; `tools/qa/runready-check.ts`; `RUNREADY_BREAK=1` fails
+  `hands`), both stands, the lobby, one seed: over a second of the sprint the hands are at most 11 cm apart (91 with the key down), the gun hand 96
+  to 109 cm up and 38 to 39 cm ahead of him (it travelled 58 cm fore and aft as a fist), the muzzle at least 49° down; beside it the rifle's sprint
+  reads 105 to 119 cm, 33 to 34 cm, 41° (the frozen stand's numbers). ON THE PAGE'S STAND the same run passes a thing inside the gun's reach: for 8 of
+  the 60 frames the low ready is the wall rule's own (12 with the key down, so it is not this rule's doing), the hands stay together through them
+  (the gun hand 94 to 109 cm up, 38 to 42 cm ahead, the muzzle at least 45° down), and the check counts those frames apart (`gunWallIs`) and wants
+  no other stance written. Half a second after Shift is let go the carry is back. LOOK AT IT: `pose-strip.ts sprint-pistol |
+  sprint-pistol-old | sprint-rifle` (capsules), `pose-mesh.ts operator_1 sprint-pistol --inhand --at <secs>` (the worn mesh; `sprint-pistol-old` =
+  before). NOT TOUCHED: gunhand.ts / inhand.ts (how a gun sits in a hand) and the creep's arms. NOT SEEN, NOT PLAYED: never on a GPU or in the
+  page; the numbers are first numbers off the capsule strips and CPU-skinned stills; the way into the sprint and out of it was looked at as a capsule strip only
+  (`pose-strip.ts sprint-pistol-turns`: the hands are together inside 0.3 s, a little apart on the way); a sprint into a door's shoulder and a throw out of a sprint were not looked at with it on.

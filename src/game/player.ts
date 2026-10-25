@@ -49,7 +49,7 @@ import { samStaggered, samRooted, samBlind, samStunPose } from './samstun';
 import { SPRINTDOOR, SPRINTDOOR_STATS, sprintDoorPace, sprintDoorLean, sprintDoorHead } from './sprintdoor';
 import { tearOff } from './doorblast';
 import { aimWeighBegin, aimWeighTurn, aimWeighShot, aimWeighLaunch, aimWeighLaunchKeep } from './aimweight';
-import { THROW_RELEASE, HOLD } from './character';
+import { THROW_RELEASE, HOLD, RUNREADY } from './character';
 import { WALLSNAP, wsTakeSecs, wsEase, wsHit, wsCornerAngle, wsSeenDeg } from './wallsnap';
 import { HANDSLOT, HANDSLOT_KEY } from './handslot';
 import { THROWBACK } from './throwback';
@@ -67,6 +67,7 @@ import { defuseRows } from './defuse';
 import { rescueEndRows } from './rescueend';
 import { snatchOutRows } from './snatchout';
 import { STALK, stalkStep, stepEase } from './stalk';
+import { TAPSTEP, tapTick, tapOff, tapHeld } from './tapstep';
 import { closeLive, CLOSE, closeRows, closeCivGate, closeCivOffer, closeTick, closeBlow, closeAt, closeKindOf, closeStation, closeNoise, closeTook, closeSeated, closeUnseat, closeBare } from './close';
 import { feedDeal, feedPlan, feedPlay, shellPlan } from './gunreload';
 import { KITANIM, kitTick, kitClick, kitReload, kitReloadNote, kitGunUp, kitNv, kitNvEye } from './kitanim';
@@ -388,7 +389,7 @@ export function reloadInHand(g: Game, sprinting = false, boltOnly = false): bool
 export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamera) {
   const pl = g.player; const c = pl.char; const T = g.tune; const gun = pl.pistol;
   if (TWOGEARS.on) pl.pace = 1;   // (two gears: a notch a checkpoint or an older visit left on him is nobody's)
-  pl.dash = false; c.anim.dash = 0;   // (CROUCHRUN: this frame's own, set below where his legs are his)
+  pl.dash = false; c.anim.dash = 0; c.anim.runReady = false;   // (CROUCHRUN, RUNREADY: this frame's own, set below where his legs are his)
   cam.peekOffset = null;   // (set again below for the one case that wants it: peeking round the end of a wall)
   aimWeighBegin(pl);   // (aimweight.ts: nothing has weighed his aim this frame yet — only the plain aim branch below does)
   noShoveBegin(g);   // (noshove.ts: nobody has moved him yet this frame, and his own legs start from here — nothing with its switch off)
@@ -496,7 +497,8 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   if (!pl.dragging && (pl.haul || c.anim.haul)) { pl.haul = null; c.anim.haul = null; }   // (a body taken out of his hands by a reset: guards.ts)
   const stunned = samStaggered(g), rooted = samRooted(g);   // folded by a blast (samstun.ts): rooted, the gun at the low ready, no round — as a man is; blind = the picture's, his feet his own
   const ownMove = !rooted && (mx !== 0 || mz !== 0);   // (rooted, his keys are no step of his own: a held Shift and a direction is then no sprint that lets go of a body or a door, and the hands' moves are fed no step from him)
-  if (HANDS.on) { const hs = handsStep(g, ownMove && !g.puppet, dt); if (hs) { mx = hs[0]; mz = hs[1]; } }   // a body being taken up / laid down plants his feet (or walks him the step in to it); a door worked by hand steps him clear of its sweep (hands.ts)
+  let handsWalk = false;
+  if (HANDS.on) { const hs = handsStep(g, ownMove && !g.puppet, dt); if (hs) { mx = hs[0]; mz = hs[1]; handsWalk = true; } }   // a body being taken up / laid down plants his feet (or walks him the step in to it); a door worked by hand steps him clear of its sweep (hands.ts)
   if (rooted) { mx = 0; mz = 0; }
   const ml = Math.hypot(mx, mz); if (ml > 0) { mx /= ml; mz /= ml; }
   if (input.hit('KeyC') && !pl.dragging) { if (!pl.crouch) pl.crouch = true; else if (canStand(g)) pl.crouch = false; else g.msg('no room to stand'); }   // crouch is C, only (Ctrl is the camera-orbit modifier now); standing needs the headroom
@@ -514,16 +516,20 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
     if (wantSprint && pl.crouch && canStand(g) && !dashes) pl.crouch = false;   // (under a counter top Shift just crouch-walks on: no standing into the slab)
     if (pl.dragging) pl.crouch = haulCrouch(g);   // (hauled along the floor: on his heels; carried on his shoulder: upright once it is half way up — hands.ts)
     pl.sprinting = wantSprint && !pl.crouch;
+    const tap = !TAPSTEP.on ? null : pl.crouch && !wantSprint && !stalk && !pl.dragging && !handsWalk && !rooted && !g.puppet && !g.touring ? tapTick(g, mx, mz, ml, dt) : tapOff(g, ml);   // (tapstep.ts: crouched, the keys are steps)
+    if (tap) { mx = tap.mx; mz = tap.mz; }
     pl.dash = dashes && wantSprint && pl.crouch && !pl.dragging && !stalk;   // (CROUCHRUN: Shift in a crouch stays down and goes quickly)
     if (pl.sprinting && gun.reloading) { gun.cancelReload(); c.anim.cancelReload(); }
     if (pl.sprinting && rifle.reloading) { rifle.cancelReload(); c.anim.cancelReload(); }
     let maxSpeed = ml === 0 ? 0 : pl.sprinting ? T.playerSprint : pl.dragging ? (pl.haul ? haulSpeed(g) : T.playerCrouch * 0.6) : pl.dash ? CROUCHRUN.pace : (pl.crouch ? crouchPace(g) : T.playerWalk) * pl.pace;   // hauling 80 kg along the floor is slow; the wheel-set pace scales the walk and the crouch-walk alike (the rifle in the shoulder costs no pace: the aim model's moving / settle terms are what the move costs him)
     if (g.puppet?.walk !== undefined && ml > 0) maxSpeed *= g.puppet.walk;
     maxSpeed = samLoadPace(g, maxSpeed, pl.sprinting);   // (kitload.ts: what his card weighs — a light one's legs are quicker, a heavy one's slower, a sprint by part of it; as asked with its switch off or no card on him)
+    if (tap) maxSpeed = tap.speed;
     if (stalk) maxSpeed = ml === 0 ? 0 : stalk.pace;   // (stalk.ts: the man's own speed and a closing speed that eases off as he nears — the game's, whatever his card weighs)
     if (pl.sprinting) maxSpeed *= sprintDoorPace(g, pl);   // (sprintdoor.ts: his hand is ripping a door round toward him — the run waits for it; 1 otherwise)
     pl.speedSm = damp(pl.speedSm, maxSpeed, stalk ? (stalk.keep ? 12 : maxSpeed > pl.speedSm ? STALK.easeUp : STALK.easeDown) : maxSpeed > pl.speedSm ? 6 : 12, dt);   // (stalk.ts: the creep takes up its speed more gently than a walk)
-    if (ml > 0) { c.vel = [mx * pl.speedSm, 0, mz * pl.speedSm]; } else { c.vel = v3.scale(c.vel, Math.exp(-14 * dt)); }
+    if (tap) { pl.speedSm = tap.speed; c.vel = [mx * tap.speed, 0, mz * tap.speed]; }
+    else if (ml > 0) { c.vel = [mx * pl.speedSm, 0, mz * pl.speedSm]; } else { c.vel = v3.scale(c.vel, Math.exp(-14 * dt)); }
     c.pos = v3.mad(c.pos, c.vel, dt);
     const headroom = pl.crouch ? 1.0 : 1.7;
     collidePlayer(g, headroom);
@@ -632,6 +638,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   c.anim.speed = speed; c.anim.crouchTarget = pl.crouch ? 1 : 0; c.anim.dash = pl.dash ? 1 : 0;
   if (pl.wall) { c.anim.stance = 'wall'; c.anim.stackSide = pl.wall.side; c.anim.wallPeek = pl.wall.peek; c.anim.wallYaw = wrapAngle(Math.atan2(pl.wall.n[0], pl.wall.n[2]) - c.bodyYaw); }   // back flat to the face whatever the legs do (the animator is told which way the wall faces off his front: square behind when parked, 55° round while the legs are turned to sidle), head / hands / lead foot toward the way he last went, leaning out with the peek (character.ts 'wall'; releaseWall takes it off — the tour's beats own the stance the rest of the time)
   c.anim.upper = pl.sprinting || pl.dragging ? 'none' : aiming ? 'aim' : gunUp ? 'relaxed' : 'none';
+  c.anim.runReady = RUNREADY.on && pl.sprinting && gunUp && !c.anim.hideHeldItem;   // (character.ts RUNREADY: the sprint with the pistol in his hand is the low ready in both hands, as the rifle's is the long gun's — false with its switch off, and the sprint's fist as it was)
   { const dp = c.anim.doorPush; const inHands = rifleUp && !c.anim.hideHeldItem; armRifle(g, inHands, !inHands ? null : pl.sprinting ? 'lowLong' : dp && dp.w >= 1 && !aiming ? 'portLong' : 'shoulder'); }   // the FN2000 in both hands = the R1 long-gun solve, its carriage forced by what he is doing (armRifle: shouldered whenever it is in the hands, the low ready for the sprint, the port for a leaf under the hand); slung / no rifle = the pistol's numbers back. hideHeldItem: the lock tools' / a hold's layer still easing out for a few frames after it ended keeps the hands 'busy' — combat.ts handProps draws the rifle on his back by the same flag, so the arms let go of it for exactly those frames too
   // a wall, a jamb or a leaf inside the raised gun's reach on the line he aims along (gunwall.ts; nothing with its switch off): the gun comes to the low ready —
   // the rifle's low carriage, the pistol's stance — and no round leaves it until there is room to bring it up
@@ -762,7 +769,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   poseGunLight(g);   // sprinting: gun down, light dark; hands still coming off the lock tools: the gun (and its light) is on the thigh
   // footsteps (for audio + AI hearing): step events from the locomotion phase — walking, crouch-walking, sprinting, the sidle along a wall and the crouched haul of
   // a body all tread here; the level is the gait's × the floor's (floor.ts tread: carpet 0.6, stone 1.1 … — one number for the mixer, the guards and the meter)
-  const fall = footfallDue(g, dt, c.anim.phase, speed);
+  const fall = footfallDue(g, dt, c.anim.phase, tapHeld(g) ? 0 : speed);   // (tapstep.ts: a step's footfall is its plant)
   if (fall) {   // (FOOTFALL: an edge of the cycle crossed at a footfall's speed, or a step's worth of leg with none)
     const base = pl.sprinting ? 1 : pl.dash ? CROUCHRUN.loud : pl.crouch ? 0.125 : loadGait(g, 'player', speed) > 2 ? 0.6 : 0.26;   // (crouch / walk per-step levels carry the clips' retiming — 0.72 / 1.06 m/s natural, so ~1.4x the steps per metre — at the old per-SECOND loudness: 0.18 x 0.69, 0.35 x 0.73; what a guard accumulates over a stretch of floor is unchanged)
     const loud = tread(g, c.pos, pl.sprinting ? base : base * loadHeard(g, 'player'), true);   // (kitload.ts: × what his card rattles and weighs; 1 with its switch off — and a flat-out sprint is boots on a floor whatever he carries)

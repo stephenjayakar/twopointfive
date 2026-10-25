@@ -28,9 +28,12 @@ export const BoxFlag = {
   // CPU: movement collision and sound treat it as a wall, sight passes through it (collision.ts segmentBlocked's `through`), a round / kick / bang breaks it.
   Glass: 1 << 17,
   // A THIN THING THAT STANDS FREE (scene/thin.ts thinLevel, as a level is stood up: a stovepipe, a window's bar, a lone post). CPU-only, like SoundSeal (bits
-  // 18-31 of the GPU word are the marking row): the fog of war's own sight passes it while FOG.thin is on (game/fogofwar.ts: segmentBlocked's `through`), and
+  // 18-31 of the GPU word are the marking row): the fog of war's own sight passes it while FOG.thin is on (game/fogofwar.ts: segmentBlocked's `through`; a teammate's own eye too under FOG.mates — game/guards.ts eyeThrough), and
   // the picture's fog eye learns which boxes carry it from the sight table's own bit list (render/fogofwar.ts FogFrame.thinBits), not from the box's word.
   Thin: 1 << 18,
+  // A WINDOW'S BAR (scene/bars.ts barLevel, as a level is stood up: the kit's upright between a window's bays). CPU-only, like Thin: a round that meets one
+  // breaks it and a line of fire passes one while WINBARS.on is up (game/winbars.ts; collision.ts shotBlocked's `firePass`); read by nothing else.
+  Bar: 1 << 19,
 } as const;
 /** the most panes SceneInfo.glass carries to the GPU (nearest to the camera's look-at first when a level has more) */
 export const MAX_GLASS = 32;

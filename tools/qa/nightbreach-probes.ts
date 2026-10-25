@@ -59,8 +59,8 @@ async function rig(seed: number, knobs: Record<string, unknown> = {}, start = tr
   Math.random = seeded(seed);
   const W: any = await standUp(); const game = W.game; const NB = game.nightBreach;
   const lit = () => game.targets.filter((t: any) => t.group === 'breakroom').map((t: any) => `${t.name ?? '?'}:${t.on ? 1 : 0}`).join(' ');
+  game.tune.chaos = chaos;   // (BEFORE `before` is taken: the shipped stand stands the game up at chaos 0.5, and this write of the rig's own read as the staging's — 'tune CHANGED' on -stage and -stop)
   const before = { guards: game.guards.length, civilians: game.civilians.length, steady: steady(W), room: lit(), tune: JSON.stringify(game.tune) };
-  game.tune.chaos = chaos;
   const why = start ? NB.start() : null;
   const R = { W, game, NB, why, before, lit, vis: 0.05, shots: {} as Record<string, number>, samHit: false, bad: '', dazzle: [] as number[],
     blind: [0, 0, 0], sighted: 0, offDoor: 0, firstBlind: [NaN, NaN, NaN], supMax: [0, 0, 0], leak: Infinity,

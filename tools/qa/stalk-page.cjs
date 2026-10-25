@@ -6,6 +6,7 @@
 //   let     the same, let go after two thirds of a second: nobody stalked, Sam at rest; pressed again: in his arm.
 //   slider  the lab's first slider moved by its own input event writes the stalk's top speed.
 //   dash    crouched, Shift and a move key held (the keyboard's own events): he stays down and goes at the fast crouch walk's pace, no sprint.
+//   tapstep in the dark corridor a tap of a move key (the keyboard's own events) goes one short step and he stops dead.
 //   look    2.2 m behind the man with the cursor elsewhere his head has the man; a metre off the man's side he leans away with the low arm out; the lab's button
 //           stands two walkers a gap apart, and dead between them he is small and leans into neither.
 //   (with the key the finish, stalk.ts `key`, as a plain address has it: `key` is that E takes him from in reach, and `hold` / `let` that the held button
@@ -42,11 +43,11 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
   const tap = async code => { await page.keyboard.down(code); await frames(3); await page.keyboard.up(code); await frames(20); };
   await page.evaluate(() => window.__runFrames(150, 1 / 60, [], 'none'));   // (the man who stands is on his mark)
   if (OFF) {
-    say(!boot.fatal && !boot.on && boot.men === 6, `?stalk=0: the switch is ${boot.on ? 'ON' : 'off'}, ${boot.men} men`);
+    say(!boot.fatal && !boot.on && boot.men === 11, `?stalk=0: the switch is ${boot.on ? 'ON' : 'off'}, ${boot.men} men`);
     await behind(0.8); const before = await frames(2); await tap('KeyE'); let r = await frames(40, true); if (!r.held) { await tap('Space'); r = await frames(40, true); }
     say(r.held && /grab him/.test(before.list), `0.8 m behind the man who stands the list offers the grab (${/grab him/.test(before.list)}) and its key takes him (${r.held})`);
   } else {
-    say(!boot.fatal && boot.on && boot.only && boot.men === 6 && boot.holstered && boot.panel && /^Sneak lab/.test(boot.sys) && boot.sliders >= 12,
+    say(!boot.fatal && boot.on && boot.only && boot.men === 11 && boot.holstered && boot.panel && /^Sneak lab/.test(boot.sys) && boot.sliders >= 12,
       `the lab: stalk ${boot.on ? 'on' : 'OFF'}, the click the only way ${boot.only}, ${boot.men} men, empty hands ${boot.holstered}, the panel ${boot.panel ? 'open' : 'SHUT'} on '${boot.sys.slice(0, 20)}' with ${boot.sliders} sliders${boot.fatal ? ' · FATAL ' + boot.fatal : ''}`);
     { // (the lab's knobs: named groups that fold, names that fit the row, and a hover on every row that says what to look for)
       const P = await page.evaluate(async () => { const pg = [...document.querySelectorAll('#panel .ppage')].find(p => p.offsetParent !== null) || document.getElementById('panel');
@@ -164,6 +165,23 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
     const s = await page.evaluate(() => { const S = window.__knobs.registry().STALK, was = S.pace, el = [...document.querySelectorAll('#panel .row')].find(r => /top speed/.test(r.textContent))?.querySelector('input[type=range]'); if (!el) return { was, now: was, found: false };
       el.value = '1.2'; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); const now = S.pace; S.pace = was; return { was, now, found: true }; });
     say(s.found && Math.abs(s.now - 1.2) < 1e-6, `the lab's 'top speed' slider moved to 1.2 writes the stalk's top speed (${s.was} → ${s.now})`);
+    { // (src/host/sneaklab.ts SCENES: the five buttons, each putting Sam at its own start and the line at the top of the page to its own; SHOTS=<dir> keeps a picture of each)
+      const names = ['man standing', 'man walking', 'dark room', 'dark corridor', 'corner'], got = [];
+      for (const name of names) {
+        got.push(await page.evaluate(async n => { const b = [...document.querySelectorAll('#panel button')].find(x => x.textContent.trim() === n); if (!b) return null; b.click(); await window.__runFrames(40, 1 / 60, [], 'none');
+          const g = window.__game, p = g.player.char.pos; return { at: `${p[0].toFixed(1)},${p[2].toFixed(1)}`, line: g.objectiveText(), seen: !g.playerInvisible, bare: !!g.player.holstered, low: !!g.player.crouch }; }, name));
+        if (process.env.SHOTS) { await page.evaluate(() => window.__runFrames(4, 1 / 60, [], true)); await page.screenshot({ path: `${process.env.SHOTS}/${name.replace(/ /g, '-')}.png` }); }
+      }
+      const ok = got.every(Boolean), seen = ok ? got.map(c => c.seen) : [];
+      say(ok && new Set(got.map(c => c.at)).size === 5 && new Set(got.map(c => c.line)).size === 5 && got.every(c => c.bare && c.low) && seen.join() === 'false,false,true,true,false',
+        `the lab's five scenario buttons each put Sam at his own start, hands empty and low, with their own line, and only the dark ones let the men see him (${ok ? got.map(c => c.at).join(' · ') : 'a button is missing'})`);
+    }
+    { // (src/game/tapstep.ts: the keyboard's own events in the dark corridor; a move key is a step, and between steps he stands)
+      await page.evaluate(async () => { [...document.querySelectorAll('#panel button')].find(x => x.textContent.trim() === 'dark corridor').click(); await window.__runFrames(60, 1 / 60, [], 'none'); });
+      const at = () => page.evaluate(() => { const g = window.__game, c = g.player.char; return { x: c.pos[0], z: c.pos[2], v: Math.hypot(c.vel[0], c.vel[2]) }; }); let best = 0, stopped = false;
+      for (const code of ['KeyW', 'KeyS', 'KeyA', 'KeyD']) { const a = await at(); await page.keyboard.down(code); await frames(4); await page.keyboard.up(code); await frames(50); const b = await at(), d = Math.hypot(b.x - a.x, b.z - a.z); if (d > best) { best = d; stopped = b.v < 0.01; } if (best > 0.2) break; }
+      say(best > 0.2 && best < 0.45 && stopped, `in the dark corridor a tap of a move key is one short step and he stops dead (${best.toFixed(2)} m)`);
+    }
   }
   if (errors.length) { rows.push(false); console.log(`- FAIL — page errors: ${errors.join(' | ')}`); }
   await browser.close();
