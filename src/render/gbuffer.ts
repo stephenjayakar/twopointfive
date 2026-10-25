@@ -56,8 +56,10 @@ fn lookSnow(cls: u32, wp: vec3f, gn: vec3f, bi: u32, lc: vec3f, hf: vec4f, paint
 `;
 }
 /** the look page's panel numbers, as look.wgsl's LookCfg takes them (a, b: the eight amounts; the layers' base roughness follows, and `snow` after it) */
-export const LOOK_DEFAULTS = { paint: 1, relief: 1, shine: 1, weather: 1, untile: 1, edges: 1, cavity: 1, size: 1, snow: 1, air: 1, ground: 1.5, crust: 1, men: 1, stone: 1, marks: 1, tailor: 1, print: 1, sky: 1, clarity: 0.7, shade: 0.7 };   // (`clarity` is × relief, edges, cavity and ground as they go up, setLook below; `air` and `sky` are not the shader's: × settings.hazeDensity and × the frame's sky, ui/lookpanel.ts)
+export const LOOK_DEFAULTS = { paint: 1, relief: 1, shine: 1, weather: 1, untile: 1, edges: 1, cavity: 1, size: 1, snow: 1, air: 1, ground: 1.5, crust: 1, men: 1, stone: 1, marks: 1, tailor: 1, print: 1, sky: 1, clarity: 0.7, shade: 0.7, lamps: 0.6 };   // (`clarity` is × relief, edges, cavity and ground as they go up, setLook below; `air` and `sky` are not the shader's: × settings.hazeDensity and × the frame's sky, ui/lookpanel.ts)
 export const lookAmounts = { ...LOOK_DEFAULTS };
+/** the amounts that are not the shader's go to where they are read (frame.ts lookConfig): after any change of lookAmounts, with GBuffer.setLook */
+export function lookSync() { lookConfig.air = lookAmounts.air; lookConfig.sky = lookAmounts.sky; lookConfig.shade = lookAmounts.shade; lookConfig.lamps = lookAmounts.lamps; }
 /** the cast's part ids the look's men are drawn by (look.wgsl manWeb), each 1 + its index in the cast's part list, 0 = this cast has none: the operators' suit
  *  (it carries the plate carrier) and the canvas chest rig. The page says them once its cast is loaded (main.ts). */
 export const lookParts = { suit: 0, rig: 0 };

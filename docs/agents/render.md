@@ -786,6 +786,31 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   break of "what the AI senses is what the picture shows" by the amount of the gain, ON by default on the prototype page because the maintainer asked
   to see it, and to be settled before any of it goes to the build (the honest version is one exposure for the picture, chosen by where the camera
   looks, which the game can read too). Seen on the software adapter only (the bay at midday); never seen on a GPU, never played.
+- **THE LOOK PANEL'S "LAMPS BY DAY" ROW** (`lookConfig.lamps`, 0.6 on the look page, 0 = as authored; `engine.ts lookLamps` sets
+  `LightSet.localK`, `render/lights.ts upload` applies it; the maintainer, 10-25, of the pass at midday: "we don't have consistent, physically accurate
+  light values (lumens?) across the image … a lamp on the ground looks way too bright in daytime mode … same for the flashlight"). He is right, by the
+  numbers: every level is authored as a night, and the pass's moon of 0.06 against bulbs that put 4 to 5 on the floor under them is about the real
+  proportion (0.2 lux against some 15). The hours then add a sun of 1 to 6, where a real one is 400,000 such moons, and the exposure is nearly one
+  number for every hour (1.7 to 2.0). So by day a lantern at a metre (4.5) or a flashlight at 3 m (70 at the lens, 7.8) lights the ground as the midday
+  sun does (about 5). The tone map is not the fault; the scene's values are. THE ROW: by day every STEADY light that is not the sun or the moon goes up
+  × 10^(−3.7 × amount). 1 = about 1/5,000, a bulb in its real proportion to the sun; the default 0.6 = about 1/170, where the flashlight is right (a
+  real weapon light is some 1 % of sunlight at 3 m; the game's is weak beside its own bulbs) and a lantern is lost in the sun. Applied to the UPLOADED
+  record alone, so the picture, the bounce, the beams and the GPU's light meter read one number; `RtLight.intensity` is never written. NOT scaled: a
+  flash or a blast and a lightning stroke (ttl / transient: theirs is a real brightness the game's numbers never held), an infrared illuminator, a
+  device's sight cone (`group 'devices'`), the Team & kit figure's staging (`kitview…`), and every EMISSIVE face (a lamp's glass still glows, and a
+  glow card or a headlamp box still lights its surroundings through the bounce as at night: for those "1 = real" is not reached). DAY is the page's
+  word, `lookConfig.day` (main.ts: the hour is not `night`), never a guess from a light's strength (41 of 53 levels have a moon of 0.9 and one of 2.6);
+  where nobody says, a level lit as a day by its own sky counts by the shade row's ramp, read without the Sky light row. A night is left exactly as it
+  was. "Hold: plain boxes" and the sweep's `look.all` do NOT move it (like Sky light: it is the light, not a layer). KNOWN BREAKS, to be settled before
+  any of it goes to the build: the game's CPU readers of the list (`guards.ts lightEstimateAt` and its callers: calm torch, power out, morale, night
+  vision) still read the authored strength, so by day a man can judge a lamp-lit room as lit that the picture and the GPU meter have as shade; the
+  lit fog's own lamp list is authored strength too (not read under the full picture, `FOG.full`); a lamp at 1/5,000 still holds its slot and its range
+  in the culling. The honest fix is in the units, not a multiplier at upload: the sun and sky of each hour raised to their real proportion with that
+  hour's exposure brought down to match, and the meter's 100 % made relative to the hour. Check: `bun run tools/qa/looklamps-check.ts`
+  (`LOOKLAMPS_BREAK=1` must fail; it stands up no game, so it is the same on both stands). Measured on the software adapter, one still each, the pass's
+  lorry bay at midday (`rebuild/graphics-next/bay-midday-lamps.png`): the lantern's pool on the bay floor code 195 at 0, 77 at 0.6, 72 at 1 (the floor
+  beside it without a lamp); a flashlight's spot on the same floor 187, 71, 68; sunlit snow 219 and the far floor 52 unchanged. Never seen on a GPU,
+  never played; dawn and dusk (where the hour's own words say "the lights still on") not looked at.
 - **THE LOOK PAGE WITH A GEOMETRY TRIAL ON IS COMPILED WITHOUT THE ROUND TEST** (`main.ts urlFlagsBeforeEngine`: `roundConfig.gpu` is false when
   `lookConfig.on` and a trial has put `cutConfig.swap` off; `?round=1` compiles it in; 10-25). After the build's round things came in by merge, the look
   page lost its SOFTWARE device on its first drawn frame ("A valid external Instance reference no longer exists") where the plain page at the same

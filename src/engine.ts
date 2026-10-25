@@ -17,7 +17,7 @@ import { TexturePool } from './render/texpool';
 import { reachLevel } from './render/reach';
 import { WORLD } from './scene/world';
 import { FollowCamera } from './game/camera';
-import { Vec3, m4, v3 } from './math/vec';
+import { Vec3, m4, v3, smoothstep } from './math/vec';
 
 import { RenderSettings, defaultSettings } from './settings';
 import { FogSight, FOG_SIGHT_BYTES, type FogFrame } from './render/fogofwar';
@@ -476,6 +476,7 @@ export class Engine {
     }
     this.glassLightMasks();   // (glass: which listed panes each light can reach at all → RtLight.glassMask, packed by the upload below; all 0 with the experiment off)
     this.lights.dirMasks = this.settings.restir;   // the moon's / sun's directional reach masks ride only with the ReSTIR estimator (render/reach.ts reachMaskForDirectional; the OFF path's rows stay as they were)
+    this.lights.localK = lookConfig.on && lookConfig.lamps > 0 ? lookLamps(lookConfig.day?.() ?? false, this.settings.skyZenith, this.settings.skyHorizon, lookConfig.lamps) : 1;
     const numLights = this.lights.upload(time);
     if (this.decals) { this.decals.enabled = this.settings.decals; this.decals.frame(this.world); }   // decals (E1): the setting is the switch (off = nothing recorded or written); attached marks follow their boxes as of THIS upload, the buffer is rewritten only when the list changed
     this.passes.setDecalBuffer(this.decals?.buf ?? null);   // (the composite reads it too: the crack stars rounds leave on glass panes — a no-op unless the buffer changed)
@@ -650,7 +651,21 @@ export { FrameFlags };
  *  sky ALONE as common.wgsl skyRadiance paints it (horizon to zenith over the first 0.4 of height): the mean radiance open air holds (half the upper hemisphere's
  *  mean, 0.8 zenith + 0.2 horizon) and the irradiance open ground gets (π × (0.947 zenith + 0.053 horizon)). Never more than ×6 */
 function lookShade(zen: ArrayLike<number>, hor: ArrayLike<number>, skyK: number, amount: number): [number, number, number, number] {
-  const lum = (a: number, b: number) => skyK * (0.2126 * (a * zen[0] + b * hor[0]) + 0.7152 * (a * zen[1] + b * hor[1]) + 0.0722 * (a * zen[2] + b * hor[2]));
-  const up = lum(0.8, 0.2), t = Math.min(1, Math.max(0, (up - 0.08) / 0.27)), day = t * t * (3 - 2 * t);
-  return [Math.min(1, amount) * day, 0.5 * up, 6, Math.PI * lum(0.947, 0.053)];
+  const up = skyK * lookSkyLum(zen, hor, 0.8);
+  return [Math.min(1, amount) * smoothstep(0.08, 0.35, up), 0.5 * up, 6, Math.PI * skyK * lookSkyLum(zen, hor, 0.947)];
+}
+/** the sky's luminance, `a` of the zenith and the rest of the horizon (0.8 = the upper hemisphere's mean radiance, 0.947 = its cosine-weighted one, over common.wgsl skyRadiance's ramp) */
+function lookSkyLum(zen: ArrayLike<number>, hor: ArrayLike<number>, a: number): number { const b = 1 - a; return 0.2126 * (a * zen[0] + b * hor[0]) + 0.7152 * (a * zen[1] + b * hor[1]) + 0.0722 * (a * zen[2] + b * hor[2]); }
+
+/** THE LOOK PROTOTYPE's lamps by day (lights.ts LightSet.localK): what the place's own steady lights are multiplied by. The maintainer, 10-25, of the pass at
+ *  midday: "we don't have consistent, physically accurate light values (lumens?) across the image … a lamp on the ground looks way too bright in daytime mode
+ *  … same for the flashlight". The numbers: the levels are authored as nights, and the pass's moon of 0.06 against bulbs that put 4 to 5 on the floor under them
+ *  is about right (0.2 lux against some 15). The hours then add a sun of 1 to 6 where a real one is 400,000 such moons, and one exposure serves every hour, so
+ *  by day a lantern at a metre equals the sun. The honest factor is therefore about the same at every hour that has a sun, some 1/5,000 (10^-3.7): the row's 1.
+ *  The default, 0.6, is 1/170, which is where the FLASHLIGHT is right (70 at the lens: a real weapon light is some 1 % of sunlight at 3 m, and the game's is
+ *  weak beside its own bulbs) and a lantern is still lost in the sun and a faint pool in deep shade. 0 = as authored. DAY is the page's word (an hour with a
+ *  sun is up: lookConfig.day), never a guess from a light's strength, since most levels' own moons are 0.9 and one is 2.6; where nobody says, a level lit
+ *  as a day by its own sky counts by lookShade's ramp, read WITHOUT the Sky light row. A night is left exactly as it was. */
+function lookLamps(day: boolean, zen: ArrayLike<number>, hor: ArrayLike<number>, amount: number): number {
+  return Math.pow(10, -3.7 * Math.min(1, amount) * (day ? 1 : smoothstep(0.08, 0.35, lookSkyLum(zen, hor, 0.8))));
 }

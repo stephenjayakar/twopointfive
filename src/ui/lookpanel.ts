@@ -1,8 +1,7 @@
 // THE LOOK PROTOTYPE's panel (the page /look; render/frame.ts lookConfig, shaders/look.wgsl): one slider a layer of the look, written straight into the g-buffer's
 // uniform block, a button that shows the boxes plain while it is held, the hour and the quality preset, and what a frame costs. Made only on that page.
 import type { Engine } from '../engine';
-import { lookAmounts, LOOK_DEFAULTS } from '../render/gbuffer';
-import { lookConfig } from '../render/frame';
+import { lookAmounts, lookSync, LOOK_DEFAULTS } from '../render/gbuffer';
 import type { PerfRecorder, PerfDump } from './perfrec';
 import type { PerfSweep } from './perfsweep';
 import { takeRead, takeWords, sendTake } from './perfsend';
@@ -27,6 +26,7 @@ const ROWS: readonly [keyof typeof lookAmounts, string, string, number][] = [
   ['air', 'Air', '× the haze that shows a lamp in the air', 4],
   ['sky', 'Sky light', '× the light the sky gives: what reaches under a roof and into shade by day (1 = the hour as it is). A measuring row. It moves the real light on this page, so the guards and your light meter see it too', 4],
   ['shade', 'Eyes adjust to shade', 'by day, a place that gets less light than the open air is shown brighter, the way your eyes open up when you look into a shed. 0 = one exposure for the whole picture, 1 = the shade is brought all the way up. The picture only: the guards and your light meter read the light as it is', 1],
+  ['lamps', 'Lamps by day', 'by day, how far lamps, lanterns, flashlights and fire light drop toward their real strength against the sun. 0 = as the game has them today (a lantern as strong as the midday sun), 0.6 = the flashlight is right (about 1 in 170), 1 = a bulb is right (about 1 in 5000). Night is not changed. Flashes and blasts are not changed. It moves the real light on this page, so your light meter and what the guards see of you move with it', 1],
   ['size', 'Map size', '× the 2 m a map covers', 2],
 ];
 
@@ -36,7 +36,7 @@ export function buildLookPanel(engine: Engine, fps: () => number, shapes?: { on:
   for (const ev of ['mousedown', 'click', 'pointerdown', 'wheel', 'contextmenu', 'dblclick']) el.addEventListener(ev, e => e.stopPropagation());   // (never the releases: the game clears a held button on the window's mouseup)
   const head = document.createElement('div'); head.textContent = 'Materials prototype'; head.style.cssText = 'font-weight:700;color:#e8efe9;margin-bottom:2px'; el.append(head);
   const cost = document.createElement('div'); cost.style.cssText = 'color:#8fa39a;margin-bottom:8px'; el.append(cost);
-  const send = () => { engine.gbuffer.setLook(); lookConfig.air = lookAmounts.air; lookConfig.sky = lookAmounts.sky; lookConfig.shade = lookAmounts.shade; };
+  const send = () => { engine.gbuffer.setLook(); lookSync(); };
   const inputs: [keyof typeof lookAmounts, HTMLInputElement, HTMLSpanElement][] = [];
   let kept: typeof lookAmounts | null = null;   // the amounts as the sliders have them, while the boxes are shown plain
   for (const [key, name, tip, max] of ROWS) {
@@ -44,7 +44,7 @@ export function buildLookPanel(engine: Engine, fps: () => number, shapes?: { on:
     const n = document.createElement('span'); n.textContent = name;
     const s = document.createElement('input'); s.type = 'range'; s.min = key === 'size' ? '0.5' : '0'; s.max = String(max); s.step = '0.05'; s.value = String(lookAmounts[key]); s.style.cssText = 'width:100%;accent-color:#9cb8a4';
     const v = document.createElement('span'); v.textContent = lookAmounts[key].toFixed(2); v.style.textAlign = 'right';
-    s.addEventListener('input', () => { (kept ?? lookAmounts)[key] = +s.value; if (key === 'size' || key === 'sky') lookAmounts[key] = +s.value; v.textContent = (+s.value).toFixed(2); send(); });
+    s.addEventListener('input', () => { (kept ?? lookAmounts)[key] = +s.value; if (key === 'size' || key === 'sky' || key === 'lamps') lookAmounts[key] = +s.value; v.textContent = (+s.value).toFixed(2); send(); });
     s.addEventListener('change', () => s.blur());   // (a focused input takes the game's keys: game/input.ts typingTarget)
     row.append(n, s, v); el.append(row); inputs.push([key, s, v]);
   }
@@ -52,7 +52,7 @@ export function buildLookPanel(engine: Engine, fps: () => number, shapes?: { on:
   const line = (label: string) => { const d = document.createElement('div'); d.style.marginTop = '8px'; const l = document.createElement('div'); l.textContent = label; l.style.color = '#8fa39a'; d.append(l); el.append(d); return d; };
   // plain while held; a click on the box leaves it plain
   const plain = (on: boolean) => {
-    if (on && !kept) { kept = { ...lookAmounts }; for (const [k] of ROWS) if (k !== 'size' && k !== 'sky') lookAmounts[k] = k === 'air' || k === 'ground' || k === 'clarity' ? 1 : 0; }
+    if (on && !kept) { kept = { ...lookAmounts }; for (const [k] of ROWS) if (k !== 'size' && k !== 'sky' && k !== 'lamps') lookAmounts[k] = k === 'air' || k === 'ground' || k === 'clarity' ? 1 : 0; }
     else if (!on && kept) { Object.assign(lookAmounts, kept); kept = null; }
     send();
   };
@@ -104,7 +104,7 @@ export function buildLookPanel(engine: Engine, fps: () => number, shapes?: { on:
       const cp = btn('Copy the read'); cp.hidden = true;
       cp.addEventListener('click', () => { const done = () => { cp.textContent = 'Copied'; setTimeout(() => { cp.textContent = 'Copy the read'; }, 1500); }; const old = () => { box.focus(); box.select(); }; if (navigator.clipboard?.writeText) navigator.clipboard.writeText(box.value).then(done, old); else old(); });
       pf.append(play, price, said, box, cp);
-      const OFF: (keyof typeof lookAmounts)[] = ['size', 'sky', 'air', 'clarity', 'untile'];   // (not layers with a cost of their own to switch off)
+      const OFF: (keyof typeof lookAmounts)[] = ['size', 'sky', 'air', 'clarity', 'untile', 'lamps'];   // (not layers with a cost of their own to switch off)
       sweep.extra = [
         { id: 'look.all', label: 'look: every layer off (plain boxes)', flip: () => kept ? 'the boxes are shown plain already' : { from: { look: 1 }, to: { look: 0 }, apply: () => { plain(true); return () => plain(false); } } },
         ...ROWS.filter(([k]) => !OFF.includes(k)).map(([key, name]) => ({ id: `look.${key}`, label: `look: ${name} off`, flip: () => { const from = lookAmounts[key], to = key === 'ground' ? 1 : 0; if (kept) return 'the boxes are shown plain'; if (from === to) return 'already off';   // (the snow's relief is × the game's own: 1 is off, as plain boxes have it)

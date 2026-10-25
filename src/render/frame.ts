@@ -308,7 +308,7 @@ export const surfTryConfig = { on: false };
  *  false on every other page (the g-buffer module gets a stub, its bind group no new entry). A switch of the picture: nothing in the update or the light meter
  *  reads it. `bounce` = how far the relief leans the bounced light (composite.wgsl); `air` = × the haze the frame block carries (engine.ts: the panel's Air row —
  *  the setting itself is the hour's to write). Never seen on a GPU. */
-export const lookConfig = { on: false, bounce: 0.7, air: 1, sky: 1, shade: 0.7 };   // (sky: × the sky's radiance, what every ray that leaves the level brings back: the panel's Sky light row)
+export const lookConfig = { on: false, bounce: 0.7, air: 1, sky: 1, shade: 0.7, lamps: 0.6, day: null as (() => boolean) | null };   // (lamps: how far the place's own lights drop by day toward their real strength against the sun, engine.ts lookLamps; day: the page's word that an hour with a sun is up, game/hours.ts, null = nobody says; sky: × the sky's radiance, what every ray that leaves the level brings back: the panel's Sky light row)
 /** A METAL NEVER MIRRORS THE ROOM BEHIND A WALL (the maintainer, 10-23, the solo night's manager's office: "some weird light leakage on bookshelf? seems like
  *  irradiance cache leak through wall? and showing up in specular?"). A ray-traced reflection shades its hit with the radiance cache read a probe spacing along
  *  the hit's normal. For a hit on a wall that is sound. For a hit on a shelf board, a desk top or the floor within half a cell of a partition the spacing runs

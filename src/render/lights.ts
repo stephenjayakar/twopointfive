@@ -190,6 +190,13 @@ export class LightSet {
   /** the lowest slot of the last upload holding a TRANSIENT light (ttl / flagged), = the slot count when none: transients are appended as they are born, so they sit at the tail and the
    *  gather's per-hit subtraction walk (gather_common directAtPoint / directOnScreen) can start here — it still tests every slot it visits, so a steady light after it costs nothing but a skip */
   firstTransientSlot = 0;
+  /** × every STEADY light of the place that is not the sun or the moon, as it is uploaded (1 = as authored): THE LOOK PROTOTYPE's "Lamps by day" row (engine.ts
+   *  lookLamps). The lamps are authored for the night, against a moon of 0.06, and keep that strength under a sun of 6: a lantern a metre away lit the ground
+   *  about as the midday sun does, where a real one is some thousands of times weaker. Scaled HERE so that the picture, the bounce, the beams and the GPU's
+   *  light meter read one number; `intensity` itself is not touched (the game's own readers of the list see the authored one). Not a flash or a blast (ttl /
+   *  transient: theirs is a real brightness the game's numbers never held), not an infrared illuminator, not a tell that is no lamp (a device's sight cone) and not the
+   *  Team & kit figure's own staging. A lamp remembered in the fog is scaled as a seen one is. */
+  localK = 1;
   upload(time: number) {
     const f = this.f32, u = this.u32; let n = 0; this.activeIdx.length = 0; let firstT = -1;
     { const words = Math.max(1, this.activeCount) * 16, p32 = this.prev32; for (let i = 0; i < words; i++) p32[i] = u[i]; } this.prevCount = this.activeCount;   // last frame's records (prevCount × 64 B, word for word), before they are overwritten in place — no per-frame view (review R1.4)
@@ -202,6 +209,7 @@ export class LightSet {
       if (n >= MAX_LIGHTS || (ir && this.irCount >= this.irCap) || ((!l.enabled || l.intensity <= 0) && !ghost)) continue;   // (a lamp over the cap has lost its slot just above, as one out of the list has)
       if (prevSlot >= 0 && prevSlot < this.prevCount) { this.slotFwd[prevSlot] = n; this.slotInv[n] = prevSlot; }   // the same RtLight object, last frame's slot → this frame's
       let inten = ghost ? l.fogGhost! : l.intensity;
+      if (this.localK !== 1 && !ir && l.kind !== 2 && l.ttl < 0 && !l.transient && l.group !== 'devices' && !l.name.startsWith('kitview')) inten *= this.localK;
       if (l.flicker > 0) {
         const s = Math.sin(time * 61 + i * 3.1) * Math.sin(time * 17.3 + i) + Math.sin(time * 7.1 + i * 0.7) * 0.5;
         inten *= 1 - l.flicker * (s > 0.55 ? 0.85 : s > 0.3 ? 0.3 : 0.0);
