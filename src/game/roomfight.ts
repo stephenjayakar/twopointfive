@@ -45,7 +45,7 @@ import type { Game, Guard, Foe } from './game';
 import type { Door } from './doors';
 import type { Character } from './character';
 import { teamFight, teamSprinting } from './teampace';   // (read inside methods only)
-import { canSee, canSeeChar, sightGain, sightGainOn, hearingCheck, clearShot, doorCells, frameOf, bodyVisibility, BODY_LIGHT, LIGHTS, onLitMan } from './guards';
+import { canSee, canSeeChar, sightGain, sightGainOn, hearingCheck, clearShot, doorCells, frameOf, bodyVisibility, BODY_LIGHT, LIGHTS, onLitMan, eyeBlocked } from './guards';
 import { order, endGuardScript } from './squad';
 import { fireWeapon } from './combat';
 import { squadSkill, squadDrill } from './enemysquads';   // (hard on a squads level: the defenders' row as a drilled garrison has it — the same object otherwise)
@@ -484,7 +484,7 @@ export class RoomFight {
           const oc = O.gd.char, pr = hearPath(g, v3.add(e.pos, [0, 1, 0]), v3.add(oc.pos, [0, 1.5, 0]));
           if (!(pr.carry > 0.5 && (e.level ?? 0.3) * clamp(1 - pr.pathLen / 9, 0, 1) * pr.carry > 0.12)) continue;
           O.stepT = e.time;
-          const sc = g.col.segmentBlocked(eyeOf(oc), chestOf(w.char)) ? 100 + pr.pathLen : Math.abs(wrapAngle(v3.yawTo(oc.pos, w.char.pos) - oc.aimYaw));
+          const sc = eyeBlocked(g, O.gd, eyeOf(oc), chestOf(w.char)) ? 100 + pr.pathLen : Math.abs(wrapAngle(v3.yawTo(oc.pos, w.char.pos) - oc.aimYaw));
           if (sc < nd) { nd = sc; near = O; from = pr.routed ? pr.via : e.pos; } }
         if (near) near.stepBy = { by: w, t: e.time, at: [from[0], 1.1, from[2]] };
         continue;
@@ -1045,7 +1045,7 @@ export class RoomFight {
       // look — the sight test above then says whether there is a man there to shoot (return fire is a look first, never a round at a noise)
       if (!blind) this.cue(O);
       if (O.turn && g.time >= O.turn.at && O.turn.to.state !== 'dead') { const tc = chestOf(O.turn.to.char);
-        const to = O.turn.pt && g.col.segmentBlocked(eyeOf(c), tc) ? O.turn.pt : tc; this.samInLine(O, to); this.point(O, to, dt, speed); }
+        const to = O.turn.pt && eyeBlocked(g, O.gd, eyeOf(c), tc) ? O.turn.pt : tc; this.samInLine(O, to); this.point(O, to, dt, speed); }
       else if (!blind && coverOp(g, O, dt, speed, to => this.point(O, to, dt, speed))) { /* coverfire.ts: a man he knows is behind something breakable — his rounds go into it */ }
       else if (s.over === O.ov) { if (g.time - O.lostAt > 0.5 || (O.fell && g.doorTools?.owesCorner(gd))) this.restore(O);   // (DOORTOOLS.collapse: his man down and a corner of his entry still owed — the corner has his muzzle now)
         else if (flat(c.pos, O.aim) < 2.5) { O.aim[0] = c.pos[0] + Math.sin(c.aimYaw) * 2.5; O.aim[2] = c.pos[2] + Math.cos(c.aimYaw) * 2.5; } }   // (the half second his gun stays where the man was: a BEARING — walking over the spot itself would swing it right round)
@@ -1116,10 +1116,10 @@ export class RoomFight {
     const gone = O.pass && O.pass.noShot && g.time < O.pass.until ? O.pass.h : null;   // (the man he has just walked on from for want of a shot: no mate's call, no burst into the pane and no footfall of his turns him back — the eye loop does, when there is a round at him)
     const A = g.orders.of(O.gd), arc = A && A.order === 'hold' && A.watch && A.arrived ? v3.yawTo(c.pos, A.watch) : null;
     const mine = (h: Guard) => arc === null || Math.abs(wrapAngle(v3.yawTo(c.pos, h.char.pos) - arc)) < ROOMFIGHT.arcHalfDeg * DEG;
-    for (const r of this.reports) { if (g.time - r.t > 0.6 || r.by.state === 'dead' || r.by === gone || this.coverPasses(g, O, r.by)) continue; const d = flat(c.pos, r.by.char.pos); if (d < bd && !g.col.segmentBlocked(eye, chestOf(r.by.char))) { bd = d; who = r.by; } }
-    if (!who) for (const X of this.ops) if (X !== O && X.tgt && X.tgt !== gone && X.tgt.state !== 'dead' && X.gd.state !== 'dead' && flat(c.pos, X.tgt.char.pos) < 16 && mine(X.tgt) && !g.col.segmentBlocked(eye, chestOf(X.tgt.char)) && !workPasses(g, O.gd, X.tgt) && !this.coverPasses(g, O, X.tgt)) { who = X.tgt; call = true; }   // (workthings.ts: not a man stood at the thing he was sent to work, for a man no round of his may go at)
+    for (const r of this.reports) { if (g.time - r.t > 0.6 || r.by.state === 'dead' || r.by === gone || this.coverPasses(g, O, r.by)) continue; const d = flat(c.pos, r.by.char.pos); if (d < bd && !eyeBlocked(g, O.gd, eye, chestOf(r.by.char))) { bd = d; who = r.by; } }
+    if (!who) for (const X of this.ops) if (X !== O && X.tgt && X.tgt !== gone && X.tgt.state !== 'dead' && X.gd.state !== 'dead' && flat(c.pos, X.tgt.char.pos) < 16 && mine(X.tgt) && !eyeBlocked(g, O.gd, eye, chestOf(X.tgt.char)) && !workPasses(g, O.gd, X.tgt) && !this.coverPasses(g, O, X.tgt)) { who = X.tgt; call = true; }   // (workthings.ts: not a man stood at the thing he was sent to work, for a man no round of his may go at)
     if (!who && O.stepBy && g.time - O.stepBy.t < 0.6 && O.stepBy.by.state !== 'dead' && O.stepBy.by !== gone && mine(O.stepBy.by) && !workPasses(g, O.gd, O.stepBy.by) && !this.coverPasses(g, O, O.stepBy.by)) {   // footsteps coming, and his the nearest ears: he looks
-      if (!g.col.segmentBlocked(eye, chestOf(O.stepBy.by.char))) { who = O.stepBy.by; call = true; }
+      if (!eyeBlocked(g, O.gd, eye, chestOf(O.stepBy.by.char))) { who = O.stepBy.by; call = true; }
       else if (ROOMFIGHT.stepLook && !look && !(A && A.door && !A.arrived)) { who = O.stepBy.by; call = true; pt = O.stepBy.at; }   // … at where they come from, with no line to the man himself (never on his way to a door's mark or through it: his corner is his)
     }
     let secs = 2.5, door: Door | null = null; const DB = O.doorBy;
@@ -1161,7 +1161,7 @@ export class RoomFight {
   private letGo(O: Op) {
     const g = this.g, c = O.gd.char; if (!(ROOMFIGHT.letGo > 0) || O.lineT < ROOMFIGHT.letGo || !O.tgt || O.step) return;
     const eye = eyeOf(c); let who: Guard | null = null, bd = 16;
-    for (const r of this.reports) { if (g.time - r.t > 1.5 || r.by.state === 'dead' || r.by === O.tgt) continue; const d = flat(c.pos, r.by.char.pos); if (d < bd && !g.col.segmentBlocked(eye, chestOf(r.by.char))) { bd = d; who = r.by; } }
+    for (const r of this.reports) { if (g.time - r.t > 1.5 || r.by.state === 'dead' || r.by === O.tgt) continue; const d = flat(c.pos, r.by.char.pos); if (d < bd && !eyeBlocked(g, O.gd, eye, chestOf(r.by.char))) { bd = d; who = r.by; } }
     if (!who) return;
     this.note(O.gd, `lets ${O.tgt.callsign} go (a friend in the line) for ${who.callsign}, who is shooting`);
     O.pass = { h: O.tgt, until: g.time + 2 }; O.tgt = null; O.kept = null; O.lostAt = g.time; O.lineT = 0; O.track = 0; O.turn = { to: who, at: g.time, until: g.time + 2.5 };

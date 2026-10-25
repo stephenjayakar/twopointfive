@@ -8,6 +8,7 @@ import { PatrolRoute, Chokepoint, RoomClearPlan } from '../scene/level';
 import { Character, HOLD } from './character';
 import type { UpperMode } from './character';
 import { BoxFlag, rayBox } from '../scene/boxes';
+import { FOG, fogThrough } from './fogofwar';
 import { Door } from './doors';
 import { rigLightPose, rigTorchPos, torchCarryDir, torchCarryWant, torchLightDef, RIG, sc20kLightPose } from './rigProps';
 import { PLAYER_ID } from './consts';
@@ -1236,12 +1237,13 @@ export function canSee(g: Game, gd: Guard): { visible: boolean; dist: number; in
 export function canSeeChar(g: Game, gd: Guard, pc: Character, isPlayer: boolean): { visible: boolean; dist: number; inCone: boolean } {
   const eye = gd.char.bones.head ?? v3.add(gd.char.pos, [0, 1.65, 0]);
   const look = v3.normalize(v3.lerp(gd.char.chestDir, gd.char.headDir(), 0.5)), E: Eye = { pos: eye, look, range: reachFor(g, gd, pc, isPlayer, eye), halfDeg: GUARD_EYE.halfDeg, nearM: GUARD_EYE.nearM, nearDeg: GUARD_EYE.nearDeg };   // (reachFor: a man standing in light is seen from past `range`; `range` itself otherwise)
-  let r = eyeContact(g, E, pc, isPlayer, g.time < gd.dazzledUntil || pairGripped(g, gd) || dozeAsleep(gd), gd.smokeTrans);   // dazzled: eyes full of magnesium (pairorders.ts: or a teammate's hands on him; doze.ts: or asleep in his chair)
+  const through = eyeThrough(gd);   // (FOG.mates: a teammate's eye passes the thin things the fog's lines pass)
+  let r = eyeContact(g, E, pc, isPlayer, g.time < gd.dazzledUntil || pairGripped(g, gd) || dozeAsleep(gd), gd.smokeTrans, through);   // dazzled: eyes full of magnesium (pairorders.ts: or a teammate's hands on him; doze.ts: or asleep in his chair)
   if (!r.inCone && r.dist < E.range && !isPlayer && (gd.team === 'operative' ? ROOMFIGHT.sights : ROOMFIGHT.sightsFoe) && fightLive(g)) {   // (roomfight.ts ROOMFIGHT.sights: a long gun in the shoulder and level along his aim — he ALSO sees what is along his sights, the same eye laid on the aim)
     const c = gd.char, ax = Math.sin(c.gunYaw), az = Math.cos(c.gunYaw);   // (gunYaw: aimYaw — or, turning under weight, where the gun has got to)
     let lv = c.gunDir[0] * ax + c.gunDir[2] * az;   // how level along his aim the bore lies, in plan
     const lift = c.anim.sightsLift; if (lift > 0) { const gh = Math.hypot(c.gunDir[0], c.gunDir[2]); if (gh > 1e-6) lv *= Math.cos(lift) - c.gunDir[1] / gh * Math.sin(lift); }   // (character.ts MOVES.entryEyes: the entry dip's own pitch put back — the question asked of his gun line as if it were not down past a friend; 0 unless that switch is on and he is dipped)
-    if (c.anim.longShown === 'shoulder' && !c.anim.atWell && lv > SIGHTS_COS) { E.look = [ax, 0, az]; E.halfDeg = Math.min(E.halfDeg, ROOMFIGHT.sightsDeg); r = eyeContact(g, E, pc, false, g.time < gd.dazzledUntil || pairGripped(g, gd) || dozeAsleep(gd), gd.smokeTrans); }
+    if (c.anim.longShown === 'shoulder' && !c.anim.atWell && lv > SIGHTS_COS) { E.look = [ax, 0, az]; E.halfDeg = Math.min(E.halfDeg, ROOMFIGHT.sightsDeg); r = eyeContact(g, E, pc, false, g.time < gd.dazzledUntil || pairGripped(g, gd) || dozeAsleep(gd), gd.smokeTrans, through); }
   }
   if (!isPlayer && r.visible && pairSmoke(g, gd.char, pc) < 0.3) r.visible = false;   // an AI man lost in a plume, by the same line as Sam (roomfight.ts marches the pair's segment; 1 = clear wherever it does not)
   return r;
@@ -1292,6 +1294,15 @@ function distTerm(dist: number): number {
   if (dist > GUARD_EYE.range && GUARD_EYE.far) return lerp(0.2, GUARD_EYE.farK, clamp((dist - GUARD_EYE.range) / Math.max(1e-3, GUARD_EYE.farRange - GUARD_EYE.range), 0, 1));
   return clamp(1 - (dist - 3) / 13, 0.2, 1);
 }
+/** WHAT THE TEAM'S OWN EYES PASS (col.segmentBlocked's `through`): under FOG.mates, what the fog's lines pass (fogofwar.ts fogThrough: glass, and with
+ *  FOG.thin the statics marked thin and free) — what the picture shows through a window's bar, the teammate standing there sees; with the row off,
+ *  glass alone, as it was. `teamThrough` = the team's (the player's own line for the squad's net: picture.ts lookSam); `eyeThrough` = a man's, which is
+ *  the team's for an operative and glass alone for every other side: no other eye is ever handed the marks. */
+export function teamThrough(): number { return FOG.mates ? fogThrough() : BoxFlag.Glass; }
+export function eyeThrough(gd: Guard): number { return gd.team === 'operative' ? teamThrough() : BoxFlag.Glass; }
+/** …and that man's own line to a point, asked bare (roomfight.ts: which teammate has a line to the man who fired, to a mate's target; the lost-behind-
+ *  something line below): is anything his eye stops at between `a` and `b`. With the row off this is col.segmentBlocked(a, b), as each caller had it. */
+export function eyeBlocked(g: Game, gd: Guard, a: Vec3, b: Vec3): boolean { return g.col.segmentBlocked(a, b, 0.02, eyeThrough(gd)); }
 /** cos 30°: how level along his aim (in plan, the bore's own pitch counted) a shouldered long gun must lie for its owner's eyes to be on its sights */
 const SIGHTS_COS = 0.866;
 /** An eye — a man's (canSeeChar fills it off his bones) or a device's (devices.ts: a camera's lens): where it is, the unit direction it looks along, how far it
@@ -1303,8 +1314,9 @@ export interface Eye { pos: Vec3; look: Vec3; range: number; halfDeg: number; ne
  *  probe's transmittance along eye → chest: under 0.3 he is a shape lost in the plume). `blind` = the eye itself is out (magnesium in it; a device says false and
  *  gates on its power instead). Sam's sandbox invisibility and his lying downed hide him from every eye; an AI target only has to be alive. Returns the distance and
  *  whether he was in the cone at all, seen or not, as canSee always did. (fogofwar.ts lineToMan repeats this function's two lines for the team's eyes — his chest,
- *  then his head behind a blocked chest: change the two together.) */
-export function eyeContact(g: Game, E: Eye, pc: Character, isPlayer: boolean, blind: boolean, smokeTrans: number): { visible: boolean; dist: number; inCone: boolean } {
+ *  then his head behind a blocked chest: change the two together.) `through` = the box flags the line passes: glass, and for a teammate's own eye what
+ *  `eyeThrough` adds. */
+export function eyeContact(g: Game, E: Eye, pc: Character, isPlayer: boolean, blind: boolean, smokeTrans: number, through: number = BoxFlag.Glass): { visible: boolean; dist: number; inCone: boolean } {
   const eye = E.pos;
   const tgt = pc.bones.chest ?? v3.add(pc.pos, [0, 1.1, 0]); const tgt2 = pc.bones.head ?? v3.add(pc.pos, [0, 1.6, 0]);
   const to = v3.sub(tgt, eye); const dist = v3.len(to); const dirTo = v3.scale(to, 1 / Math.max(dist, 1e-4));
@@ -1314,7 +1326,7 @@ export function eyeContact(g: Game, E: Eye, pc: Character, isPlayer: boolean, bl
   let inCone = cosA > fov && dist < E.range;
   if (inCone && E.vHalfDeg !== undefined) inCone = Math.abs(Math.asin(clamp(dirTo[1], -1, 1)) - Math.asin(clamp(look[1], -1, 1))) < E.vHalfDeg * DEG;   // (a lens: the elevation to his chest within the cone's own about its pitch — straight under a wall camera is under its picture)
   if (!inCone || (isPlayer ? g.playerInvisible || g.player.down : !pc.alive) || blind) return { visible: false, dist, inCone };
-  const blocked = (g.col.segmentBlocked(eye, tgt) && g.col.segmentBlocked(eye, tgt2)) || (isPlayer && smokeTrans < 0.3);
+  const blocked = (g.col.segmentBlocked(eye, tgt, 0.02, through) && g.col.segmentBlocked(eye, tgt2, 0.02, through)) || (isPlayer && smokeTrans < 0.3);
   return { visible: !blocked, dist, inCone };
 }
 
@@ -2100,7 +2112,7 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
     if (gd.sightT < g.time && gd.sightT > gd.ledT) {
       if (g.time - gd.sightT < 0.25 && gd.lastKnown && v3.distXZ(gd.lastKnown, gd.sightPos) < 0.01 && fc) {
         const eye = c.bones.head ?? v3.add(c.pos, [0, 1.65, 0]); const pc = fc;
-        if (g.col.segmentBlocked(eye, pc.bones.chest ?? v3.add(pc.pos, [0, 1.1, 0])) && g.col.segmentBlocked(eye, pc.bones.head ?? v3.add(pc.pos, [0, 1.6, 0]))) gd.lastKnown = leadFix(g, gd.sightPos, gd.sightVel);
+        if (eyeBlocked(g, gd, eye, pc.bones.chest ?? v3.add(pc.pos, [0, 1.1, 0])) && eyeBlocked(g, gd, eye, pc.bones.head ?? v3.add(pc.pos, [0, 1.6, 0]))) gd.lastKnown = leadFix(g, gd.sightPos, gd.sightVel);
       }
       gd.ledT = gd.sightT;
     }

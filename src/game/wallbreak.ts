@@ -340,7 +340,7 @@ export class WallBreak {
       const k = rects.length + j; const c = this.toWorld(B, studs[j].c), h = studs[j].h; let p: Box;
       if (k < B.slots.length) { p = g.col.boxes[B.slots[k]]; p.c = c; p.h = h; p.flags = B.flags0; if (p.cut) { p.cut = undefined; p.cutCore = undefined; } }
       else { p = makeBox({ c, h, yaw: B.box.yaw, flags: B.flags0 }); const i = g.col.addStatic(p, B.box); world.addStatic(p); B.slots.push(i); this.owner.set(i, B); }
-      p.name = 'stud'; p.flags |= BoxFlag.Thin;   // (a bare stud, 4 cm across in an opened wall: the fog of war's eye goes round it — scene/thin.ts, FOG.thin; read by nothing else)
+      p.name = 'stud'; p.flags |= BoxFlag.Thin;   // (a bare stud, 4 cm across in an opened wall: the fog of war's eye goes round it — scene/thin.ts, FOG.thin — and, under FOG.mates, a teammate's own; read by nothing else)
       p.albedo = v3.copy(studs[j].albedo); p.rough = studs[j].rough; p.metal = studs[j].metal;
     }
     for (let k = rects.length + studs.length; k < B.slots.length; k++) g.col.boxes[B.slots[k]].flags |= HIDE;

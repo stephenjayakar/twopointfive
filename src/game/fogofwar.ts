@@ -230,7 +230,7 @@ export const FOG = {
    *  a spot, a door, a lamp) and, under `full`, the picture's fog eye (render/fogofwar.ts FogFrame.thinBits → common.wgsl fogThinBox), which then also
    *  passes what another man carries — a box the squad's own lines never met. It is the FOG's sight alone: a guard's eye, a round, a sound and a shadow
    *  meet those boxes as ever. Not the picture alone: who the squad has seen can differ behind a pipe, so a run's digest can. false = every static stops
-   *  it, as it was. ON in the page since 10-24 (?fogthin=0 puts it off; the frozen stand pins it off — src/host/standup.ts, `TPS_FOGTHIN=1`). Never seen on a GPU */
+   *  it, as it was (a teammate's own eye passes them too under `mates`, below). ON in the page since 10-24 (?fogthin=0 puts it off; the frozen stand pins it off — src/host/standup.ts, `TPS_FOGTHIN=1`). Never seen on a GPU */
   thin: true,
   /** HOW MANY EYES LIFT THE FOG (the fourth of the fog's principles: to see more, get more eyes on it): Sam, the living teammates in list order, then a
    *  sticky camera's feed, then a tutorial's lookout or a step's own eye — as many as this. 5 until 10-24: a squad of four filled it, so a camera that sent
@@ -259,6 +259,16 @@ export const FOG = {
    *  and back: his steps one by one would be him). false = a hidden man presses nothing at all, as it was: a guard who crossed a yard unseen left it clean. The picture only. ON in the
    *  page since 10-24 (?fogtracks=0 puts it off; the frozen stand pins it off — src/host/standup.ts, `TPS_FOGTRACKS=1`). Never seen on a GPU */
   tracks: true,
+  /** A TEAMMATE SEES WHAT THE PICTURE SHOWS (the maintainer, 10-25, asked whether the men's own eyes should pass thin things as the fog's do: 'i think
+   *  teammates should see whatever we see'). Under `thin` the fog's lines pass a static the level marked thin and free while a teammate's own eye (guards.ts
+   *  eyeContact) stopped at it: a man behind a window's bar was in the picture, and called, before the teammate standing there could notice or shoot him.
+   *  true = an OPERATIVE's own sight line passes what the fog's passes (guards.ts eyeThrough: the marks of scene/thin.ts — a level's, and an opened wall's
+   *  bare studs — only while `thin` is on: one mask, `fogThrough`, for the picture and for the men in it), in his sight test, in the room fight's own
+   *  lines from his eye to a man (guards.ts eyeBlocked), and in the player's own line that tells the squad's net of a man the picture shows him
+   *  (picture.ts lookSam). Sight alone: his rounds still meet the bar (clearShot holds a shot the thing is across; a man with a walk left
+   *  walks on, a planted man waits with his gun on him), and no other side's eye changes — the enemy never reads the fog. false = his eye stops at a thin
+   *  thing, as it was. NOT the picture alone: who a teammate has seen is the game's. ON in the page since 10-25 (?fogmates=0 puts it off; the frozen stand pins it off — src/host/standup.ts, `TPS_FOGMATES=1`). Never seen on a GPU */
+  mates: true,
   /** WHAT THE TEAM DOES IS ALWAYS SHOWN (the picture — and, with it, what the cursor's ray meets: the boxes handed to the renderer; under `full` alone; the maintainer, of the tutorial's wall charge: 'still can't see the wall shot detonate' — the
    *  fog was taken off that mission for it): the flash of a blast one of the team set or threw lights the fog's picture too (lights.ts RtLight.fogBy: its
    *  class is the doer's, as a carried light's is its carrier's), the streak of a teammate's round is drawn its whole length, the rubble the team throws is drawn
@@ -328,7 +338,7 @@ export function fogEyeCount(v: number): number { return Number.isNaN(v) ? FOG_EY
 /** ?fogown / ?fogown=0 · ?fogcalls=0 — the two options for a visit, over the kept rows (the Game's constructor, right after teamfeel.ts has read those back;
  *  no page — the harness — nothing) */
 export function fogFlags() { try { const q = new URLSearchParams(location.search); if (q.has('fogown')) FOG.own = q.get('fogown') !== '0'; if (q.has('fogcalls')) FOG.calls = q.get('fogcalls') !== '0';
-  if (q.has('fogflat')) { const v = parseFloat(q.get('fogflat') ?? ''); FOG.flat = Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : FOG_FLAT_ON; } if (q.has('foglit')) { const v = parseFloat(q.get('foglit') ?? ''); FOG.lit = Number.isFinite(v) ? Math.min(4, Math.max(0, v)) : FOG_LIT_ON; } if (q.has('fogfull')) FOG.full = q.get('fogfull') !== '0'; if (q.has('fogair')) FOG.air = q.get('fogair') !== '0'; if (q.has('fogours')) FOG.ours = q.get('fogours') !== '0'; if (q.has('fogthin')) FOG.thin = q.get('fogthin') !== '0'; if (q.has('fogkept')) FOG.kept = q.get('fogkept') !== '0'; if (q.has('fogfiled')) FOG.filed = q.get('fogfiled') !== '0'; if (q.has('fogtracks')) FOG.tracks = q.get('fogtracks') !== '0'; if (q.has('fogeyes')) { const v = parseInt(q.get('fogeyes') ?? '', 10); FOG.eyes = v === 0 ? FOG_EYES_WAS : !Number.isFinite(v) || v === 1 ? FOG_EYES_ON : fogEyeCount(v); } if (q.has('fogdesat')) { const v = parseFloat(q.get('fogdesat') ?? ''); FOG.desat = Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : FOG_DESAT_WAS; } if (q.has('fogedge')) { const v = parseFloat(q.get('fogedge') ?? ''); FOG.edge = Number.isFinite(v) ? Math.min(1.5, Math.max(0, v)) : FOG_EDGE_ON; } if (q.has('fogthings')) FOG.things = q.get('fogthings') !== '0'; if (q.has('squaddoors')) FOG.squadDoors = q.get('squaddoors') !== '0'; if (q.has('squadfire')) FOG.squadFire = q.get('squadfire') !== '0'; if (q.has('fogdesat')) FOG_PAGE.desat = FOG.desat; if (q.has('fogedge')) FOG_PAGE.edge = FOG.edge; if (q.has('fogair')) FOG_PAGE.air = FOG.air; if (q.has('fogkept')) FOG_PAGE.kept = FOG.kept; } catch { /* no page */ } }
+  if (q.has('fogflat')) { const v = parseFloat(q.get('fogflat') ?? ''); FOG.flat = Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : FOG_FLAT_ON; } if (q.has('foglit')) { const v = parseFloat(q.get('foglit') ?? ''); FOG.lit = Number.isFinite(v) ? Math.min(4, Math.max(0, v)) : FOG_LIT_ON; } if (q.has('fogfull')) FOG.full = q.get('fogfull') !== '0'; if (q.has('fogair')) FOG.air = q.get('fogair') !== '0'; if (q.has('fogours')) FOG.ours = q.get('fogours') !== '0'; if (q.has('fogthin')) FOG.thin = q.get('fogthin') !== '0'; if (q.has('fogkept')) FOG.kept = q.get('fogkept') !== '0'; if (q.has('fogfiled')) FOG.filed = q.get('fogfiled') !== '0'; if (q.has('fogtracks')) FOG.tracks = q.get('fogtracks') !== '0'; if (q.has('fogmates')) FOG.mates = q.get('fogmates') !== '0'; if (q.has('fogeyes')) { const v = parseInt(q.get('fogeyes') ?? '', 10); FOG.eyes = v === 0 ? FOG_EYES_WAS : !Number.isFinite(v) || v === 1 ? FOG_EYES_ON : fogEyeCount(v); } if (q.has('fogdesat')) { const v = parseFloat(q.get('fogdesat') ?? ''); FOG.desat = Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : FOG_DESAT_WAS; } if (q.has('fogedge')) { const v = parseFloat(q.get('fogedge') ?? ''); FOG.edge = Number.isFinite(v) ? Math.min(1.5, Math.max(0, v)) : FOG_EDGE_ON; } if (q.has('fogthings')) FOG.things = q.get('fogthings') !== '0'; if (q.has('squaddoors')) FOG.squadDoors = q.get('squaddoors') !== '0'; if (q.has('squadfire')) FOG.squadFire = q.get('squadfire') !== '0'; if (q.has('fogdesat')) FOG_PAGE.desat = FOG.desat; if (q.has('fogedge')) FOG_PAGE.edge = FOG.edge; if (q.has('fogair')) FOG_PAGE.air = FOG.air; if (q.has('fogkept')) FOG_PAGE.kept = FOG.kept; } catch { /* no page */ } }
 /** THE FOG'S LOOK ON THIS PAGE (`desat`, `edge`, `air`: the picture alone — NOT `ours`: what it hands the renderer is what the cursor's ray meets, so a tape keeps its own), as the module ships it and the address words change it (fogFlags) — never what a tape's knob
  *  tables laid over FOG. THE ENGINE REPLAY SHOWS A TAPE UNDER THIS, not under the look the tape was recorded with (FogOfWar.pageLook, which it alone calls):
  *  the maintainer judged both on a replay, and a recording from before either would otherwise show the old fog for ever. The tape's own values still ride its
@@ -373,6 +383,10 @@ const ghostBox = (s: Box): Box => ({ ...s, c: [s.c[0], s.c[1], s.c[2]], h: [s.h[
 /** the beam is looked at every this many metres, each end of a seen stretch then found to BEAM_FINE */
 const BEAM_STEP = 0.75, BEAM_FINE = 0.1;
 
+/** WHAT THE TEAM'S SIGHT LINES PASS (col.segmentBlocked's `through`): glass, and under FOG.thin the statics marked thin and free (scene/thin.ts; an opened
+ *  wall's bare studs). The fog's own lines ask it (sightBlocked); under FOG.mates a teammate's own eye and the player's line for the squad's net are handed
+ *  the same (guards.ts teamThrough / eyeThrough): ONE mask, so the picture and the men in it cannot part. */
+export function fogThrough(): number { return FOG.thin ? BoxFlag.Glass | BoxFlag.Thin : BoxFlag.Glass; }
 /** one of the team's eyes this frame */
 export interface FogEye {
   id: number;
@@ -660,7 +674,7 @@ export class FogOfWar {
 
   /** THE FOG'S OWN LINE: is anything solid between an eye and a point — the game's sight test (statics and leaves; glass passes), which under FOG.thin also
    *  passes the statics the level marked thin and free (scene/thin.ts). With the row off this is segmentBlocked(a, b) as every caller here had it. */
-  private sightBlocked(a: Vec3, b: Vec3): boolean { return this.g.col.segmentBlocked(a, b, 0.02, FOG.thin ? BoxFlag.Glass | BoxFlag.Thin : BoxFlag.Glass); }
+  private sightBlocked(a: Vec3, b: Vec3): boolean { return this.g.col.segmentBlocked(a, b, 0.02, fogThrough()); }
   /** the picture's half of FOG.thin: the row, and WHICH statics are marked, as bits by box index (a static's index in the box world is its index on the GPU;
    *  one past the list's reach — render/fogofwar.ts FOG_THIN_WORDS × 32 — has no bit: the lines here pass it, the picture does not). Filled every frame: a
    *  breached wall's studs come and go (wallbreak.ts), and a scan of the statics' flags is nothing; the renderer uploads only when the bits differ. */
@@ -671,9 +685,9 @@ export class FogOfWar {
     if (st) for (let i = 0, n = Math.min(st.length, bits.length * 32); i < n; i++) if (st[i].flags & BoxFlag.Thin) bits[i >> 5] |= 1 << (i & 31);
   }
   /** one eye on one living man, walls and leaves only: the game's own line-of-sight test (guards.ts eyeContact: statics and leaves against his chest AND his head,
-   *  glass passed), inside the eye's field. The smoke along a clear line is update()'s second step. UNDER FOG.thin THE TWO PART: these lines pass a static the
-   *  level marked thin and free, eyeContact's do not — a man behind a window's bar is in the picture, and a teammate may call him, a moment before that
-   *  teammate's own eye has him (docs/agents/stealth.md, the row's bullet: not held). */
+   *  glass passed), inside the eye's field. The smoke along a clear line is update()'s second step. Under FOG.thin these lines pass a static the level marked
+   *  thin and free; a teammate's own eye passes the same ones under FOG.mates (guards.ts eyeThrough), and with that row off it stops at them — a man behind
+   *  a window's bar is then in the picture, and called, a moment before that teammate's own eye has him. */
   private lineToMan(e: FogEye, gd: Guard, chest: Vec3): boolean {
     const g = this.g, pc = gd.char;
     if (!this.inField(e, chest)) return false;
