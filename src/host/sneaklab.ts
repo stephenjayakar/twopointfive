@@ -19,11 +19,11 @@ import { STALKVIZ } from '../ui/stalkviz';
 
 export const SNEAKLAB = { on: false, unseen: true, safe: true, clear: true, scene: 0 };
 /** THE FIVE THINGS TO TUNE, as he named them. A button puts every man back and Sam where the scenario starts, hands empty and low, and says nothing else: no steps, no
- *  cards. `sam` and `yaw` are his start, `seen` whether the men can see him there (the walks through the dark are nothing without it), `end` the far end of such a walk, `line` the line at the top of the
+ *  cards. `sam` and `yaw` are his start, `seen` whether the men can see him there (the walks through the dark are nothing without it), `behind` the beat of a man Sam starts 3 m behind, wherever the night's opening has found him on it, `end` the far end of such a walk, `line` the line at the top of the
  *  page, `tip` what to look for. The men are the level's own (tools/levels/sneak-lab.ts): every man is on his beat in every scenario, and walls keep the others out of it. */
-export const SCENES: { name: string; sam: Vec3; yaw: number; seen: boolean; end?: Vec3; line: string; tip: string }[] = [
+export const SCENES: { name: string; sam: Vec3; yaw: number; seen: boolean; behind?: string; end?: Vec3; line: string; tip: string }[] = [
   { name: 'man standing', sam: [10.4, 0, 16.5], yaw: 1.03, seen: false, line: 'Sneak up behind him and grab him', tip: 'a man who stands with his back to you. Look at the whole of it: the walk in, the stop, the grab' },
-  { name: 'man walking', sam: [13.2, 0, 13.6], yaw: Math.PI / 2, seen: false, line: 'Catch up with him from behind and grab him', tip: 'a man who walks away from you down the yard, waits, and turns back. Look for: can you match his pace and stay behind him?' },
+  { name: 'man walking', sam: [13.2, 0, 13.6], yaw: Math.PI / 2, seen: false, behind: 'beat', line: 'Catch up with him from behind and grab him', tip: 'a man who walks away from you down the yard, waits, and turns back. Look for: can you match his pace and stay behind him?' },
   { name: 'dark room', sam: [34.2, 0, 25.9], yaw: Math.PI, seen: true, end: [36.2, 0, 7.4], line: 'Get to the far end of the room without being seen', tip: 'three men among the shelves, and they can see you. Look for: does slipping between them feel careful and quick to read?' },
   { name: 'dark corridor', sam: [9.4, 0, 3.2], yaw: Math.PI / 2, seen: true, end: [33.0, 0, 3.2], line: 'Get to the far end of the corridor without being seen', tip: 'two men walking up and down, three niches, and they can see you. Look for: does ducking into a niche as one comes feel good?' },
   { name: 'corner', sam: [10.7, 0, 12.45], yaw: 0, seen: false, line: 'Wait at the corner and grab him as he comes past', tip: 'your back is on the wall, and a man comes round the corner past you. Look for: is the moment to grab easy to feel?' },
@@ -220,7 +220,9 @@ function hands(game: Game) { game.player.holstered = true; game.player.crouch = 
 /** Sam at the start of the scenario SNEAKLAB.scene names, and whether the men can see him there */
 export function stage(game: Game) {
   const c = SCENES[SNEAKLAB.scene], p = game.player.char; SNEAKLAB.unseen = !c.seen;
-  game.teleportPlayer([...c.sam]); p.bodyYaw = p.aimYaw = c.yaw; p.vel = [0, 0, 0]; hands(game);
+  const gd = c.behind ? game.guards.find(x => game.level.routes[x.routeI]?.name === c.behind) : null, y = gd?.char.bodyYaw ?? 0;
+  const at: Vec3 = gd ? [gd.char.pos[0] - Math.sin(y) * 3, 0, gd.char.pos[2] - Math.cos(y) * 3] : [...c.sam], free = !game.col.nav.isBlocked(at[0], at[2]);
+  game.teleportPlayer(free ? at : [...c.sam]); p.bodyYaw = p.aimYaw = gd && free ? y : c.yaw; p.vel = [0, 0, 0]; hands(game);
 }
 /** ONCE A PAGE FRAME, before the game's update: the lab's two flags */
 export function sneakLabFrame(game: Game, cam?: FollowCamera) {

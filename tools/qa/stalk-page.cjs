@@ -42,11 +42,11 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
   const tap = async code => { await page.keyboard.down(code); await frames(3); await page.keyboard.up(code); await frames(20); };
   await page.evaluate(() => window.__runFrames(150, 1 / 60, [], 'none'));   // (the man who stands is on his mark)
   if (OFF) {
-    say(!boot.fatal && !boot.on && boot.men === 6, `?stalk=0: the switch is ${boot.on ? 'ON' : 'off'}, ${boot.men} men`);
+    say(!boot.fatal && !boot.on && boot.men === 11, `?stalk=0: the switch is ${boot.on ? 'ON' : 'off'}, ${boot.men} men`);
     await behind(0.8); const before = await frames(2); await tap('KeyE'); let r = await frames(40, true); if (!r.held) { await tap('Space'); r = await frames(40, true); }
     say(r.held && /grab him/.test(before.list), `0.8 m behind the man who stands the list offers the grab (${/grab him/.test(before.list)}) and its key takes him (${r.held})`);
   } else {
-    say(!boot.fatal && boot.on && boot.only && boot.men === 6 && boot.holstered && boot.panel && /^Sneak lab/.test(boot.sys) && boot.sliders >= 12,
+    say(!boot.fatal && boot.on && boot.only && boot.men === 11 && boot.holstered && boot.panel && /^Sneak lab/.test(boot.sys) && boot.sliders >= 12,
       `the lab: stalk ${boot.on ? 'on' : 'OFF'}, the click the only way ${boot.only}, ${boot.men} men, empty hands ${boot.holstered}, the panel ${boot.panel ? 'open' : 'SHUT'} on '${boot.sys.slice(0, 20)}' with ${boot.sliders} sliders${boot.fatal ? ' · FATAL ' + boot.fatal : ''}`);
     { // (the lab's knobs: named groups that fold, names that fit the row, and a hover on every row that says what to look for)
       const P = await page.evaluate(async () => { const pg = [...document.querySelectorAll('#panel .ppage')].find(p => p.offsetParent !== null) || document.getElementById('panel');
