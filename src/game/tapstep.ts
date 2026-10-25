@@ -52,7 +52,7 @@ function stateOf(g: Game): St { let s = STATE.get(g); if (!s) { s = { st: 0, t: 
 export const tapHeld = (g: Game): boolean => { const S = STATE.get(g); return TAPSTEP.on && !!S && S.at >= 0 && g.time - S.at < 0.1; };   // (close.ts asks before this frame's step has run)
 /** a man's footfall (guards.ts): a plant just after it is under it */
 export function tapHears(g: Game, pos: ArrayLike<number>) { const p = g.player.char.pos; if (Math.hypot(pos[0] - p[0], pos[2] - p[2]) <= TAPSTEP.maskM) stateOf(g).maskT = g.time; }
-export function tapReset(g: Game) { const S = STATE.get(g); if (S) { S.st = 0; S.t = 9; S.at = -1; S.keys = false; S.v = 0; S.man = null; S.prev = null; S.maskT = -9; } }
+export function tapReset(g: Game) { STATE.delete(g); }
 
 /** a man whose back this step is going to, and the spot `keyM` behind him */
 function backOf(g: Game, dx: number, dz: number, far: number): { gd: Guard; x: number; z: number; d: number } | null {
