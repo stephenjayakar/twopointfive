@@ -114,9 +114,9 @@ function pickDigit(S: SquadOrders, d: number, shift: boolean): void {
 }
 /** the digit that picks everyone (the men's own are below it) */
 const PLAN_ALL = 5;
-/** a left click on bare ground picks everyone, as the mode was built — not once the digits pick the men, except on a tutorial mission, whose lines still
- *  name that click (rails live: the tutorial's own to move) */
-export const planGroundAll = (S: SquadOrders): boolean => !CMDRING.planDigits || !!S.g.rails?.live;
+/** a left click on bare ground picks everyone, as the mode was built — not once the digits pick the men, on a tutorial mission as anywhere (its lines
+ *  teach the digits now; until 10-25 a tutorial kept the click) */
+export const planGroundAll = (_S: SquadOrders): boolean => !CMDRING.planDigits;
 /** the digit drawn by a man's circle (0: none — the digits are not the mode's, or he has none) */
 function digitOf(S: SquadOrders, m: Guard): number { if (!CMDRING.planDigits) return 0; const k = S.squad().indexOf(m) + 1; return k >= 1 && k < PLAN_ALL ? k : 0; }
 
