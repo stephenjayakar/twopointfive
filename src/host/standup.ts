@@ -156,7 +156,7 @@ import { WINBARS } from '../game/winbars';
 import { FRAG } from '../game/frag';
 import { HOUR, applyHour } from '../game/hours';
 import { DOORPATH } from '../game/doorpath';
-import { HOLD, MOVES, TURN, TURN_FEEL, THROW_BY, HARDBREATH } from '../game/character';
+import { HOLD, MOVES, TURN, TURN_FEEL, THROW_BY, HARDBREATH, RUNREADY } from '../game/character';
 import { WOUND } from '../game/wounds';
 import { DOORSTAY, DOORWAY, DOORTHROW } from '../game/doors';
 import { FollowCamera } from '../game/camera';
@@ -481,9 +481,11 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_STALKKEY')) STALK.key = String((globalThis as any).process?.env?.TPS_STALKKEY ?? '') === '1';   // …the row's key finishing a stalk (stalk.ts STALK.key): off, so the hold becomes the grab by itself as on the stalk's own recordings
     if (pinned('TPS_STALKLOW')) STALK.low = String((globalThis as any).process?.env?.TPS_STALKLOW ?? '') === '1';   // …and the lower, hands-down way in (STALK.low): off, the arm up and the rise
     if (pinned('TPS_STALKDRAG')) STALK.drag = String((globalThis as any).process?.env?.TPS_STALKDRAG ?? '') === '1';   // …and the mouse as a stick in the creep (STALK.drag, a prototype: down in the plain page too)
+    if (pinned('TPS_STALKHEFT')) STALK.heft = String((globalThis as any).process?.env?.TPS_STALKHEFT ?? '') === '1';   // …and his trunk and arms carried by his legs (STALK.heft): off, so a creep's body is as it was
     if (pinned('TPS_STALKORBIT')) STALK.orbit = String((globalThis as any).process?.env?.TPS_STALKORBIT ?? '') === '1';   // …and his keys taking him round the man in the creep (STALK.orbit): off, so a move key ends it as in every frozen probe and digest; `TPS_STALKORBIT=1` turns it on
     if (pinned('TPS_STALKWIDE')) STALK.wide = String((globalThis as any).process?.env?.TPS_STALKWIDE ?? '') === '1';   // …and his arms out wide and low as he creeps (STALK.wide, under STALK.low): off, his hands by his knees
     if (pinned('TPS_STALKPOLISH')) stalkPolish(String((globalThis as any).process?.env?.TPS_STALKPOLISH ?? '') === '1');   // …and the stalk's polish (stalk.ts stalkPolish, with the hold's share in character.ts): down, so a frozen run raised with TPS_STALK=1 is the stalk as it first stood; acts only under STALK.on
+    if (pinned('TPS_RUNREADY')) RUNREADY.on = String((globalThis as any).process?.env?.TPS_RUNREADY ?? '') === '1';   // the sprint with the pistol (src/game/character.ts RUNREADY): off, so the gun rides a pumping fist
     if (pinned('TPS_CROUCHRUN')) CROUCHRUN.on = String((globalThis as any).process?.env?.TPS_CROUCHRUN ?? '') === '1';   // Shift in a crouch (src/game/player.ts CROUCHRUN): off, so it stands him up into the sprint
     if (pinned('TPS_SAMLOOK')) SAMLOOK.on = String((globalThis as any).process?.env?.TPS_SAMLOOK ?? '') === '1';   // his head on a man (src/game/samlook.ts): off
     if (pinned('TPS_SAMSLIP')) SAMLOOK.slip = String((globalThis as any).process?.env?.TPS_SAMSLIP ?? '') === '1';   // the room he gives a man in passing (src/game/samlook.ts): off

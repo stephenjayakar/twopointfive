@@ -36,7 +36,7 @@ import { GLASSBREAK, GLASSREAL } from './glassbreak';
 import { GLASSPEN } from './glasspen';
 import { SHARDS } from './shards';
 import { TALK_TUNE } from './dialogue';
-import { HOLD, MOVES, MV, TURN, HARDBREATH, DASH, WATCH } from './character';
+import { HOLD, MOVES, MV, TURN, HARDBREATH, DASH, WATCH, RUNREADY } from './character';
 import { SUPPRESSION } from './suppression';
 import { RIFLE_SPREAD, FOOTFALL, TWOGEARS, CROUCHRUN } from './player';
 import { SAMLOOK } from './samlook';
@@ -177,6 +177,9 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   // before the table stands him up into the sprint. SAMLOOK (samlook.ts): his head on a man and the room he gives one in passing — poses, carried so that
   // a replay shows what was seen
   'CROUCHRUN', 'SAMLOOK',
+  // the sprint with the pistol in both hands (character.ts RUNREADY): a pose, so a recording made with it on replays his arms and one from before the key
+  // replays the pumping fist (journal.ts applyKnobs)
+  'RUNREADY',
   // …and their poses' numbers (character.ts): DASH's stride sets the crouch cycle's cadence and so when a footfall is filed, WATCH's turn and lean move the
   // head and chest joints the eyes that look for him read. The sneak lab moves both, so a recording carries them
   'DASH', 'WATCH',
@@ -302,7 +305,7 @@ export function knobRegistry(): Record<string, object> {
   const all: Record<string, object | undefined> = {
     // what a recording carries (JOURNAL_KNOBS)
     AIM, TRAINED, AI_TUNE, BODY_LIGHT, GUARD_EYE, NEEDS, WHISTLE, WET, WIND, CIV, CHAOS, RING, LAUNCHER, HE40, LAUNCHER40, FRAG, SHOTGUN, GLASS, GLASSFX, GLASSBREAK, GLASSPEN, SHARDS,
-    TALK_TUNE, HOLD, SUPPRESSION, RIFLE_SPREAD, FOOTFALL, TWOGEARS, CROUCHRUN, SAMLOOK, DASH, WATCH, STALK, OVERHEAR, SCORE, BADGE, CKPT, FOG, MOVES, MV, TURN, WOUND, DOORPATH, WALLS, WALLCHARGE, WALLSHOT, WALLKILL, HARDBREATH, CASTOR, WALLREACT, COVERFIRE, FURNBLAST, DOORWAY, DOORBLAST, DOORSHOT, DOORTHROW, WINBARS, OPENING,
+    TALK_TUNE, HOLD, SUPPRESSION, RIFLE_SPREAD, FOOTFALL, TWOGEARS, CROUCHRUN, RUNREADY, SAMLOOK, DASH, WATCH, STALK, OVERHEAR, SCORE, BADGE, CKPT, FOG, MOVES, MV, TURN, WOUND, DOORPATH, WALLS, WALLCHARGE, WALLSHOT, WALLKILL, HARDBREATH, CASTOR, WALLREACT, COVERFIRE, FURNBLAST, DOORWAY, DOORBLAST, DOORSHOT, DOORTHROW, WINBARS, OPENING,
     DOORSTAY, HANDLE, DOORMANNERS,
     // what breaks into what, by material (breakTable.ts), and how a blast treats furniture (furnblast.ts): the sim reads both, so a recording carries them
     BREAKS, FURN,

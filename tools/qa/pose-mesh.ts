@@ -60,6 +60,8 @@ const SITS: Record<string, { say: string; go(x: Ctx): void }> = {
   'run': { say: 'running at 3.4 m/s, nothing in the hands', go: x => { x.arm(null); x.walk(3.4); x.run(2.15); } },
   'sprint': { say: 'sprinting at 4.7 m/s, nothing in the hands (the player, hands empty or the pistol holstered)', go: x => { x.arm(null); x.c.anim.upper = 'none'; x.walk(4.7); x.run(2); } },
   'sprint-rifle': { say: 'sprinting at 4.7 m/s with the long gun in both hands at the low carriage (the player sprinting with the rifle)', go: x => { x.arm('rifle'); const a = x.c.anim; a.upper = 'none'; if ('longStance' in a) { a.longStance = 'lowLong'; a.longSteady = 1; } x.walk(4.7); x.run(2); } },
+  'sprint-pistol': { say: 'sprinting at 4.7 m/s with the pistol in both hands at the low ready (the player sprinting with the pistol out: character.ts RUNREADY)', go: x => { x.arm('pistol'); const a = x.c.anim; a.upper = 'none'; a.runReady = true; x.walk(4.7); x.run(2); } },
+  'sprint-pistol-old': { say: 'sprinting at 4.7 m/s with the pistol in a pumping fist (the player with RUNREADY off)', go: x => { x.arm('pistol'); x.c.anim.upper = 'none'; x.walk(4.7); x.run(2); } },
   'crouch': { say: 'crouched, still, nothing in the hands', go: x => { x.arm(null); x.c.anim.crouchTarget = 1; x.run(2); } },
   'crouch-walk': { say: 'crouched, moving at 0.9 m/s, nothing in the hands', go: x => { x.arm(null); x.c.anim.crouchTarget = 1; x.walk(0.9); x.run(2.3); } },
   'rifle-carry': { say: 'the long gun carried: an operator at the low ready, anybody else on patrol', go: x => { x.arm('rifle'); const a = x.c.anim; if (x.side === 'operator') { a.upper = 'none'; a.stance = 'lowReady'; } else a.upper = 'relaxed'; x.run(2); } },
