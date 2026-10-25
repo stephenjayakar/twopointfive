@@ -142,9 +142,11 @@ fn markSoftRead(m: MarkRec, x: f32, y: f32) -> vec3f {
  *    THE SHAPE (all of it by 1): the bitmap read as a soft picture a cell wide (markSoftRead above: a bilinear ramp between cell centres, with its corner
  *      bridge) and cut back to an edge, so a staircase of cells is a slanted stroke, a lone cell a dab, a corner round; between two colours the stronger
  *      takes the pixel;
- *    THE HAND: where that cut falls wanders along the stroke (a brush pressed harder and lighter: a stripe a cell wide is 0.7 to 1.3 of one at 1, a third
- *      to one and a half at 2), over a finer ragged line the bristles left;
- *    THE WEAR: the paint is rubbed off in patches a hand to a forearm wide, measured in metres on the face and not in cells (a fifth of it at 1, half at 2);
+ *    THE HAND: where that cut falls wanders slowly along the stroke (a brush pressed harder and lighter: a stripe a cell wide is 0.85 to 1.15 of one at
+ *      1, twice that swing at 2), over a finer ragged line the bristles left. The swing was first more than twice this over half the length, and a row of
+ *      stripes read as dripped wax: a painter's stripe is nearly straight, and it is the wear that says its age;
+ *    THE WEAR: the paint is rubbed thin in patches a hand to a forearm wide, measured in metres on the face and not in cells, each fading out at its rim
+ *      (a quarter of the paint touched at 1, half at 2);
  *    THE AGE (markTone, the caller's): its colour has gone a shade into the surface under it.
  *  An entry that BURNS keeps its cells and its colour (an LED is a square). `w` = the crisp weights, `ws` = the soft read (the caller's: markSoftRead has
  *  ONE call site in the module, on purpose), `t` = metres a cell; returns the weights to use. */
@@ -157,13 +159,13 @@ fn markSoft(m: MarkRec, x: f32, y: f32, wT: vec2f, w: vec3f, soft: f32, salt: f3
   let amt = min(soft, 1.0) * near; let age = min(soft, 2.0) * near;
   if (amt <= 0.0) { return w; }
   let pm = vec2f(x, y) * t;                                            // (metres on the face: the hand and the wear are the painter's and the years', not the bitmap's)
-  let worn = smoothstep(-0.1, 0.1, 0.55 * mkNoise(pm * 3.3 + vec2f(3.0, 9.0 + salt)) + 0.45 * mkNoise(pm * 11.0 + vec2f(salt, 5.0)) - (0.74 - 0.12 * age));
+  let worn = smoothstep(-0.16, 0.16, 0.55 * mkNoise(pm * 3.3 + vec2f(3.0, 9.0 + salt)) + 0.45 * mkNoise(pm * 11.0 + vec2f(salt, 5.0)) - (0.72 - 0.12 * age));
   let keep = 1.0 - 0.85 * min(age, 1.0) * worn;
   let s = ws.x + ws.y + ws.z;
   if (s <= 0.0) { return w * (1.0 - amt); }
   let eg = clamp(0.5 * foot, 0.07, 0.5);
   let rag = (mkNoise(vec2f(x, y) * 2.3 + vec2f(salt, 1.7)) - 0.5) * 0.3 + (mkNoise(vec2f(x, y) * 0.45 + vec2f(7.0, salt)) - 0.5) * 0.18;
-  let cut = clamp(0.5 + 0.7 * age * (mkNoise(pm * 9.0 + vec2f(salt, 21.0)) - 0.5), 0.22, 0.82);
+  let cut = clamp(0.5 + 0.32 * age * (mkNoise(pm * 5.0 + vec2f(salt, 21.0)) - 0.5), 0.22, 0.82);
   let cover = smoothstep(cut - min(eg, cut - 0.02), cut + eg, s + rag * near);
   let p4 = ws * ws * ws * ws; let share = p4 / max(p4.x + p4.y + p4.z, 1e-6);
   var o = share * cover * keep;
