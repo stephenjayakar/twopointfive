@@ -347,3 +347,11 @@ but synthetic writes still work.
   distinct texts and their size; pipelines asynchronous and synchronous, before and after ready; how many texts and pipelines an EARLIER page of the walk had made character for
   character (the most a browser's shader cache can hand back); which boot pipelines a pass took after ready; the boot line. Exit 1 on a page that did not come ready or printed a
   GPU error. The counts are the page's; no time it prints is a price on a real machine (a page is three to seven minutes on the software adapter).
+- **The night breach's probes on the SHIPPED stand** (2026-10-25; tests only). `nightbreach-stage` and `nightbreach-stop` read 'tune CHANGED' there: the
+  rig (`tools/qa/nightbreach-probes.ts rig`) took its `before.tune` and THEN wrote `game.tune.chaos` itself, and the shipped stand stands the game up at
+  chaos 0.5 where the frozen one has 0 — the rig's own write read as the staging's. The write is before the snapshot now; both are green on both stands.
+  STILL RED THERE AND KNOWN, not mended: `nightbreach-contested` ('the man Sam's rifle pins fires no blind round; the two it cannot reach fire theirs')
+  and `nightbreach-restart` (its last line wants `blindRounds > 0`). Both are bars set on the frozen stand's fight; on the shipped stand a run has 0 to 2
+  blind rounds (`nightbreach-fight`, seeds 11‥20: none in two of ten, the room cleared in all ten), so a line that needs one fails by the seed. Whether
+  dazzled defenders SHOULD fire blind more than that on the page is the room fight's question, not a probe's. The mission itself is off the list
+  (`docs/agents/menus.md`, its foot); the staging under it is the room clear's and the rescue's.
