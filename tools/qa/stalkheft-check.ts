@@ -7,6 +7,7 @@
 //   stop      the click let go with his feet passing each other: his feet stop and his hands go on past that frame, then settle.
 //   alive     stopped behind the man three seconds on, his shoulders still rise and fall, on top of what the key down's do.
 //   smooth    no frame of the whole walk in throws a hand: its fastest frame against his hips is no faster than the key down's, and an arm is never pulled straight.
+//   ahead     no hand ever goes out past his head, the way he is facing, on the walk in: from the game's camera, side on, that is arms held out (his note on a GPU).
 //   feet      the foot he stands on stays where it stands, as with the key down.
 //   grab      the key takes the man out of the stance as it did: he is `held` within a frame of where the key down has him.
 //   harness   down on the frozen stand, up in the page, ?stalkheft=0 puts it down; it rides a recording's tables, and a recording from before it replays with it down.
@@ -47,7 +48,7 @@ async function world(heft: boolean) {
     const sL = b.upperArmL, sR = b.upperArmR, h = b.hips, hL = b.handL, hR = b.handR;
     return { stride: f(b.footL) - f(b.footR), turn: Math.atan2(f(sL) - f(sR), l(sL) - l(sR)) * 180 / Math.PI, swing: (f(hL) - f(hR)), side: l(h) - (l(b.footL) + l(b.footR)) / 2, lift: b.footR[1] - b.footL[1], shoulder: (sL[1] + sR[1]) / 2 - c.pos[1],
       hL: [hL[0] - h[0], hL[1] - h[1], hL[2] - h[2]], hR: [hR[0] - h[0], hR[1] - h[1], hR[2] - h[2]], footL: [...b.footL], footR: [...b.footR],
-      stretch: Math.max(Math.hypot(hL[0] - sL[0], hL[1] - sL[1], hL[2] - sL[2]) / (Math.hypot(b.forearmL[0] - sL[0], b.forearmL[1] - sL[1], b.forearmL[2] - sL[2]) + Math.hypot(hL[0] - b.forearmL[0], hL[1] - b.forearmL[1], hL[2] - b.forearmL[2])), Math.hypot(hR[0] - sR[0], hR[1] - sR[1], hR[2] - sR[2]) / (Math.hypot(b.forearmR[0] - sR[0], b.forearmR[1] - sR[1], b.forearmR[2] - sR[2]) + Math.hypot(hR[0] - b.forearmR[0], hR[1] - b.forearmR[1], hR[2] - b.forearmR[2]))) }; };
+      ahead: Math.max(f(hL), f(hR)) - f(b.head), stretch: Math.max(Math.hypot(hL[0] - sL[0], hL[1] - sL[1], hL[2] - sL[2]) / (Math.hypot(b.forearmL[0] - sL[0], b.forearmL[1] - sL[1], b.forearmL[2] - sL[2]) + Math.hypot(hL[0] - b.forearmL[0], hL[1] - b.forearmL[1], hL[2] - b.forearmL[2])), Math.hypot(hR[0] - sR[0], hR[1] - sR[1], hR[2] - sR[2]) / (Math.hypot(b.forearmR[0] - sR[0], b.forearmR[1] - sR[1], b.forearmR[2] - sR[2]) + Math.hypot(hR[0] - b.forearmR[0], hR[1] - b.forearmR[1], hR[2] - b.forearmR[2]))) }; };
   return { W, g, A, c, step, gap, read };
 }
 /** the click held from 3.2 m all the way in to where he waits, a read of each frame he moves under 1.9 m */
@@ -85,6 +86,9 @@ async function moves() {
   console.log('\n=== alive: he breathes as he waits ===');
   la.C.step(180); lb.C.step(180); const s: number[] = []; for (let i = 0; i < 240; i++) { la.C.step(); lb.C.step(); s.push(la.C.read().shoulder - lb.C.read().shoulder); }   // (against the key down's, frame by frame)
   verdict(span(s) > 0.006, 'stopped behind the man for three seconds, his shoulders still rise and fall over the next four, on top of whatever the key down\'s do', `his shoulders over ${f3(span(s))} m`);
+  console.log('\n=== ahead: his hands stay behind his head ===');
+  const past = Math.max(...col(a, 'ahead')), past0 = Math.max(...col(b, 'ahead'));
+  verdict(past < 0, 'on the walk in no hand goes out past his head the way he is facing, so from the side his arms are not held out', `the hand nearest ahead of his head ${f2(past)} m (key down ${f2(past0)})`);
   console.log('\n=== smooth: nothing thrown, nothing pulled straight, his feet stay put ===');
   verdict(a.throwM < b.throwM * 1.1 + 0.002 && a.stretch < 0.985 && a.slip < b.slip * 1.15 + 0.0005, 'no frame of the walk in throws a hand, no arm is pulled straight, and the foot he stands on stays where it stands as with the key down',
     `the fastest frame of a hand against his hips ${f3(a.throwM)} m (key down ${f3(b.throwM)}) · the arm at its longest ${f2(a.stretch)} of its reach · a foot down slips ${f3(a.slip)} m a frame (key down ${f3(b.slip)})`);
