@@ -391,6 +391,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
     if (T.key === undefined) STALK.key = false;   // (a file from before the row's key finished a stalk: the hold became the grab by itself)
     if (T.low === undefined) STALK.low = false;   // (…and from before he went lower with his hands down: the arm came up and he rose)
     if (T.drag === undefined) STALK.drag = false;   // (…and from before the mouse could steer the creep: the hold walks him in)
+    if (T.heft === undefined) STALK.heft = false;   // (…and from before his trunk and arms went with his legs: as they were)
     if (T.orbit === undefined) STALK.orbit = false;   // (…and from before his keys took him round the man: a move key ended the creep)
     if (T.orbitSnap === undefined) STALK.orbitSnap = 0;   // (…and from before a key nearly across him was taken as across him)
     if (T.wide === undefined) STALK.wide = false;   // (…and from before his arms went out wide as he crept: his hands by his knees)
@@ -434,6 +435,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   { const T = k.tables.SLOTSETUP as Partial<typeof SLOTSETUP> | undefined;
     if (!T) SLOTSETUP.on = false;   // (a file from before the slot in hand pressed again opened its setup: its 2 pressed with the rifle up stepped the launcher's load)
     if (typeof T?.pop !== 'boolean') SLOTSETUP.pop = false;   // (…and one from before the setup was a mode with no clock on it: there it shut by itself after its seconds)
+    if (typeof T?.mags !== 'boolean') SLOTSETUP.mags = false;   // (…and one from before the box counted the gun's rounds over its magazine's size: its box said the rounds in all the spares)
     if (typeof T?.draw !== 'boolean') SLOTSETUP.draw = false; }   // (…nor has one from before a double tap off another slot opened it: there the second press was the draw and no more)
   if (!k.tables.DOORFORCE) DOORFORCE.on = false;   // (a file from before an alerted man fired through a shut door and booted it in: its defenders waited at the leaf or went to its handle)
   if (!k.tables.RAILS) RAILS.on = false;

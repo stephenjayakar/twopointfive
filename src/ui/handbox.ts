@@ -3,8 +3,9 @@
 //   A STRIP of the five slots, each in its own place whatever is selected: its key and what the digit brings (a gun's name and rounds ready, the cans
 //   themselves). The selected one is a tab, and under it
 //   ONE BOX of one line for it: the magazine as pips (a reload is written across them, and they go dim under it), what is set on the gun as plain
-//   words (the selector's position, the load on the launcher and how many, the light while it is on), and the rounds in the gun and in reserve as
-//   two numbers (a can: the cans and how many).
+//   words (the selector's position, the load on the launcher and how many, the light while it is on), and the rounds in the gun over what its
+//   magazine holds with a little box for each spare magazine beside it, each as full as that magazine is (slotsetup.ts `mags`; off: the rounds in
+//   the gun and in all the spares as two numbers. A can: the cans and how many).
 //   THE SETUP POPS UP ABOVE THE COLUMN (slotsetup.ts `pop`; the maintainer, 10-22, after playing the box that carried its rows always: "to make it
 //   feel like the radial menu it should be something that pops up above the equipment menu rather than always taking up space"). The gun's key again
 //   and a small panel stands over the column: a row each for what can be set, its digit on a warm cap, its positions beside it with the one that is
@@ -53,6 +54,9 @@ const CSS = `
 #equip.hand .hb-top .re { font: 700 9px/1 var(--h-head); letter-spacing: 0.14em; color: var(--h-soft); }
 #equip.hand .hb-n { margin-left: auto; font: 700 17px/0.85 var(--h-mono); color: var(--h-hi); letter-spacing: 0.02em; white-space: nowrap; }
 #equip.hand .hb-n i { font: 600 11px/1 var(--h-mono); color: var(--h-soft); margin-left: 5px; }
+#equip.hand .hb-n i.of { margin-left: 0; }
+#equip.hand .hb-top .mags { margin-left: -3px; gap: 2px; align-self: center; flex: none; }   /* (two boxes and 31/30 take the line's room that 31 / 60 took: the words for what is set are not cut) */
+#equip.hand .hb-top .mag { width: 4px; }
 #equip.hand .hb-n.dry { color: #ff9c8c; }
 #equip.hand .hb-top .tag.ocp { margin-left: 4px; }
 #equip.hand .hb-set { display: grid; grid-template-columns: 24px 92px 1fr 54px; align-items: center; column-gap: 7px; min-height: 15px; }
@@ -96,7 +100,7 @@ const mk = (tag: string, cls?: string, text?: string) => { const e = document.cr
 const loadName = (id: string) => id === 'ring' ? ringTag() : id === 'he40' ? shellTag() : 'CAM';
 
 /** what the box shows that the column's own cache key does not hold: whether the setup is up, whether his hands are free for it, whether a light is fitted */
-export function handBoxKey(game: Game): string { const pl = game.player; return `|hb${slotSetupOpen(game) ? 1 : 0}${pl.holding ? 'h' : ''}${kitYouLight(pl) ? 'l' : ''}${setupGun(pl) ?? ''}${keysOf('KeyL').join()}${pl.rifle.def.id}${pl.pistol.def.id}${pl.rifle.mode}${pl.pistol.mode}${pl.rifle.lightOn ? 1 : 0}${pl.pistol.lightOn ? 1 : 0}${pl.setup ? pl.setup.t : ''}${SLOTSETUP.pop ? 'p' : ''}`; }
+export function handBoxKey(game: Game): string { const pl = game.player; return `|hb${slotSetupOpen(game) ? 1 : 0}${pl.holding ? 'h' : ''}${kitYouLight(pl) ? 'l' : ''}${setupGun(pl) ?? ''}${keysOf('KeyL').join()}${pl.rifle.def.id}${pl.pistol.def.id}${pl.rifle.mode}${pl.pistol.mode}${pl.rifle.lightOn ? 1 : 0}${pl.pistol.lightOn ? 1 : 0}${pl.setup ? pl.setup.t : ''}${SLOTSETUP.pop ? 'p' : ''}${SLOTSETUP.mags ? 'm' : ''}`; }
 
 /** the line the open setup's time runs down on (null: none drawn) — the column's own element, set again at every draw */
 let leftBar: HTMLElement | null = null;
@@ -147,6 +151,14 @@ function magazine(f: Firearm): HTMLElement {
   return rounds;
 }
 
+/** his spare magazines, fullest first: a little box each, filled as far as that magazine is (the column's own drawing: index.html #equip .mags) */
+function spares(f: Firearm): HTMLElement {
+  const mags = mk('span', 'mags');
+  for (const r of f.spareSorted()) { const m = mk('span', 'mag'), b = mk('b'); b.style.height = `${Math.round((r / f.def.magCapacity) * 100)}%`; m.appendChild(b); mags.appendChild(m); }
+  return mags;
+}
+const MAGS_BREAK = ((): boolean => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.MAGBOXES_BREAK ?? '') === '1'; } catch { return false; } })();
+
 /** the kit column as the box and its strip: `el` is #equip, emptied and drawn again (the caller keys the redraw) */
 export function drawHandBox(el: HTMLElement, game: Game, paceShow: boolean, bigAt: string): void {
   styles(); el.textContent = ''; el.classList?.add('hand'); leftBar = null;   // (classList: the headless stand-in's elements have none)
@@ -184,7 +196,9 @@ export function drawHandBox(el: HTMLElement, game: Game, paceShow: boolean, bigA
       else top.appendChild(magazine(f));
       if (setGun === 'pistol') { const oc = mk('span', 'tag ocp' + (pl.ocp.ready() ? ' on' : ''), 'OCP'), bar = mk('span', 'ocpbar'), bb = mk('b'); bb.style.width = `${Math.round(pl.ocp.charge * 100)}%`; bar.appendChild(bb); oc.appendChild(bar); top.appendChild(oc); }
       if (pop) top.appendChild(state(pl, setGun, f)); else if (f.reloading) top.appendChild(mk('span', 're', 'RELOADING'));
-      const n = mk('span', 'hb-n' + (f.roundsReady ? '' : ' dry')); n.appendChild(mk('b', '', String(f.roundsReady))); n.appendChild(mk('i', '', `/ ${f.spare.reduce((a, b) => a + b, 0)}`)); top.appendChild(n);
+      const n = mk('span', 'hb-n' + (f.roundsReady ? '' : ' dry')); n.appendChild(mk('b', '', String(f.roundsReady)));
+      if (SLOTSETUP.mags && !MAGS_BREAK && !f.def.reload.shell) { n.appendChild(mk('i', 'of', `/${f.def.magCapacity}`)); top.appendChild(n); if (!f.bottomless) top.appendChild(spares(f)); }   // (31/30 and a box a spare magazine: slotsetup.ts `mags` — a gun fed a shell at a time carries loose shells, and keeps the count of them)
+      else { n.appendChild(mk('i', '', `/ ${f.spare.reduce((a, b) => a + b, 0)}`)); top.appendChild(n); }
       box.appendChild(top);
       if (!pop) { box.appendChild(settings(pl, setGun, f, key, inHand === setGun && !pl.holding)); if (open) { leftBar = mk('i', 'hb-left'); box.appendChild(leftBar); handBoxTick(game); } }
     } else {
