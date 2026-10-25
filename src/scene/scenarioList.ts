@@ -13,9 +13,11 @@ import { squadOfQuery, sizeWords, sizeTag, type SquadSize } from '../game/loadou
 // THE LIST'S GROUPS (scenarios.ts MISSION_GROUPS, ui/missions.ts groupOf): a row may name its own; without one a quiet mission is 'quiet alone' / 'quiet as
 // two' by its team, a rescue is 'on the clock' and any other squad's mission a 'raid'. (A comment over a row below that says group 'ideas' or 'more' is of the groups before 10-11: the row's own field is the fact.)
 export const SCENARIOS: ScenarioEntry[] = [
-  // the office (the bundled level). The night breach stays here: it was built and tuned on this floor and its idea is picking your entry. The other three are
-  // the office versions of what the levels below were made for, kept beside them
-  { id: 'night-breach', title: 'Night breach', kind: 'nightbreach', squad: 2, group: 'raids',
+  // the office (the bundled level). The night breach was built and tuned on this floor and its idea is picking your entry. It is CUT FROM THE LIST (the
+  // maintainer, 10-24: "let's also remove "night breach" since it's unnecessary now"): no list or card draws it; the row, its address (`?nightbreach`) and
+  // every check that stages it stay, as the room clear and the rescue are built on its staging (game/nightbreach.ts). `?offlist=0` draws it again. The other
+  // three are the office versions of what the levels below were made for, kept beside them
+  { id: 'night-breach', title: 'Night breach', kind: 'nightbreach', squad: 2, group: 'raids', offList: true,
     place: 'The office · the break room', lean: 'either', defenders: 3,
     blurb: 'Enemies hold a break room with four doors. Stack your pair up on one door and send them in while you come through another.' },
   { id: 'room-clear-pair', title: 'Room clear', kind: 'roomclear', squad: 2,

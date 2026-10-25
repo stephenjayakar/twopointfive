@@ -28,7 +28,7 @@ await withDom('?quality=high&mute', async (root) => {
   const card = bootCard(); out.boot = fnv(serial(root)); card.off();
   menu.open('start'); out.start = fnv(serial(root));
   menu.open('pause'); out.pause = fnv(serial(root));
-  (globalThis as any).location.search = '?nightbreach&difficulty=standard&pick=night-breach&quality=high&mute'; menu.open('pause'); out.pausePick = fnv(serial(root));
+  (globalThis as any).location.search = '?levelFile=depot.json&roomclear&squad4&difficulty=standard&pick=depot&quality=high&mute'; menu.open('pause'); out.pausePick = fnv(serial(root));
   menu.close();
 });
 log(`CARD-DIGEST ${P ? (nopicks ? 'the short list switched off' : 'as shipped') : 'a tree without the short list'}: ${Object.entries(out).map(([k, v]) => `${k} ${v}`).join(' · ')} · all ${fnv(Object.values(out).join(''))}`);
