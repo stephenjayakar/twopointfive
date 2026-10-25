@@ -35,7 +35,8 @@ const dist = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 /** the room clear with `squad` teammates, the rule as asked, the team stacked on the nearest door it can stack on by the quick key */
 async function rig(squad: number, rule: boolean) {
   const squad0 = NIGHTBREACH.squad; let W: any, why: any;
-  try { Object.assign(NIGHTBREACH, { squad }); Math.random = seeded(5); W = await standUp(); AUTOPILOT.on = true; PLAN.on = true; DOORTOOLS.wordSmall = rule; W.game.godMode = true; why = W.game.roomClear.start(5); }
+  // (one line gives the word to one man of the two, outside plan mode: the rule that only plan mode picks a part of the squad is held off in this rig and has its own lines, wholesquad-check)
+  try { Object.assign(NIGHTBREACH, { squad }); Math.random = seeded(5); W = await standUp(); (await import(`${ROOT}/src/game/cmdring.ts`)).CMDRING.wholeSquad = false; AUTOPILOT.on = true; PLAN.on = true; DOORTOOLS.wordSmall = rule; W.game.godMode = true; why = W.game.roomClear.start(5); }
   finally { Object.assign(NIGHTBREACH, { squad: squad0 }); }
   const g = W.game, O = g.orders, D = g.doorTools, I = W.input;
   const R = { W, g, O, D, why: why ? String(why) : null as string | null, door: null as any, n0: 0,
