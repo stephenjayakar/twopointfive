@@ -1,10 +1,10 @@
-// THE SQUAD'S RING IS TWO RINGS DEEP AND NOTHING RIDES THE CURSOR (src/game/cmdring.ts CMDRING.flat / plainHint; orders.ts flatRows, seats, hintView). The maintainer, 10-23, at a wall with three rings between him and one greyed row: "radial menu tree needs
+// THE SQUAD'S RING IS TWO RINGS DEEP AND NOTHING RIDES THE CURSOR (src/game/cmdring.ts CMDRING.flat / plainHint / bareHint; orders.ts flatRows, seats, hintView). The maintainer, 10-23, at a wall with three rings between him and one greyed row: "radial menu tree needs
 // some work, way too nested"; "loud and quiet should be an option on squad wheel"; "let's remove the icons on mouse position from squad orders
 // entirely". (The squad's corner cut down to its key lines is the page's own layer's, not the order book's: no line here.)
 //   bun run tools/qa/ringflat-check.ts            (also `probes.ts ringflat`, in family squadorders)
 //   TPS_PROFILE=shipped bun run tools/qa/ringflat-check.ts      — the same lines on the page's stand
 // PASS / FAIL each, headless: the room clear on the office with its squad of four under god mode, ONE deal (seed 3: the rules have no die in them). The
-// check raises the ring, `only`, the squad's posture rows and the two switches itself, so both stands ask the same lines.
+// check raises the ring, `only`, the squad's posture rows and the three switches itself, so both stands ask the same lines.
 //   1. the floor's ring: what a tap gives, cover, fall in, hold, 'more' — and 'more' is one ring of the throws with the posture row last; given there,
 //      the squad's posture turns.
 //   2. a door's ring: the two entries are on the first ring where 'fall in' and 'hold position' were; the rest of its tools are the one ring behind
@@ -16,14 +16,16 @@
 //   5. stacked on a door, wedge 1 is the squad's own entry and the row with the same words is not drawn again.
 //   6. not offered at all: a charge and the big slot's tool on a steel door, a wall charge the squad never carried — and one carried is on 'more',
 //      and is given from it.
-//   7. CONTROL — a tutorial mission (rails live) keeps the menu's pages: its lines name the digits of the tree as it was.
+//   7. CONTROL — a tutorial mission (rails live) keeps the menu's pages: its lines name the digits of the tree as it was. One whose level takes the
+//      flat ring (rails.ts Rails.flatRing) has the flat tree.
 //   7b. flatSeats by itself: more rows than wedges (the posture row gives up its place first), one row left over (it sits on the last wedge, no
 //      second ring), gaps in the fixed wedges filled, the word's row never seated.
-//   9. the mark of what the key orders on carries no glyph; the outline on the floor is still there.
+//   9. the squad's cursor mark is not drawn at all (bareHint; the maintainer, at a wall with the ring up: "the line and circle are weird, don't need
+//      them"): at rest and under an open ring. 9b, CONTROL: that switch off and plainHint on, the outline with no glyph.
 //  10. CONTROL — the switches off: the floor's fifth wedge opens a page, the mark has its glyph.
-//  11. CONTROL (plumbing) — a recording from before the keys replays with both off; one made with them on replays on, off off.
-//  12. CONTROL (the stands) — the frozen stand holds both off, the page's has them on, FROZEN_HOLDS carries their rows.
-// RINGFLAT_BREAK=1 = the two switches left off and the same lines asked: 1 to 6 and 9 must fail (7, 7b, 10, 11 and 12 say what holds without them).
+//  11. CONTROL (plumbing) — a recording from before the keys replays with all three off; one made with them on replays on, off off.
+//  12. CONTROL (the stands) — the frozen stand holds all three off, the page's has them on, FROZEN_HOLDS carries their rows.
+// RINGFLAT_BREAK=1 = the three switches left off and the same lines asked: 1 to 6 and 9 must fail (7, 7b, 10, 11 and 12 say what holds without them).
 //   exit 0 = all hold · 1 = one does not
 import { standUp, ROOT } from './headless.ts';
 
@@ -45,8 +47,8 @@ export async function ringflatCheck(): Promise<boolean> {
   const knobs0 = knobsCopy(), rnd0 = Math.random, squad0 = NIGHTBREACH.squad, K = CMDRING;
   try {
     Object.assign(NIGHTBREACH, { squad: 4 }); Math.random = seeded(3);
-    const W: any = await standUp(), stood = { flat: !!K.flat, plainHint: !!K.plainHint };   // (what this stand stood the two up as: line 12)
-    const raise = (on: boolean) => { K.flat = on; K.plainHint = on; };
+    const W: any = await standUp(), stood = { flat: !!K.flat, plainHint: !!K.plainHint, bareHint: !!K.bareHint };   // (what this stand stood the three up as: line 12)
+    const raise = (on: boolean) => { K.flat = on; K.plainHint = on; K.bareHint = on; };
     HANDRING.on = false; K.on = true; K.only = true; K.hint = false; K.hands = false; K.plan = false; K.planRts = false; K.planRun = false; K.stay = false; K.tapNow = false; K.pin = false; K.holdSecs = HOLD_SECS; AUTOPILOT.on = true; SIL.SILENT.on = true; DT_.DOORTOOLS.outsidePlain = true; ST.SQUADTHROW.on = true;   // (the rows the page's ring has on both stands: the squad's posture, one 'clear from outside', the throws)
     raise(!BREAK);
     const g = W.game, O = g.orders, input = W.input, KEY = K.key; g.godMode = true; g.roomClear.start(3);
@@ -122,9 +124,10 @@ export async function ringflatCheck(): Promise<boolean> {
     // ---- 7
     { const rails0 = g.rails; K.flat = true;
       g.rails = { live: true }; const taught = (O as any).flatRing();
+      g.rails = { live: true, flatRing: true }; const took = (O as any).flatRing();
       g.rails = { live: false }; const plain = (O as any).flatRing();
       g.rails = rails0; const here = (O as any).flatRing(); K.only = false; const noOnly = (O as any).flatRing(); K.only = true; K.flat = !BREAK;
-      line(taught === false && plain === true && here === true && noOnly === false, 'CONTROL — a tutorial mission keeps the menu\'s pages (its lines teach them); any other level takes the flat tree, and only while the ring carries every order', `on a tutorial mission: ${taught} · off one: ${plain} · this level: ${here} · the ring not carrying every order: ${noOnly}`); }
+      line(taught === false && took === true && plain === true && here === true && noOnly === false, 'CONTROL — a tutorial mission keeps the menu\'s pages (its lines teach them) unless its level takes the flat ring; any other level takes the flat tree, and only while the ring carries every order', `on a tutorial mission: ${taught} · on one whose level takes the flat ring: ${took} · off one: ${plain} · this level: ${here} · the ring not carrying every order: ${noOnly}`); }
     // ---- 7b (the seating by itself: what no kit on this floor shows)
     { const R = (id: string, o: any = {}) => ({ id, targets: ['floor'], ...o }), post = R('silent', { free: true, targets: ['floor', 'none'] }), base = [R('move'), R('cover'), R('fallIn'), R('hold')];
       const five = flatSeats([...base, R('a'), R('b'), R('c'), R('d'), R('e'), post], 'floor', 'KeyF', 0), names5 = five.over.length;
@@ -134,24 +137,29 @@ export async function ringflatCheck(): Promise<boolean> {
       line(five.more === 5 && names5 === 5 && !five.over.includes(9) && one.more === 0 && one.row[5] === 4 && gap.row[2] === 2 && gap.row[4] === 3 && gap.more === 5 && gap.over.join() === '4,5' && word.more === 0 && word.row[5] === -1,
         'the seating by itself: five tools and the posture row — the posture row gives up its place and no tool is lost; one row left over is on wedge 5, not a ring; empty wedges are filled before \'more\'; the word\'s row has no wedge', `five tools + posture: more on ${five.more}, ${names5} rows, posture ${five.over.includes(9) ? 'ON IT' : 'not on it'} · one left over: wedge 5 row ${one.row[5]}, more ${one.more} · two wedges empty: ${gap.row.slice(1).join()} + more ${gap.over.join()} · the word's row: wedge ${word.row.indexOf(4)}`); }
     // ---- 9
-    { const ok0 = up(floor), H = O.hintView(); away();
-      line(ok0 && !!H && H.glyph === false && !!H.ring, 'the mark of what the key orders on carries no glyph; the outline on the floor is still there', `hint ${H ? `${H.kind}, glyph ${H.glyph}, outline ${H.ring ? 'a ring on the spot' : H.seg ? 'a line' : 'NONE'}` : 'none'}`); }
+    { const say = (H: any) => H ? `${H.kind}, glyph ${H.glyph}, outline ${H.ring && H.seg ? 'a line and a circle' : H.ring ? 'a circle on the spot' : H.seg ? 'a line' : 'none'}` : 'nothing';
+      const hint0 = K.hint; K.hint = true; W.cursorAt([floor.at[0], 0.04, floor.at[2]]); step(3); const idle = O.hintView(); K.hint = hint0;   // (the cursor at rest, the mark asked for)
+      const ok0 = up(floor), H = O.hintView(); away();
+      line(ok0 && H === null && idle === null, 'the squad\'s cursor mark is not drawn at all: no glyph, no line, no circle — at rest or under an open ring', `at rest: ${say(idle)} · the ring up: ${say(H)}`);
+      // 9b. the outline alone, as plainHint left it (bareHint off): still its own switch
+      if (!BREAK) { K.bareHint = false; const ok1 = up(floor), P = O.hintView(); away(); K.bareHint = true;
+        line(ok1 && !!P && P.glyph === false && !!P.ring, 'CONTROL — the outline\'s switch off, the glyph\'s on: the outline on the floor and no glyph, as that switch was built', `hint ${say(P)}`); } }
     // ---- 10
     { raise(false); const ok0 = up(floor), first = texts(); press(5); const page = O.menu?.page, H = O.hintView(); away();
       raise(!BREAK);
       line(ok0 && page !== null && page !== undefined && H?.glyph === true, 'CONTROL — the switches off: the floor\'s fifth wedge opens a page, the mark has its glyph', `first ${first.join(' | ')} · wedge 5: page '${page}' · glyph ${H?.glyph}`); }
     // ---- 11
-    { const J: any = await import(`${ROOT}/src/game/journal.ts`), snap = () => JSON.parse(JSON.stringify(J.knobsSnapshot(g))), keys = ['flat', 'plainHint'] as const, now = () => keys.map(k => K[k]).join();
+    { const J: any = await import(`${ROOT}/src/game/journal.ts`), snap = () => JSON.parse(JSON.stringify(J.knobsSnapshot(g))), keys = ['flat', 'plainHint', 'bareHint'] as const, now = () => keys.map(k => K[k]).join();
       raise(true); const old = snap(); for (const k of keys) if (old.tables.CMDRING) delete old.tables.CMDRING[k]; J.applyKnobs(g, old); const before = now();
       raise(true); const on = snap(); raise(false); J.applyKnobs(g, on); const kept = now();
       raise(false); const offS = snap(); raise(true); J.applyKnobs(g, offS); const keptOff = now(); raise(!BREAK);
-      line(before === 'false,false' && kept === 'true,true' && keptOff === 'false,false', 'CONTROL (plumbing: no break word touches it) — a recording from before the keys replays with both off; one made with them on replays on, off off', `from before the keys: ${before} · recorded on: ${kept} · recorded off: ${keptOff}`); }
+      line(before === 'false,false,false' && kept === 'true,true,true' && keptOff === 'false,false,false', 'CONTROL (plumbing: no break word touches it) — a recording from before the keys replays with all three off; one made with them on replays on, off off', `from before the keys: ${before} · recorded on: ${kept} · recorded off: ${keptOff}`); }
     // ---- 12
     { const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`), E = process.env, shipped = E.TPS_PROFILE === 'shipped';
-      const want = { flat: shipped ? E.TPS_RINGFLAT !== '0' && E.TPS_QONLY !== '0' && E.TPS_QRING !== '0' : E.TPS_RINGFLAT === '1' && E.TPS_QONLY === '1' && E.TPS_QRING === '1', plainHint: shipped ? E.TPS_PLAINHINT !== '0' : E.TPS_PLAINHINT === '1' };
-      const rows = ['flat', 'plainHint'].map(k => FROZEN_HOLDS[`CMDRING.${k}`] ?? '');
-      line(stood.flat === want.flat && stood.plainHint === want.plainHint && /TPS_RINGFLAT=1/.test(rows[0]) && /TPS_PLAINHINT=1/.test(rows[1]),
-        `CONTROL (the stands) — this stand (${shipped ? 'the page\'s' : 'frozen'}) stands the two up as its words say, and FROZEN_HOLDS carries their rows`, `stood ${JSON.stringify(stood)} · by its words ${JSON.stringify(want)} · rows: ${rows.map(r => `'${r}'`).join(' ')}`); }
+      const want = { flat: shipped ? E.TPS_RINGFLAT !== '0' && E.TPS_QONLY !== '0' && E.TPS_QRING !== '0' : E.TPS_RINGFLAT === '1' && E.TPS_QONLY === '1' && E.TPS_QRING === '1', plainHint: shipped ? E.TPS_PLAINHINT !== '0' : E.TPS_PLAINHINT === '1', bareHint: shipped ? E.TPS_BAREHINT !== '0' : E.TPS_BAREHINT === '1' };
+      const rows = ['flat', 'plainHint', 'bareHint'].map(k => FROZEN_HOLDS[`CMDRING.${k}`] ?? '');
+      line(stood.flat === want.flat && stood.plainHint === want.plainHint && stood.bareHint === want.bareHint && /TPS_RINGFLAT=1/.test(rows[0]) && /TPS_PLAINHINT=1/.test(rows[1]) && /TPS_BAREHINT=1/.test(rows[2]),
+        `CONTROL (the stands) — this stand (${shipped ? 'the page\'s' : 'frozen'}) stands the three up as its words say, and FROZEN_HOLDS carries their rows`, `stood ${JSON.stringify(stood)} · by its words ${JSON.stringify(want)} · rows: ${rows.map(r => `'${r}'`).join(' ')}`); }
   } finally { knobsBack(knobs0); Math.random = rnd0; Object.assign(NIGHTBREACH, { squad: squad0 }); }
   console.log(fails ? `ringflat-check: ${fails} FAIL` : 'ringflat-check: ALL PASS');
   return fails === 0;

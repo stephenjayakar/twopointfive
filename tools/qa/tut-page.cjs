@@ -47,7 +47,7 @@ const at = (page, p) => page.evaluate(p => { const c = document.getElementById('
     try { await page.screenshot({ path: f, timeout: 60000 }); } catch (e) { return `(no picture: ${String(e).slice(0, 60)})`; }
     finally { await page.evaluate(() => { document.getElementById('view').style.visibility = ''; document.getElementById('__still')?.remove(); }); }
     return f; };
-  const url = `http://localhost:${PORT}/?roomclear&squad4&levelFile=${name}.json&paused&quality=${QUALITY}&mute`;
+  const url = `http://localhost:${PORT}/?roomclear&squad4&levelFile=${name}.json&paused&quality=${QUALITY}&mute${process.env.MARKCLEAR_BREAK === '1' ? '&markclear=0' : ''}`;
   log(url);
   if (!held) await page.goto(url, { timeout: 600000 });
   await page.evaluate(async held => { await window.__ready; window.__testVisible = true; if (held && window.__game.lesson.i > 0) window.__game.restartEncounter();   // (a page played before: the mission again, as Shift+Enter gives it)
@@ -68,11 +68,29 @@ const at = (page, p) => page.evaluate(p => { const c = document.getElementById('
 
   // ---- the steps, by hand
   const camKey = async () => (await page.evaluate(() => document.querySelector('#railprompt kbd')?.textContent || '')) === 'Space' ? 'Space' : 'ControlLeft';
+  let smokeCall = null;   // (the 'zoom' hand's reading of the squad's smoke calls)
   const hand = {
     // (the camera's key is the one the line's own cap names: Ctrl, or the Space bar where the page's board leaves it spare)
     turn: async () => { const k = await camKey(); await page.keyboard.down(k); for (let x = 400; x <= 900; x += 50) { await page.mouse.move(x, 320); await run(page, 3); } await page.keyboard.up(k); },
-    zoom: async () => { const k = await camKey(); await page.keyboard.down(k); for (let n = 0; n < 8; n++) { await page.mouse.wheel(0, 120); await run(page, 4); } await page.keyboard.up(k); },
-    pan: async () => { await page.keyboard.down('KeyD'); await run(page, 70); await page.keyboard.up('KeyD'); },
+    // (…and the squad's smoke goes out on the NEXT step's cue, the tick that step comes up: the page is stepped a twentieth of a second at a time from the
+    //  zoom's last frame, so each thrower's call is read as the page draws it before his can is in the air)
+    zoom: async () => { const k = await camKey(); await page.keyboard.down(k); for (let n = 0; n < 8; n++) { await page.mouse.wheel(0, 120); await run(page, 4); } await page.keyboard.up(k);
+      // (the page as it is DRAWN, a twentieth of a second at a time: the bubbles on it with 'smoke' in them, the radio strip's rows, and — from the game —
+      //  each can in the air with its thrower's name)
+      const look = () => page.evaluate(() => { const g = window.__game, shown = e => { const cs = getComputedStyle(e); return cs.display !== 'none' && cs.visibility !== 'hidden' && +cs.opacity > 0.3; };
+        return { bubbles: [...document.querySelectorAll('.bubble')].filter(e => shown(e) && /smoke/i.test(e.textContent)).map(e => e.textContent), strip: [...document.querySelectorAll('#log .rx')].map(e => e.textContent).filter(t => /smoke/i.test(t)),
+          cans: g.items.items.filter(i => i.kind === 'smoke').map(i => ({ n: i.serial, who: g.guards.find(x => x.char.id === i.who)?.callsign ?? '?', said: g.guards.find(x => x.char.id === i.who)?.bubble?.text ?? '' })) }; });
+      if (steps[steps.findIndex(s => s.id === 'zoom') + 1]?.cue !== 'smoke') return;   // (a mission whose next step throws no smoke)
+      for (let n = 0; n < 60 && (await read(page)).id === 'zoom'; n++) await run(page, 3);
+      smokeCall = { cans: [], pic: '' }; let was = { bubbles: [], strip: [] };
+      for (let n = 0; n < 120 && smokeCall.cans.length < 2; n++) { await run(page, 3); const L = await look();   // (six seconds at most: the second can is out about 1.6 s after the cue)
+        for (const c of L.cans) if (!smokeCall.cans.some(x => x.n === c.n)) smokeCall.cans.push({ ...c, bubble: !!c.said && was.bubbles.some(t => t.includes(c.said)), row: was.strip.find(t => t.includes(c.who) && t.includes(c.said)) || '' });   // (`was`: the page a twentieth of a second BEFORE the can was first in the air)
+        if (L.cans.length === 1 && !smokeCall.pic) smokeCall.pic = await shot('2-call'); was = L; }
+      check(smokeCall.cans.length >= 2 && new Set(smokeCall.cans.map(c => c.who)).size >= 2 && smokeCall.cans.every(c => c.bubble && c.row),
+        'the squad\'s smoke is called on the page: before each can is in the air its own thrower\'s line is drawn in a bubble and is a row under his name on the radio strip',
+        `${smokeCall.cans.map(c => `${c.who}: ${c.said ? `"${c.said}"` : 'SAID NOTHING'} · bubble ${c.bubble ? 'drawn' : 'NOT DRAWN'} · strip ${c.row ? `"${c.row.trim()}"` : 'NO ROW'}`).join(' | ') || 'no can went out'} · picture ${smokeCall.pic}`); },
+    pan: async () => {
+      await page.keyboard.down('KeyD'); await run(page, 70); await page.keyboard.up('KeyD'); },
     move: async s => { await point(s.at); await tap('KeyQ'); for (let k = 0; k < 25; k++) { await run(page, 120); if ((await read(page)).id !== 'move') break; } },
     gate: async () => { for (let k = 0; k < 40; k++) { await run(page, 120); if ((await read(page)).id !== 'gate') break; } },
     // (the stack's tap is made WITH SHIFT DOWN: plan mode is locked on this step and the pair is then the plain key — the second play's 'Q doesn't do anything here')
@@ -80,18 +98,24 @@ const at = (page, p) => page.evaluate(p => { const c = document.getElementById('
     go: async () => { await tap('KeyF'); for (let k = 0; k < 20; k++) { await run(page, 120); if ((await read(page)).id !== 'go') break; } },
     kitchen: async s => { await point(s.at); await tap('KeyQ'); for (let k = 0; k < 10; k++) { await run(page, 120); if (k >= 3) break; }
       await tap('KeyF'); for (let k = 0; k < 20; k++) { await run(page, 120); if ((await read(page)).id !== 'kitchen') break; } },
-    // the orders' menu on the wall's ring: its fifth row is the wall's page, the third there the charge; then the word once a man has set it
+    // the orders' menu on the wall's ring: ONE ring with the charge on a wedge of it (the level's `rails.flatRing`) — or, with that off, its fifth row
+    // is the wall's page, the third there the charge; then the word once a man has set it
     charge: async s => {
       // (the step teaches the key HELD: a tap gives no order and says so under the line; held, the ring is up and the line is what to press in it)
       await point(s.at); const o0 = await page.evaluate(() => window.__game.orders.log.length); await tap('KeyQ'); await run(page, 6);
       const T = await page.evaluate(() => ({ o: window.__game.orders.log.length, note: document.querySelector('#railprompt .note')?.textContent || '', line: document.querySelector('#railprompt .line')?.textContent || '' }));
       check(T.o === o0 && !!T.note, 'on the hold\'s step a tap of the command key gives no order and words come up under the line', `orders ${o0} → ${T.o} · line "${T.line}" · under it "${T.note}"`);
       log('picture', await shot('91-tap'));
-      await point(s.at); await page.keyboard.down('KeyQ'); await run(page, 30); await page.keyboard.up('KeyQ'); await run(page, 3);
-      const U = await page.evaluate(() => ({ menu: !!window.__orders.menu, line: document.querySelector('#railprompt .line')?.textContent || '' }));
-      check(U.menu && /5/.test(U.line) && /3/.test(U.line), 'held, the ring is up and stays with the key let go, and the line names the two digits', `ring ${U.menu} · line "${U.line}"`);
+      const mk = () => page.evaluate(() => { const e = document.querySelector('.objmark'); if (!e || getComputedStyle(e).display === 'none') return null; const r = e.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+      await point(s.at); const mark0 = await mk(); await page.keyboard.down('KeyQ'); await run(page, 30); await page.keyboard.up('KeyQ'); await run(page, 3);
+      await run(page, 2); const mark1 = await mk(); const U = await page.evaluate(() => ({ menu: !!window.__orders.menu, flat: !!window.__orders.menu?.flat, line: document.querySelector('#railprompt .line')?.textContent || '', keys: [...document.querySelectorAll('#railprompt .line kbd')].map(k => k.textContent) }));
+      if (U.flat) check(U.menu && U.keys.length === 1 && /^[1-5]$/.test(U.keys[0]), 'held, the ring is up and stays with the key let go: one ring, and the line names its one digit', `ring ${U.menu}, flat ${U.flat} · line "${U.line}" · keys ${JSON.stringify(U.keys)}`);
+      else check(U.menu && /5/.test(U.line) && /3/.test(U.line), 'held, the ring is up and stays with the key let go, and the line names the two digits', `ring ${U.menu} · line "${U.line}"`);
+      check(!!mark0 && !mark1, 'the step\'s mark is drawn on its place, and gives way to the ring held up over it (?markclear=0 keeps it: MARKCLEAR_BREAK=1 loads that)', `before the ring ${mark0 ? `at ${mark0.x.toFixed(0)},${mark0.y.toFixed(0)}` : 'NOT DRAWN'} · with the ring up ${mark1 ? `DRAWN at ${mark1.x.toFixed(0)},${mark1.y.toFixed(0)}` : 'not drawn'}`);
       log('picture', await shot('92-ring'));
-      await tap('Digit5'); await tap('Digit3'); await until('charge', 40); },   // (the command key held is the squad's menu, a ring that stays: its wall page, then the charge)
+      if (U.flat) { await tap('Digit' + U.keys[0]); const V = await page.evaluate(() => ({ menu: !!window.__orders.menu, last: window.__game.orders.log[window.__game.orders.log.length - 1]?.order ?? null })); check(!V.menu && V.last === 'wallCharge', 'that one digit gives the wall charge and the ring is gone: no second ring', `ring up ${V.menu} · the last order '${V.last}'`); }
+      else { await tap('Digit5'); await tap('Digit3'); }
+      await until('charge', 40); },   // (the command key held is the squad's menu, a ring that stays: its wall page, then the charge)
     blow: async () => { await run(page, 60); await tap('KeyF'); await until('blow', 30); },
     breaker: async s => { await point(s.at); await tap('KeyQ'); await until('breaker', 40); },
     nv: async () => { await tap('KeyN'); await run(page, 20); },

@@ -169,6 +169,14 @@ export const CMDRING = {
    *  16:10 screen runs 8.4 m to either side of its middle (7.4 along its bottom edge), 5.5 m toward the camera and 7.8 m away: these leave his body
    *  on it. What is drawn from an edge then runs to about 15 m from him */
   planNearSideM: 6.5, planNearAwayM: 4.5, planNearBackM: 6,
+  /** PLAN MODE: THE DIGITS PICK THE MEN (planmode.ts planInput; the maintainer, 10-24: "1 2 3 4 in plan mode should select the appropriate squad
+   *  members, and 5 selects all of them? and then we should remove clicking on the ground selects all"): with the mode up and no ring or menu up, a
+   *  digit 1 to 4 picks that man of the squad alone (the squad's own order: a man keeps his digit when another is down), Shift + the digit puts him in
+   *  the picked set or takes him out, 5 picks everyone — and a left click on bare ground picks nobody new: the men picked stay picked (a drag still
+   *  boxes, a click on a man is still him). His digit is drawn by each man's circle. A TUTORIAL MISSION (rails live) KEEPS THE GROUND CLICK until its
+   *  own lines stop naming it; the digits work there too. false: no digit is the mode's, and a click on nothing is everyone, as it was built. Off
+   *  here and on the frozen stand (`TPS_PLANDIGITS=1`, beside `TPS_QPLAN=1`); the page raises it with the mode (`?plandigits=0` off) */
+  planDigits: false,
   /** … how long the view's point takes to come back to him (s) */
   planBackSecs: 0.7,
   /** THE TREE IS TWO RINGS DEEP (the maintainer, 10-23, at a wall with three rings between him and one greyed row: "radial menu tree needs some
@@ -180,7 +188,7 @@ export const CMDRING = {
    *  posture row (go silent / go loud) closes every second ring, and is on the first where the ring is the squad's own (fall in stays on wedge 3 and
    *  hold position on 4 there, as fingers have them; a row that says what wedge 1 says has no wedge of its own, and its digit is wedge 1's:
    *  orders.ts seats `same`). Not on a tutorial mission (rails live: its lines name the digits of the tree as it was, "[X], then press [3]"; the tutorial's own
-   *  to move). false: the menu's pages, as built. Off here and on the frozen
+   *  to move) unless its level takes it (`rails.flatRing`, rails.ts RAILS.flatRing: the first mission does). false: the menu's pages, as built. Off here and on the frozen
    *  stand (`TPS_RINGFLAT=1` beside `TPS_QRING=1 TPS_QONLY=1`); the page raises it with `only` (`?ringflat=0` off) */
   flat: false,
   /** NO GLYPH AT THE CURSOR (the maintainer, 10-23: "let's remove the icons on mouse position from squad orders entirely"): the mark of what the
@@ -188,6 +196,11 @@ export const CMDRING = {
    *  hintView `glyph`; a picture only). false: the glyph, as built. Off here and on the frozen stand (`TPS_PLAINHINT=1`); the page raises it
    *  (`?plainhint=0` off) */
   plainHint: false,
+  /** … AND NO OUTLINE EITHER (the maintainer, 10-23, at a wall with the ring up: "the line and circle are weird, don't need them"): the squad's
+   *  cursor mark is not drawn at all — no line along a wall or a door, no circle on a spot or a man, before the key, with it down or under an open
+   *  ring (orders.ts hintView answers null; a picture only). What a tap would order, and on what, is the corner's line on the key. false: the
+   *  outline, as built. Off here and on the frozen stand (`TPS_BAREHINT=1`); the page raises it (`?barehint=0` off) */
+  bareHint: false,
   /** THE SQUAD'S ONLY KEYS (the maintainer, 10-22: "squad is now just q and f. everything is through the radial menu (which is 1-5? is that
    *  sufficient) so we don't need all the other keys"): the ring carries EVERY order of the menu it is — a row the menu had on a letter of its own
    *  (throw there on G, frag and clear on G, the big slot's tool on H, a look under the door on V) takes a spare wedge of its page, and where a page has

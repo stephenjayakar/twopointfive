@@ -5,6 +5,22 @@ One of the area files CLAUDE.md indexes. Everything below was moved here word fo
 title may now live in another file of this folder: `grep -l '<title>' docs/agents/*.md`. New bullets for this area go at the foot of this file.
 
 <!-- was CLAUDE.md lines 1541–1610 -->
+- **THE FOG'S FOUR PRINCIPLES, AND WHERE EACH IS ASKED (agreed by the maintainer 10-23; read this before adding anything the fog touches).** "The
+  fog hides other people. It never hides the place, and it never hides your own team." A new effect asks ONE question, whose is it, and takes
+  that kind's rule; it does not get a fog exception of its own. (1) THE PLACE is always alive: walls, floors, weather, lying snow, every
+  light's glow on the room, and all smoke and dust (`FOG.air`). (2) WHAT YOUR OWN TEAM DOES always shows: its flashes, tracers, rubble and
+  particles (`FOG.ours`: a box's `owner` in the team's set, in `FogOfWar.things`); a blast adds no eye and shows nobody hidden. (3) EVERYONE
+  ELSE IS WHERE YOUR TEAM LAST SAW THEM, and what they changed stays as last seen until the team looks: men (`hidden` / `seen`, a body kept
+  for good), doors (`doorShown`), lamps (`lampSeen`, and the bulb's own face: `FOG.kept`), furniture (`things` / `thingSeen`), one-frame
+  boxes such as another man's muzzle flash (`cellSeenAt`: never shown unseen, even a shot at the team), resting litter (`FOG.kept`), marks
+  in snow (`FOG.tracks`, `groundLook`), and all of it through a file load (`FOG.filed`). (4) TO SEE MORE, GET MORE EYES ON IT (`FOG.eyes`,
+  `fogEyeCount`; a sticky camera, a peek round a wall's end, a thin thing that does not cut the sight: `FOG.thin`). BESIDE THEM: you hear
+  everything; the enemy never reads the fog; there is one fog picture. KEPT ON PURPOSE: a blown wall or broken glass shows at once (it is
+  loud); a living man's last-seen mark fades in seconds. NOT YET UNDER THE PRINCIPLES: a furrow, a dent or a crater in snow made by a thing
+  nobody sees (`snowMarks.ts`); broken pieces and items after a file load. THE OLDER LOOKS STAY (`FOG.full` off, `FOG.lit` 0, `FOG.flat`
+  off and the rest of the fog's `FROZEN_HOLDS` rows): the frozen stand is every frozen digest's ground, so they are not retired; the page
+  runs none of them. Each principle's own bullet, with its switch and check, is below (`FOG.air`, `FOG.ours`, `FOG.thin`, `FOG.eyes`,
+  `FOG.kept`, `FOG.filed`, `FOG.tracks`).
 - **Fog of war as a cone, on hard** (`src/game/fogofwar.ts`, 10-10; the maintainer: "fog of war being 360 degrees around the players isn't quite realistic. it really should just be the
   cone they're looking at" — "the status quo is fine for normal difficulty"; page rebuild/fog-cone/read-first.md): `FOG.cone` (off = the fog all round every eye, the base by
   run digest) makes each of the fog's eyes a wedge of `FOG.coneDeg` 120 about his GAZE (`gazeOf(c)`: the head, eased onto the aim with a long gun in the shoulder) plus `coneNearM` 1.5 m all round;
@@ -31,7 +47,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (or after the switch comes on) take the floor as it stands. IT REWRITES THE LIST IN PLACE (the headless harness re-points `world.dynamics` at `game.dynBoxes` every frame), so
   a reader of `g.dynBoxes` after drawCharacters sees the picture's list (`Game.dynRaw` = the game's own count before the rewrite, which edgeLook.ts budgets by), and so does
   `BoxWorld.raycast`: the cursor's ray lands on the thing as drawn (1 of 26 shipped Standard run digests moves — Sam's yaw for twelve seconds of block-squads:1 — off = the base
-  26 of 26), a decal on a remembered thing is hidden while it is remembered, and a tripwire's DRAWN beam ends on a remembered box — its SENSOR does not: while the fog runs the sensor's reach (devices.ts `LaserRt.sense`) is asked of the statics, the leaves where they stand and the props, not of this list (devices sense under the fog only on a quiet mission's rung or a solo `?fow`; never in a team scenario). Not in checkpoints (a load re-primes). `FOG.flat` (0 = off = ships;
+  26 of 26), a decal on a remembered thing is hidden while it is remembered, and a tripwire's DRAWN beam ends on a remembered box — its SENSOR does not: while the fog runs the sensor's reach (devices.ts `LaserRt.sense`) is asked of the statics, the leaves where they stand and the props, not of this list (devices sense under the fog only on a quiet mission's rung or a solo `?fow`; never in a team scenario). In a checkpoint since 10-24 for furniture (`FOG.filed`, its own bullet below: held and left-out pieces are filed and no opening half second follows a load; items and rubble still re-prime). `FOG.flat` (0 = off = ships;
   `?fogflat[=0.2]`, Tab ▸ 'fog of war ▸ own light') = the radiance half: fogofwar.wgsl takes the G-buffer albedo (group 1 binding 5) and an unseen pixel is that paint under one
   fixed light (`soft.w`, exposure divided out) instead of the live frame dimmed — no lamp, weapon light, flash, smoke or particle shows in fog; never seen on a GPU. NOT HELD:
   edits to the static level made unseen (decals, a wall or pane coming apart, a fixture's lamp with flat off). QA `probes.ts fog-things` (in family `fog`; its leak watch counts
@@ -73,11 +89,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   any: 2 again with the rifle up steps ring → 40 mm → camera; RMB held previews, letting go sends it — `fireCam`; count `Rifle.cams`, HUD tag `CAM ×n`): it flies flat at `aimY` over the
   cursor's spot and STICKS to the first static it meets (a wall, a pane, built-in furniture); off a leaf, a prop or a man it drops to the floor under where it struck; a camera whose wall
   goes (a blast, a pane broken) drops too (asked once a second by a short ray). Stuck, it is ONE MORE EYE OF THE FOG (`stickyEyes` → fogofwar.ts's eye list, ids 200 +; on a wall a wedge
-  of `fovDeg` 110 about the normal (160 until 10-13), the fog's own cone width while `FOG.cone` is on; lying flat all round; the newest served first inside `FOG_EYES` 5; `max` 3 on the walls at once, one more
+  of `fovDeg` 110 about the normal (160 until 10-13), the fog's own cone width while `FOG.cone` is on; lying flat all round; the newest served first inside the fog's eyes (`FOG.eyes`: 5 until 10-24, 7 in the page since); `max` 3 on the walls at once, one more
   retires the oldest). ONE LIVE FEED (`STICKY.live` 1 — the balance his pick asked for; Tab 'cam ▸ live feeds' 1‥3; `live` = `max` and `fovDeg` 160 = the cameras as they first shipped, and a recording from before the key replays so): only the newest `live` stuck cameras SEND (`stickyLive(pl)` → `stickyEyes`); the others stay on their walls, dark — a second camera is a second LOOK, not a second eye, so two cameras are no longer a floor's worth of coverage left behind — and a sending camera's lens is drawn dull red (`LENS_LIVE`), a dark one's black. The sheet's row says it in one line (levers.ts `CAM_WORDS`, a tooltip). MEASURED on the maintainer's 253 s police-post tape (`sticky-cover.ts --tape`; of the moments a guard stood within 12 m with no line to him, the share the cameras gave back, as first built → now): two cameras placed as well as possible 19.8 % → 15.0 %, two at the nearest walls 15.3 % → 7.5 %, three placed well 25.6 % → 17.2 %. Nobody on the floor notices one and nobody picks one up (open calls); its only cost in play is the launcher's small noise and a tick where it sticks ('prop' events).
   Per-player state on the Player (`Player.cams`, `camSeq`), no dice, a checkpoint slice (`stickySnapshot / stickyRestore`; one in flight refuses a plain save, a forced one files it back on
   the rifle; the slice carries `camSeq`, the run's count of camera ids, so an id is never handed out twice). KNOWN: a card with no rifle gets no camera, the mission's `cams=N` included (the camera is the
-  rifle launcher's load: the row still reads 2); a squad of four under the team's fog fills the fog's five eyes, so a camera there lifts nothing (`STICKY_STATS.blind` counts those frames). A camera's lens is drawn red only while the fog took it as an eye THAT frame (`stickyBoxes` reads `fogOfWar.eyes`: black with no fog up and past the five). The mission's cameras are handed only where the fog is up (`?quiet&nofow` = none) and are let go of BEFORE a quit's stop (its restart kits the fresh player); a kept 'None' survives all shown under `?quietdef=off` too. KNOWN, left: an old kept rung or `quietfog=team` link with no `cams` key now gets the cameras (they come with the fog); 'newest' is firing order, not sticking order. The debrief says 'placed a sticky camera' (a 'thrown' row of kind `cam`; the thrown count and the par clock are untouched). Tab ▸ Player & weapons ▸ Sticky cameras.
+  rifle launcher's load: the row still reads 2); a squad of four under the team's fog filled the fog's five eyes, so a camera there lifted nothing — with `FOG.eyes` at 7 (the page since 10-24) it is the sixth eye (`STICKY_STATS.blind` counts those frames). A camera's lens is drawn red only while the fog took it as an eye THAT frame (`stickyBoxes` reads `fogOfWar.eyes`: black with no fog up and past the fog's eyes). The mission's cameras are handed only where the fog is up (`?quiet&nofow` = none) and are let go of BEFORE a quit's stop (its restart kits the fresh player); a kept 'None' survives all shown under `?quietdef=off` too. KNOWN, left: an old kept rung or `quietfog=team` link with no `cams` key now gets the cameras (they come with the fog); 'newest' is firing order, not sticking order. The debrief says 'placed a sticky camera' (a 'thrown' row of kind `cam`; the thrown count and the par clock are untouched). Tab ▸ Player & weapons ▸ Sticky cameras.
   QA: `bun run tools/qa/sticky-check.ts [kit|fly|fog|save|ways|default|off]` (`probes.ts sticky`, in all-quick; both stands; `STICKY_BREAK=1` must fail), `PORT=<dev server> node
   tools/qa/sticky-page.cjs` (the real start page, no GPU: the Sticky cameras rail row, its links, none on a squad row, none under `?nosticky`), `bun run tools/qa/sticky-cover.ts --tape <F7
   replay> | --ghost <level> --seeds 1-3 [--live N|all] [--fov deg]` (how much of the guards each way shows over a recorded or scripted run; `--live all --fov 160` = the cameras as first shipped). Page rebuild/stealth-sight/read-first.md. Never
@@ -668,7 +684,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the player (the office has 31). SWITCH: `FOG.lit` 1 in the module and the page — `?foglit=0` = the one fixed light as it was (`?foglit=gain` another; Tab
   'lit as last known' + three 'lit:' rows, short so that a slider's label shows them whole); `?fogflat=0` is still the live frame dimmed, whatever `lit` says. Frozen stand: 0, `TPS_FOGLIT=1`
   raises it and wants `TPS_FOGFLAT=1` with it (`FROZEN_HOLDS['FOG.lit']`, `STAND_ENV`); shipped: 1, `TPS_FOGLIT=0` holds it. Picture only: no digest moves,
-  nothing in a checkpoint or a tape (the memory is re-primed at `reset()`, as the things' is); a recording from before the key replays with 0
+  nothing in a tape (the memory is re-primed at `reset()`; in a checkpoint since 10-24, `FOG.filed`: a lamp the team knows another way is filed); a recording from before the key replays with 0
   (`journal.ts applyKnobs`). CHECK: `probes.ts fog-lit` (family `fog`; 9 lines; `FOGLIT_BREAK=1` red) on both stands — the block, only fixtures and the sun in
   the list with every carried light and a flash forced on, last known (off unseen stays lit, on unseen stays dark, a seen one follows), the mains, the shader's
   branch reads nothing live, the walk against `occludedTBoxes`, the address, the journal, the stands. MEASURED on software-adapter stills only
@@ -685,7 +701,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   until the sight table below is live). An unseen pixel is the LIVE FRAME dimmed (`dim` 0.4; greyed too until 10-15, `desat` 0.75 — now 0, the bullet after this one: every pass, its bounce, soft
   shadows, air) and what must not show there is cut WHERE IT IS MADE: (1) THE SIGHT TABLE — `render/fogofwar.ts FogSight`, `shaders/fogsight.wgsl`: at the
   head of the frame one 32 × 5-group compute pass writes, for each eye, how far its level ray goes along each of 2048 bearings (`occludedTBoxes`, the fog
-  pass's own eye ray) into a 41 KB buffer that is the scene group's binding 11 in every pass (a UNIFORM — the fragment stage has no sampled texture left;
+  pass's own eye ray) into a 58 KB buffer (41 KB until 10-24: five eyes' rows, now seven's) that is the scene group's binding 11 in every pass (a UNIFORM — the fragment stage has no sampled texture left;
   the pass itself binds a zero stand-in there, `Engine.sceneBGPlain`); `common.wgsl fogSeenAt(P, N)` = the fog pass's `fowSeen` rule answered from it — the two
   table rays beside the spot's bearing, and the exact ray walked only where they disagree (a sight edge, a wall seen along its length), cached per spot;
   `fogSeenBins` = the table alone, for the vertex stage (which does not see the grid). (2) LIGHT CLASSES in the light record's kind word (bits 25 / 26,
@@ -795,9 +811,255 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   a lamp the 40 % dim is lost in the tone map's shoulder. That is his ask taken literally and his call: `dim` lower, or `?fogdesat=0.25`, are the two knobs.
   COST: unknown — never timed. On the replica a seen pixel reads the table 14 times an eye on average and an unseen one 11 (most: about 200 beside an eye
   along a slanted wall; bounded by the code at 65 steps × 2 sides × 5 eyes); only pixels within half a band of a sight edge pay more than the row skips.
-  The table is a 41 KB uniform read at a per-pixel index, which some GPUs serialise (a read-only storage view is the mend if it shows). `?fogedge=0` is the
+  The table is a 58 KB uniform (41 KB until 10-24) read at a per-pixel index, which some GPUs serialise (a read-only storage view is the mend if it shows). `?fogedge=0` is the
   way out. NEVER SEEN ON A GPU, never played: how the band reads in motion (a sight line sweeping as a man turns), whether 0.5 m is the right width, and
   whether the fog still reads as fog now that it has its colour (`dim` is the knob).
+- **Smoke is drawn under the fog too (`FOG.air`, 10-23; the maintainer, of a shot of the pass with a lit drum and no flame under the fog: "I think we
+  should at least show everything in the environment visible at the start of the level all the time?").** PICTURE ONLY, and only under the full picture
+  (`FOG.full`: it rides the sight table). THE FIRST STEP OF SORTING THE FOG BY WHOSE A THING IS, NOT BY WHETHER IT MOVES: the place (the level as it
+  starts, its fires, its weather, its air) is always shown; the team's own doings are always shown; everybody else is where the team last saw them.
+  Before, the smoke's march took no density over floor nobody on the team saw (`common.wgsl fogSmoke`, rule 4g's "what is not light"), so a fire burned
+  under the fog (`FIRE.fog`) with no plume, and the cloud of the team's own grenade stopped on the sight line. Now `fogSmoke` hands the density back
+  whole while the sight table's head says so (`fogSight.soft.w`, written by `render/fogofwar.ts FogSight.encode` from `FogFrame.air`; that float is NOT
+  what `FowU.soft.w` means in the fog pass), and the fog pass dims the frame afterwards. WHAT STAYS HIDDEN: what a hidden MAN puts into the air is not
+  filed with the solver at all — his breath and his cigarette already (`snowBreath.ts`, `smokebreak.ts`), and now the gas of his shot
+  (`FogOfWar.airHides`, asked by `combat.ts` of every shooter — and true only under the full picture, since 10-24: with `?fogfull=0` nothing draws smoke
+  under the fog, so a hidden man's gas is filed as it always was; the probe holds it; `effects.ts spawnShot`'s `gas: false` files no emitter and gives the same flash; only
+  while `FOG.air` is on — off, the solver gets everything as it did). A hidden light still gives a plume nothing (`lightFogK`), so an enemy's flashlight
+  draws no cone in smoke the team does not see. The PARTICLES' puffs (a blast's dust ring, a round's chip of plaster: `particles_draw.wgsl`) are cut
+  over unseen floor unless the team made them: `FOG.ours`, the next bullet. WHAT IT NOW SHOWS THAT IT DID NOT: ALL the solver's smoke, whoever made it — an enemy
+  grenade's cloud in a room nobody watches (it was heard), and smoke drifting through a door opened unseen (a hint that it is open). The stricter rule
+  (only the place's smoke) would need the solver to know whose smoke is whose; that is the maintainer's call and is asked. NOT HELD, each a tell or a
+  flaw to judge on a GPU: (1) a hidden man walking through a plume still stirs it (`game.ts smokeWake` pushes the solver for every man) — live movement
+  in the fog; (2) the fog pass dims a pixel by the SURFACE behind it, so the part of a tall plume that stands over unseen floor but is drawn in front of
+  seen ground is not dimmed (before, the cut was a curtain on the sight line); (3) a fire lit or put out where nobody saw: the flame is drawn by the
+  fog's memory (`FIRE.fog`) and the plume by the fire as it is, so the two can disagree; (4) the march no longer skips smoke over unseen floor: its
+  cost in a smoky room nobody watches is not measured. THE ENGINE REPLAY SHOWS A TAPE UNDER THE PAGE'S OWN LOOK, as it does for `edge` and `desat`
+  (`FOG_PAGE.air`, `FogOfWar.pageLook`; `ui/replaykey.ts VISIT_FLAGS` keeps a visit's `?fogair`): a tape from before the key would otherwise show no
+  smoke under the fog for ever. SWITCH: ON in the module and the page (the `FOG` table's own way: `full` and `edge` ship the same); `?fogair=0` = no
+  smoke over unseen floor, as it was; the debugger's fog page has the row ('full: smoke under the fog'); frozen stand: off, `TPS_FOGAIR=1` raises it
+  (`FROZEN_HOLDS['FOG.air']`, `host/standup.ts`, `host/standEnv.ts`); `FOG` rides the journal — a recording without the `air` key replays in the
+  harness with it off (`journal.ts applyKnobs`). CHECK: `probes.ts fog-air` (family `fog`; 7 lines; `FOGAIR_BREAK=1` red on the block's line) on both
+  stands — the block's row every frame and the head's write; the march's rule as written (all three marches and the dust look's twin lines go through
+  `fogSmoke`; no other shader reads the row); a hidden defender's gas left out, a teammate's and the player's never, nobody's with the row off; the
+  address; the journal and the replay's look; the stands; and the night breach under the full picture, a hidden defender firing one round through
+  `fireWeapon` and the team then ordered in, two seeds, 21 s each, digesting the same with it as without, dice and all, his gas left out only with it.
+  NOT CHECKED: the picture itself. **Never seen on a GPU**, and not seen moving; whether a plume dimmed to the fog's 0.4 reads as part of the fog or as
+  something seen is the maintainer's to judge.
+- **What the team does is always shown under the fog (`FOG.ours`, 10-23; the maintainer, of the tutorial's wall charge: "still can't see the wall
+  shot detonate" — the fog was taken off that whole mission for it).** The second step of sorting the fog by whose a thing is; under the full picture
+  alone (`FogOfWar.oursOn`: the row, the fog on, `FOG.full`'s block filled). It adds NO EYE: the room a charge opens is the fog's picture of it,
+  dimmed — the room as last seen, with nobody hidden drawn and nobody hidden casting a shadow (the men the fog filters out hand over no capsules) — and
+  nobody in it is drawn until one of the team has a line. A grenade is not a look through a wall. FOUR THINGS TAKE THEIR DOER'S SIDE
+  (`FogOfWar.oursId`, read off the team list the fog fills for the lights, `LightSet.fogTeam.owners`, never off `g.guards`: a blast swaps that list
+  out while it works). (1) A FLASH NOBODY CARRIES: `lights.ts RtLight.fogBy` = who made it, read by `LightSet.fogClass` in place of `owner` (which
+  stays 0: `owner` is also the shadow rule); set through `FogOfWar.lightBy(light, who)` at a round's strike (`combat.ts`), the stun charge
+  (`detonateStun`, `it.who`), the frag (`frag.ts`, `spec.who`), the wall charge's afterglow (`blastLook.ts`, the player's) and a tracer's ember
+  (`tracers.ts`, through the `Tracers.fog` hook `game.ts` sets: the class stays Game-free). The team's lights the fog's picture, an enemy's and an
+  ownerless one only what the team sees, as before. (2) A TEAMMATE'S TRACER is drawn its whole length (`things()`: an unkeyed box whose `owner` is one
+  of the team). (3) THE TEAM'S RUBBLE (`debris.ts Chunk.who`, a kinked panel's `mate` box too) is drawn on its FIRST way down and lies in the picture
+  where it fell; once the picture has it at rest it is a thing like any other (woken unseen, it stays where the picture has it), and a piece a boot
+  slides is nobody's, so walking through rubble still shows nobody. (4) THE PARTICLES: `FogOfWar.begin(who)` / `done()` (or `doing(who, fn)`) name
+  the doer round a cause — `fireWeapon`, `detonateStun`, `frag.ts blast`, `Destruction.blast`, the wall and door charges' `blow`, `blastLookTick`,
+  `blastFeelTick` (the wall charge's later stages: the dust ring, the roll, the soot, the crumbs), a tracer's ember — and what is filed inside
+  carries `Particles.ours` → the emit record's bit 18 → `PB_OURS` (128) on the particle, which `particles_draw.wgsl` leaves uncut over unseen floor.
+  A doing by nobody inside another keeps its cause; an enemy's inside a teammate's is his own; a particle that has lain and is woken (a kick, the
+  wind, its support gone) loses the mark in the kernel, so litter the team made does not jump under the fog when somebody unseen disturbs it. A
+  ROUND THAT STOPS IN A MAN NOBODY SEES (`combat.ts`: `FogOfWar.hidden(hitGuard)` → `hush()`): nothing filed after it met him is marked and its
+  flash is nobody's, so no spray and no flash say where he stands. NOT THE PICTURE ALONE IN ONE WAY: the boxes it hands the renderer (streaks,
+  rubble) are what the cursor's ray meets (`world.dynamics`), as with every thing the fog shows or holds — so the row is the tape's, not the replay
+  page's look (`FOG_PAGE` does not carry it, no visit word). NOT HELD: (a) a lamp shot out by the team (`combat.ts`, `destruction.ts` lamp flashes)
+  and what a team's chunk throws up when it lands or breaks on a later frame (`breakTable.ts`) are not marked and are cut as before; (b) a marked
+  particle stays marked while it flies, so a team's spark that bounces on into another unseen room is drawn there; (c) the STREAK of a teammate's
+  round that stops in a hidden man still ends at him (as its head light, a carried light, always did); (d) with `FOG.air` a team's flash now lights
+  the plume over unseen floor too; (e) the first frame the fog is live has no team list yet: a blast on that frame is not marked. SWITCH: ON in the
+  module and the page; `?fogours=0` = as it was; the debugger's fog page has the row; frozen stand: off, `TPS_FOGOURS=1` raises it
+  (`FROZEN_HOLDS['FOG.ours']`, `host/standup.ts`, `host/standEnv.ts`); the journal carries it (a recording without the `ours` key replays with it
+  off). CHECK: `probes.ts fog-ours` (family `fog`; 8 lines; `FOGOURS_BREAK=1` red on whose, the lights', the boxes' and the particles' lines) on
+  both stands — whose a doing is; a made flash's class by its doer and the real stun charge's set off unseen by the player and by a defender; a
+  streak and a chunk of rubble over unseen floor by owner, in flight, under a boot and at rest; the mark round a real round fired by a teammate and
+  by a defender on a stand-in for the GPU system, a teammate's round put into a hidden man (hushed, no flash given), and the record, kernel and draw
+  lines as written; the address; the journal, and that the replay leaves the row alone; the stands; the night breach fought under the full picture,
+  two seeds, 21 s each, the same digest and dice with it as without (the harness has no cursor). NOT CHECKED: the picture. **Never seen on a GPU**:
+  whether a blast under the fog reads as the team's own doing or as a hole in the fog, and how bright the flash should be there (it is dimmed with
+  the frame, `FOG.dim`), are the maintainer's to judge. The tutorial's first mission still has its fog off: whether it wants it back is that
+  mission's owner's call.
+- **Thin things that stand free do not cut the fog's sight (`FOG.thin`, 10-24; the maintainer, of a taken room on The Pass: "weird vertical striations
+  due to fog of war + squad's vision").** Every static stopped the fog's eye, on both sides of the one model: the squad's own lines (`segmentBlocked`)
+  and the picture's ray (`occludedTBoxes`). So a stovepipe 10 cm across, a window's bar or a lone post each threw a sliver of "not seen" across the room
+  behind it, and with men outside looking in through barred windows the floor, rug and back wall were fans of seen and unseen (on The Pass, 3 to 5
+  slivers from one eye by a window of the long room, by the game's own sight test). THE RULE (`src/scene/thin.ts thinLevel`, run by
+  `host/standup.ts populateHost` after `roundLevel`, on both stands): a static is marked `BoxFlag.Thin` when it is NARROW (under `THIN_WIDTH` 0.25 m
+  across in plan both ways), FREE (no solid box beside it over a quarter of its height, counted over all its neighbours; what it stands on or under,
+  a pane of glass and the other slabs of the same round thing are not beside it) and NOT A DOOR'S (nothing within `DOOR_NEAR` 0.3 m of a door's shut
+  leaf: a jamb or a stop passed would open every shut door — the first version of this did exactly that, by size alone, and a review caught it). A
+  breached partition's bare studs are marked as they are made (`wallbreak.ts`). The mark is inert until read: (a) THE SQUAD'S LINES, every eye's line
+  in `game/fogofwar.ts` through `sightBlocked` (to a man, a body, a spot, a door, a lamp), pass marked statics; (b) THE PICTURE's fog eye passes them
+  too — which boxes, as a bit a box index in the sight table (`FogFrame.thinBits` → `FogSightT.thin`, written to the table and to the stand-in the
+  table's own pass reads) — and passes what a man CARRIES (any owned box: another man's gun, a tracer's streak; the squad's lines never met those).
+  One test, `common.wgsl fogThinBox`, asked only of a box a ray has already hit, live only while the private `fogEyeThin` is raised by the fog's own
+  rays (`fogSeenAt`, the fog pass's `main` and `pre`, the table's kernel). The lines go by the row alone (`FOG.full` stays a
+  switch of the picture only); the picture's half rides the sight table, so it is under the FULL picture alone. NOT the picture alone: who the squad has seen can differ behind a pipe, so a digest can. It is
+  the FOG's sight only: a guard's eye, a teammate's own `eyeContact`, a round, a sound and a shadow meet those boxes as ever. SWITCH: ON in the module
+  and the page; `?fogthin=0` = every static stops the eye, as it was; the debugger's fog page has the row; frozen stand: off, `TPS_FOGTHIN=1` raises
+  it (`FROZEN_HOLDS['FOG.thin']`); the journal carries it (a recording without the key replays with it off); not part of the replay page's look (the
+  tape's row decides who was seen). CHECK: `probes.ts fog-thin` (family `fog`; 8 lines; `FOGTHIN_BREAK=1` red on the marks', the lines' and the
+  block's) on both stands — the marks on all 53 level files, rounded and as slabs (narrow, free, none at a door; The Pass's are its stovepipes and
+  window bars), and through each level's own collision no line across a door's frame goes further with the marks passed; The Pass stood up: slivers
+  taken away from four eyes, no line shortened, the fog's test across a stovepipe, a wall, every shut door's frame; the block, its bits and the box list they were read off (a frame drawn after a wall is rebuilt and before the
+  next fill passes nothing: `FogSight.encode`);
+  the shaders as written; the address; the journal; the stands; the night breach with and without, two seeds (92 marked statics on that level: the
+  same digest and dice both ways, on both stands — held: red if the row begins to move that run). The fog, replay and journal gates on both stands. NOT HELD: (a) a teammate can call a contact the
+  fog's line gave him through a window bar while his own `eyeContact` is still blocked by it — whether thin things should stop hiding anyone from
+  anyone is a game rule, the maintainer's call, not made here; (b) loose props at eye height (a shelf, a locker) still stop the PICTURE's eye and
+  never stopped the squad's lines, and a carried box too large for the grid's cells (asked in the walk's own first loop) is not passed; (c) a host that stands boxes up another way (the viewer, the editor's stage) makes no marks: the fog there cuts on thin things as before; (d) while the sight table's program compiles (the first frames), if it fails, or under `?fogfull=0`, the picture is an older fog that does not pass
+  them while the squad's lines do (a man behind a pipe is drawn on a sliver the picture still fogs); (e) the rule's numbers are code, not knobs: retuning `THIN_WIDTH` changes what an old recording's level marks; (f) the fans a window's own
+  frame and wall thickness cast on Hard (each man a cone) are real sight edges and stay. **Never seen on a GPU**: the page boots with it on the
+  software adapter (every pipeline, no error); whether the room now reads clean is the maintainer's to judge.
+- **More than five eyes lift the fog (`FOG.eyes`, 10-24; the fourth of the fog's principles the maintainer agreed 10-23: "to see more, get more eyes on
+  it").** The fog took FIVE eyes (`render/fogofwar.ts FOG_EYES`, a literal in three shaders): Sam and a squad of four filled them, so a sticky camera
+  that sent was "drawn, blind" (`STICKY_STATS.blind`), and in the tutorial's sky seat the lookout and a step's own eye fought for the last place. NOW the
+  ROOM is seven (`FOG_EYES` 7: the fog pass's block, the sight table — 58 KB of the 64 KB a uniform block may be, so seven is the most at 2048 bearings —
+  and `fogofwar.wgsl`, `fogsight.wgsl`, `common.wgsl FogSightT`; the passes walk only the live eyes — the sight table's pass dispatches the live rows,
+  not the room) and HOW MANY ARE USED is the row: `FOG.eyes`, read where the list is made (`game/fogofwar.ts update`) through `fogEyeCount`, the one
+  clamp the list, the address and the checks share (under five is five, over seven is seven, no number is five). The order is as it was: Sam (or his lens), the
+  living teammates in list order, the newest sending camera(s), then the tutorial frame's lookout and step eye (`RAILS.eyeFirst` still puts a step's eye
+  in the last place when the places are full). NOT the picture alone: an eye more is a man more the squad may have seen (`seen()`), so a run with a
+  camera out can differ; with nobody past the fifth place it is the same run (the probe holds two seeds). SWITCH: 7 in the module and the page;
+  `?fogeyes=5` (or `=0`) = five, as it was (`?fogeyes` or `=1` = seven, `=6` = six); the debugger's fog page has the row (5 to 7); frozen stand: five, `TPS_FOGEYES=1` raises it
+  (`FROZEN_HOLDS['FOG.eyes']`); the journal carries it (a recording without the key replays with five); not part of the replay page's look. CHECK:
+  `probes.ts fog-eyes` (family `fog`; 7 lines; `FOGEYES_BREAK=1` red on the game's line) on both stands — the room as written in the block, the table,
+  the shaders and the hint pass's counting twin (its costs go under the seventh row: `fogofwar.wgsl`'s `//#C` line carries the literal too); THE CASE IT
+  WAS BUILT FOR, the room clear with a squad of four, three cameras sending and the newest laid by a man nobody sees (at five: 5 eyes, blind counted,
+  unseen; at six: the camera is the sixth eye, the block's next row at its lens, seen; at seven: two see, the third blind; asked 99 or no end: seven;
+  no number or 0: five; one feed live, as the page has it: 6 eyes, nothing blind; cameras up: unseen again); the same four with no camera, eight
+  seconds on their marks at five and at seven: the same game by digest; the address; the journal; the stands; the night breach fought at five and at
+  seven, two seeds, the same digest and dice. `sticky-check`'s cap line reads the row through `fogEyeCount`, and `rails-check`'s line for a step's own
+  eye asks its rule at five places and then that at seven the lookout and the step's eye both have one. NOT HELD: (a) what a sixth and seventh eye cost a frame on a real GPU (two more rows of the sight
+  table's pass and of the fog pass's per-pixel loop while they are live) — unmeasured; and the ROOM is not behind the switch: the sight table bound in
+  every pass is 58 KB where it was 41 KB whatever the row says (the note on GPUs that serialise a uniform read at a per-pixel index stands, at the
+  larger size); (b) the tutorial's sky seat now has room for the lookout AND a
+  step's eye with four men up: nobody has looked at mission 1 with it; (c) three cameras all sending (`STICKY.live` 3) with a squad of four still
+  leaves one blind. **Never seen on a GPU.**
+- **What others left behind stays as the team last saw it (`FOG.kept`, 10-24; the third of the fog's principles the maintainer agreed 10-23: "everyone
+  else is where your team last saw them").** Two gaps of the audit, the picture alone, under the full picture. (1) A LAMP'S FACE: the fog already lit a
+  room by a lamp put out unseen (the ghost light, `fullBlock`) while its ceiling panel went dark at once, because the panel's box follows the real lamp.
+  Now a lamp the team has in another state than it is in keeps its face that way too: `FogOfWar.lampFace` writes `Box.fogEmit` / `fogMark` (what the box
+  glowed with while the team knew it lit — `faceSeen`, the brightest of the last second, since a fire's coals glow at a quarter of the level's emission
+  and a tube drops out — and gain 1; or dark and 0), which the upload alone reads in place of `emissive` / `markGain` (`scene/boxes.ts`, the shadow
+  compare and the pack); the game's `Box.emissive` stays the real lamp's (destruction, marks, floormess and furnblast read it), so nothing in the game
+  moves. ONLY a box no ray reads the emission of gets a face (`AreaLit`, or `NoShadow`): a remembered glow a bounce ray could pick up would reach the
+  cascades and the light meter. A blackout is known to all, as the ghost is: no face is kept there. The viewer's picture without the fog
+  (`Game.fogLift`, the replay's Fog switch) shows the lamps as they are (`facesLift` / `facesBack`). Emissive things with no light of their own (a
+  sign, an LED row, a monitor) have no memory in the fog and are drawn as they are. (2) LITTER AT REST: a case, a chip or a leaf of paper at rest was cut the moment the team
+  looked away and came back when they looked again. Now the particles' kernel, in its resting branch (one particle in 16 a frame, with the support
+  test), marks a resting particle that lies on floor the team sees with a bit of its own (`PB_KEPT`, bit 16), which the draw passes under the fog only while
+  the row is on (the row put off mid-game cuts them again); the three places that wake a particle take it off, so a kicked case is cut again where
+  nobody sees. The row rides the sight table's head (`FogFrame.kept` → bit 4 of
+  the word `fogSmokeOn` / `fogThinOn` read; `common.wgsl fogKeptOn`). What a man nobody sees drops stays cut until the team has seen it lying.
+  NOT IN IT: the floor glint of a hidden torch, which the audit named, was already cut (`reflect.wgsl` asks `lightFogK`, since 10-16); a checkpoint's
+  memory of the fog is the next bullet's switch. SWITCH: on in the module and the page; `?fogkept=0` off; the debugger's fog page has the row; frozen stand off,
+  `TPS_FOGKEPT=1` (`FROZEN_HOLDS['FOG.kept']`); the journal carries it (a recording without the key replays with it off), and, being the picture alone, it is part of the replay page's
+  fog look (`FOG_PAGE`, with the air: the engine replay shows any tape under the page's own; `fogkept` is a visit word). CHECK: `probes.ts fog-kept`
+  (family `fog`; 6 lines; `FOGKEPT_BREAK=1` red on three) on both stands — a lit lamp with a face put out unseen (face lit for the picture as it glowed, a
+  dimmer record kept as it was, the game's emission dark, ghost light; the fog lifted for a draw: untouched, and back after; a blackout: none; seen:
+  as it stands; lit again unseen: face dark; a fresh encounter, the row off, not the full picture, a lamp in sight:
+  nothing written; the upload's two reads, no other game module reading them); the litter bit as written (the frame, the head, `fogKeptOn`, the kernel's
+  one line in the resting branch, the bit clear of the others, the three wakes, the draw asking the row); the address; the journal; the stands; the night breach fought with a lamp put out unseen,
+  two seeds, with the row and without: the same digest and dice, a face kept with the row alone.
+  NOT HELD: (a) the litter half is held as text and by
+  the page's boot alone — no particle was watched coming to rest and staying, on any adapter; (b) the fog's "seen" for a lamp is one spot under it
+  (`lampSeen`), so a panel whose far corner the picture shows as seen can be drawn in its remembered state for the frames until that spot is seen;
+  (c) a panel broken unseen keeps its lit face on the broken box. **Never seen on a GPU.**
+- **A checkpoint carries what the fog holds (`FOG.filed`, 10-24; the same principle through a load).** A load's restart forgets all the fog knew
+  (`FogOfWar.reset`), so the picture after it had every door, lamp and chair as it stands: what a man did unseen, told by a load. Now a save files
+  what the picture has ANOTHER WAY THAN THE WORLD STANDS and nothing else (`FogOfWar.snapshot` → `SaveState.fog`, a `FogSnap`; an EMPTY slice with
+  the fog up and nothing held, no key with the row off or the fog off): a door by its NAME with the angle shown (poured through `Door.sided`, as
+  the doors' own slice is); a lamp by its name (as the targets' slice is poured) as the team
+  knows it and, known lit, its boxes' emission as they glowed (`faceRecs`); furniture the picture holds, by its thing key with its parts' poses
+  (one a blast took unseen too: `PropSystem.all` keeps its boxes); the keys of furniture the picture leaves OUT (last seen on the move, or the
+  team has looked at the place it left); and the dead the team has seen lying (`Rec.body`, which the picture keeps for good: before, a known body
+  left the picture at a load), by their place on the roster. `loadState` hands it back after the world is poured (`FogOfWar.restore`): each is a record again at once,
+  built there (no pending table), and comes up to date the frame an eye has it like any record the fog made itself. THE FURNITURE'S MEMORY IS
+  MADE WHOLE AT THE LOAD: held where the file has it, no record for one left out, and every other piece on the floor at rest where it stands.
+  So the opening half second after a restart, which takes everything as it stands (`THING_PRIME`), passes the furniture by after a load
+  (`propsLoaded`, down when the half second ends, on a reset, or when the rule's memory is dropped): a chair pushed unseen a moment after the
+  load stays where the team knew it, as it would have carried on (primed, it was drawn moving and then dropped); a remembered chair the team
+  looks at is dropped and does not come back; one left out is not drawn where it stands. Items, rubble and unkeyed one-frame boxes still get
+  the half second. Each kind goes under its own rule's switch at the save and at the load (`FOG.doors`, `FOG.things`); with the fog off at the
+  load nothing is made, and found off on the first update after one, the load's records are forgotten (`loaded`). A row of another shape is left out, never a throw. This is a FILE's memory: a save
+  made with a team on the floor is a rollback snapshot (`docs/agents/qa.md`), which keeps the fog's records with the rest of the game. NOT filed:
+  a living man's last-seen mark (seconds long), rubble and broken pieces (no checkpoint files debris by key), items (their keys are serials). NOT
+  THE PICTURE ALONE: the
+  remembered leaf and chair are what the cursor's ray meets after the load, as before the save, so the row is its own switch and no row of the
+  replay page's fog look (`FOG_PAGE`: an old tape replays with it off, by the journal). SWITCH: on in the module and the page; `?fogfiled=0` off;
+  the debugger's fog page has the row; frozen stand off, `TPS_FOGFILED=1` (`FROZEN_HOLDS['FOG.filed']`); the journal carries it (a recording
+  without the key replays with it off). CHECK: `probes.ts fog-filed` (families `fog` and `checkpoints`; 9 lines; `FOGFILED_BREAK=1` loads with
+  the row off and reds five) on both stands, the solo night on the office with the fog up — a door swung open, a lamp put out and furniture
+  shoved unseen: the file has those three alone, as shown; loaded, a save before the first frame says what the file said, the picture two frames
+  in and a second later holds the three (the furniture's record with the middle and long side it had), a save then files them the same; an eye
+  on each: as it stands, nothing left to file; a look at the remembered place inside the half second: dropped, not back, filed as left out;
+  furniture left out and furniture a blast took: 70 frames after the load the first drawn nowhere and the second where it stood; the fog off at
+  the load, the fog put off straight after one, the row off, a file from before the slice, a file of another shape (no throw, nothing held,
+  nothing filed after); an empty slice and its load (a record for every piece; a chair pushed unseen five frames on remembered at frames 6 to
+  105; a row at the live pose; the furniture rule off and on, and a restart, two frames after a load); a body seen lying, named in the file and
+  in the picture after its load, a body never seen left out, bad rows; the address, the journal, the page look without it, the stands. NOT HELD: (a) loaded in a page once, on the software adapter (the solo night: a door, a lamp and a box held before the save, in the file and held after the load; no console or GPU error), never on a GPU; headless otherwise, one level, one seed; (b)
+  no run was replayed across a load with the slice in its file (the `replay` and `journal` gates pass, and none of their tapes holds a door or a
+  chair in the fog at its save); (c) a lamp's name is taken as unique, as the targets' slice takes it; (d) WHAT A LOAD STILL TELLS: the
+  pieces of a thing broken unseen (a lamp's glass, rubble) and items get the opening half second after a load, so they are drawn as they stand
+  while the lamp they came off is still remembered lit; (e) the slice is handed back only while the fog is up at the load: a lesson's rails that
+  raise the fog a tick after a put-back (`rails.ts`, the sky seat's level alone today) get everything as it stands. **Never seen on a GPU.**
+- **A man nobody sees leaves his tracks in the snow (`FOG.tracks`, 10-24; principle 3: everyone else is where your team last saw them, and what
+  they changed is found when the team looks).** The maintainer: "I won't see tracks forming in fog of war, right? but if an enemy off screen makes
+  tracks and then I see snow, I'll see the tracks?" Before, a man the fog hides pressed NOTHING (`snowTracks.ts`: nothing live shows in the fog),
+  so a patrol left no trail at all unless watched. Now what he would press is worked out the frame he presses it and KEPT OFF THE MAP, by the
+  half-metre square it is in (`SnowTracks.unseen`, a map of squares; the mark's own numbers: a print, a messy print or a lying man's hollow;
+  six a square, the oldest going, and 6000 in all, the square next in the look giving up its oldest; both counted in `lost`). Every mark of a
+  square is asked for at ONE point, where the square's first mark was made (`UnseenSquare.x/z`: a place a boot stood; the square's middle can
+  be inside a wall), so they are seen or not together. A kept mark is laid when the team SEES ITS SQUARE AFTER HAVING HAD IT OUT OF SIGHT (`Unseen.dark`): a print
+  made on snow the team is looking at (its man behind smoke, which the ground's question does not ask about, or low behind a crate) stays kept
+  for as long as they look, or each step would show as he takes it; they look away and back and the trail is there. A first cut laid it the
+  frame it was made: the review caught it, and a played run showed it (a mark "found" mid-fight on the shipped stand). A HOLLOW on watched
+  snow waits instead (nothing kept, `pressOf`): kept, it would lie unlaid under the body the fog then shows; it is pressed in the open the
+  frame he is shown, or kept once they look away, and never made if he is up again before either (a sight line a tick for each such man,
+  beside the look's). THE LOOK, once a TICK (`findUnseen`), from the head of the map, each square asked going to its tail:
+  `FogOfWar.groundLook` (`spotSeen`'s own walk, which now runs through it, off the things' tally) says 0 = in no eye's field, out of sight
+  for little (with no cone, off Hard, every square is in one), 1 = in a field and not seen, 2 = seen; at most 64 squares a tick cost a sight
+  line (3 µs each with five eyes, measured headless) and about 16 marks are laid a tick (a messy print is a tenth of a millisecond to
+  press, the same as one made in sight: 128 in one update was 20 ms; a slow page runs up to four ticks a frame). So a long trail found at
+  once comes in over a few frames (300 prints in a third of a second), in about the order walked, and with thousands of squares kept a
+  square is asked every half second or so. A mark is laid WHOLE: the same bytes as the mark pressed in sight and settled, with no forming
+  and no snow kicked up. The FOG off with marks still kept lays them at the same pace (the map is the world's then); the ROW put off with
+  marks kept drops them unlaid (off is a hidden man pressing nothing). Hidden marks are counted in `prints`
+  / `hollows` when made. PICTURE ONLY: the map is read by the snow's shading alone; nothing in the game reads `unseen`. But NO row of the
+  replay page's fog look (`FOG_PAGE`): a tape carries the row by its journal. Kept marks are not in a file checkpoint (the prints texture
+  never was) and go at a restart (`clearSnowTracks`). The page's `__snow.trackStats` has `unseen`, `found`, `lost`. SWITCH: on in the module
+  and the page; `?fogtracks=0` = a hidden man presses nothing, as it was; the debugger's fog page has the row; frozen stand off,
+  `TPS_FOGTRACKS=1` (`FROZEN_HOLDS['FOG.tracks']`); the journal carries it (a recording without the key replays with it off). CHECK:
+  `probes.ts fog-tracks` (`tools/qa/fogtracks-check.ts`, families `fog` and `snow`; 6 lines; `FOGTRACKS_BREAK=1` puts the row off where the
+  lines ask for it and reds five), both stands, on the pass. Stand-in men with a stub fog: a man down on snow, hidden, with marks forming
+  and kicking as on the page (1 kept, 0 texels on the map, no kick; seen: there that frame, 0 forming, 0 kicks, 0 of the map's bytes other
+  than the same man's hollow in sight, 872 texels; row off: nothing pressed, nothing kept); WATCHED snow (a standing man's two prints kept,
+  not dark, not laid through 90 frames; a frame out of sight then seen: laid; a body: nothing kept, shown: pressed with its kick; or looked
+  away from: kept, and found on the look back); 300 men down, a square each (backs turned: 0 lines, 0 laid; in field unseen: 64 lines a
+  tick and all 300 squares asked in five; seen: 16 then 32; the fog off: 16 a tick, all 300 in 17; eight men in one place: 6 kept, 2
+  lost, and the row put off drops them unlaid; six men in each of 1001 places: 6000 kept, 6 lost). THE GAME'S OWN FOG, the squad staged: ground a stride before Sam in a field and seen, the things' tally left
+  alone; a hollow kept on open snow 31 m off stays kept through 30 of the game's own frames; Sam put a stride from it, the game's own frame
+  lays it. PLAYED (marks forming, as on the page): the squad of four sent at a man the fog hides, 30 s, seeds 3 and 4, with the row and without:
+  the same 60 digests and the same dice on both stands; marks kept with the row (frozen 5 and 7, shipped 0 and 4) and none without. The address, the journal, the page look without it,
+  the stands. The older `snowtracks` line `fog` has a stand-in with no fog up: it holds the rule with the row off. NOT COVERED: furrows and
+  dents of things nobody sees (`snowMarks.ts`) are never pressed and never caught up, and a blast's crater is pressed at once, as before; a
+  kept mark does not age (snow that fell on a trail since is not on it when found); a square is asked at ONE point, its first mark's, so a
+  mark shows when that is seen (up to 70 cm from its own middle; a hollow is filed by the point between its hips and head and shows whole); a
+  found trail's marks dirty more rectangles than the texture's hand-over takes singly (24), so each tick of a find uploads their bounding
+  rectangle, up to the whole map (never timed); at the cap every snapshot walks some 18,000 more nodes (never timed); a
+  body's hollow can be laid a moment before the fog shows the body (the body's own rule asks more than the ground's); a print made on
+  watched snow has no trail behind the man when he walks out into view, until the team looks away. THE PAGE, driven on the software adapter (the pass, four men, Hard, `?paused&quality=low`; 119 of 119 pipelines, no console or GPU
+  error either way): the eight defenders stood on snow no eye has leave 8 marks kept and none on the map; the cone put off and Sam put beside
+  one, 6 are found within six ticks (2 still out of sight); with `?fogtracks=0` the same drive keeps none and presses none. NOT SEEN:
+  anything on a GPU, so not the found prints as a picture; a found trail in a played run (in the four headless runs no kept mark was FOUND:
+  the fight ended before the team looked at that snow again, so finding rests on the stand-in lines, the one staged look and the page
+  drive); the cost on the maintainer's machine (the pace's numbers are this box's).
 - **A held man drops his gun** (`HOLD.dropGun`, the table in `src/game/character.ts`; the rule is `player.ts startGrab`; ON in the page, `?nogundrop` puts it
   off; OFF in the module and on the frozen stand, `TPS_HOLDDROP=1`; a `FROZEN_HOLDS` row; a recording from before the key replays with it off). The maintainer,
   10-15, of a rifleman in his arm with the rifle up in his fist: "held enemies should drop their gun". As the arm goes round, the weapon in his hand (rifle or
@@ -1097,6 +1359,227 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   solve is on or off, never eased, so where it starts or stops (the gun swapped in with a man in the arm, the hold ending, the haul's
   end) a knee still moves about 2 cm in one frame, once. sneaklab-check now raises the polish with the stalk, as the rule above asks.
   Nobody has seen or played anything of this pass; nothing of the stalk has been seen on a GPU.
+- **The stalk's eighth pass: the catch has a shape (10-23; `STALK.yankWith`, `HOLD.catchShape` and its numbers `HOLD.catch`;
+  `player.ts`, `character.ts` `holdLayer` / `heldLayer` / `catchFix`).** Measured first, frame by frame (`tools/qa/stalk-pose.ts`): the
+  man was hauled 11 cm INTO Sam (the haul moved him alone), Sam's root jumped 7 cm on the hold's first frame, his legs went from idle
+  to a walk mid-stride as the haul began and back as it ended, and his lead hand swung past the man's face at brow height, 21 cm
+  ahead of him. With the two keys up: (1) Sam goes back WITH the man (the gap is `HOLD.dist` from the landing on), his own stride
+  stops once he has landed and his feet STEP the haul, the rear one first (`catch.samFeet`, `HoldPose.pull`; slid with his root they
+  skated 28 cm at one height); the pair's turn to the cursor eases in over 0.45 s from a quarter second after the landing, whatever
+  the hold's phase by then. (2) The lead hand starts from where it
+  was DRAWN the frame before (the reach's hand, kept by `catchFix`, which also solves that arm last, after the crouch and reach
+  layers have moved the shoulder), goes over the man's left shoulder and round his throat with the elbow tucked (`catch.via`, `.over`,
+  both carried with the man by `HoldPose.man`, across and ahead, while Sam is still coming in). (3) The man is seen to be hit: both hands fly out, one
+  higher than the other, hang a tenth of a second and come onto the arm one after the other (`catch.fling`; a gun hand is the
+  disarm's as before), a short jolt of chest and head (`catch.jolt`), and his feet lag the haul and step back one after the other
+  (`catch.feet`, `HeldPose.pull`). (4) THE HOLD: he sits back onto Sam, hips down and forward, knees bent, heels out in front
+  (`catch.sink`, `.hips`, `.heels`), Sam's rear foot stepped back and out, his hips back and to the side, his head above and beside
+  the man's (`catch.brace`, `.seat`). The seat gives way to the lowering, the haul on the head and a gun's share, which have their own
+  fitted places: to the gun by `gv`, its eased share (keyed off the variant it dropped whole on the frame of a swap: Sam's hips 10 cm,
+  the man's 18). The FEET do not give way: where the seat set Sam's rear foot and the man's heels they stay through the lowering, the
+  haul and his going limp (`seatF`, `sitF`; given up with the rest they slid 19 and 12 cm as he was let down, which takedown-lower
+  caught). A hold dropped mid-reach lets the arm go with the layer's weight (held whole on its frozen key the hand hung, then
+  jumped 70 cm). `catchFix` lets go of the hand over the first 0.4 s of the held that follows the catch (`catch.settle`). The leg
+  solve's knee swivel eases in and out under the key. SWITCH: both keys are of the polish: up by
+  `stalkPolish(true)` at the page's boot, `?stalkpolish=0` puts them down with the other twelve; `HOLD.catchShape` acts only in a
+  bare-handed hold (not with Sam's pistol drawn, not with the knife back by `?noknife=0`), `STALK.yankWith` in any stalk's grab.
+  `HOLD.catch`'s numbers are the same on both stands and do nothing with the key down. FROZEN: down, two more `FROZEN_HOLDS` rows with
+  `TPS_STALKPOLISH=1` (fourteen now). SHIPPED: up. A recording from before this pass (no `yankWith` in its stalk table) replays with
+  both down (`journal.ts`). No new module state (`hdFrom`, `rdHandL`, `hdFix` are the animator's, drawn only). CHECK: stalk-check
+  `catch`, four lines, each against the same grab with the two keys down: the gap 0.27 to 0.27 m for 40 frames from the landing (0.16
+  with them down), Sam 0.28 m back, a foot 10.6 cm up at its highest and no foot on the floor moving more than 1.8 cm in a frame; the
+  lead hand at most 2.6 cm over the man's head bone and 11.5 cm ahead of him (4.6 and 25.0), and with the man taken out of the arm 14
+  frames into the reach the hand moves no further in a frame than with the keys down (22.0 cm both, Sam's own step in it); the man's
+  hands 78 cm apart for 9 frames on end (0); in the settled hold, the sway up, his feet 15.0 cm ahead of where he stands and his hips
+  15.9 cm ahead of his head (-7.0, 1.0), Sam's shins at most 0.7 mm a frame, the same again after a second's walk, and the gun
+  swapped in from there moves no hip, head or foot of either man more than 2.3 cm in a frame (0.8 with the keys down). `harness`: the fourteen rows, and a
+  seventh-pass recording replays with these two down and the rest up. Both stands, `STALK_BREAK=1` fails all five on both, one seed.
+  takedown-lower's '30 cm below standing' now adds the seat's 12 cm to the choke that does not lower him (he no longer ends it
+  standing): 40.0 cm by that, both stands green. `legs`' knee-twitch line now runs with `HOLD.catchShape` down (the seat asks for the leg solve too and hid its break). DOWN IS AS
+  IT WAS: stalk-pose `--down` in this tree against the build before it, bare hands and with the knife: THE SAME, 411 frames, 44 bones,
+  none 0.1 mm apart (by hand, shipped stand, one scene). With the polish up and the KNIFE back, Sam goes back with the man too, his
+  feet step it and the turn eases in: `STALK.yankWith`'s share, the changes outside bare hands. `catchFix` mends the LEFT hand only:
+  the right hand and every hand after the settle are still solved before the layers that move the trunk. LOOKED AT: close-stills sheets (`stalk`, `stalk-rifle`, `hold`, `choke`) on the shipped stand, three
+  passes with a visual reviewer between them; close-stills' `stalk` scene now keeps the cursor at Sam's feet after the grab so the
+  pair does not turn under the camera. STILL WRONG, known: the man's long shirt tents into a wedge beside his legs in the hold; the
+  rifle hangs for a tenth of a second while the support hand is out, then swings through both bodies on its way to Sam's hand (the
+  disarm's own timing, not touched); nothing moves in the settled hold but the sway; the chest-and-head jolt is too small to see from
+  the game's camera. Nobody has seen or played this pass; nothing of the stalk has been seen on a GPU.
+- **The stalk's ninth pass: the body lands, and he is laid down ahead of Sam (10-23; `HOLD.hitShape` with its numbers `HOLD.hit`, and
+  `HOLD.layAhead`).** A visual reviewer's read of the game-camera stills before it: "Sam covers a metre, but the guard's feet, hips and chest stay
+  nailed down. Only his arms fling. He then bends smoothly", and at the choke's end "Sam standing on his thighs". (1) THE LANDING. From the
+  frame the step lands (the yank's own clock, `HoldPose` / `HeldPose` `.yank`) the man's hips are driven `hit.hips` (15 cm) further ahead of
+  his neck than the seat has them, in by 0.04 s, held to 0.07, back in the seat by 0.22; his knees give 3 cm; his head is given back the
+  whole of that extra recline (left to ride his trunk it went 4 cm into Sam's). Sam heaves: hips 5 cm in under the man and 6 cm down,
+  chest 12° back. The beat leaves with the arm's share of the hold (`1 - gv`) and with the layer's weight, so the gun drawn inside it, or
+  the hold ended inside it, does not pop (gated on the variant and on the live pose it dropped 11 and 14 cm in a frame). (2) THE LAY. The
+  choke ends in the 'sink' fall (`fallGuide`): his pelvis stayed where it knelt and his legs were drawn out behind it, under Sam's boots.
+  With `layAhead` (0.9 m) the pelvis is led that much further along his facing, two fifths of it as he goes to his knees and the rest as
+  he is laid flat (0.5 and 0.7 m left a shin within 5 cm of a boot on the seeds whose die tips him the other way). `takedown.ts setFall`
+  asks the level for the room first: no static anywhere in a strip as wide as his shoulders (`LAY_HALF` 0.3 m each side), from his shins
+  to 1.2 m up, as long as the lay and the whole of him past it (`LAY_REACH` 0.95 m) — the VOLUME, by `circleTouches` every 0.2 m — and
+  nothing else solid on three lines down its middle (a leaf, a chair); half the lay where only that much is clear; none otherwise, and
+  none in a fall that is already `tight`. This one MOVES WHERE A BODY LIES (a guard who finds it, a carry that starts from it): a change
+  to the game, not only to the picture. SWITCH: both are rows of the polish, up by `stalkPolish(true)` at the page's boot and down with
+  `?stalkpolish=0` (sixteen rows now); `hitShape` acts only in the grab a stalk ends in, `layAhead` only at a choke's end with the
+  takedown's own fall (`TAKEDOWN.on`, `?notakedown` puts it off). FROZEN: both down, two more `FROZEN_HOLDS` rows with
+  `TPS_STALKPOLISH=1`. SHIPPED: up. A recording from before this pass (no `hitShape` in its hold table) replays with both down
+  (`journal.ts`). No new module state (`Character.fallAhead` is per man, beside `fallTight`). CHECK: stalk-check `lands`, two lines,
+  `STALK_BREAK=1` fails both, both stands (29 of 29 on each and on the frozen stand with the three words; 23 FAIL under the break).
+  Line one, one seed, against the same grab with `hitShape` down: his hips at most 14.7 cm further ahead of his neck in the first ten
+  frames after the landing and 0.0 from frame 25; frame for frame the heads never nearer (16.9 cm at the nearest, 15.4 with the key
+  down); Sam's hips 5.9 cm lower; with the gun drawn on the hold's first frame his hips move 2.4 cm in a frame at most (1.5 with the key
+  down), with the hold ended three frames after the landing 2.1 (1.0). Line two, three seeds on open floor: his legs at the nearest
+  23.0 cm from a boot seen from above (at 0: 6.6), his hips 0.93 m along his facing (at 0: 0.04), never faster than the fall at 0
+  (1.98 m/s); then, two seeds, twelve walls stood from 0.95 to 2.3 m ahead of him, each asked which it gets by which side of the lay's
+  two edges it stands, a tenth of a metre either side of each (kept where he knelt 4, half the lay 5, the whole 3; the nearest bone
+  5.4 cm short of a wall), and sixteen runs with furniture in the strip (a table's top at 0.73 m, a low table, a post a hand off his
+  middle on either side, a low crate at three places): never laid further than the floor is clear less `LAY_REACH`, never thrown
+  back, never faster. The walls and the furniture are boxes stood ahead of where the same seed's open run ENDED its choke: through a
+  choke the pair goes on turning to the cursor, by half a turn on the frozen stand, and a scene measured by his facing at the grab
+  measured nothing there. What the room test was before two reviews of it, each measured: one line down his middle let a crate a hand
+  off it through (thrown 1.2 m back at 5.7 m/s); 1.2 m asked for a body that reaches 1.36 m let a wall at 1.25 m through; nine lines
+  let a table's top, a low table and a 12 cm post between them (13 m/s). OFF IS AS IT WAS: stalk-pose with the two keys down against
+  the build before it, bare hands and the knife, THE SAME over 411 frames and 44 bones (by hand, shipped stand, one scene). NOT
+  MENDED, the same short margin in the fall that was already there: the old 0.7 m test for a body that reaches 0.86 m, on two lines
+  that pass over anything lower than 0.45 m (a 0.3 m crate 0.8 m ahead knocks the body 0.17 m back with the lay at 0 as well).
+  LOOKED AT: close-stills `stalk-hit` (new: nine moments from 0.2 to 0.7 s of the grab) and `hold`, two rounds with a visual
+  reviewer; its read of the landing after the first: "slightly better, close to the same at game size", "a deeper bend, not a hit"
+  (the beat was shortened and the heave raised after it, and nobody has looked since); of the lay at 0.5 m, "clearly better" with
+  "Sam's boots still overlap the guard's ankles" (hence 0.9). STILL WRONG, known, from the same review: the disarm parks Sam's arm
+  straight out with the carbine gripped by its end; the choke has one visible beat; the settled hold reads as still from the camera;
+  the choked man's arms lie in a T; the shirt's wedge; Sam's launch stance. Where the room is only good for half the lay his shins lie
+  under Sam's boots as before. `tools/qa/stalk-pose.ts --set '<json>'` writes table keys after the polish, key by key (an unknown key,
+  or a value given for a table, is refused). Nobody has seen or played this pass. (The maintainer has played the eighth pass's lab on a
+  GPU; the tenth pass below is from that play.)
+- **The stalk's tenth pass: the key finishes it, and he goes lower with his hands down (10-23; `STALK.key`, `STALK.low`).** From the
+  maintainer's first play of the lab: "i do think having the hands up just doesn't look cool. in chaos theory sam starts regular
+  crouch walk, then goes lower to the ground and creeps much more deliberately (and that's where stopping just pauses the animation)
+  ... I think you should really have to hit E to finish the grab. it feels weird having it happen automatically. and then in chaos
+  theory, sam springs into action for the final grab", and "i think we can make the start radius a bit larger too". Two switches, each
+  ON in the page and OFF in the module and on the frozen stand, each a `FROZEN_HOLDS` row with its own word, both under `STALK.on`:
+  - **`STALK.key`** (`?stalkkey=0`, `TPS_STALKKEY=1`). The held click only brings him in. Inside `grabM` with the grab on offer he
+    eases to a stop `keyM` (0.8 m) behind the man and KEEPS STATION there: the man's own speed, plus or minus the last of the closing
+    speed by how far he is from `keyM`, his speed following closely (`StalkMove.keep`: the creep's own ease made him hunt back and
+    forth behind a man who walks). The grab is the row's own, `grab him` on the interaction's key (E in the page), back in the list
+    whatever `STALK.only` says (`stalkClickOnly`, the one place that asks: on a wall the row stays away, the corner's wait is the
+    click's), and it is taken AS the stalk's (`stalkKeyCan` asks, `stalkKeyTook` counts once `startGrab` has him, game.ts: the step
+    in from where he stood, the landing, the haul back, one `STALK_STATS.grabs`), whether the click or his own keys walked him in.
+    The line over the man reads "hold to sneak up on him". A corner's wait still takes its man by itself. A lesson's grab token reads as with the stalk off ("press [Space] to grab
+    him": `lesson.ts tokenLine`), which is true again.
+  - **`STALK.low`** (`?stalklow=0`, `TPS_STALKLOW=1`). No arm comes up and he does not rise (`stalkTell` gives reach 0, rise 0 and
+    `low`, 0 at `lowFrom` 2.6 m to 1 at `lowBy` 1.1 m, and only out of his crouch: walked up on standing, he is drawn standing).
+    The animator (`anim.low`, eased at `CREEP.low`'s rates; the shape is fed as `anim.lowShape`) sinks the pelvis `lowDrop` 6 cm,
+    sets it back `lowBack` 3 cm and bows the spine `lowLean` 6 degrees more, straight by the distance, so letting go holds it. The
+    creep's carriage gives up its raised hands at ANY distance and for any man the mode is on (`anim.handsDown`, `lowHands`; bare
+    hands only: with `?noknife=0` the right hand's hover by the hilt is the carriage's). Each metre beyond the reach adds `lowK`
+    0.35 m/s where it added `closeK` 0.6: slower all the way in. Through a stalk's grab he leaves the crouch at `lowSpring` 18 (the
+    animator's own is 10), a rate wound up over `lowWind` 0.12 s (`anim.spring`, fed by `closeTick`; not for the corner's grab, which
+    comes up out of its own coil): the spring. And a press can begin one from `lowBeginM` 4.2 m, kept out to `lowOutM` 5 m
+    (`stalkBeginM`, `stalkOutM`: the lab's rings draw them), where the mode's 3.0 and 3.6 m were the limit: from out there he comes on
+    at his plain crouch walk, and the mode's carriage and the sink come in inside it. The line over the man that says what the click
+    does is shown out to that start (`closeRows`: past 2.4 m it is the one line, with no row).
+  Carried by the journal (a recording from before either key replays with both down: `applyKnobs`); every number has its row in the
+  lab, and the lab's two toggles are the switches. THE CHECK is `stalk-check.ts` (`STALK_BREAK=1` reds them): card `key` (seven
+  seconds of hold behind a man who stands grab nobody and leave him still 0.81 m behind, the stalk still his and the row offered; the
+  key then is the stalk's grab; behind a man walking at 0.9 m/s he settles at 0.79 to 0.80 m within 0.04 m/s of the man's speed; on
+  his own keys the key's grab is the same one; off, the hold grabs by itself), card `low` (a press from 3.8 m begins it and with the
+  rule off does not; hips 5.2 cm lower in reach than at 2.9 m on the shipped stand and 3.3 on the frozen one, never coming back up;
+  neither hand ever within 22 cm of chest height; no reach, no rise; 4.5 s to close against 3.7 with it off; the pose holds when
+  let go; out of the wait his hips come up 45 cm in the grab against 20 with it off), card `shipped` (both keys up, as the page
+  opens: the man turning on Sam while he keeps station ends it with nobody grabbed; the button let go in reach leaves him still and a
+  new press takes it up again; a man suddenly 4.6 m off is still stalked and 5.3 m off is not; the line over the man 3.6 m and 1.8 m
+  behind him and none with the rule off or past the start; stood up behind him he is drawn standing with no sink fed), and a harness
+  line (rows, both stands, a recording, the page's boot). One seed each: these are poses and distances, not tallies. Every card before
+  these three writes both keys DOWN in its world, so the first nine passes are still read as they were; `stalk-pose.ts` does the
+  same. `STALK_ONLY=key,low` runs cards alone for a quick look: it says PARTIAL and exits 1, and a name that is no card is refused.
+  `writing-check.ts` reads every lesson line with the key up as well. Tools that held the click for the grab now press the key in reach: `lesson-run.ts` (verb),
+  `sneaklab-check.ts`, `close-stills.ts`, `stalk-page.cjs` (`ONLY=nokey` drives the page with both off). `lesson-check.ts` and
+  `noknife-check.ts` write `STALK.key` down where they read the held click's words. The three tutorial missions play through on the
+  shipped stand. NOT DONE: the wait at a corner has no key (its timing is the press); a guard who turns while Sam keeps station is
+  the old break-off; the low creep's arms are plain crouch arms, where the game it follows spreads them wide and low. LOOKED AT on
+  stills of the worn meshes only. Nobody has played this pass or seen it on a GPU.
+- **The right button, tapped or held (10-23; `CLOSE.rmbHold`, `?rmbhold=0`, `TPS_RMBHOLD=1`).** The maintainer: "make it possible to
+  just right click to knock him out quickly but it's a bit louder, or holding right click does a choke. we already have this when you
+  can pistol whip him if the gun is out". ON in the page, OFF in the module and on the frozen stand, a `FROZEN_HOLDS` row, carried by
+  the journal (a recording from before the key replays with it down). With empty hands (`game.ts`, where the click's blow was read;
+  `closeRmb` keeps the press's clock in close.ts's state), behind a man the grab is offered on: a press let go inside `rmbTapSecs`
+  (0.2 s) is the knockout, begun as the button comes up, the blow as it was and heard `rmbLoud` (0.15) further up the hearing scale
+  (0.45 where it was 0.30: about a metre further in open air), its hit played louder to the player too. A press kept down past that
+  is the grab (the stalk's own where the key's would be: `stalkKeyCan`) with `Hold.rmbChoke`: `updateHold` closes the arm the frame
+  the hold has him (no row, no commit beat, and the "press Space to make him talk" line is not put up over it) and keeps it closed
+  while the button is down. Let go, `easeOffHold`: he breathes and is held. In the arm the button is the same: pressed and kept down
+  it chokes, let go he breathes, and a TAP there is the whole choke as the arm hold's click always was (the arm closing at once, where
+  the click waited the commit beat). Stopped by anything else (a step, a tap, Esc), the button still down does not start it again.
+  Where the choke is not his to be given (his side, his front, a civilian, a lesson that does not offer the grab) there is nothing to
+  choose between: the press is the knockout on its own frame, as loud as it was. A press made just out of reach waits `rmbWaitSecs`
+  (1.2 s) for him to walk into it; a button the page takes away (a blur, the pause card) is no tap. The man's row says "RMB  knock
+  him out  ·  RMB  hold to choke him" where the hold is the choke. The lab has the toggle and both numbers; the debugger has the
+  toggle beside "no knife". Off = the press itself is the knockout everywhere. THE CHECK is `rmbhold-check.ts` (`probes.ts rmbhold`,
+  in the stealth and takedown families; `RMBHOLD_BREAK=1` reds nine of its twelve lines), both stands: a four-frame tap begins the
+  blow 0.08 s after the press and he is down at 0.37 s, heard at 0.45; kept down he is in the arm at 0.22 s, the arm closing at
+  0.70 s, down choked at 3.32 s, the loudest of it 0.30; let go while the grab is still landing he is held and the arm never closes; let go mid-choke he is held three seconds on; eased off with the button down
+  it does not start again; in the arm the button chokes while held and a one-frame click is the whole choke; a press from 1.7 m takes
+  him once in reach, and not after the wait; a blur is no tap; from the front the press is the knockout on its frame at 0.50; the
+  row's words; with the stalk as the page has it the held button's grab is the stalk's own, counted once; with the click the only way
+  and with the knife back the row says it and both halves work; off; the harness line. One seed: these are timings of a fixed beat.
+  `stalk-page.cjs` drives both on the real page. The probes that read the build before it (the `close-` family, `heldclicks`, the
+  grab's and the knife's: `KNIFE_AS_IT_WAS` in probes.ts) hold the key down as they hold the knife. WHAT IT COSTS: behind a man, a tap's knockout waits for the button to come up (a frame or five later than the
+  press). NOT DONE: the choke out of a held button has no pose of its own (it is the grab, then the hold's choke); no sound of its
+  own. Nobody has played it or seen it on a GPU.
+- **He watches the man who matters, and gives a man room as he passes (10-23; `SAMLOOK` in `samlook.ts`, the poses `WATCH` in
+  character.ts; `?samlook=0` / `TPS_SAMLOOK=1`, `?slip=0` / `TPS_SAMSLIP=1`).** The maintainer: "another thing CT did really well is
+  having sam look at enemies! curious how that might fit with our control scheme" and "i'm also curious if we can make the experience
+  of 'slithering' through guards also feel just as amazing as approaching them for a grab". Both ON in the page, OFF in the module
+  and on the frozen stand, two `FROZEN_HOLDS` rows, the tables `SAMLOOK` and `WATCH` in `JOURNAL_KNOBS` (a recording from before them replays with both off).
+  HOW IT FITS THE CONTROLS: the cursor still aims and nothing is added to press. It is his HEAD that goes to a man, and the game picks
+  the man, so the head is something to read. THE LOOK (`samLookStep`, once a step after `updatePlayer`; the pick is `samLookMan`,
+  exported for a camera that wants the same man): the man a held click is creeping up on, else of the men the fog shows inside
+  `nearM` 8 m, within `backDeg` 120° of his aim's line, with nothing solid between the heads, the lowest score: distance, less
+  `noticeM` 3 for a man who is onto him or has him in view with his notice risen, less `swapM` 0.75 for the man he already has.
+  Nobody while he is down, sprinting, holds a man, drags one, is in a takedown, kicks, picks, wands, codes, is on a wall, has a
+  hand on a door or a breaker, or has a gun in the aim. He looks at the man's head where it is, so a man on the floor or a crouched one
+  is looked down at. The
+  animator (`watchLayer`) turns chest, neck and head (0.14 / 0.34 / 0.52) up to 72° off the chest's line, following at 6 /s; the
+  close-in carriage's own look (`creepLayer`) gives way by this one's eased weight, so the two never add up or snap. THE SLIP (`samSlipMan`): crouched, empty hands,
+  off a wall, the nearest man not onto him inside `slipFrom` 2.6 m at any bearing, whole by `slipBy` 1.2 m: the trunk tips 9° away
+  with the head brought level, the pelvis 3.5 cm lower and 3 cm off his side over feet left where they were, and the arm on his side
+  out low with an open hand (at 0.7 of the arm; a hand with something in it is left alone). It lets go behind a man's back
+  (`backCos`), where the creep's own body has him. BETWEEN TWO MEN (`slipNow`: every man's pull on him summed) he tips into neither:
+  the lean, the step aside and the arm go by what is left of the pull, and he sinks `squeeze` 0.6 of the drop further (5.6 cm
+  against 3.5). NOT ONLY LOOKS: his head and chest joints move a few centimetres with both, and
+  those are what the eyes that look for him read, so a run with them on is not the same run to the digit. THE CHECK is
+  `samlook-check.ts` (`probes.ts samlook`, the stealth family; `SAMLOOK_BREAK=1` reds six of its nine lines), both stands: a man
+  40° off his aim at 3 m has his head inside a second and a half (28° at 0.67 s, 40° at 1.67 s) with his aim unmoved; of two men the
+  nearer is his until the further one notices him, and again when that one has lost him; two men at one distance do not trade him
+  (0.4 m nearer does not, 1.3 m does); nobody behind him, past the range, in the fog, or over an aimed gun; the stalked man; the
+  slip (chest 4.9 cm further from the man and 3.5 cm lower, the near hand out and under the chest, either side; none standing, for a
+  man onto him, from 3 m, or behind a back); between (a man 1.2 m off each side: his chest to neither side, 5.6 cm lower); off; the harness line. One seed: fixed stagings. The sneak lab has both toggles and
+  sliders for the range, the notice bonus, the head's turn, the slip's range and its lean, a "lights out" box that puts every
+  lamp on the floor off, and a button that stands two of the walkers a gap of 2.4 m apart to slip between; the debugger has both toggles under the close-in rows. `close-stills.ts` has scenes `pass` and
+  `pass-back`. NOT DONE: nothing in the look reads the dark; the camera's soft lock (another thread's) picks its own man. Nobody has
+  played either or seen them on a GPU: the stills show the low arm clearly and the lean and the head only faintly.
+- **A lesson line names the move, not its key (`lesson.ts` `TOKENS`, `LESSON_TOKENS`, `lessonToken`; 10-23).** `{grab him}`,
+  `{grab him from behind}`, `{knock him out}`, `{take him out}` in a lesson's text are written out by `lessonLine` in the build's own
+  words: the held click with the stalk up (`STALK.on` and `.only`), the grab's key without, the knockout with bare hands, the knife
+  with `?noknife=0`. Any words may stand for `him`; a capital first letter begins a sentence; a name in braces that is none of the
+  four is left as written. No switch: a line with no token reads as before, and the old exact-sentence patterns still turn the old
+  lines. `checkLesson` refuses, in a step's `line`, `setupLine`, `blowLine` and `ringLine`: a name in braces that is no token (a
+  digit, a doubled or trailing space, a `from` left in the man's words), a brace left open, and a line that fits the row's 96
+  characters as written and not once written out the longest of the four ways (`lessonTokenFaults`). A token in a card's
+  text, a `noTap`, a plan, menu or after line is held the same way by `rails.ts railsFaults` since the same day, and a brace in a card's title
+  refused (`missions.md`, "A lesson's words are checked as the page says them"). `tut-quiet` and `tut-pair` use tokens, and `lesson-check` holds every tutorial level to them. CHECK: noknife-check, one line, the four ways the two keys stand and seven bad and three good lines, both
+  stands, its break by `NOKNIFE_BREAK=1`. Read on the page on `tut-quiet` (the software adapter), the stalk and the knife each way; never on a GPU.
+  A click is written with its hyphen since the ninth pass (10-23, the tutorial thread's ask, by the guide's own table): "right-click to knock him
+  out", ", or left-click to use the knife", "left-click to knife him", in `TOKENS` and in `bareLine`; the grab keeps "hold left click on him".
+  `lessonTokenFaults(w, line, cap, row, always)`: `row` names the caller's own row in the over-cap message (it said "the objective row" of a
+  card), and `always` reports a line that is over the cap written out even when it is over as written too; without them it answers as before.
+- **The knife's own probe puts the knife back (`tools/qa/hold-pose-probes.ts` `holdKnife`, probe `hold-knife`; 10-23).** It was red on the shipped
+  stand from the day the no-knife rule went on there (three lines: no knife in the arm hold, twice no knife boxes), because the probe wants the thing the
+  rule takes away. It is the check of `?noknife=0`'s build, so while it runs every stage writes `CLOSE.noKnife` down and gives it back after; its third
+  line now wants the drawn man's fist EMPTY a second and a half in when the grab disarms him (`HOLD.disarm` under `HOLD.dropGun`, both on in the page)
+  and full when it does not. `HOLDKNIFE_BREAK=1` writes the rule up (with `CLOSE.on`, which it needs) and three lines fail on either stand. Measured:
+  4 of 4 on both stands, the `hold-pose` family 7 of 7 on both, the break 3 FAIL on both. A check's change only: no game file, no switch.
 - **The wait at a corner (`STALK.corner`, `stalk.ts cornerMan`).** The maintainer, 10-23: "curious if we can make this language work for working corners.
   like when you're at a corner you can either grab or CQC with the right timing". With his back on a wall (the wall hold, not the stack), hands empty, the
   left button HELD lies in wait: the moment a man who is not onto him is inside `cornerM` (1.35 m) with Sam at least `cornerDeg` (110) degrees round from
@@ -1107,13 +1590,126 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   past, not before; no press or the switch off and he walks by; a man facing him is not taken; `STALK_BREAK=1` fails it), both stands. LIMITS: no pose of
   its own while he waits (the wall stance), no hint on screen until the man is in the grab's own reach, and whether a guard notices him first is the guard's
   sight as ever. One scene, one seed, the AI off; stills `--scene stalk-corner`; never seen on a GPU, never played.
+- **The disarm leads the grab (10-23; `HOLD.stripFirst`, `HOLD.first`; `disarm.ts lead`; `?stripfirst=0`, `TPS_STRIPFIRST=1`).** The
+  maintainer: "sam springs into action for the final grab ... you really want a disarm and then a grab, right?" In the footage he works
+  from, the rifle is the first thing to move, out of the man's hands before the arm is round his neck (which lands 0.22 to 0.33 s in).
+  TIMED FIRST (the E grab from the low creep's station on a rifleman, the page's stand): Sam is upright by frame 12, his left hand is
+  at the man's neck on frame 16 (0.27 s), the pair go back and down from frame 19, all inside the footage's counts already. What did
+  not match was the order: the gun left the man's hand on frame 13, three frames before the arm, with the catch's voice on frame 0. ON
+  in the page, OFF in the module and on the frozen stand, a `FROZEN_HOLDS` row, under `HOLD.disarm`; a recording from before the key
+  replays with it off (`applyKnobs`). THE RULE: the move's own clock (`Strip.t`) runs ahead of the hold's until the gun is let go, so
+  the take falls `first.take` 0.16 s in and the let-go at `first.drop` 0.3 where `strip.take` 0.2 and `strip.drop` 0.42 had them (0.26 and 0.41 since the
+  disarm's fourth pass, 10-24, below: the move is over 0.11 s sooner, was 0.12), and the hand comes home at its old pace from there. The gun's knock is 0.70 s from the grab's frame in either order (the timed fall is longer by what the lead lets go sooner). On the page the strip is 0.15 s after that frame and the catch 0.12 s after the strip (a take from outside a step reads 0.17 and 0.10: see the fourth pass). Both figures' poses read that clock, so nothing in
+  character.ts changed. The hold's own clock is untouched: he is `held` on the frame he was. The catch's voice (`grabCatch`) is kept
+  for the arm's landing, `first.catch` 0.26 s in (`Strip.owed`, played by `disarmTick`), behind the strip's. Only for a grab with a gun
+  to take and an empty right hand: a man with his torch has the catch on the grab's frame, and the pistol hold's rap comes with the
+  frame as it did. Why not sooner: at 0.12 s Sam's hand is still 23 cm short of the gun (he is rising out of the squat), at 0.16 it is
+  13. THE CHECK is `stripfirst-check.ts` (`probes.ts stripfirst`, the grab and stealth families; `STRIPFIRST_BREAK=1` reds three of
+  its five lines), both stands: lead (out of his hand at 0.17 s and let go at 0.32, against 0.22 and 0.43 with the key down; held on
+  frame 28 either way), voices (the strip at 0.17 s, the catch at 0.27; key down the catch at 0 and the strip at 0.27, 0.22 before the disarm's fourth pass; this check calls `startGrab` from outside a step), arm (the gun
+  leaves him on frame 10 and the hand is at his neck on frame 16: six frames between, three with the key down), others, harness.
+  `disarm-check.ts` writes the key down in its worlds: it reads the two beats as they were. The lab has the toggle and both moments.
+  One seed: a fixed staging. Nobody has seen it on a GPU or heard it.
+- **Arms out and low in the creep (10-23, reshaped 10-24; `STALK.wide`, `wideOut` / `wideDown` / `wideFwd` / `wideLead` / `wideBy` / `widePole`;
+  `CREEP.wide`; `?stalkwide=0`, `TPS_STALKWIDE=1`).** The maintainer: "having the hands up just doesn't look cool", and the low creep's
+  answer (hands down by his knees) read as a man picking something up. The first shape (each hand 0.3 m outside its shoulder, 0.2 m
+  under it, elbows out) flung the arms out like wings; on his GPU (10-24): "having sam's arms out so wide looks pretty jank. we should
+  really look at the frame by frame from the chaos theory footage". Read off two of the footage's creeps, frame by frame: elbows bent and back, the upper arms hanging a little off his sides, the hands open by his knees, one reaching ahead.
+  THE RULE (`close.ts` feeds the animator, `character.ts creepLayer` draws it): under `STALK.low`, bare hands, in his crouch, closing on a
+  man from behind, each hand is 0.1 m outside its own shoulder, 0.32 m under it and 0.24 m ahead of it, the left 0.07 m further ahead
+  and the right as far back, open, palm to the floor, the elbow pole back and a little out (`widePole` [0.45, 0.15, -0.88]; the
+  animator's own `CREEP.wide.pole` keeps the first shape's, for a recording from before it). It comes with the sink
+  (all of it once he is `wideBy` 0.35 of the way down, about 2.1 m from the man), in at 5 1/s and out at 14. It is by distance, not by
+  the click: it holds while he waits behind the man and goes with the carriage when no man is in front of him. Upright it is nothing.
+  The stealth pose layer gives the left arm back to the creep by the share shown (it owned that arm through the creep). ON in the page,
+  OFF in the module and on the frozen stand, a `FROZEN_HOLDS` row; a recording from before the key replays with it off, and one from
+  before `wideLead` with both hands as far ahead. The lab has the toggle ('arms out') and the five numbers. THE CHECK is
+  `stalkwide-check.ts` (`probes.ts stalkwide`, the grab and stealth families; `STALKWIDE_BREAK=1` reds two of its five lines), both
+  stands: out (under two metres neither hand more than 0.25 m outside its shoulder, both at least 0.2 m under it, the left ahead, and
+  1.6 m out a good way off the key down's hands; the same hands as the key down before he sinks, neither above his neck), waits (still out two
+  seconds after the click is let go, 0.5 to 0.7 m off the key down's hands; the plain crouch's half a second after the man is taken
+  away), upright, grab (held on frame 29 either way), harness. Judged on CPU stills next to the footage's frames
+  (`close-stills.ts` scene `stalk-rifle`, the page's stand). One
+  seed: a fixed staging. Nobody has seen the new shape on a GPU.
+- **Drag to steer the creep, a prototype (10-23; `STALK.drag`, `dragDead` 14 px, `dragFull` 140 px; `stalk.ts dragged`; lab only:
+  `?sneaklab` raises it, `?stalkdrag=1` anywhere, `?stalkdrag=0` in the lab; `TPS_STALKDRAG=1`).** The maintainer: "you click on the guy
+  and then you can drag towards him to move in that direction. like a joystick centered on the guy. that would make things feel more
+  controlled than right now which feels automatic." THE RULE: the press on a man still begins the creep (the same arc, range and
+  cursor test) and the screen point it was made at is the stick's middle. While the button is down the mouse's way from there is the
+  way Sam creeps (screen up = the camera's forward, as the move keys have it, so the camera following him does not feed the stick) and
+  its length from `dragDead` to `dragFull` is the share of `pace`. Left at the press he holds still in the pose. He faces the man
+  throughout; the way into the man is taken off the stick over the last 20 cm before `keyM`, so he stops there and can still go round.
+  Everything else is the creep's (the arc ends it, a wall ends it, the key grabs). NOT the switch rule on purpose: it changes how the
+  hold plays everywhere (the tutorials teach "hold left click"), so it is down in the plain page and on both stands until the
+  maintainer has tried it; there is no `FROZEN_HOLDS` row because the stands agree. The line over the man reads "press and drag to
+  sneak up on him" while it is up. THE CHECK is `stalkdrag-check.ts` (`probes.ts stalkdrag`; `STALKDRAG_BREAK=1` reds four of seven),
+  both stands: still (2 s, 0 cm moved), toward (the whole drag 1.6 m/s, half of it 0.8), side (across, 2° off the man), stops (0.79 m
+  behind him, the key takes him), outside, off, harness. OFF THE VIEW: a press made on the view goes on being the stick with the mouse
+  over the panel or the HUD (`input.ts` window `mousemove`), only while `Input.dragOff`, which `Game.update` writes on the host's input
+  from `STALK.on && STALK.drag` each frame (the editor imports `Input`, so input.ts does not import stalk.ts). It asks the event's own
+  `buttons` (a button let go outside the window sends no mouseup), calls `modsUp` first, keeps tracking through a lock as the view's
+  listener does, and follows no press begun off the view (a lab slider). The `outside` line drives it on a window of lists. The page
+  drive drags the real mouse in the lab (on the real page the drag goes over the panel: 139 px of 140 read with the listener, 46 without). No hand has held it and nobody has
+  seen it on a GPU.
+- **Round him: the keys and the stick orbit the man (10-24; `STALK.orbit`, `orbitK` 3, `orbitEdge` 0.05, `orbitSnap` 0.3; `stalk.ts orbited`;
+  `?stalkorbit=0`, `TPS_STALKORBIT=1`).** The maintainer: "when you're clicking on an enemy and moving around them, you should really be
+  "orbiting" them". THE RULE: with the button held on a man, a move key no longer ends the creep. The way it points is split, as it is
+  first asked for (and again when it swings more than 30° off that), into a share toward the man and a share round him, and those shares
+  are kept while it is held (a share toward him under `orbitSnap`, about 17° off square, counts as none: the screen's keys are seldom
+  square to the man, and on the real page a key 10° off spiralled him 21 cm in over 0.8 s): a key held across him carries Sam round him on the circle he is on, facing him, at the creep's `pace`
+  (1.6 m/s), with a pull of `orbitK` per metre back onto that circle, and a man who walks takes the circle with him; the share toward or
+  away closes or opens the gap, down to `keyM` (the stick's own taper, `intoKeep`). He goes round no further than `orbitEdge` short of
+  the grab's own arc (`close.ts BEHIND_COS`, inside where the creep ends), and waits there, so the grab is still on offer. His hips turn
+  toward the man as far as they do with a gun up. Keys let go, the held button walks him in as before. The stick (`STALK.drag`, the lab's) is taken the same way. With it up the aim's weight
+  (`aimweight.ts`, which turned him to the cursor's floor point, left where the press was) has no say in a creep: he faces the man. ON
+  in the page, OFF in the module and on the frozen stand, a `FROZEN_HOLDS` row; a recording from before it replays with it off. The lab
+  has the toggle ('keys go round him') and the three numbers ('nearly across' is `orbitSnap`). THE CHECK is `stalkorbit-check.ts` (`probes.ts stalkorbit`, the grab and
+  stealth families; `STALKORBIT_BREAK=1` reds eight of its eleven lines), both stands: round (the key across him for a second, after 20 frames of
+  creep: 57° round him at 1.51 m, the gap within 1 cm, facing him within 3°), slant (the view turned 12° so that key is off square: the
+  same, and 34 cm off with `orbitSnap` 0), nogun (no round in a creep: his hands are empty in one, `stalk.ts hands`, and drawing ends
+  it; the pistol drawn out of one with the cursor a quarter turn off swings there at `AIMWEIGHT.rate`, not in a frame, so leaving the
+  aim's weight out while a creep is on gives no free turn onto a target), edge (six seconds: stops at -0.42 against the grab's -0.25, the creep on), in and out
+  (closes to 0.80 m against `keyM` 0.8, the nearest 0.79; away opens 1.08 m in 0.75 s), walking (a man walking away at 1.2 m/s: the gap
+  within 17 cm over a second), reach (from 0.9 m: stops at -0.51 and the key takes him), stick (the lab's drag across him: 53° round,
+  within 6 cm), letgo (walked into reach in 2.6 s), off (a move key ends it), harness. `stalk-check` and `stalkdrag-check` hold it down
+  (their cards are of a key that ends the creep and of the stick's own way). The real page (`stalk-page.cjs`) drives it with a real button and key and picks the clearest of the four. Nobody
+  has played it and it was never seen on a GPU; the harness has no hand on the keys. One seed: a fixed staging.
+- **The sneak lab's knobs in groups (10-23; `src/host/sneaklab.ts` GROUPS, NUMS, TOGS).** The maintainer, of the panel on his GPU:
+  "it's hard to tweak the knobs in the debug panel, illegible. maybe more grouping, shorter names, alt text would help? and some
+  explanation of what to look for / test in the alt text?" The one long "The creep" list is ten sections that fold (Start and stop,
+  Pace, Pose, The grab, Right click, Passing guards, Fast crouch walk, Corner wait, When he turns, Old pose), the first three of the
+  game's own feel open; each has its own '↺', a header hover saying what to watch, and a live "N moved" summary; every switch sits in
+  its group; every slider has a revert dot. Names are short enough for the 372 px column; each hover says what the number is, what
+  to look for and what to try. The page drive reads it: 12 sections, 79 rows, none cut short, none without a hover. Panel code
+  (`src/ui/panel.ts`) is unchanged. A new STALK number still needs its row here (`sneaklab-check` words).
 - **The grab's disarm, second pass (`HOLD.strip`, `HOLD.bareGrip`; `disarm.ts`, `character.ts`).** The move itself is `HOLD.disarm` (`?disarm=0`,
   `TPS_DISARM=1` with `TPS_HOLDDROP=1`): Sam's right hand takes the gun out of the man's hand 0.2 s into the grab and lets it go at 0.5 s; its voices are
   `docs/agents/sounds.md`'s. Judged on stills, the first pass set the gun down at his thigh (it slid down his leg and lay under his foot) and the held man's
   open right hand waved over the pair. Now the gun is torn out to a straight arm at Sam's right (`strip.low`), his chest going with it (`strip.yaw` -16),
   and thrown from there (`strip.push` 1.3 m/s out, `strip.spin`). Third pass: let go earlier (`strip.drop` 0.42 s, was 0.5) from a LEVEL arm with the gun
   level, the arm held out `strip.follow` 0.1 s after it; it lands a metre clear on the same beat as before (0.83 s; `grabvoice` green), and the knock is
-  the floor's alone (`disarm.ts GUN_FLOOR`: a thrown gun may touch a wall on its way, which moved the beat). With no knife in the hold the man's right hand is on the arm across his throat from the start (`HeldPose.bare`, `HOLD.bareGrip`
+  the floor's alone (a height test then, `GUN_FLOOR`; a thrown gun may touch a wall on its way, which moved the beat). FOURTH PASS (2026-10-24, the maintainer's own
+  beats, set by ear on the listening page: "strip: new 2 at 0.25 s · gun down: in the game at 0.70 s"): `strip.take` 0.2 → 0.26, the tear in two thirds
+  of the time (`strip.out` 0.34 → 0.35, `strip.drop` 0.42 → 0.41; the strip voice's own click is 0.13 s into it, just before he lets go), `strip.free`
+  0.3 → 0.36 to follow the take, and THE FALL IS TIMED (`strip.fall` 0.311 s; `disarm.ts letGo`): he throws it down as hard as it takes to be on what
+  lies under its landing place that long after it leaves the hand (about 2 m/s from a level arm; the fixed push was 1.05), so the knock does not move a
+  frame with the height of the hand. `fall` 0 or absent = the fixed push (`journal.ts`: a recording from before it). THE BEATS ARE COUNTED AS THE PAGE
+  PLAYS THEM: there the grab begins inside an update, so the catch is heard on that frame and the move's clock already reads one step at its end; a
+  check that calls `startGrab` from outside a step is a frame ahead of its own voices (the first retime was a frame short for that reason, found on the
+  real page). `grabvoice` now takes him by the row's key inside a step for every beat it holds. MEASURED so, headless on the lobby's open floor, one
+  staging, seed 4471, both stands: the strip 15 frames after the catch (0.250 s) and the knock 42 (0.700 s), pistol and carbine (it was 0.80 by the old
+  ruler); `take` and `drop` are mid-frame values and 0.311 is the middle of the falls that land 18 frames after the let-go (0.303 to 0.318). A wall
+  in the way of the throw: he throws it that much shorter (`letGo` casts the throw's own reach), so the gun does not rub down the wall and the knock is on the same frame (it was one to two frames late, found on the real page's first guard); rapped out by Sam's own pistol it is at 0.62 s (not timed). WITH `HOLD.stripFirst` UP
+  (the page) the lead lets go at 0.30 s, the fall is longer by `strip.drop - first.drop` in whole steps (0.428 s; from a low hand that is a small lob,
+  the down push may go to -1.5), and the knock is on the same frame from the grab's frame: strip 0.150 s, catch 0.267, his protest 0.467, gun down 0.700
+  (from the strip: 0.117 / 0.317 / 0.550), pistol and carbine, both stands. His 0.25 s was picked with the catch first, and nobody has asked him which
+  order it was for. The gun rests about 0.97 m from Sam (was 1.06; measured before the last frame's shift). Sam's hand carries the gun at 3.5 to 4.5 m/s
+  where it was 2 to 3, and AS IT LEAVES THE HAND the gun's velocity changes by about 5 m/s in a frame (the hand is going back and up at 4 m/s, the gun
+  leaves out and down at 2.4); that jump was 3.8 before, and nobody has watched either. The knock asks WHAT FACE the gun struck (`throwables.ts
+  onBounce` hands the normal on; `disarm.ts gunDown` wants one that faces up) where it asked a height (`GUN_FLOOR` 0.25 m): thrown down harder the gun
+  met the wall under that height and knocked there, and a gun landing on a low slab would have said nothing. `disarm`, `grabvoice`, `stripfirst`,
+  `holddrop` green on both stands; on the real page (software adapter) the log reads the same frames in both orders. Judged on mesh stills (made with
+  the catch first, a frame before the last shift) and these numbers only; never seen on a GPU, and nobody has watched it move. With no knife in the hold the man's right hand is on the arm across his throat from the start (`HeldPose.bare`, `HOLD.bareGrip`
   0.9) instead of half up and open beside his head. CHECK: `tools/qa/disarm-check.ts` (probe `disarm`; beats, pose, ends, off, harness; `DISARM_BREAK=1`
   fails), both stands. Where the gun lands is the item's own physics and was read off stills in one open room; never seen on a GPU.
 - **The close-in poses as pictures with no Blender: `tools/qa/close-stills.ts` + `tools/qa/pose-mesh-raster.py`.** `close-stills.ts [--scene approach-crouch |

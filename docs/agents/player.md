@@ -1067,6 +1067,21 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   swallows the key's coming up) lets go of it. It is a latch where Ctrl was read off every mouse event: a keyup lost some other way leaves the
   view turning until Space is tapped. While Space is
   the camera's, Ctrl and the mouse turn NOTHING; a wheel that says Ctrl still zooms, because that is what a trackpad pinch sends.
+  CTRL AND THE WHEEL (2026-10-24; `KEYMAP.pinchOnly`, `?pinchonly=0`; the maintainer: "ctrl-scroll still zooms in and out, should remove"): while
+  Space is the camera's, the wheel under a Ctrl key that is DOWN is nothing, neither the zoom nor his pace. A PINCH STILL ZOOMS: Chrome and Firefox
+  send a trackpad pinch as a wheel that says Ctrl with no Ctrl key down, and `game/input.ts` tells the two apart by `ctrlDown`, the `ctrlKey` of the
+  last key or mouse event on the window (first in line, behind no gate: a field with the focus, a lock, a Control he put on another key and a Ctrl
+  pressed in another frame all say it; a lost focus keeps it and a plain wheel clears it). So zoom is Space and the wheel, or a pinch. Space pressed
+  UNDER a held Ctrl was never a key of ours (a system's own chord), so with Ctrl down first there is neither the turn nor, now, the zoom. With the camera on
+  Ctrl (`?camspace=0`, or a row he put on Space) Ctrl and the wheel is the only zoom there is and stays. Like `camSpace` it is the page's own
+  (`keysBoot`), off in the module, in no recording and on no stand: no run reads a wheel. CHECK: `camspace`, its line 'the wheel under a held Ctrl
+  key is nothing…' (left and right Ctrl, a pinch, a plain wheel, a Ctrl key whose coming up was never seen, both Ctrl keys and one let go, Space and Ctrl in either order, Ctrl
+  pressed in a field, on Caps Lock, through a lost focus and in another frame, the camera on Ctrl, the rule off, the page's word);
+  `PINCHONLY_BREAK=1` fails that line alone. KNOWN: (1) a Ctrl key-up the page never saw (a system shortcut) leaves a pinch dead until the mouse
+  next moves or a plain wheel turns; (2) a device that makes its pinch or its zoom button out of a REAL Ctrl press and a wheel (some older Windows
+  touchpad drivers, some mice) cannot be told from the chord and is nothing: `?pinchonly=0`, there is no Options row; (3) Ctrl held and the wheel
+  turned over a page that never saw the key go down (another frame, the address bar or devtools has the keys) still zooms until the mouse moves; (4) Safari sends a
+  pinch as its own gesture events and no wheel, so a pinch there was never the zoom (not checked here). NOBODY HAS TRIED IT ON A TRACKPAD.
   TWICE (`host/findme.ts watchCtrlTaps(win, idle, key)`; main.ts hands it `camKey`): the "Double tap" option of Options, Game (off unless he turns
   it on) is two taps of the camera's key, wherever it is. findme.ts still imports nothing.
   A tap of Space with Shift held counts (Shift is his sprint; with Ctrl it is a browser chord and still does not). With a text box focused (the
@@ -1078,8 +1093,8 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   swap shown. Making the camera hold a row of the board would give it caps, words and a swap by the board's own machinery. `tools/qa/findme-page.cjs`
   (the settings thread's) reads "Double tap Ctrl" and presses Control: it needs `&camspace=0` or the new words. The engine replay's own view still
   turns on Ctrl (`replay/engineplay.ts`). A laptop touchpad that goes dead while a key is held would not turn the view under Space: not tried.
-  CHECK: `bun run tools/qa/probes.ts camspace` (family `player`), 5 lines: the board, held, Ctrl, twice, off; on game/input.ts's own listeners and
-  the double tap's, stood on a window and a canvas that are lists of them. `CAMSPACE_BREAK=1` fails 4 (the `off` line is the build as it was).
+  CHECK: `bun run tools/qa/probes.ts camspace` (family `player`), 6 lines: the board, held, Ctrl, the wheel (above), twice, off; on game/input.ts's own listeners and
+  the double tap's, stood on a window and a canvas that are lists of them. `CAMSPACE_BREAK=1` fails 5 (the `off` line is the build as it was).
   `tools/qa/keybinds-page.cjs` reads the camera's cap in its last line.
   Never seen on a GPU; nobody has felt Space held under a thumb while the same hand walks.
 - **A can in the wind-up goes back on the belt when his hands start something else** (`src/game/throwback.ts THROWBACK.on`, 10-22; the deep
@@ -1208,6 +1223,28 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   IS STILL THE FIRST TOUCH: the ring now sits metres past it, and aiming the throw so the can RESTS under the cursor would be a rule of the game
   (every throw, the scripted ones too) — asked of the maintainer, not built. `tools/qa/hudmarks-page.cjs` reads the ring, the tick and the roll on
   the real page (software adapter). NEVER SEEN ON A GPU: the tick, the dots, the ring's place on the screen.
+- **The throw preview shows what the thing will reach** (`THROWBACK.reach`, throwback.ts; `src/game/throwreach.ts throwReach`, `ui/overlay.ts
+  drawReach`, 10-23; the maintainer off a GPU shot of a grenade's arc: "we should also have kill radius / stun radius when throwing grenades"). While a
+  throw is aimed the overlay draws, flat on the floor round the point the can comes to REST (`frag.ts restOfThrow`: where its fuse finds it, whatever
+  the rest mark's own switch says): for a FRAG a solid red-orange KILL ring at `FRAG.lethalM` (4 m) and a dotted, fainter ring at `FRAG.woundM` (8 m,
+  the band it hurts in and kills by a falling chance); for a STUN canister a dashed bright ring at the canister's own dazzle radius (`effects.ts
+  bang.dazzleRadius`, 8 m: the edge every part of `combat.ts FLASH` falls off to); for the LAUNCHER'S GRENADE the frag's two rings on the floor under
+  where the arc ends (it bursts through `frag.ts blast`), none while the arc is too short to arm (a dud). Smoke, a sponge round and a sticky camera
+  draw none. The radii are read from the tables the burst is judged by, never copied. No word and no number is drawn. THEY ARE RADII, NOT SHADOWS: a
+  wall, a shut door or a desk between is not drawn, though the burst asks what of a man is exposed; a ring that crosses a wall overstates the reach
+  past it. THEY ARE BIG: at the page's own zoom the kill ring is about half the view's width and the 8 m rings run off its edges. A point behind the
+  camera breaks the ring there and the rest stays (as `ui/squadthrowviz.ts` draws the squad's); a cut ring has no fill. The overlay asks when the arc
+  has changed, not every frame, and writes a ring only when it has moved.
+  SWITCH: `THROWBACK.reach`, the overlay's (nothing in the game reads it), OFF in the module and on the frozen stand (`standGame` pins it off;
+  `FROZEN_HOLDS` row with no word, like the rest mark's), ON in the page (`?noreach`); a recording from before the key replays with it off (`journal.ts
+  applyKnobs`). CHECK: `probes.ts throwreach` (`tools/qa/throwreach-check.ts`, families `throw`, `player`; `THROWREACH_BREAK=1` must fail) on BOTH
+  stands: what the overlay is handed for a frag, a stun canister and a smoke, with the rest mark off, that asking changes nothing, one frag thrown by
+  the click with three men stood by the rings (inside the kill ring down, in the band hurt, past the outer ring untouched: one throw, no seeds), the
+  40 mm on an armed arc, a dud arc and the sponge round, and the journal. THE PAGE: `tools/qa/throwreach-page.cjs` reads the paths on the software
+  adapter (the small ring inside each, the hurt ring about twice the kill ring's width, none for smoke, none with the switch off). NOT DONE: the
+  squad's own throw rings (`ui/squadthrowviz.ts`: a frag's two, none for a stun) and the floor plan's (the kill radius alone) are other drawings of
+  the same numbers and were left as they are. NOBODY HAS seen it on a GPU or thrown by it in play; the colours and line weights are a first guess
+  against the snow level's shot.
 - **One footfall a step** (`FOOTFALL.once`, src/game/player.ts; 2026-10-22, from the quiet lesson's scripted run). THE FLAW: a footfall is filed when the
   walk cycle's phase crosses a half or wraps. Backpedal runs the cycle backwards, so when backpedal flips frame by frame the phase rocks over ONE edge
   and every frame files a footfall: 20 in 20 frames staged, and a calm man 0.76 m in front goes alert on eight of them. What flips it: forwards and
@@ -1307,6 +1344,28 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   turns has 10 % less time to catch him crossing, and Sam has 10 % less time behind a man who stops), no tour, no soak, no tutorial mission's scripted run;
   the walk at 1.55 is now 7 % quicker than the sneak and four times as loud, which may leave the walk little to do; nobody has played it and it has never
   been seen on a GPU.
+- **Shift in a crouch is a fast crouch walk (10-23; `CROUCHRUN`, player.ts; its look `DASH`, character.ts; `?crouchrun=0`, `TPS_CROUCHRUN=1`).** The maintainer:
+  "we can make sprint when crouching a really fast crouch walk, but you have to stand up to sprint properly". ON in the page, OFF in the module and on the
+  frozen stand, a `FROZEN_HOLDS` row, its own table and `DASH` in knobs.ts and `JOURNAL_KNOBS` (a recording from before the table replays with it off). With the key up,
+  Shift held in a crouch no longer stands him up: `pl.dash` is set where `sprinting` is, he stays down and goes at `pace` 2.5 m/s (the crouch walk 1.45, the
+  walk 1.55, the sprint 4.7), each footfall filed at `loud` 0.34 (the crouch walk's 0.125, the walk's 0.26, a run's 0.6, the sprint's 1), and it is no sneak
+  (`samSneaks`). He is not `sprinting`: doors, switches, the grab and a reload are still his hands'. A door or a chair he
+  runs into at this pace is bumped as a walking man bumps it, not as a creeping one. The sprint is the standing man's ([C], then Shift). A body in tow
+  is let go of as a sprint's is; a held click on a man is the creep whatever Shift says; a puppet's or a tour's Shift is the old one. THE LOOK: by
+  `anim.dash` (eased at 7 /s) the crouch cycle's stride is 30 % longer and its cadence that much lower, the pelvis 3 cm lower, the trunk 7° further over,
+  the head level (`sneakLayer`). `tools/qa/gait.ts` (two new rows): at 2.5 m/s 2.68 steps a second on a 1.87 m stride with 0.067 m/s of foot slip, where the
+  cycle unstretched would take 3.48 on 1.44 m with 0.156. THE CHECK is `crouchrun-check.ts` (`probes.ts crouchrun`, the player and stealth families;
+  `CROUCHRUN_BREAK=1` reds five of its seven lines), both stands: stays (down, not sprinting, 2.50 m/s), heard (a step 0.374 on the lobby's floor against
+  0.138 crouched, 0.286 walking, 1.100 sprinting), sneak, look (the stride's share whole with Shift and gone a second after; 2.67 steps a second where its
+  own stride would take 3.45), stand ([C] with Shift held stands him up into 4.70 m/s), off, harness. One seed: these are speeds on a flat floor. The
+  debugger has the toggle and both numbers under Detection & movement; the sneak lab has them and the stride and lean. `close-stills.ts` has a scene
+  `dash`. THE WORDS (the controls goal, same day): while the rule is on, Options ▸ Controls' Sprint row has the line "hold it while you're crouched
+  to stay low and move faster, but it's louder than walking" (`ui/options.ts sprintSmall`), and the controls list of the old start card (`?cards`,
+  the boot card of a URL that names a mission, the harness: `ui/menu.ts moveRowNow`) adds "and Shift while you're crouched to hurry (it's louder)";
+  the shipped start page and the load brief show no controls list. Off, both read as they did. `keybinds` has the line, both stands;
+  `MOVEWORDS_BREAK=1` fails it. It asks the two functions, not the drawn rows. KNOWN: a screen already open keeps its words when the rule is
+  flipped in the debugger or the sneak lab, until it is drawn again. Not seen on a page. NOT DONE: no sound of its own; teammates following a crouched Sam
+  keep their sneak pace (they speed up only for a real sprint). Nobody has played it or seen it on a GPU.
 - **Four ring notes: one row is a pill, no line under his ring, his ring stands on its thing, a switch's row turns him** (2026-10-23; four fields of
   `HANDRING`, handring.ts, each with its own page word and all four off under `?handring=0` too; all four off in the module and on the frozen stand and raised there by the hands ring's own
   word, `TPS_HANDRING=1` (no new stand word), each a `FROZEN_HOLDS` row, each off for a recording from before its key). CHECK: `handring`, both
@@ -1318,8 +1377,8 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
      of a turn and a pill over the middle is wider, so its digit lay in the next wedge's fifth and a key let go there gave nothing. No other way
      out lights it: a row is still chosen, never fallen into. THE GAME READS NO WORDS OF A RING: it reads which digits have a wedge (`ringKeys`,
      orders.ts and interact.ts, a bit each) and, for a pill, a PLACE as long as the longest pill (`pillBox`, `LONE.max` 20 letters) whatever the
-     row says, so a recorded cursor lights the same row after a label is reworded. The pill drawn is always inside that place (a longer label is
-     drawn tighter); a cursor just past a short pill's end is still on its row. WHERE ONE ROW COMES UP (read
+     row says, so a recorded cursor lights the same row after a label is reworded. The pill drawn is always inside that place (a longer label takes two lines under `loneWrap`, the bullet
+     below; without it, it is drawn tighter); a cursor just past a short pill's end is still on its row. WHERE ONE ROW COMES UP (read
      headless on the page's stand, each tutorial mission at its first and last step): on tut-sky EVERY squad ring ('1 stack up' on a door, '1 go'
      elsewhere: its frame names six orders); on tut-pair his ring at a door ('1 push it open', '1 keypad'); on tut-solo his ring at the gate;
      anywhere, his ring on open floor (the whistle, wedge 5). NOT DONE, the squad ring's own rows: a ring whose only order is also the quick
@@ -1360,6 +1419,31 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   MEASURED: the check's own lines on both stands (die 1, the office; the pill's shape for 40 pills). NOT MEASURED: no fight or stealth tally was
   run with these on. NOT DRIVEN headless in a mission: the squad ring with one row (its pointing is the same function, asked directly). Never
   seen on a GPU; the before and after pictures of the wedges were drawn by the page's own drawing code and stylesheet over a flat backdrop.
+- **A lone pill's long label takes two lines** (2026-10-23; `HANDRING.loneWrap`, `?lonewrap=0`, off with `?lonepill=0` and `?handring=0`; off in
+  the module and on the frozen stand, raised there by `TPS_HANDRING=1` with the rest of the ring (no new stand word); a `FROZEN_HOLDS` row; off for
+  a recording from before the key). The maintainer, 10-23, with a shot of a wall's second ring in plan mode, one row, 'breach with a wall charge ·
+  3 left': "weird after hitting 5". A pill is drawn for at most `LONE.max` 20 letters and a longer label was set to that width (`textLength`), so
+  34 letters stood in the room of 20 and ran into each other. THE RULE (`game/ringlone.ts loneLines`, `lonePill`; `ui/cmdring.ts RingDraw.place`
+  writes the lines as two `tspan`s, once): a label longer than 20 letters takes two lines. It breaks at its ' · ' where both halves then fit in 20
+  ('BANG AND CLEAR' / '3 LEFT', 'STAND OFF' / 'IN BEHIND THE CHARGE'; the dot is dropped, the line break says it), else at the space that leaves
+  its longer line shortest ('BREACH WITH A WALL' / 'CHARGE · 3 LEFT'), never leaving the '▸' by itself. The pill is two lines tall (34
+  px: `LONE.lead` 12 px taller, its lines that far apart) and grows AWAY from the middle, so its edge by the middle's ring is where a one-line pill's is. Each line is
+  set to its own counted width: a letter is squeezed only where the best break still leaves a line over 20 (no space at all, over 40 letters, or
+  words that will not split evenly: 'support hand grip' / 'point (arrows only) ▸' is 17 and 21). A label of 20 letters or fewer is the pill as it
+  was, to the last figure. WHAT THE GAME READS: the pill's place (`pillBox`) is two lines tall under the rule whatever the row says, so the pill
+  drawn is still always inside it and a recorded cursor never turns on a label's wording. So a SHORT pill's place gains a 12 px band too, away
+  from the middle, where the cursor is on the row (less than the room the place already keeps past a short pill's end). CHECK: `handring`, its line
+  'a lone pill's label longer than the pill…', both stands: 19 labels on five wedges (the lines, the door tools' own long rows by name, every word
+  kept, full letter width wherever a break can give it, inside the place, clear of the middle, inside the ring's box), every short label against
+  the pill of before the rule written out again (and every label against it with the rule off), the cursor on a tall pill's far line, the page's three words, an old recording, the stand's word;
+  `HANDRING_BREAK=loneWrap` fails that line alone, `HANDRING_BREAK=1` and `=lone` fail it too. SEEN: the page's own drawing code and stylesheet in
+  Chromium, before and after, nine cases, and on the real page (tut-sky, the software adapter) with the row of his shot handed to the page's ring:
+  each line's measured width against the width it is set to (1.71 times too wide before, 1.00 after), both lines inside the pill. Never seen on a
+  GPU, though nothing here is the renderer's: it is SVG text over the picture. NOT DONE: nobody drove to that wall's row by hand (the step of the
+  mission in his shot was not found), and nobody has played it. NOT MEASURED: no tally moves (the frozen stand holds it off; on the page it changes
+  what a cursor in that 12 px band lights and no more), so no seeds were run. KNOWN: Firefox does not set a `tspan`'s `textLength`, so there a
+  line still over 20 letters runs long (the page asks for Chrome, Edge or Safari); the squad ring's rows are still worded long enough to need two
+  lines, and shorter labels are Commanding's and the writing pass's.
 - **The corner panel is three things: the objective, his key's line, the squad key's line** (2026-10-23; `HANDRING.corner`, `?corner=0`, off under
   `?handring=0` too; off in the module and on the frozen stand, raised there by `TPS_HANDRING=1`, a `FROZEN_HOLDS` row, off for a recording from
   before its key; the maintainer's five lines are in handring.ts). The panel at the top left was a heading and a row for his key ('DOOR · OPEN' over

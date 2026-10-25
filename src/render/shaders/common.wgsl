@@ -85,6 +85,7 @@ const BOX_EMISSIVE: u32 = 16u;
 const BOX_AREALIT: u32 = 32u;     // emission carried by an analytic area light instead (see Light kind 3)
 const BOX_ROT: u32 = 64u;         // fully rotated box: orientation is the quaternion boxRot(i), not the packed yaw (hand props, sparks, tumbling canisters)
 const BOX_GLOSS: u32 = 128u;      // polished floor finish: its on-screen top face gets a traced reflection ray under FLAG_GLOSS (boxes.ts BoxFlag.Gloss)
+const GEO_ROUND: u32 = 8u;        // ROUND THINGS (scene/round.ts; only ever raised in a build compiled with ROUND_BOXES): the box is the cylinder about its own y, radius h.x (boxes.ts BOX_ROUND_BIT — the CPU's Dynamic bit, which is not sent then)
 const GEO_CUT: u32 = 65536u;      // CUT BOXES (scene/cut.ts; only ever raised in a build compiled with CUT_BOXES): the box is clipped by the planes in its rows of the cut table (boxMat from CUT_BASE)
 const BOX_GLASS: u32 = 131072u;   // a glass pane (boxes.ts BoxFlag.Glass, bit 17 — the flag word widened past its byte): never in the trace grid nor the raster; here only so a debug view can tell one
 const MAX_GLASS: u32 = 32u;       // panes SceneInfo.glass can hold (boxes.ts MAX_GLASS)
@@ -120,13 +121,14 @@ struct SmokeBound {                // a loose box round some of the smoke (smoke
 @group(0) @binding(9) var linSamp: sampler;
 @group(0) @binding(10) var<storage, read> capsules: array<Capsule>;
 struct FogSightT {            // THE FOG OF WAR'S SIGHT TABLE (render/fogofwar.ts FogSight; asked only for a light that carries a fog bit, the picture's smoke and its particles — fogSeenAt below)
-  dist: array<vec4f, 2560>,   // [eye × FOG_SIGHT_BINS + bin], four to a vec4: how far that eye's level ray along the bin's bearing goes before a box (the head-of-frame pass, shaders/fogsight.wgsl)
-  eyes: array<vec4f, 5>,      // FowU's head (shaders/fogofwar.wgsl), field for field: the eye and its man, …
-  looks: array<vec4f, 5>,     // … where he looks, his cone and near field
+  dist: array<vec4f, 3584>,   // [eye × FOG_SIGHT_BINS + bin], four to a vec4: how far that eye's level ray along the bin's bearing goes before a box (the head-of-frame pass, shaders/fogsight.wgsl)
+  eyes: array<vec4f, 7>,      // FowU's head (shaders/fogofwar.wgsl), field for field: the eye and its man, …
+  looks: array<vec4f, 7>,     // … where he looks, his cone and near field
   cfg: vec4f,                 // x = eyes, y = 1 while this frame's table is written (0: no table — every spot answers 'seen'), z = topPad (m), w = the fog's soft edge: its band (m; 0 = the hard line — shaders/fogofwar.wgsl fowEdge, the fog pass alone reads it)
-  soft: vec4f,                // the cone's soft edges, as FowU.soft
+  soft: vec4f,                // xyz = the cone's soft edges, as FowU.soft · w = one whole number, three bits (4 = FOG.kept, fogKeptOn below): 1 = smoke and dust are drawn under the fog too (fogSmokeOn below; 0 = cut there, as it was), 2 = thin things that stand free do not stop a fog eye (fogThinOn)
+  thin: array<vec4u, 32>,     // WHICH statics are thin and free (game/fogofwar.ts FOG.thin; scene/thin.ts): a bit a box index, 4096 boxes (fogThinBox below). In the buffer the sight table's own pass reads here too (the stand-in: render/fogofwar.ts FogSight.stand)
 };
-@group(0) @binding(11) var<uniform> fogSight: FogSightT;   // (a UNIFORM, 41 KB: the fragment stage's sampled textures are all spoken for — passes.ts lComp)
+@group(0) @binding(11) var<uniform> fogSight: FogSightT;   // (a UNIFORM, 58 KB: the fragment stage's sampled textures are all spoken for — passes.ts lComp)
 // binding 12 — the per-light reach rows (render/reach.ts, lights.ts reachBuf) — is declared by the scene prelude (frame.ts scenePrelude) as either a read-only
 // storage array<u32> (the default: measured cheaper) or a uniform array<vec4u, REACH_VEC4S> (adapters with only 8 storage buffers per stage, or ?reachUniform
 // for A/B), each with a reachWord(w) accessor over the flat word index
@@ -357,6 +359,34 @@ fn isectCut(lo: vec3f, ld: vec3f, tmn: vec3f, tN0: f32, tF0: f32, tmax: f32, bi:
   else if (tN == tmn.y) { code = 2.0 + select(0.0, 1.0, ld.y > 0.0); }
   return vec2f(tN, code);
 }
+// ---- ROUND THINGS (scene/round.ts; called only inside `if (ROUND_BOXES)` blocks — the scene prelude's const, false = this is dead code and the module is as it was): a
+// box flagged GEO_ROUND is the cylinder about its own y, radius h.x (= h.z), between its two y faces. The ray's stay inside is ONE interval: its stay between the
+// ends (the y slab) cut down to its stay inside the circle. The circle's quadratic is solved from where the ray enters the box round it (tBox), so a ray from far
+// off loses no bits to the distance. Codes: an end keeps isectBox's 2 / 3, 7 = origin inside, and the SIDE answers ROUND_SIDE (negative, under the cut planes'
+// −1‥−8: every caller's `code > 6.5` inside test and its t tests read it as an ordinary face). The side's normal needs the hit point: roundNormalAt, asked by the
+// closest-hit walks after boxNormalFromCode. boxes.ts rayBoxRound is this on the CPU (rayBox, and collision.ts lineBox).
+const ROUND_SIDE: f32 = -9.0;
+fn isectRound(lo: vec3f, ld: vec3f, R: f32, tNy: f32, tFy: f32, tBox: f32, tmax: f32) -> vec2f {
+  var tN = tNy; var tF = tFy; var code = 2.0 + select(0.0, 1.0, ld.y > 0.0);
+  let p = lo.xz + ld.xz * tBox;
+  let a = dot(ld.xz, ld.xz); let hb = dot(p, ld.xz); let c = dot(p, p) - R * R;
+  if (a < 1e-12) { if (c > 0.0) { return vec2f(-1.0, 0.0); } }   // along the axis: inside the circle for every t, or never
+  else {
+    let disc = hb * hb - a * c; if (disc < 0.0) { return vec2f(-1.0, 0.0); }
+    let s = sqrt(disc); let ta = tBox + (-hb - s) / a;
+    if (ta >= tN) { tN = ta; code = ROUND_SIDE; }
+    tF = min(tF, tBox + (-hb + s) / a);
+  }
+  if (tN > tF || tF < 0.0 || tN > tmax) { return vec2f(-1.0, 0.0); }
+  if (tN < 0.0) { return vec2f(0.0, 7.0); }
+  return vec2f(tN, code);
+}
+/** the normal of a round box's SIDE at world point wp on it: straight out from its axis (a yaw about that axis changes nothing; a tilted one goes through its own frame) */
+fn roundNormalAt(b: BoxGeo, bi: u32, wp: vec3f) -> vec3f {
+  let p = wp - b.c;
+  if ((b.flags & BOX_ROT) != 0u) { let q = boxRot(bi); let l = quatRotate(vec4f(-q.xyz, q.w), p); return quatRotate(q, normalize(vec3f(l.x, 0.0, l.z) + vec3f(1e-9, 0.0, 0.0))); }
+  return normalize(vec3f(p.x, 0.0, p.z) + vec3f(1e-9, 0.0, 0.0));
+}
 fn isectBox(ro: vec3f, rd: vec3f, b: BoxGeo, tmax: f32, bi: u32, invRd: vec3f, axisFast: bool) -> vec2f {
   let p = ro - b.c;
   var lo: vec3f; var ld: vec3f; var inv: vec3f;
@@ -368,6 +398,7 @@ fn isectBox(ro: vec3f, rd: vec3f, b: BoxGeo, tmax: f32, bi: u32, invRd: vec3f, a
   let tN = max(max(tmn.x, tmn.y), tmn.z);
   let tF = min(min(tmx.x, tmx.y), tmx.z);
   if (tN > tF || tF < 0.0 || tN > tmax) { return vec2f(-1.0, 0.0); }
+  if (ROUND_BOXES) { if ((b.flags & GEO_ROUND) != 0u) { return isectRound(lo, ld, b.h.x, tmn.y, tmx.y, tN, tmax); } }   // ROUND THINGS: the cylinder inside the box (above); dead code without the switch
   if (CUT_BOXES) { if ((b.flags & GEO_CUT) != 0u) { return isectCut(lo, ld, tmn, tN, tF, tmax, bi); } }   // CUT BOXES: the slab interval cut down by the box's planes (below); dead code without the switch
   if (tN < 0.0) { return vec2f(0.0, 7.0); }
   var code = 4.0 + select(0.0, 1.0, ld.z > 0.0);
@@ -377,7 +408,7 @@ fn isectBox(ro: vec3f, rd: vec3f, b: BoxGeo, tmax: f32, bi: u32, invRd: vec3f, a
 }
 
 fn boxNormalFromCode(b: BoxGeo, code: f32, bi: u32) -> vec3f {
-  if (CUT_BOXES) { if (code < 0.0) { return quatRotate(boxRot(bi), cutPlaneRow(bi, u32(-code - 0.5)).xyz); } }   // CUT BOXES: a cut face — plane k's own normal, out of the box's frame (boxRot = the yaw for an ordinary box)
+  if (CUT_BOXES) { if (code < 0.0 && code > ROUND_SIDE + 0.5) { return quatRotate(boxRot(bi), cutPlaneRow(bi, u32(-code - 0.5)).xyz); } }   // CUT BOXES: a cut face — plane k's own normal, out of the box's frame (boxRot = the yaw for an ordinary box)
   let c = u32(code);
   let sgn = select(1.0, -1.0, (c & 1u) == 1u);
   let axis = c >> 1u;
@@ -395,6 +426,16 @@ const CAPSULE_HIT: i32 = 0x7ffffff0;   // Hit.idx of a character-proxy hit (a ro
 fn capsuleOwner(c: Capsule) -> u32 { return c.misc & 0xffu; }
 /** `skip` packs up to two character ids (bits 0-7: usually the receiving pixel's owner; bits 8-15: the light's owner) whose boxes / proxies a ray ignores. */
 fn skipsOwner(owner: u32, skip: u32) -> bool { return owner != 0u && (owner == (skip & 0xffu) || owner == ((skip >> 8u) & 0xffu)); }
+// THIN THINGS THAT STAND FREE DO NOT CUT THE FOG'S SIGHT (game/fogofwar.ts FOG.thin). While a FOG EYE's ray is walked (fogEyeThin raised by the fog's own
+// callers and put back: fogSeenAt below, shaders/fogofwar.wgsl main / pre, shaders/fogsight.wgsl) a box the ray MEETS is passed when somebody carries it (any
+// owner: another man's gun, a tracer's streak — the squad's own lines never met those) or when the level marked it thin and free (its bit in fogSight.thin:
+// a stovepipe, a window's bar, a lone post — never a door's jamb). Asked only of a box already hit, so a shadow ray pays one false bool per hit.
+var<private> fogEyeThin: bool = false;
+fn fogThinBox(b: BoxGeo, bi: u32) -> bool {
+  if (!fogEyeThin) { return false; }
+  if (boxOwner(b) != 0u) { return true; }
+  return bi < 4096u && ((fogSight.thin[bi >> 7u][(bi >> 5u) & 3u] >> (bi & 31u)) & 1u) != 0u;
+}
 fn capsuleAlbedo(c: Capsule) -> vec3f { let p = c.misc >> 8u; return vec3f(f32((p >> 11u) & 31u) / 31.0, f32((p >> 5u) & 63u) / 63.0, f32(p & 31u) / 31.0); }
 
 fn raySphere(ro: vec3f, rd: vec3f, ce: vec3f, ra: f32, tmax: f32) -> bool {
@@ -765,7 +806,10 @@ fn traceClosest(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32) -> Hit {
   }
   if (found) {
     if (code > 6.5) { hit.inside = true; hit.n = -rd; }
-    else { hit.n = boxNormalFromCode(boxGeo[u32(hit.idx)], code, u32(hit.idx)); }
+    else {
+      hit.n = boxNormalFromCode(boxGeo[u32(hit.idx)], code, u32(hit.idx));
+      if (ROUND_BOXES) { if (code < ROUND_SIDE + 0.5) { hit.n = roundNormalAt(boxGeo[u32(hit.idx)], u32(hit.idx), ro + rd * hit.t); } }   // ROUND THINGS: a round's side
+    }
   } else { hit.idx = -1; hit.t = tmaxIn; }
   if (GROUND_RAYS) { let tg = ghHit(ro, rd, hit.t); if (tg >= 0.0) { hit.t = tg; hit.idx = i32(boxMat[GH_BASE].z); hit.inside = false; hit.n = ghNormal((ro + rd * tg).xz); } }   // (the trial: a snow hill nearer than the box — the ground slab's hit, the hill's slope)
   // the character proxies (few, sphere-culled per character): the round cones' closest hit and normal
@@ -838,7 +882,10 @@ fn traceClosestMesh(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32) -> Hit {
   }
   if (found) {
     if (code > 6.5) { hit.inside = true; hit.n = -rd; }
-    else { hit.n = boxNormalFromCode(boxGeo[u32(hit.idx)], code, u32(hit.idx)); }
+    else {
+      hit.n = boxNormalFromCode(boxGeo[u32(hit.idx)], code, u32(hit.idx));
+      if (ROUND_BOXES) { if (code < ROUND_SIDE + 0.5) { hit.n = roundNormalAt(boxGeo[u32(hit.idx)], u32(hit.idx), ro + rd * hit.t); } }   // ROUND THINGS: a round's side
+    }
   } else { hit.idx = -1; hit.t = tmaxIn; }
   if (GROUND_RAYS) { let tg = ghHit(ro, rd, hit.t); if (tg >= 0.0) { hit.t = tg; hit.idx = i32(boxMat[GH_BASE].z); hit.inside = false; hit.n = ghNormal((ro + rd * tg).xz); } }   // (the trial, as traceClosest)
   if (scene.numCapsules > 0u) {
@@ -1011,7 +1058,7 @@ fn occludedTBoxes(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32, tCap: f32) 
       let b = boxGeo[bi];
       if (skipsOwner(boxOwner(b), skipOwner)) { continue; }
       let r = isectBox(ro, rd, b, tmax, bi, invRd, axisFast);
-      if (r.x >= 0.0 && (bestInCell < 0.0 || r.x < bestInCell)) { bestInCell = r.x; }
+      if (r.x >= 0.0 && (bestInCell < 0.0 || r.x < bestInCell) && !fogThinBox(b, bi)) { bestInCell = r.x; }
     }
     if (bestInCell >= 0.0) { return bestInCell; }
     if (tNext.x < tNext.y) { tCell = tNext.x; tNext.x += tDelta.x; cell.x += stp.x; tBack = tDelta.x * slack; }
@@ -1066,6 +1113,11 @@ fn fogEyeSay(k: i32, e: vec4f, q: vec2f, pad: f32) -> vec4f {
 /// that far, or neither) that is the answer, and only where they differ — a sight edge, a wall seen along its length — is the fog pass's own ray walked. So the
 /// light a class cuts ends on the line the fog is drawn to. 1 while no table is written (the fog is not drawn either). Compute and fragment stages (the walk
 /// reads the grid); the vertex stage has fogSeenBins.
+/// the head's last float, a whole number of three bits (render/fogofwar.ts FogSight.encode): the air's (1), thin things' (2) and what lies still (4) (only over a table written this frame)
+fn fogSmokeOn() -> bool { return (u32(fogSight.soft.w + 0.5) & 1u) != 0u; }
+fn fogThinOn() -> bool { return fogSight.cfg.y == 1.0 && (u32(fogSight.soft.w + 0.5) & 2u) != 0u; }
+/// FOG.kept: what lies still stays as the team last saw it (particles.wgsl marks a resting particle on seen floor; particles_draw.wgsl then draws it under the fog)
+fn fogKeptOn() -> bool { return fogSight.cfg.y == 1.0 && (u32(fogSight.soft.w + 0.5) & 4u) != 0u; }
 fn fogSeenAt(P: vec3f, N: vec3f) -> f32 {
   if (all(P == fogSeenKeyP) && all(N == fogSeenKeyN)) { return fogSeenVal; }
   fogSeenKeyP = P; fogSeenKeyN = N; fogSeenVal = 1.0;
@@ -1073,6 +1125,7 @@ fn fogSeenAt(P: vec3f, N: vec3f) -> f32 {
   if (cfg.y != 1.0) { return 1.0; }
   let q = vec2f(P.x + N.x * 0.06, P.z + N.z * 0.06);
   var best = 0.0;
+  let thinWas = fogEyeThin; fogEyeThin = fogThinOn();   // (FOG.thin: the walks below are fog eyes' — put back before this returns)
   for (var k = 0; k < i32(cfg.x); k++) {
     let e = fogSight.eyes[k]; if (e.w < 0.5) { continue; }
     let top = N.y > 0.5 && P.y > e.y - 0.05;
@@ -1083,6 +1136,7 @@ fn fogSeenAt(P: vec3f, N: vec3f) -> f32 {
     if (say.z != say.w) { let to = q - e.xz; clear = occludedTBoxes(e.xyz, vec3f(to.x, 0.0, to.y) / max(length(to), 1e-6), say.y, u32(e.w + 0.5), -1.0) < 0.0; }
     if (clear) { best = say.x; if (best >= 1.0) { break; } }
   }
+  fogEyeThin = thinWas;
   fogSeenVal = best;
   return best;
 }
@@ -1100,9 +1154,11 @@ fn fogSeenBins(P: vec3f) -> f32 {
   return best;
 }
 /// what is left of light `li` at the spot P under the fog's light classes: 1 for a light with no fog bit (every light while the rule is off)
-// (the picture's own march of the smoke — volumetrics.wgsl — takes a plume's density through this: smoke over floor nobody on the team sees is not in the
-// picture. Shadow rays and the game's readings take the smoke as it is.)
-fn fogSmoke(dens: f32, X: vec3f) -> f32 { if (dens <= 0.002) { return dens; } return dens * fogSeenAt(X, vec3f(0.0)); }
+// (the picture's own march of the smoke — volumetrics.wgsl — takes a plume's density through this. fogSmokeOn(), as the page has it: the air is the place
+// — game/fogofwar.ts FOG.air — and a plume is drawn wherever it stands; the fog pass then dims each pixel by the SURFACE behind it, so a plume over unseen
+// floor is dimmed where the ground behind it on the screen is unseen and not where that ground is seen. Off: smoke over floor nobody on the team
+// sees is not in the picture, as it was. Shadow rays and the game's readings take the smoke as it is either way.)
+fn fogSmoke(dens: f32, X: vec3f) -> f32 { if (dens <= 0.002 || fogSmokeOn()) { return dens; } return dens * fogSeenAt(X, vec3f(0.0)); }
 fn lightFogK(li: Light, P: vec3f, N: vec3f) -> f32 {
   let fc = li.kind & (LIGHT_FOG_SEEN | LIGHT_FOG_UNSEEN);
   if (fc == 0u) { return 1.0; }

@@ -29,7 +29,7 @@
 import { SideSet } from '../math/side';
 import type { Game, Guard } from './game';
 import type { BlowStyle, Character, FallStyle } from './character';
-import { HOLD_SHOW } from './character';   // (written inside takedownTick only: the game's one import cycle)
+import { HOLD, HOLD_SHOW } from './character';   // (HOLD_SHOW written inside takedownTick only, HOLD read inside takeFall only: the game's one import cycle)
 import type { CloseKind } from './close';
 import { Vec3, v3 } from '../math/vec';
 import { canStand } from './player';   // (is there headroom over a crouched Sam: the rise out of the crouch is not taken under a duct)
@@ -109,13 +109,26 @@ function fallWay(vic: Character, from: Vec3 | null, style: FallStyle): [Vec3, nu
   const away: Vec3 = from && Math.hypot(p[0] - from[0], p[2] - from[2]) > 0.05 ? v3.normalize([p[0] - from[0], 0, p[2] - from[2]]) : f;
   return style === 'topple' ? [away, 1.5] : style === 'cut' ? [away, 0.9] : [f, 0.7];
 }
+/** HOLD.layAhead's room (setFall): m from where a laid man's hips are led to past the top of his head, with a hand's width over, and half the width of
+ *  floor he is laid on */
+export const LAY_REACH = 0.95, LAY_HALF = 0.3;
 /** a fall is asked for: its style, where the man who did it stands, and whether the level has room for it — a wall or a desk where the body would be led
  *  (asked at knee and at chest height) keeps the fall to where he stands, and the plank that has no floor behind it is let down instead */
-function setFall(g: Game, vic: Character, style: FallStyle, by: Character | null) {
+function setFall(g: Game, vic: Character, style: FallStyle, by: Character | null, ahead = 0) {
   const from = by ? v3.copy(by.pos) : null, [d, m] = fallWay(vic, from, style), p = vic.pos;
-  const shut = (y: number) => g.col.solidBlocked([p[0], y, p[2]], [p[0] + d[0] * m, y, p[2] + d[2] * m]);
+  const shut = (y: number, len = m) => g.col.solidBlocked([p[0], y, p[2]], [p[0] + d[0] * len, y, p[2] + d[2] * len]);
   const tight = style !== 'slump' && (shut(0.45) || shut(1.1));
   vic.fallAs = tight && style === 'topple' ? 'sink' : style; vic.fallFrom = from; vic.fallTight = tight; TAKEDOWN_STATS.falls++;
+  // (HOLD.layAhead: laid down further along his facing, where the level has floor for the whole of him there — a strip as wide as his shoulders, as long
+  // as the lay and LAY_REACH past it, with no static in it anywhere from his shins to his head (the volume, not a line or nine: a table's top, a low
+  // table and a post a hand off his middle each went between lines, and he was slid into them at 13 m/s) and nothing else solid along its middle (a
+  // door's leaf, a chair); half the lay where only that much is clear)
+  const touch = new Int32Array(4);
+  const fits = (a: number) => {
+    const len = a + LAY_REACH; if (shut(0.15, len) || shut(0.45, len) || shut(1.1, len)) return false;
+    for (let s = LAY_HALF; ; s += 0.2) { const t = Math.min(s, len - LAY_HALF); if (g.col.circleTouches(p[0] + d[0] * t, p[2] + d[2] * t, LAY_HALF + 0.05, 0.1, 1.2, touch) !== 0) return false; if (t >= len - LAY_HALF) return true; }
+  };
+  vic.fallAhead = ahead > 0 && style === 'sink' && !tight ? (fits(ahead) ? ahead : fits(ahead / 2) ? ahead / 2 : 0) : 0;
 }
 /** …AND LANDS (the frame he is put down, before killGuard): how he falls. `how` = a move with no blow of its own: the choke's end, the pistol whip, the kill
  *  from the hold (he is already going forward off his knees: the fold carries on from it; its half off = `how` not given). A man taken in his chair slumps
@@ -123,7 +136,7 @@ function setFall(g: Game, vic: Character, style: FallStyle, by: Character | null
 export function takeFall(g: Game, gd: Guard, kind: CloseKind | undefined, lethal: boolean, how?: 'choke' | 'whip' | 'kill') {
   if (!live(g, 'fall')) return;
   const led = how === 'kill' && !live(g, 'kill') ? undefined : how;
-  setFall(g, gd.char, led === 'choke' ? 'sink' : led === 'whip' || led === 'kill' ? 'fold' : kind === 'seat' ? 'slump' : fallStyle(blowStyle(kind, lethal)), g.player.char);
+  setFall(g, gd.char, led === 'choke' ? 'sink' : led === 'whip' || led === 'kill' ? 'fold' : kind === 'seat' ? 'slump' : fallStyle(blowStyle(kind, lethal)), g.player.char, led === 'choke' ? HOLD.layAhead : 0);
 }
 
 /** THE PARTNER'S HANDS GO ON (pairorders.ts / spotted.ts, right after his strike): the chop from behind, the palm from the front — landing `partnerHit` in,

@@ -24,13 +24,14 @@
 import type { Game, Guard } from './game';
 import type { Hold } from './player';
 import type { Item } from './throwables';
+import { GRAVITY } from './throwables';
 import type { Character, StripPose } from './character';
 import type { DropKind } from './weapons';
 import { HOLD } from './character';
 import { inHand } from './guards';
 import { Vec3, v3 } from '../math/vec';
 
-/** the move while it runs: seconds since the grab's first frame · what he had (the item's kind, and whether it wore a can) · the man's gun hand as last posed
+/** the move while it runs: its own clock, s (the hold's, but for HOLD.stripFirst, which runs it ahead until the gun is let go) · what he had (the item's kind, and whether it wore a can) · the man's gun hand as last posed
  *  (WORLD; held where it was once the gun is taken) · the gun while it is in Sam's hand · the pistol hold's (rapped out, never carried) · it has left him */
 export interface Strip { t: number; kind: DropKind; supp: boolean; at: Vec3; item: Item | null; rap: boolean; gone: boolean; yaw: number; }
 /** the three voices' gains (audio/sfx.ts grabCatch, gunStrip, gunDown) and the rate a long gun's strip and fall are played at (one buffer each: lower = heavier) */
@@ -45,11 +46,21 @@ export function disarmBegin(g: Game): void {
   const H = g.player.holding; if (!H || !HOLD.disarm || !HOLD.dropGun) return;
   const gd = H.g; if (inHand(gd) !== 'weapon') return;
   H.strip = { t: 0, kind: gd.weapon.def.drop, supp: gd.weapon.def.suppressed, at: handOf(gd), item: null, rap: H.variant === 'gun', gone: false, yaw: v3.yawOf(gd.char.gunDir) };
+  if (leads(H.strip)) g.player.catchDue = g.time + HOLD.first.catch;
 }
 /** the grab's first voice (player.ts startGrab, every grab): the catch with the move's two keys on, the scuffle it always was without — so one condition
  *  decides all three voices. Its rate is pinned: the beat does not wander */
 export function disarmCatch(g: Game, at: Vec3): void {
+  if (leads(g.player.holding?.strip)) return;   // (HOLD.stripFirst: the strip is heard first, and the catch as the arm lands — disarmTick)
   if (HOLD.disarm && HOLD.dropGun) g.audio.play('grabCatch', at, DISARM_GAIN.catch, { rate: 1 }); else g.audio.play('grabScuffle', at, 0.4);
+}
+/** THE DISARM LEADS (HOLD.stripFirst) for this move: a gun to take with an empty hand (the pistol hold's rap comes down with the frame, as it did) */
+const leads = (S: Strip | null | undefined): boolean => !!S && HOLD.stripFirst && !S.rap;
+/** …the rate its clock runs at: ahead of the hold's, so that the take falls `first.take` s in and the let-go at `first.drop`, and the hold's own pace from there */
+function lead(S: Strip): number {
+  if (!leads(S)) return 1;
+  const K = HOLD.strip, F = HOLD.first;
+  return S.t < K.take ? K.take / Math.max(0.02, F.take) : S.t < K.drop ? (K.drop - K.take) / Math.max(0.02, F.drop - F.take) : 1;
 }
 /** what both figures' hold layers are told of it this frame (player.ts holdTail) */
 export function disarmPose(S: Strip): StripPose { return { t: S.t, at: S.at }; }
@@ -60,15 +71,17 @@ export function disarmHand(H: Hold): boolean { return !!H.strip && H.strip.t < H
 export function disarmTick(g: Game, dt: number): void {
   const pl = g.player, H = pl.holding, S = H?.strip ?? null;
   for (const it of g.items.items) if (it.carried && it !== S?.item) letGo(g, it, pl.char);   // (a gun in his hand and no hold to carry it for — however that ended — falls from where it is)
+  if (pl.catchDue !== undefined && (!H || !S || g.time >= pl.catchDue || H.phase !== 'grab')) {   // (HOLD.stripFirst: the catch's voice as the arm lands — or now, if the hold or the move ended first: a grab is never silent)
+    pl.catchDue = undefined; g.audio.play('grabCatch', v3.add((H?.g.char ?? pl.char).pos, [0, 1.4, 0]), DISARM_GAIN.catch, { rate: 1 }); }
   if (!H || !S) return;
   const K = HOLD.strip, gd = H.g;
-  S.t += dt * (S.gone && H.phase !== 'grab' && H.phase !== 'held' ? 2 : 1);   // (a choke or the knife begun at once: the hand is home in half the time, ahead of what that move asks of it)
+  S.t += dt * lead(S) * (S.gone && H.phase !== 'grab' && H.phase !== 'held' ? 2 : 1);   // (a choke or the knife begun at once: the hand is home in half the time, ahead of what that move asks of it)
   if (!S.item && !S.gone) {
     if (inHand(gd) !== 'weapon') { H.strip = undefined; return; }   // (something else has had it out of his hand since the grab: nothing left to take)
     S.at = handOf(gd);
     if (S.t >= K.take) take(g, H, S);
   }
-  if (S.item) { if (S.t < K.drop) carry(S, pl.char); else { letGo(g, S.item, pl.char); S.item = null; S.gone = true; } }
+  if (S.item) { if (S.t < K.drop) carry(S, pl.char); else { letGo(g, S.item, pl.char, K.fall > 0 ? K.fall + (leads(S) ? Math.round((K.drop - HOLD.first.drop) * 60) / 60 : 0) : 0); S.item = null; S.gone = true; } }   // (HOLD.stripFirst lets it go sooner: the fall is longer by that many whole steps, and the knock on the frame it was)
   if (S.t >= K.home) H.strip = undefined;
 }
 
@@ -95,19 +108,29 @@ function carry(S: Strip, sam: Character): void {
 }
 /** let go of: it falls from where it is with the pair's own motion and a little push out to that man's right — dead, no spin; never from inside a wall (a
  *  hand can be posed through one: the item is brought back to the near face) */
-function letGo(g: Game, it: Item, by: Character): void {
+function letGo(g: Game, it: Item, by: Character, fall = 0): void {
   const K = HOLD.strip, y = by.bodyYaw, from: Vec3 = [by.pos[0], Math.max(0.3, it.pos[1]), by.pos[2]];
   const d: Vec3 = [it.pos[0] - from[0], 0, it.pos[2] - from[2]], L = Math.hypot(d[0], d[2]);
   let push = K.push[0];
   if (L > 1e-3) { const dir: Vec3 = [d[0] / L, 0, d[2] / L], hit = g.col.raycast(from, dir, L + it.radius + 0.05); if (hit) { it.pos = v3.mad(from, dir, Math.max(0, hit.t - it.radius - 0.03)); push = 0; } }
   it.carried = false; it.settled = false; it.spin = push > 0 ? K.spin : 0; it.tumbleRate = 0;   // (thrown: it turns flat as it goes — a fixed rate, no dice; stopped at a wall: dead, as it was)
-  it.vel = [by.vel[0] - Math.cos(y) * push, -K.push[1], by.vel[2] + Math.sin(y) * push];
+  // THE THROW'S FALL IS TIMED (HOLD.strip.fall): thrown at a fixed speed down, the gun landed a frame sooner or later with the height of the hand that let it
+  // go (a pistol or a carbine, Sam crouched or standing, either stand's poses) — and the knock is a beat. He throws it down just hard enough to be on what
+  // lies under its landing place `fall` seconds on, from wherever the hand is; no dice. A gun stopped at a wall, rapped out, or let fall with no hold: as before.
+  // With the disarm leading (HOLD.stripFirst) he lets go sooner by `strip.drop - first.drop`, and the fall is longer by that in whole steps: the knock stays on its frame
+  let down = K.push[1], vx = by.vel[0] - Math.cos(y) * push, vz = by.vel[2] + Math.sin(y) * push;
+  if (fall > 0 && push > 0) {
+    // (…and never INTO a wall: one in the way of the throw within its reach, and he throws it that much shorter — a gun that rubs down a wall is slowed, and its knock late)
+    const T = fall, sp = Math.hypot(vx, vz), wall = sp > 1e-3 ? g.col.raycast(it.pos, [vx / sp, 0, vz / sp], sp * T + it.radius + 0.08) : null;
+    if (wall) { const k = Math.max(0, wall.t - it.radius - 0.08) / (sp * T); vx *= k; vz *= k; }
+    const under = g.col.raycast([it.pos[0] + vx * T, it.pos[1], it.pos[2] + vz * T], [0, -1, 0], it.pos[1] + 0.1), D = (under ? under.t : it.pos[1]) - it.radius;
+    if (D > 0.3) down = Math.min(4, Math.max(-1.5, D / T - 0.5 * GRAVITY * T));   // (below zero it leaves his hand going up a little: a long fall from a low hand is a lob)
+  }
+  it.vel = [vx, -down, vz];
 }
-/** how high a bounce can be and still be the floor's (m: the gun's own half thickness and change) */
-const GUN_FLOOR = 0.25;
 /** the gun on the floor: one dull knock, the first time it lands (Item.onBounce — it keeps nothing of its own but the item's count) */
-function gunDown(sp: number, p: Vec3, g: Game, it: Item): void {
-  if (p[1] > GUN_FLOOR) return;   // (thrown, it may touch a wall or a table's edge on its way: the knock is the FLOOR's — the one beat that falls at the same moment every time)
+function gunDown(sp: number, p: Vec3, g: Game, it: Item, n: Vec3): void {
+  if (n[1] < 0.6) return;   // (thrown, it may touch a wall or a table's edge on its way: the knock is for what it LANDS on — a floor, a step, a pallet's top — by the face it struck. It was a height, 0.25 m: a gun thrown down harder met a wall under that and knocked there, and one landing on a low slab would have said nothing)
   if (sp < 0.7 || (it.clatters = (it.clatters ?? 0) + 1) > 1) return;
   g.audio.play('gunDown', p, DISARM_GAIN.down * Math.min(1, 0.5 + sp / 8), { rate: long(it.kind) ? DISARM_GAIN.long : 1 });
 }

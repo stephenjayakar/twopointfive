@@ -70,6 +70,7 @@ import { gunHoldSee, gunHoldFeet, gunHoldFree, gunHoldKeeps, gunHoldRuns, gunHol
 import { teamCap, teamRunLegs, teamAccel, teamTread } from './teampace';   // (teampace.ts: a teammate's walk is a share of the player's, and he runs only for a reason — all read inside functions)
 import { loadPace, loadPaceOn, loadSprintOn, loadGait, loadSeen, loadHeard } from './kitload';   // what a man's card weighs: his pace, the notice he builds, his footfall (1 each with its switch off)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
+import { railsDown } from './rails';   // (a tutorial mission's spared teammate is a man down to the enemy's eye: asked inside acquireFoe only)
 
 /** A/B switches for the AI passes (the QA probes flip them to print before / after off the same build; play never touches them): motion acuity in the sight
  *  gain, the search that deals hide spots and reads the renderer's light (off: the old sweep-and-wander), threshold discipline at doorways (off: straight through). */
@@ -2557,7 +2558,8 @@ export function lightEstimateAt(g: Game, P: Vec3, skipOwner?: (owner: number) =>
     const dx = lp[0] - P[0], dy = lp[1] - P[1], dz = lp[2] - P[2]; const dist2 = dx * dx + dy * dy + dz * dz; const dist = Math.sqrt(dist2);
     if (dist > l.range || dist < 1e-3) continue;
     const Lx = dx / dist, Ly = dy / dist, Lz = dz / dist;
-    let att = lightWindow(dist, l.range) / Math.max(dist2, l.radius * l.radius);
+    const lr = sp ? sp.radius : l.radius;   // (… and the size the level gave it)
+    let att = lightWindow(dist, l.range) / Math.max(dist2, lr * lr);
     if (l.kind === 1) {
       const cd = -(Lx * l.dir[0] + Ly * l.dir[1] + Lz * l.dir[2]); const cosOuter = Math.cos(l.outerDeg * DEG), cosInner = Math.cos(Math.min(l.innerDeg, l.outerDeg - 0.5) * DEG);
       if (cd < cosOuter) continue;
@@ -2571,7 +2573,7 @@ export function lightEstimateAt(g: Game, P: Vec3, skipOwner?: (owner: number) =>
     const c = l.color, I = sp ? sp.intensity : l.intensity;
     if (Math.max(c[0], c[1], c[2]) * I * att < 0.002) continue;                                    // (the probe's own floor for a light worth a shadow ray)
     const lum = (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) * I * att;
-    const tmax = dist - l.radius - 0.02;
+    const tmax = dist - lr - 0.02;
     if (tmax > 0.05 && g.col.segmentBlocked(P, [P[0] + Lx * tmax, P[1] + Ly * tmax, P[2] + Lz * tmax])) continue;   // a wall, a partition, a desk, a shut leaf between him and it: dark from that one
     for (let k = 0; k < 6; k++) { const N = METER_NORMALS[k]; const cs = N[0] * Lx + N[1] * Ly + N[2] * Lz; if (cs > 0) acc[k] += lum * cs; }
   }
@@ -2603,11 +2605,11 @@ function unitLightMeter(g: Game, gd: Guard, dt: number) {
  *  across him). Nobody in sight: he keeps a living man he had (his fix and memory are of that man) or stays on nobody, working fixes by ear until one shows —
  *  and a man whose foe has just DIED with no other enemy in sight comes off the alert (below): the fight his eyes know of is over. The killer says so. */
 function acquireFoe(g: Game, gd: Guard) {
-  const cur = gd.foe; let lostMan = false, mine = false;
-  if (cur && cur !== 'player' && (cur.state === 'dead' || !g.guards.includes(cur) || runnerFled(cur))) {   // his man is down (or despawned under him): off him — Sam down is handled where it always was (the alert branch covers the body)
+  const cur = gd.foe; let lostMan = false, mine = false; const knee = !!cur && cur !== 'player' && railsDown(g, cur);   // (rails.ts: his man is on his knee, spared, on a tutorial mission — false on its first word with RAILS.spareDown off)
+  if (cur && cur !== 'player' && (cur.state === 'dead' || !g.guards.includes(cur) || runnerFled(cur) || knee)) {   // his man is down (or on his knee, spared: to him the same) (or despawned under him): off him — Sam down is handled where it always was (the alert branch covers the body)
     if (gd.lastKnown && v3.distXZ(gd.lastKnown, cur.char.pos) < 1.5) gd.lastKnown = null;   // (a fix that IS the dead man is no place to run to; one a noise put somewhere else stands)
     mine = cur.state === 'dead' && cur.killerId === gd.char.id && gd.state === 'alert';   // (his round did it: he is the one who says so, below; the others saw it and say nothing)
-    gd.foe = null; gd.aim.clear(); lostMan = true;
+    gd.foe = null; gd.aim.clear(); lostMan = true; if (knee) gd.weapon.burst = null;   // (no round of a burst in hand goes into a man who is down to him)
   }
   let best: Foe = null, bestRate = 0.05, curVisible = false;
   const consider = (f: 'player' | Guard, ch: Character) => {
@@ -2617,7 +2619,7 @@ function acquireFoe(g: Game, gd: Guard) {
     if (rate > bestRate) { bestRate = rate; best = f; }
   };
   if (isHostile(gd.team, 'player') && !g.player.down && !g.playerInvisible) consider('player', g.player.char);
-  for (const o of g.guards) if (o !== gd && o.state !== 'dead' && o.char.alive && isHostile(gd.team, o.team) && !runnerFled(o)) consider(o, o.char);
+  for (const o of g.guards) if (o !== gd && o.state !== 'dead' && o.char.alive && isHostile(gd.team, o.team) && !runnerFled(o) && !railsDown(g, o)) consider(o, o.char);
   const op = gd.team === 'operative';
   if (curVisible) return;
   if (best && best !== gd.foe) { gd.foe = best; gd.aim.clear(); if (mine) g.say(gd, op ? 'he\'s down — next.' : 'got him!'); return; }   // a new man: he lines him up from nothing (aim.ts keys the track by foe too)
@@ -2637,7 +2639,7 @@ function acquireFoe(g: Game, gd: Guard) {
     const left = WORDS.on && (g.guards.some(o => o.state !== 'dead' && isHostile(gd.team, o.team)) || (isHostile(gd.team, 'player') && !g.player.down));   // (words.ts: nobody calls a floor clear with an enemy still up on it — his own man is down, and that is all he says)
     const said = left || g.guards.some(o => o !== gd && o.team === gd.team && o.bubble && g.time - o.bubble.t < 3 && /clear\.|all of them/.test(o.bubble.text));
     if (mine) g.say(gd, op ? (said ? 'he\'s down.' : 'he\'s down — clear.') : (said ? 'got him!' : 'got him — that\'s all of them.'));
-    else if (!said) g.say(gd, op ? 'clear.' : 'that\'s all of them.');
+    else if (!said && !knee) g.say(gd, op ? 'clear.' : 'that\'s all of them.');   // (a spared man on his knee is nobody's kill to call: nothing is said)
   } else if (mine) g.say(gd, op ? 'he\'s down.' : 'got him!');
 }
 

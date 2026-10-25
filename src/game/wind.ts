@@ -18,6 +18,7 @@
 // (tools/qa wind-identity). Knobs WIND below (Tab ▸ Weather ▸ wind rows, kept per machine with the master: localStorage twopointsix.wind).
 import { Vec3, v3 } from '../math/vec';
 import { hashStr } from '../math/dice';
+import { HostOwned } from '../math/side';
 import type { Game } from './game';
 import type { Door } from './doors';
 import type { VentDef } from '../scene/level';
@@ -132,12 +133,20 @@ export interface WindSource extends WindGpuSource { why: WindWhy; base: number; 
 export const WIND_STATS = { frames: 0, active: 0, toParticles: 0, toSmoke: 0, doorGusts: 0, stormFrames: 0, atCalls: 0 };
 const DEG = Math.PI / 180;
 
+class PoolList extends HostOwned { readonly list: WindSource[] = []; }
+/** `at` and `stormShare`'s working vectors: written and read inside one call, so nothing of the game's — they were fields of the Wind, where whoever asked last
+ *  (the particle pool's path, the panel's probe at the cursor) left his numbers in the game's state */
+const SCRATCH_P: Vec3 = [0, 0, 0], SCRATCH_Q: Vec3 = [0, 0, 0], SCRATCH_W: Vec3 = [0, 0, 0];
+
 export class Wind {
   /** every source the level can have (vents, one storm, one per exterior door), built once; `active` = the ones blowing this frame (speed > 0), rebuilt in place each update */
   readonly all: WindSource[] = []; readonly active: WindSource[] = [];
-  /** what went to the particles this frame (nearest the view first, ≤ WIND_GPU_MAX) — the solver gets `active` and culls it itself */
-  readonly forParticles: WindSource[] = [];
-  private storm: WindSource; private scratch: Vec3 = [0, 0, 0]; private scratchW: Vec3 = [0, 0, 0];
+  /** what went to the particles this frame (nearest the view first, ≤ WIND_GPU_MAX) — the solver gets `active` and culls it itself. THE HOST'S, not the game's
+   *  (math/side.ts HostOwned): it is filled only where a particle pool is, by distance from where the view looks, and rebuilt every frame — so no snapshot or
+   *  state hash holds it, and a game with a pool and one without are one state */
+  private readonly toPool = new PoolList();
+  get forParticles(): WindSource[] { return this.toPool.list; }
+  private storm: WindSource;
   /** the level's own roofs as the weather last told them (reroof; null = the office's two) — what the storm record's `roofs` is while WX_OWN.wind is on */
   private lvRoofs: readonly (readonly number[])[] | null = null;
   constructor(private g: Game) {
@@ -205,11 +214,10 @@ export class Wind {
   /** the share 0‥1 of its own vector the storm's field has at GROUND point (x, z) under the roofs in force: 0 under one, easing to 1 over the lee off it — what
    *  the wisps' births are weighed by (snowFx.ts; particles.wgsl wispShare is this on the GPU) */
   stormShare(x: number, z: number): number {
-    const s = this.storm, p = this.scratchP, q = this.scratch; p[0] = x; p[1] = 0; p[2] = z;
+    const s = this.storm, p = SCRATCH_P, q = SCRATCH_Q; p[0] = x; p[1] = 0; p[2] = z;
     if (s.roofs) stormVelRoofs(UNIT_X, s.roofs, p, q); else stormVel(UNIT_X, s.interior!, s.annex!, p, q);
     return Math.max(0, Math.min(1, q[0] / 0.55));
   }
-  private scratchP: Vec3 = [0, 0, 0];
   /** the storm's wind vector this frame before gusting (m/s), or null when there is none: weather off, day, or a dead calm */
   /** the storm's wind vector when it should be felt (weather on, night, the storm knob up, rain or storm actually running, a real speed) — null otherwise; glassbreak's gusts through shot-out panes ask the same question (one test) */
   stormWind(): Vec3 | null {
@@ -276,7 +284,7 @@ export class Wind {
   /** The air's velocity at p this frame (m/s): the sum over every active source — what the GPU consumers evaluate, on the CPU (the moths, the panel, the probes). */
   at(p: Vec3, out: Vec3 = [0, 0, 0]): Vec3 {
     WIND_STATS.atCalls++;
-    out[0] = 0; out[1] = 0; out[2] = 0; const q = this.scratch, w = this.scratchW;
+    out[0] = 0; out[1] = 0; out[2] = 0; const q = SCRATCH_Q, w = SCRATCH_W;
     for (const s of this.active) {
       if (s.kind === 'storm') { w[0] = s.dir[0] * s.speed; w[1] = 0; w[2] = s.dir[2] * s.speed; if (s.roofs) stormVelRoofs(w, s.roofs, p, q); else stormVel(w, s.interior!, s.annex!, p, q); }
       else jetVel(s.pos, s.dir, s.speed, s.reach, s.tanSpread, s.r0, s.dMax, s.floorY ?? -1e9, p, q);

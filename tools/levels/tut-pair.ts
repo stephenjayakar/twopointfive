@@ -316,20 +316,20 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { id: 'far', line: 'Press [B] on the far guard to send your partner after him', deny: ['word'], at: chest(TP.C), atMan: 'far', done: any(did(`order:pairMark@foe:${FAR_MAN}`), down(2)),
         explain: { title: 'Two guards at once', text: 'These two can see each other, so if you take down just one, the other will shout.\nGive your partner the far one, then get behind the near one yourself. When you grab yours, he\'ll take his.' } },
       { id: 'near', line: 'Get behind the near guard and wait for "set"', allow: ['use'], at: mark(TP.behindB), done: any(pair('set'), pair('go'), flag('holding'), down(2)) },
-      { id: 'hands', line: 'Press [Space] behind him to grab him, and your partner will take his', at: chest(TP.B), atMan: 'near', done: any(all(flag('holding'), down(2)), down(3)) },
+      { id: 'hands', line: '{Grab him from behind}, and your partner will take his', at: chest(TP.B), atMan: 'near', done: any(all(flag('holding'), down(2)), down(3)) },
       // (the interaction key is shut while the line is the right button: a tap of it in the hold is a question, and ANY held man gives the office code —
       //  learnt here, the last man would have nothing left to say and his step no way to pass)
-      { id: 'sleep', line: 'Right-click to knock him out', allow: ['alt'], deny: ['use'], done: down(3) },
+      { id: 'sleep', line: '{Knock him out}', allow: ['alt'], deny: ['use'], done: down(3) },
       // ---- the office yard: a man held and asked while the partner throws the mains ----
       // (the last man is the only way to the code: until he has given it the right button is shut, and so are the squad's key and the word — a taught "[B]
       //  on the man, then [F]" would put him out through the partner. The squad's key comes back for the fuse box, and is shut again while the dark is
       //  walked: a second order on the box would put the mains back on)
       { id: 'past', line: 'Keep going past the wall', cue: 'yard', deny: ['alt', 'order', 'word'], checkpoint: 'the truck park', done: any(near(TP.past, 1.4), flag('holding'), down(4)), hold: 0.3, at: mark(TP.past) },   // (nor this one on where the partner is: the last man has a line down this strip, and the partner stands a few strides back out of it)
-      { id: 'hold', line: 'He knows the door code. Press [Space] behind him to grab him', allow: ['use'], at: chest(TP.D), atMan: 'gate', done: any(flag('holding'), did('chron:codeLearned'), down(4)) },
+      { id: 'hold', line: 'He knows the door code. {Grab him from behind}', allow: ['use'], at: chest(TP.D), atMan: 'gate', done: any(flag('holding'), did('chron:codeLearned'), down(4)) },
       { id: 'ask', line: 'Press [Space] to ask him for the code', done: any(did('chron:codeLearned'), down(4)) },
       { id: 'box', line: 'Your hands are full. Press [B] on the breaker box', after: { line: 'He\'s going for the breaker box. Watch the lights', on: ['work'] }, allow: ['order'], at: [TP.box[0], 1.35, TP.box[2]], done: flag('dark'),
         explain: { title: 'Your partner can use things too', text: 'Press [B] on anything you could use yourself, and your partner will go use it.\nThe light and the camera over the office door both run off this breaker box.' } },
-      { id: 'drop', line: 'Right-click to knock him out', allow: ['alt'], deny: ['order'], done: down(4) },
+      { id: 'drop', line: '{Knock him out}', allow: ['alt'], deny: ['order'], done: down(4) },
       // ---- the dark ----
       { id: 'nv', line: 'Press [N] to turn on night vision', allow: ['nvg'], checkpoint: 'the dark', done: flag('nv') },
       { id: 'code', line: 'Press [Space] at the keypad to enter his code', at: [TP.pad[0], 1.3, TP.pad[2] + 0.2], done: any(did('chron:codeEntered'), ...opened('office')) },

@@ -593,12 +593,13 @@ fn refractedRead(pixf: vec2f, P0: vec3f, N0: vec3f, gp: GlassPath) -> GlassRead 
   r.pix = rp; r.depth = rd; r.P = Pr; r.ok = true; return r;
 }
 
-@fragment fn fs(v: VOut) -> @location(0) vec4f { return vec4f(compositePixel(v.pos.xy), 1.0); }
+@fragment fn fs(v: VOut) -> @location(0) vec4f { let px = compositePixel(v.pos.xy); return vec4f(px, 1.0 - fireReact); }
 /** SHARP DIRECT: the composite per OUTPUT pixel (dispatched only from the SHARP = true module, one thread per output pixel, hdrOut = the output-size HDR target) */
 @compute @workgroup_size(8, 8) fn cs(@builtin(global_invocation_id) gid: vec3u) {
   let od = textureDimensions(hdrOut);
   if (gid.x >= od.x || gid.y >= od.y) { return; }
-  textureStore(hdrOut, gid.xy, vec4f(compositePixel(vec2f(gid.xy) + 0.5), 1.0));
+  let px = compositePixel(vec2f(gid.xy) + 0.5);
+  textureStore(hdrOut, gid.xy, vec4f(px, 1.0 - fireReact));   // (alpha: 1 but where an open fire burns — fireReact; nobody else reads it)
 }
 
 /** the composite at pixel centre `pixf` of the raster this module runs at → scene-referred colour; post.wgsl takes it from here (debug views 1/2/6/9 are passed through untouched there) */
@@ -608,7 +609,7 @@ fn refractedRead(pixf: vec2f, P0: vec3f, N0: vec3f, gp: GlassPath) -> GlassRead 
 // along than across, with the DOT where it lands (seg.b.w) and a glint at the device. Picture only: nothing the game reads. a = start + drawn half-width,
 // b = end + dot, e = the box's (dimmed) emissive + the air's share.
 struct BeamSeg { a: vec4f, b: vec4f, e: vec4f };
-struct Beams { n: u32, p0: u32, p1: u32, p2: u32, k: vec4f, seg: array<BeamSeg, 8>, fireN: vec4u, fire: array<FireRec, 4> };   // (… and, behind the segments, THE OPEN FIRES: passes.ts setFires — fire.wgsl FireRec, fireN.x of them; the reflection pass's own struct stops at the segments)
+struct Beams { n: u32, p0: u32, p1: u32, p2: u32, k: vec4f, seg: array<BeamSeg, 8>, fireN: vec4u, fire: array<FireRec, 4>, fireLook: FireLook };   // (… and, behind the segments, THE OPEN FIRES: passes.ts setFires — fire.wgsl FireRec, fireN.x of them, and the look's numbers they are all drawn with, FireLook; the reflection pass's own struct stops at the segments)
 @group(1) @binding(15) var<uniform> beams: Beams;
 const BEAM_R0 = 0.0022;                           // combat.ts beamBoxes: the beam's own half-width, m
 fn beamOutdoors(p: vec2f) -> bool {
@@ -662,14 +663,17 @@ fn beamAir(ro: vec3f, D: vec3f, tMax: f32, cpix: f32) -> vec3f {
   return L;
 }
 /** THE OPEN FIRES over what the pixel shows (game/fire.ts; fire.wgsl fireAir): each fire's flame and embers along the pixel's ray as far as its surface, the
- *  one this ray meets last drawn first (by where the ray enters each one's bound: right for this pixel, whatever order the list came in). Not over ground
- *  the fog of war hides (the fog's own rule for what is live: smoke, flakes). `c` in, `c` with the fires out. */
+ *  one this ray meets last drawn first (by where the ray enters each one's bound: right for this pixel, whatever order the list came in). UNDER THE FOG OF WAR a fire is part of the
+ *  place and is drawn as the team last saw it (game/fire.ts FIRE.fog says which, a record at a time: wherever it stands, only where the team sees its coals, or
+ *  only where it does not; the fog pass then dims it with the ground it stands on). `c` in, `c` with the fires out. */
+/** how much of this pixel is an open fire's flame or drawn smoke (0‥1; fireOver writes it, the picture's alpha carries 1 − it to the temporal resolve) */
+var<private> fireReact: f32 = 0.0;
 fn fireOver(c: vec3f, pixf: vec2f, rd: vec3f, tMax: f32) -> vec3f {
   var col = c;
   let n = min(beams.fireN.x, 4u);
   var at = array<f32, 4>(-1.0, -1.0, -1.0, -1.0); var any = false;
   for (var i = 0u; i < n; i++) {
-    let cb = fireBound(beams.fire[i], frame.camPos, rd);   // (nothing of this fire is on a ray that misses it)
+    let cb = fireBound(beams.fire[i], beams.fireLook, frame.camPos, rd);   // (nothing of this fire is on a ray that misses it)
     if (cb.x > cb.y || cb.y < 0.0 || cb.x > tMax) { continue; }
     at[i] = max(cb.x, 0.0); any = true;
   }
@@ -681,13 +685,40 @@ fn fireOver(c: vec3f, pixf: vec2f, rd: vec3f, tMax: f32) -> vec3f {
     if (pick > 3u) { break; }
     at[pick] = -1.0;
     let F = beams.fire[pick];
-    if (fogSeenAt(F.a.xyz, vec3f(0.0)) < 0.5) { continue; }
-    let fa = fireAir(F, frame.camPos, rd, tMax, beamPix(), jit);
+    if (F.d.y > 0.5) { let seen = fogSeenAt(F.a.xyz, vec3f(0.0)) >= 0.5; if (seen != (F.d.y < 1.5)) { continue; } }
+    let fa = fireAir(F, beams.fireLook, frame.camPos, rd, tMax, beamPix(), jit);
     col = col * fa.a + fa.rgb;
+    fireReact = max(fireReact, min(1.0, 4.0 * fireVeil) * beams.fireLook.d.x);   // (a quarter veiled is wholly the flame's: a thin flame — the look's sigma is the maintainer's 2.5 — is as new every frame as a solid one)   // (a flame is new every frame and has nothing to be reprojected by: taau.wgsl takes these pixels from this frame)
   }
   return col;
 }
-fn compositePixel(pixf: vec2f) -> vec3f {
+/** the hot gas of a fire the smoke solver carries (fire.wgsl fireFlameG): the fine lattice's heat there */
+fn fireGas(p: vec3f) -> f32 { return spgFineHot(p).y; }
+/** THE SHIMMER OF THE HOT AIR OVER A FIRE (fire.wgsl fireShimmer; game/fire.ts FIRE.look.shimmer, `?fireheat=0`): how far, in pixels, this pixel reads the
+ *  picture aside — the whole composite is a function of the pixel, so the picture behind a fire's column is that function a little off. Nothing nearer than
+ *  the column is moved, and nothing nearer is read in its place (the depth here and the depth where it would read both say), and a fire the fog of war
+ *  draws only here or only there has its shimmer by the flame's own rule (fireOver). 0 with no fire near the ray. */
+fn fireWarp(pixf: vec2f) -> vec2f {
+  let n = min(beams.fireN.x, 4u);
+  if (n == 0u || beams.fireLook.b.w <= 0.0) { return vec2f(0.0); }
+  let rd = normalize(worldFromDepth(pixf, 0.5) - frame.camPos);
+  var off = vec2f(0.0); var near = 1e30;
+  for (var i = 0u; i < n; i++) {
+    let F = beams.fire[i];
+    if (F.d.y > 0.5) { let seen = fogSeenAt(F.a.xyz, vec3f(0.0)) >= 0.5; if (seen != (F.d.y < 1.5)) { continue; } }
+    let s = fireShimmer(F, beams.fireLook, frame.camPos, rd);
+    if (s.z > 0.0) { off += vec2f(s.x, -s.y) / (beamPix() * s.z); near = min(near, s.z); }
+  }
+  if (near > 1e29) { return vec2f(0.0); }
+  let d = textureLoad(gDepth, vec2i(pixf), 0);
+  if (d < 1.0 && linearDepth(d, pixf) < near) { return vec2f(0.0); }   // (what this pixel shows stands in front of the fire's column)
+  let to = clamp(pixf + off, vec2f(0.5), vec2f(textureDimensions(gDepth)) - 0.5); let d2 = textureLoad(gDepth, vec2i(to), 0);
+  if (d2 < 1.0 && linearDepth(d2, to) < near) { return vec2f(0.0); }   // (… and so does what it would have read: a man in front of the fire is not smeared onto the ground beside him)
+  return off;
+}
+fn compositePixel(pix0: vec2f) -> vec3f {
+  var pixf = pix0;
+  if (frame.debugView == 0u && beams.fireN.x > 0u) { pixf = clamp(pix0 + fireWarp(pix0), vec2f(0.5), vec2f(textureDimensions(gDepth)) - 0.5); }
   let pix = vec2i(pixf);
   var pin = pixf; if (SHARP) { pin = pixf * inOverOut() + frame.sharpCfgC.xy; }   // this pixel on the INTERNAL raster (the stochastic terms' texel maps; + the decoupled jitter that raster carries, 0 without it)
   let depth = textureLoad(gDepth, pix, 0);

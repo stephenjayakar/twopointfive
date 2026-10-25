@@ -5,6 +5,13 @@
 //                            second over guards / Sam / doors / mission / chronicle / lights / devices / items with the seeded Math.random re-seeded to one
 //                            value at their start: A = the game simply stepped on after the save, B = the SAME game after loadState(snapshot), C = a FRESH game
 //                            after loadState(snapshot). A ≡ B ≡ C (the file holds everything the next frames hang on), and save(load(s)) ≡ s slice by slice;
+//   checkpoint-turn      (a2) a man caught in the MIDDLE OF A TURN (character.ts TURN, the turn weight: on in the page, raised here on either stand by
+//                            TPS_TURN=1) is filed with it under SAVETIMELINE.turn (GuardSnap.turn, character.ts turnSnap; TPS_SAVETURN=1, raised here
+//                            too) and goes on turning after a load: every man's place and yaws agree frame for frame over the first half second, A ≡ B ≡ C
+//                            over three seconds, and the file made from a fresh game after a load holds the same turn. Twice: as his own update left him,
+//                            and with a wish written AFTER his update on the frame of the save (two men turning to talk do that), which the loader's bake
+//                            must hand back. With the switch off no file says a turn and one that has it loads as the keyless file. CHECKPOINT_TURN_BREAK=1 = the key taken out of the file before it is
+//                            loaded, as a file from before the key: he starts from rest, and the futures must part (lines 1 and 2 fail);
 //   checkpoint-autosave  (b) every autosave trigger fires exactly once in a scripted run — a room entered, the stage advancing, a body hauled away, 90 s of
 //                            quiet — and NOTHING is written while compromised: a man alert / searching / over the awareness line, Sam mid-pick, a can on its
 //                            fuse (the request waits, then lands or lapses); the slots rotate through three; the HUD tag and the chronicle row appear;
@@ -15,7 +22,7 @@
 //   checkpoint-refuse    (e) refused with the reason: the tour flag up, daylight in, the QRF requested, a unit on the floor, Sam down, a man scripted / the
 //                            pair clearing (plain), Sam holding a man (plain) — and `force` files the last two (the hold let go of in the FILE, not the game).
 import { standUp, ROOT } from './headless.ts';
-const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
+const { v3, wrapAngle } = await import(`${ROOT}/src/math/vec.ts`);
 const SS = await import(`${ROOT}/src/game/savestate.ts`);
 const { saveState, loadState, canSave, canLoad, CKPT, levelFingerprint } = SS;
 const ringSize = (): number => SS.SAVETIMELINE.on ? SS.SAVETIMELINE.auto : CKPT.autoSlots;   // how many autosaves the stand keeps
@@ -25,7 +32,7 @@ const { requestQrf, resetQrf } = await import(`${ROOT}/src/game/qrf.ts`);
 const { spawnUnit, despawnUnit, rollcallState } = await import(`${ROOT}/src/game/guards.ts`);
 const { setDaylight } = await import(`${ROOT}/src/game/lighting.ts`);
 const { ambientState, hashStr } = await import(`${ROOT}/src/game/dialogue.ts`);
-const { HOLD } = await import(`${ROOT}/src/game/character.ts`);
+const { HOLD, TURN } = await import(`${ROOT}/src/game/character.ts`);
 const { debriefOf } = await import(`${ROOT}/src/game/chronicle.ts`);
 
 type Vec3 = [number, number, number];
@@ -136,6 +143,17 @@ export async function stageRich(seed = 4471): Promise<{ W: any; notes: string[] 
   return { W, notes };
 }
 
+/** the three futures of one file, each run the same way: A the game that simply goes on, B the same game with the file loaded into it, C a fresh game with it loaded */
+async function futures<T>(W: any, file: () => any, run: (W: any) => T): Promise<{ A: T; B: T; C: T; W2: any }> {
+  const A = run(W);
+  loadState(W.game, file()); W.cam.target = v3.copy(W.game.player.char.pos);
+  const B = run(W);
+  Math.random = seeded(777);   // (whatever the fresh boot draws)
+  const W2 = await standUp(); loadState(W2.game, file()); W2.cam.target = v3.copy(W2.game.player.char.pos);
+  const C = run(W2);
+  return { A, B, C, W2 };
+}
+
 // ================================================================================================================================ (a) identity
 export async function checkpointIdentity() {
   console.log('\n=== checkpoint-identity: a rich mid-mission state saved; A (stepped on) ≡ B (same game, loaded) ≡ C (fresh game, loaded) over ten seconds digested once a second under one seed; save(load(s)) ≡ s ===');
@@ -147,12 +165,7 @@ export async function checkpointIdentity() {
   const s = saveState(game, { label: 'identity', kind: 'harness' }); const json = JSON.stringify(s);
   notes.push(`saved ${(json.length / 1024).toFixed(1)} KB · ${s.guards.filter((x: any) => x.state === 'dead').length} body · ${s.items.length} items · ${s.decals.length} decals · ${s.chronicle.events.length} rows · blackout ${s.blackout.active} · stage ${s.stage}`);
   const SEED = 90210, SECS = 10;
-  const A = digestRun(W, SECS, SEED);
-  loadState(game, JSON.parse(json)); W.cam.target = v3.copy(game.player.char.pos);
-  const B = digestRun(W, SECS, SEED);
-  Math.random = seeded(777);   // (whatever the fresh boot draws)
-  const W2 = await standUp(); loadState(W2.game, JSON.parse(json)); W2.cam.target = v3.copy(W2.game.player.char.pos);
-  const Cd = digestRun(W2, SECS, SEED);
+  const { A, B, C: Cd, W2 } = await futures(W, () => JSON.parse(json), (w) => digestRun(w, SECS, SEED));
   notes.push(`digests: A ${A.hash} · B ${B.hash} · C ${Cd.hash}`);
   if (A.hash !== B.hash) fails.push(`A ≠ B — ${firstDiff(A.samples, B.samples)}`);
   if (B.hash !== Cd.hash) fails.push(`B ≠ C — ${firstDiff(B.samples, Cd.samples)}`);
@@ -165,6 +178,64 @@ export async function checkpointIdentity() {
     if (!g2.blackout.active) fails.push('blackout not restored'); if (!g2.player.keys.size && s.player.keys.length) fails.push('key not restored'); if (!g2.doors.byName('storage').lockBroken) fails.push('kicked lock not restored'); if (g2.mission.stage !== 'exfil' || !g2.mission.pulled) fails.push(`mission ${g2.mission.stage} pulled ${g2.mission.pulled}`); }
   const ok = !fails.length; if (!ok) familyFails++;
   verdictLine(ok, '(a) the staged state (body hauled, door kicked, key taken, mains thrown, beam tripped, marks, chair, drive out) saves; A ≡ B ≡ C over 10 s at one seed; save∘load is the identity on the file; the body / marks / blackout / key / lock / stage are back in a fresh game', notes.join('\n    '), fails);
+}
+
+// ================================================================================================================================ (a2) a man caught mid-turn
+export async function checkpointTurn() {
+  console.log('\n=== checkpoint-turn: a man in the middle of a turn at the save is filed with it and goes on turning after a load (the turn weight and the save\'s own switch raised: TPS_TURN=1 TPS_SAVETURN=1) ===');
+  const { SAVETIMELINE } = SS; const BREAK = process.env.CHECKPOINT_TURN_BREAK === '1'; const env = { turn: process.env.TPS_TURN, save: process.env.TPS_SAVETURN }, was = { turn: TURN.on, save: SAVETIMELINE.turn };
+  process.env.TPS_TURN = '1'; process.env.TPS_SAVETURN = '1';
+  const lines: { ok: boolean; what: string; notes: string[]; fails: string[] }[] = [];
+  try {
+    Math.random = seeded(4242); let W = await standUp();
+    // the patrols walk until a living man's weight is carrying him round (speed in his feet, his AI's wish well ahead of where he has got to) on a frame that can be saved
+    const mid = (g: any) => g.guards.filter((gd: any) => { const t = gd.state !== 'dead' && gd.char.turnSnap(); return !!t && Math.abs(t[2]) > 1 && Math.abs(wrapAngle(t[4] - t[0])) > 0.3; });
+    const turns = (f: any) => JSON.stringify(f.guards.map((x: any) => [x.turn ?? null, x.bodyYaw, x.aimYaw]));
+    // every man's place and yaws on each of the first frames, to the bit (a turn that starts from rest parts from the run that went on in its first frame, by a
+    // fraction of a degree — the once-a-second digest after it would see it only as the millimetres his feet end up off), then the family's digest
+    const FRAMES = 30, SEED = 31337, SECS = 3;
+    const run = (w: any) => { Math.random = seeded(SEED); const f: string[] = []; for (let i = 0; i < FRAMES; i++) { w.step(DT); f.push(JSON.stringify(w.game.guards.map((gd: any) => [gd.callsign, gd.char.pos[0], gd.char.pos[2], gd.char.bodyYaw, gd.char.aimYaw]))); } return { f, d: digestRun(w, SECS, SEED) }; };
+    const part = (a: string[], b: string[]) => { const i = a.findIndex((x, k) => x !== b[k]); if (i < 0) return ''; const x = JSON.parse(a[i]), y = JSON.parse(b[i]); const m = x.find((r: any, k: number) => JSON.stringify(r) !== JSON.stringify(y[k])); return `frame ${i + 1}${m ? `, ${m[0]}` : ''}`; };
+    const one = async (what: string, wish: boolean) => {
+      const fails: string[] = [], notes: string[] = []; const { game } = W;
+      const hit = steps(W, 90, () => mid(game).length > 0 && !canSave(game) && !ambientState(game).run);
+      if (TURN.on <= 0.5 || !SAVETIMELINE.turn) fails.push(`the switches are not up under TPS_TURN=1 TPS_SAVETURN=1 (TURN.on ${TURN.on}, SAVETIMELINE.turn ${SAVETIMELINE.turn})`);
+      if (!hit) { fails.push('no man was caught mid-turn on a frame that can be saved inside 90 s'); lines.push({ ok: false, what, notes, fails }); return; }
+      const men = mid(game), who = men.map((gd: any) => gd.callsign);
+      if (wish) { const c = men[0].char; c.bodyYaw = wrapAngle(c.bodyYaw + 0.4); notes.push(`${who[0]}'s body yaw written 0.4 rad on after his own update, as a man turning to talk has it written`); }
+      const s = saveState(game, { label: 'turn', kind: 'harness' }); const json = JSON.stringify(s);
+      const filed = s.guards.filter((x: any) => Array.isArray(x.turn)); const t0 = filed.find((x: any) => x.callsign === who[0])?.turn as number[] | undefined;
+      notes.push(`t ${game.time.toFixed(2)}: ${who.join(', ')} mid-turn (${t0 ? `${Math.abs(wrapAngle(t0[4] - t0[0])).toFixed(2)} rad still to come round, ${Math.abs(t0[2]).toFixed(1)} rad/s in his feet` : 'NOT in the file'}); ${filed.length} of ${s.guards.length} men filed with a turn`);
+      if (!t0 || t0.length !== 9) fails.push('the man mid-turn has no turn in the file');
+      if (wish && t0 && s.guards.find((x: any) => x.callsign === who[0]).bodyYaw === t0[0]) fails.push('the staged wish is not in the file');
+      const file = () => { const f = JSON.parse(json); if (BREAK) for (const x of f.guards) delete x.turn; return f; };   // (the break: a file from before the key)
+      const { A, B, C, W2 } = await futures(W, file, run);
+      const ab = part(A.f, B.f), bc = part(B.f, C.f);
+      notes.push(`the first ${FRAMES} frames: A against B ${ab ? `part at ${ab}` : 'the same'}, B against C ${bc ? `part at ${bc}` : 'the same'} · digests over the ${SECS} s after: A ${A.d.hash} · B ${B.d.hash} · C ${C.d.hash}${BREAK ? ' (CHECKPOINT_TURN_BREAK=1: the key taken out of the file — the futures must part)' : ''}`);
+      if (ab) fails.push(`A ≠ B from ${ab}`); else if (A.d.hash !== B.d.hash) fails.push(`A ≠ B — ${firstDiff(A.d.samples, B.d.samples)}`);
+      if (bc) fails.push(`B ≠ C from ${bc}`); else if (B.d.hash !== C.d.hash) fails.push(`B ≠ C — ${firstDiff(B.d.samples, C.d.samples)}`);
+      if (!BREAK) { Math.random = seeded(1); const W3 = await standUp(); loadState(W3.game, file()); const s2 = saveState(W3.game, { label: 'turn', kind: 'harness' }); if (turns(s) !== turns(s2)) fails.push('save(load(s)) does not hold the same turns and yaws'); }   // (under the break the file has no turn to hold: the futures above are what must part)
+      lines.push({ ok: !fails.length, what, notes, fails }); W = W2;   // (the next case walks on in the fresh game)
+    };
+    await one('(a2.1) a man caught mid-turn is filed with his turn; every man\'s place and yaws agree frame for frame over the first half second and A ≡ B ≡ C over the 3 s after; the file made after a load holds the same turns', false);
+    await one('(a2.2) … and with a wish written after his own update on the frame of the save: the loader poses him where his weight had got him and hands the wish back', true);
+    // the switch off: no file says a turn (the file as it was), and a file that has one is loaded as the same file without the key
+    { const fails: string[] = [], notes: string[] = []; const { game } = W; const hit = steps(W, 90, () => mid(game).length > 0 && !canSave(game) && !ambientState(game).run);
+      if (!hit) fails.push('no man was caught mid-turn on a frame that can be saved inside 90 s'); else {
+        const on = saveState(game, { label: 'turn', kind: 'harness' }), json = JSON.stringify(on); SAVETIMELINE.turn = false; const off = saveState(game, { label: 'turn', kind: 'harness' });
+        const nOn = on.guards.filter((x: any) => 'turn' in x).length, nOff = off.guards.filter((x: any) => 'turn' in x).length; const bare = JSON.parse(json); for (const x of bare.guards) delete x.turn;
+        const same = JSON.stringify(bare.guards) === JSON.stringify(off.guards);
+        notes.push(`${nOn} men filed with a turn with the switch on, ${nOff} with it off; the guards' slice bar the key ${same ? 'the same' : 'DIFFERENT'}`);
+        if (!nOn || nOff || !same) fails.push('SAVETIMELINE.turn off does not write the file as it was');
+        const load = (f: any) => { loadState(game, f); W.cam.target = v3.copy(game.player.char.pos); return run(W); };
+        const keyed = load(JSON.parse(json)), plain = load(JSON.parse(JSON.stringify(bare))); SAVETIMELINE.turn = true; const put = load(JSON.parse(json));
+        const kp = part(keyed.f, plain.f) || (keyed.d.hash !== plain.d.hash ? 'the digest after' : ''), pp = part(put.f, plain.f);
+        notes.push(`the switch off, the file with its turns against the same file with the key taken out: ${kp ? `part at ${kp}` : `the same over ${FRAMES} frames and the ${SECS} s after`}; the switch on again, the same two ${pp ? `part at ${pp}` : 'do not part'}`);
+        if (kp) fails.push(`with the switch off a file's turn is still put back (parts from the keyless file at ${kp})`);
+        if (!pp) fails.push('with the switch on the file\'s turn made no difference: this line proves nothing'); }
+      lines.push({ ok: !fails.length, what: '(a2.3) with SAVETIMELINE.turn off no file says a turn, the rest of the guards\' slice is what it was, and a file that has one loads as the same file without the key', notes, fails }); }
+  } finally { for (const [k, v] of [['TPS_TURN', env.turn], ['TPS_SAVETURN', env.save]] as const) { if (v === undefined) delete process.env[k]; else process.env[k] = v; } TURN.on = was.turn; SAVETIMELINE.turn = was.save; }
+  for (const L of lines) { if (!L.ok) familyFails++; verdictLine(L.ok, L.what, L.notes.join('\n    '), L.fails); }
 }
 
 // ================================================================================================================================ (b) autosave triggers + gates

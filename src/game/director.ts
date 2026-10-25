@@ -54,7 +54,7 @@ import type { Input } from './input';
 import type { Team } from './teams';
 import type { WeaponId } from './weapons';
 import type { Stance } from './character';
-import { KICK_IMPACT } from './character';
+import { KICK_IMPACT, TOSS_QUICK } from './character';
 import { kickScuff } from './marks';
 import type { Level, BreachPlan, RoomClearPlan } from '../scene/level';
 import type { Door } from './doors';
@@ -190,7 +190,7 @@ export interface BeatCtx {
     kick(d: DoorRef, by: UnitRef, opts?: { leg?: 'left' | 'right' }): void;
     /** where `by` throws that kick from on his side of the leaf: square to it three-quarters of a metre off, by the lock (doors.ts kickSpot) */
     kickSpot(d: DoorRef, by: UnitRef): { pos: Vec3; yaw: number } };
-  stimulus: { charge(at: Place, opts: { by: UnitRef; kind?: 'flash' | 'smoke'; fuse?: number }): void; burst(u: UnitRef, at: Place | UnitRef, rounds: number, opts?: { cadence?: number; spread?: number }): Cond;
+  stimulus: { charge(at: Place, opts: { by: UnitRef; kind?: 'flash' | 'smoke'; fuse?: number; /** he is SEEN to throw it: the animator's quick toss, as the squad's own cans (off: the can leaves a still hand, as every script before the word) */ toss?: boolean }): void; burst(u: UnitRef, at: Place | UnitRef, rounds: number, opts?: { cadence?: number; spread?: number }): Cond;
     /** rounds of his that a burst has not put yet are not put (a burst a beat stopped waiting on would otherwise fire them later, whoever stands in its line by then) */
     cease(u: UnitRef): void };
   objective(text: string | null, markAt?: Place | DoorRef): void; chronicle(kind: 'objective', text: string): void;
@@ -1001,6 +1001,7 @@ export class Director {
           const to = this.placeOf(at); const sol = g.items.solve(from, [to[0], 0, to[2]], 9);
           const it = g.items.spawn(o.kind ?? 'flash', from, sol.v0, { fuse: o.fuse ?? 1.2, who: gd.char.id, heading: v3.yawOf(sol.v0) });
           it.onBounce = (sp, p, g) => g.audio.play('canisterBounce', p, Math.min(1, sp / 4)); g.audio.play('throw', from, 0.7);
+          if (o.toss) gd.char.anim.tossItem(TOSS_QUICK);
           this.push({ beat: b.name, kind: 'stimulus', what: `charge ${o.kind ?? 'flash'}`, data: { by: o.by.callsign, at: [+to[0].toFixed(2), 0, +to[2].toFixed(2)] } });
         },
         cease: u => { for (const B of R.bursts) if (B.u.id === u.id) B.left = 0; },

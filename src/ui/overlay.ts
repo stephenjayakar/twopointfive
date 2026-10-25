@@ -8,6 +8,7 @@ import type { Vec3 } from '../math/vec';
 import { FollowCamera } from '../game/camera';
 import { Game, Player, Interactable, isBreathing } from '../game/game';
 import { FLOOR } from '../game/floor';
+import { RAILS } from '../game/rails';
 import { backName } from '../game/backkey';
 import { KEYMAP, keyCap, keyText, camCap } from '../host/keymap';   // (the player's own keys: every key this HUD names is named as it is bound — the same string back while nothing is rebound)
 import { FLOOR_KEY } from '../game/doors';
@@ -16,6 +17,7 @@ import { AIMCOST } from '../game/aimcost';
 import { aimGunPoint, aimGunOn } from '../game/aimweight';
 import { previewTooClose } from '../game/he40';
 import { gunShut, throwRest, thingDist } from '../game/player';
+import { throwReach, type ThrowReach } from '../game/throwreach';
 import { GEAR, gearText, ringTag, shellTag } from '../game/gear';
 import { HANDSLOT } from '../game/handslot';
 import { HANDRING, EMPTY_WORD, EMPTY_WHY, EMPTY_SHOW_SECS } from '../game/handring';
@@ -98,6 +100,7 @@ export class Overlay implements HudLike {
   private equip = document.getElementById('equip')!;
   private traj = document.getElementById('traj') as unknown as SVGSVGElement;
   private trajPath: SVGPolylineElement; private trajLand: SVGCircleElement; private trajShort = false;
+  private reachEls!: Record<'kill' | 'hurt' | 'stun', { el: SVGPathElement; d: string }>; private reach: ThrowReach | null = null;   // throwreach.ts: what the thing he is aiming will reach, flat on the floor round where it ends
   private trajRoll: SVGPolylineElement; private trajTick: SVGCircleElement; private restKey = ''; private restN = 0; private rest: { at: Vec3; path: Vec3[] } | null = null;   // player.ts throwRest: the ring goes where the can comes to REST, a tick stays on its first touch, the floor between is dotted
   private squadThrow!: SquadThrowViz;
   private attention!: AttentionViz;
@@ -187,6 +190,8 @@ export class Overlay implements HudLike {
     this.trajTick = document.createElementNS(NS, 'circle') as SVGCircleElement;
     this.trajTick.setAttribute('r', '3'); this.trajTick.setAttribute('class', 'trajland trajtick'); this.trajTick.setAttribute('stroke-width', '1.5');
     this.trajRoll.style.display = 'none'; this.trajTick.style.display = 'none';
+    { const mk = (cls: string) => { const el = document.createElementNS(NS, 'path') as SVGPathElement; el.setAttribute('class', `reach ${cls}`); this.traj.appendChild(el); return { el, d: '' }; };   // (under the arc and its ring: the widest first)
+      this.reachEls = { hurt: mk('hurt'), kill: mk('kill'), stun: mk('stun') }; }
     this.traj.appendChild(this.trajPath); this.traj.appendChild(this.trajRoll); this.traj.appendChild(this.trajTick); this.traj.appendChild(this.trajLand);
     this.squadThrow = new SquadThrowViz(this.traj, this.trajPath);   // (a squad throw's ring, walk and arc: over the floor's marks, under his own throw arc)
     this.attention = new AttentionViz(this.traj, this.traj.firstChild as Element | null);   // (where a guard's attention is — game/attention.ts: a thread and a ring on the floor, under everything else drawn there)
@@ -422,13 +427,19 @@ export class Overlay implements HudLike {
       let nx = vp[0] * op[0] + vp[4] * op[1] + vp[8] * op[2] + vp[12], ny = vp[1] * op[0] + vp[5] * op[1] + vp[9] * op[2] + vp[13];
       if (cw > 1e-4) { nx /= cw; ny /= cw; } else { const l = Math.hypot(nx, ny) || 1; nx = nx / l * 9; ny = ny / l * 9; }   // behind the eye: keep the undivided clip direction (dividing by w < 0 would mirror it) and force it onto the edge
       const mx = 1 - 2 * 36 / w, my = 1 - 2 * 36 / h; const k = Math.max(1, Math.abs(nx) / mx, Math.abs(ny) / my); nx /= k; ny /= k;   // into a 36 px inset of the view
-      const el = this.objMark; el.style.display = 'block'; el.style.opacity = alpha.toFixed(2);
+      const el = this.objMark, mx0 = (nx * 0.5 + 0.5) * w, my0 = (1 - (ny * 0.5 + 0.5)) * h;
+      // (…and a tutorial step's mark under a ring that is up, the squad's or his own, is not drawn: it lay over the ring's middle and its inner digits, and
+      //  with the ring up there the place is found — rails.ts RAILS.markClear; the rings are last frame's, as drawn)
+      if (game.rails.live && RAILS.markClear && this.cmdRing.covers(mx0, my0)) el.style.display = 'none';
+      else {
+      el.style.display = 'block'; el.style.opacity = alpha.toFixed(2);
       // (a tutorial step's `toward`: the mark is an arrow lying from the place to where it points, turned as the view has the two — never at the picture's edge, where the ring says 'that way')
       const to = k > 1 ? null : game.rails.arrow(); let turn = '';
       if (to) { const [ax, ay, av] = cam.project(op, w, h, EDGE), [bx, by] = cam.project(to, w, h); if (av && Math.hypot(bx - ax, by - ay) > 4) turn = `${(Math.atan2(by - ay, bx - ax) * 180 / Math.PI).toFixed(1)}deg`; }
       el.className = k > 1 ? 'objmark edge' : turn ? 'objmark arrow' : 'objmark'; if (turn !== this.objTurn) { this.objTurn = turn; el.style.setProperty?.('--turn', turn || '0deg'); }
-      el.style.left = `${((nx * 0.5 + 0.5) * w).toFixed(1)}px`; el.style.top = `${((1 - (ny * 0.5 + 0.5)) * h).toFixed(1)}px`;
+      el.style.left = `${mx0.toFixed(1)}px`; el.style.top = `${my0.toFixed(1)}px`;
       (el.lastChild as HTMLElement).textContent = skySeat || turn ? '' : `${Math.round(far)}m`;   // (an arrow lies at his feet and says which way, not how far: under it the metres read '99m', the number that keeps it from fading)
+      }
     }
     // the squad's order menu: a ring on the door / spot / man it was opened on, in the addressed element's colour (it stays there while Sam walks and aims on)
     this.cmdRing.update(game, cam, w, h, tz);
@@ -447,8 +458,9 @@ export class Overlay implements HudLike {
       this.trajPath.setAttribute('points', pts.join(' ')); this.trajPath.style.display = 'block';
       { const short = previewTooClose(game); if (short !== this.trajShort) { this.trajShort = short; this.trajPath.style.stroke = this.trajLand.style.stroke = short ? HE40_SHORT_STROKE : ''; this.trajPath.style.strokeDasharray = short ? '3 7' : ''; } }   // (a 40 mm arc too short to arm: amber, broken — whatever the reticle is busy saying)
       // WHERE IT COMES TO REST (player.ts throwRest; null = the mark off, or the launcher's arc): reckoned again when the arc has changed, and four times a second under one held still (a door swung, a chair shoved)
-      { const p0 = pv.points[0], k = `${p0[0].toFixed(2)},${p0[1].toFixed(2)},${p0[2].toFixed(2)},${pv.v0[0].toFixed(2)},${pv.v0[1].toFixed(2)},${pv.v0[2].toFixed(2)},${game.player.heldKind},${Math.floor(game.time * 4)}`; if (k !== this.restKey && (!this.restKey || (this.restN++ & 1) === 0)) { this.restKey = k; this.rest = throwRest(game); } }   // (every other frame under a moving cursor: the replay is some tenths of a millisecond, the ring trails the arc by a frame)
+      { const p0 = pv.points[0], k = `${p0[0].toFixed(2)},${p0[1].toFixed(2)},${p0[2].toFixed(2)},${pv.v0[0].toFixed(2)},${pv.v0[1].toFixed(2)},${pv.v0[2].toFixed(2)},${game.player.heldKind},${Math.floor(game.time * 4)}`; if (k !== this.restKey && (!this.restKey || (this.restN++ & 1) === 0)) { this.restKey = k; this.rest = throwRest(game); this.reach = throwReach(game, this.rest); } }   // (every other frame under a moving cursor: the replay is some tenths of a millisecond, the ring trails the arc by a frame)
       const rest = this.rest, ring = rest ? rest.at : pv.land;
+      this.drawReach(this.reach, cam, w, h);
       const [lx, ly, lv] = cam.project(ring, w, h, EDGE); this.trajLand.style.display = lv ? 'block' : 'none'; this.trajLand.setAttribute('cx', lx.toFixed(1)); this.trajLand.setAttribute('cy', ly.toFixed(1));
       if (rest) {
         const [tx, ty, tv] = cam.project(pv.land, w, h, EDGE), far = Math.hypot(rest.at[0] - pv.land[0], rest.at[2] - pv.land[2]) > 0.3;   // (a can that stays where it lands needs no tick under its ring)
@@ -456,7 +468,7 @@ export class Overlay implements HudLike {
         const rp: string[] = []; if (far) for (const p of [pv.land, ...rest.path, rest.at]) { const [x, y, vis] = cam.project(p, w, h, EDGE); if (vis) rp.push(`${x.toFixed(1)},${y.toFixed(1)}`); }
         this.trajRoll.setAttribute('points', rp.join(' ')); this.trajRoll.style.display = rp.length > 1 ? 'block' : 'none';
       } else { this.trajTick.style.display = 'none'; this.trajRoll.style.display = 'none'; }
-    } else { this.trajPath.style.display = 'none'; this.trajLand.style.display = 'none'; this.trajTick.style.display = 'none'; this.trajRoll.style.display = 'none'; this.restKey = ''; this.rest = null; }
+    } else { this.trajPath.style.display = 'none'; this.trajLand.style.display = 'none'; this.trajTick.style.display = 'none'; this.trajRoll.style.display = 'none'; this.restKey = ''; this.rest = null; this.reach = null; this.drawReach(null, cam, w, h); }
     this.drawClose(game, cam, w, h);
     this.plan.update(game, cam, w, h);
     this.findme.update(game, cam, w, h, this.plan.youOn);
@@ -464,6 +476,23 @@ export class Overlay implements HudLike {
     this.updateEquip(game);
     // the wind field's debug view (nothing drawn, nothing sampled unless a switch of it is on)
     this.windViz.update(game, cam, w, h);
+  }
+
+  /** WHAT THE THING HE IS AIMING WILL REACH (throwreach.ts; null = nothing to draw): each radius a ring flat on the floor under the point, so the camera's
+   *  tilt squashes it as it squashes the floor. A point behind the camera BREAKS the ring there and the rest of it stays (squadthrowviz.ts draws the
+   *  squad's the same way); only a whole ring is filled. A ring that has not changed writes nothing. */
+  private drawReach(R: ThrowReach | null, cam: FollowCamera, w: number, h: number) {
+    const ring = (E: { el: SVGPathElement; d: string }, r: number) => {
+      let d = '', run = 0, whole = true;
+      if (R && r > 0) for (let i = 0, N = 64; i <= N; i++) {
+        const a = (i / N) * Math.PI * 2, [x, y, vis] = cam.project([R.at[0] + Math.cos(a) * r, 0.03, R.at[2] + Math.sin(a) * r], w, h);
+        if (!vis) { run = 0; whole = false; continue; }
+        d += `${run++ ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`;
+      }
+      if (d && whole) d += 'Z';
+      if (d !== E.d) { E.d = d; E.el.setAttribute('d', d); E.el.classList.toggle('cut', !whole); }   // (a cut ring has no fill: index.html .reach.cut)
+    };
+    const E = this.reachEls; ring(E.kill, R?.kill ?? 0); ring(E.hurt, R?.hurt ?? 0); ring(E.stun, R?.stun ?? 0);
   }
 
   /** Interaction panel: `rows` top to bottom, `primary` = index of the highlighted row (what a Space tap does / letting go performs; -1: none), `more` = how

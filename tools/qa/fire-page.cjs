@@ -19,21 +19,23 @@
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs'), os = require('os'), path = require('path');
 const PORT = process.env.PORT || 5199, OUT = process.env.OUT || fs.mkdtempSync(path.join(os.tmpdir(), 'fire-page-'));
-const LEVEL = process.env.LEVEL || 'pass.json', QUALITY = process.env.QUALITY || 'low', STILLS = +(process.env.STILLS ?? 6), GAP = Math.max(1, +(process.env.GAP ?? 4)), WARM = +(process.env.WARM ?? 60), METER = +(process.env.METER ?? 45), FWD = +(process.env.FWD || 0);
+const LEVEL = process.env.LEVEL || 'pass.json', QUALITY = process.env.QUALITY || 'low', STILLS = +(process.env.STILLS ?? 6), GAP = Math.max(1, +(process.env.GAP ?? 4)), WARM = +(process.env.WARM ?? 60), METER = process.env.AWAY === '1' ? 0 : +(process.env.METER ?? 45), FWD = +(process.env.FWD || 0);
 const W = +(process.env.W || 960), H = +(process.env.H || 540), VIEWS = (process.env.VIEWS || 'close,play').split(','), TABLE = process.env.FIRE ? JSON.parse(process.env.FIRE) : null;
 const QUERY = process.env.QUERY || 'roomclear&squad4&nofow';
+const AWAY = process.env.AWAY === '1';   // the player left where the mission put him, not stood by the fire: with a QUERY that has no `nofow`, the fire as the fog of war shows it (and no meter stands: they walk him to the drum)
+const DPR = +(process.env.DPR || 1);   // (2 = a laptop's screen: the picture is made at half the device's pixels and scaled up, as a player sees it)
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
 const want = process.argv.slice(2).filter(a => a === 'fire' || a === 'off'); const jobs = want.length ? want : ['fire'];
 fs.mkdirSync(OUT, { recursive: true });
-const PINS = { close: { pitch: 28, dist: 3.2, up: 0.35 }, play: { pitch: 55, dist: 13, up: 0 }, low: { pitch: 12, dist: 5, up: 0.5 }, far: { pitch: 55, dist: 21, up: 0 } };
+const PINS = { close: { pitch: 28, dist: 3.2, up: 0.35 }, play: { pitch: 55, dist: 13, up: 0 }, low: { pitch: 12, dist: 5, up: 0.5 }, far: { pitch: 55, dist: 21, up: 0 }, shot: { pitch: 50, dist: 7, up: -0.2 } };
 
 async function one(browser, name) {
-  const page = await (await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1 })).newPage();
+  const page = await (await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: DPR })).newPage();
   const errs = []; page.on('pageerror', e => errs.push(String(e).slice(0, 300))); page.on('console', m => { if ((m.type() === 'error' && !/Failed to load resource/.test(m.text())) || /error:|Invalid/.test(m.text())) errs.push(m.text().slice(0, 300)); });
   const url = `http://localhost:${PORT}/?levelFile=${LEVEL}&${QUERY}&paused&quality=${QUALITY}&mute${name === 'off' ? '&fire=0' : ''}`;
   log(`${name}: ${url}`); await page.goto(url);
-  const boot = await page.evaluate(async ({ table }) => {
+  const boot = await page.evaluate(async ({ table, away }) => {
     await window.__ready; window.__testVisible = true; const g = window.__game, F = window.__fire;
     if (table) for (const k in table) { if (table[k] && typeof table[k] === 'object' && !Array.isArray(table[k]) && F.knobs[k] && typeof F.knobs[k] === 'object') Object.assign(F.knobs[k], table[k]); else F.knobs[k] = table[k]; }   // (a nested row, FIRE.smoke, is laid over key by key)
     const t = F.targets[0]; if (!t) return { pipes: window.__boot.pipelines, none: true };
@@ -42,10 +44,10 @@ async function one(browser, name) {
     const at = [t.pos[0], t.pos[2]], col = g.col; let stand = null;
     for (const a of [Math.PI * 0.5, Math.PI, 0, -Math.PI * 0.5, Math.PI * 0.75, Math.PI * 0.25]) { const p = [at[0] + Math.sin(a) * 1.25, 0, at[1] + Math.cos(a) * 1.25]; if (!col.solidBlocked([p[0], 1, p[2]], [at[0], 1.2, at[1]]) && !window.__engine.world.raycast([p[0], 2.2, p[2]], [0, -1, 0], 2.0)) { stand = { p, yaw: a + Math.PI }; break; } }
     stand = stand || { p: [at[0] + 1.25, 0, at[1]], yaw: -Math.PI / 2 };
-    window.__stage(null, { player: { pos: stand.p, yaw: stand.yaw, holstered: true } });
+    if (!away) window.__stage(null, { player: { pos: stand.p, yaw: stand.yaw, holstered: true } });
     window.__runFrames(2, 1 / 30);
     return { pipes: window.__boot.pipelines, on: F.knobs.on, fire: { name: t.name, pos: t.pos.map(v => +v.toFixed(2)), base: +t.baseIntensity.toFixed(2) }, stand, drawing: window.__smoke.drawing(), summary: F.summary() };
-  }, { table: TABLE });
+  }, { table: TABLE, away: AWAY });
   log(`${name}: booted`, JSON.stringify(boot));
   if (boot.none) { await page.close(); console.log(`- FAIL — ${name}: the level has no fire`); return false; }
   const step = (n, pin) => page.evaluate(async ({ n, pin, at, stand }) => { const yieldM = () => new Promise(res => { const ch = new MessageChannel(); ch.port1.onmessage = () => res(); ch.port2.postMessage(0); });

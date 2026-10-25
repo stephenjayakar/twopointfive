@@ -43,6 +43,7 @@ import type { OrderTarget, SquadOrders } from './orders';
 import type { LaidWhere } from './planlay';
 import { layTarget } from './planlay';   // (these are called inside functions only: src/game is one import cycle)
 import { CMDRING, ringZoom } from './cmdring';
+import { WORLD } from '../scene/world';
 import { backTake } from './backkey';   // (read inside planInput only)
 import { DOORTOOLS } from './doortools';
 import { canStand } from './player';   // (called inside down only)
@@ -76,7 +77,7 @@ export interface PlanView {
   frame: boolean;
   /** the mode up and the view the hand's: where Sam stands (the view may have left him) */
   sam: Vec3 | null;
-  men: { at: Vec3; tone: string | undefined; picked: boolean }[];
+  men: { at: Vec3; tone: string | undefined; picked: boolean; /** the digit that picks him, drawn by his circle (0: none — CMDRING.planDigits off, or the mode down) */ n: number }[];
   chains: { tone: string | undefined; from: Vec3; stops: { at: Vec3; door: boolean; keys: number; now: boolean; /** the far end of its way to look (null: none) */ look: Vec3 | null }[] }[];
   key: string;
   /** a right press being dragged: from the place it went down on to the point under the cursor */
@@ -104,6 +105,20 @@ function choose(S: SquadOrders, men: Guard[]): void {
   if (id && L.length === S.men(id).length && L.every(m => S.pairOf(m) === id)) { S.who = id; return; }
   P.pick = L.map(m => m.callsign);
 }
+/** THE DIGITS PICK THE MEN (CMDRING.planDigits): 1 to 4 is that man of the squad alone — the squad's own order, so a man keeps his digit when another is
+ *  down — Shift + the digit puts him in the picked set or takes him out, as a Shift click does; 5 is everyone. A digit with no living man does nothing */
+function pickDigit(S: SquadOrders, d: number, shift: boolean): void {
+  if (d === PLAN_ALL) { PLAN_STATS.picked++; choose(S, []); return; }
+  const man = S.squad()[d - 1], now = S.recipients(); if (!man || !S.men('all').includes(man)) return;
+  PLAN_STATS.picked++; choose(S, !shift ? [man] : now.includes(man) ? now.filter(m => m !== man) : [...now, man]);
+}
+/** the digit that picks everyone (the men's own are below it) */
+const PLAN_ALL = 5;
+/** a left click on bare ground picks everyone, as the mode was built — not once the digits pick the men, except on a tutorial mission, whose lines still
+ *  name that click (rails live: the tutorial's own to move) */
+export const planGroundAll = (S: SquadOrders): boolean => !CMDRING.planDigits || !!S.g.rails?.live;
+/** the digit drawn by a man's circle (0: none — the digits are not the mode's, or he has none) */
+function digitOf(S: SquadOrders, m: Guard): number { if (!CMDRING.planDigits) return 0; const k = S.squad().indexOf(m) + 1; return k >= 1 && k < PLAN_ALL ? k : 0; }
 
 /** a place for a chain, off the target the cursor was on (null: a man of the other side — an order on him is given at once and never chained) */
 function stepOf(S: SquadOrders, t: OrderTarget): PlanStep | null {
@@ -306,6 +321,15 @@ function cycle(S: SquadOrders, C: PlanChain, i: number): void {
   if (C.phase === 'wait' && !waitsAt(s)) enter(S, C); else if (C.phase === 'held' && !holdOn(s, last)) next(S, C);
 }
 
+/** A TUTORIAL'S SKY SEAT HOLDS THE MODE UP (rails.ts planSeat, RAILS.skyUp): nobody of the player's is on the floor — he is parked out of the picture — so
+ *  the mode has no man to kneel, to mark or to start its view on, and no key of its own takes it down */
+const seat = (S: SquadOrders): boolean => !!S.g.rails?.planSeat;
+/** where the view starts: on Sam — or, in that seat, on the middle of the men still up (the parked player is nowhere the picture should go) */
+function home(S: SquadOrders): Vec3 {
+  const p = S.g.player.char.pos, men = seat(S) ? S.men('all') : [];
+  if (!men.length) return [p[0], 0, p[2]];
+  const c: Vec3 = [0, 0, 0]; for (const m of men) { c[0] += m.char.pos[0] / men.length; c[2] += m.char.pos[2] / men.length; } return c;
+}
 /** the mode put down: the mouse is Sam's again once he lets go of it, and the choice is the who key's */
 function down(S: SquadOrders, input: Input | null): void {
   const P = S.plan, g = S.g; if (!P.up) return;
@@ -319,9 +343,9 @@ function down(S: SquadOrders, input: Input | null): void {
 export function planLoaded(S: SquadOrders): void { down(S, null); S.plan.back = null; }
 /** … and put up: the view's point starts on Sam, and what he is facing is what he goes on facing */
 function up(S: SquadOrders): void {
-  const P = S.plan, g = S.g, p = g.player.char.pos;
+  const P = S.plan, g = S.g;
   P.up = true; P.drag = null; P.rmbT = -1; P.rdown = null; P.look = P.aim = null; P.back = null; P.stood = null;
-  if (CMDRING.planRts) { P.look = [p[0], 0, p[2]]; P.aim = v3c(g.aimPoint); }
+  if (CMDRING.planRts) { P.look = home(S); P.aim = v3c(g.aimPoint); }
   // HE TAKES A KNEE AT THE RADIO (CMDRING.planKnee; the maintainer, 10-22: "plan mode should also show the player taking a knee and talking on the
   // radio, and then camera can decouple from them and move (up to some limit) with wasd and then gently snap back when exiting the mode"): the
   // crouch is his real one — lower to a round and to an eye, as a man on a knee is — and player.ts lowers the gun and puts his hand to the handset
@@ -330,7 +354,7 @@ function up(S: SquadOrders): void {
 /** the page's Esc (Game.escape, behind everything nearer): the mode comes down (false: it was not up, or the back key is not its way out) */
 export function planEscape(S: SquadOrders): boolean { if (!S.planBack()) return false; PLAN_STATS.toggled++; down(S, S.g.seat.input); return true; }
 /** Sam put somewhere else with the mode up (a restart, a fresh cast): the view starts on him again, and he faces what he faces there */
-export function planHome(S: SquadOrders): void { const P = S.plan, g = S.g, p = g.player.char.pos; if (P.up && P.look) { P.look = [p[0], 0, p[2]]; P.aim = v3c(g.aimPoint); P.rmbT = -1; } }
+export function planHome(S: SquadOrders): void { const P = S.plan, g = S.g; if (P.up && P.look) { P.look = home(S); P.aim = v3c(g.aimPoint); P.rmbT = -1; } }
 /** the walk keys move the view's point, the way they would have walked him (the camera's own basis), `planPanMps` — kept inside the box where he is still on the screen
  *  (planNear) or, as first built, within `planPanReachM` of the box he and the men stand in, so the view is never lost */
 function pan(S: SquadOrders, input: Input, cam: FollowCamera, dt: number): void {
@@ -349,14 +373,17 @@ function pan(S: SquadOrders, input: Input, cam: FollowCamera, dt: number): void 
     if (out <= step || !(dt > 0)) { L[0] = cx; L[2] = cz; } else { L[0] += (cx - L[0]) / out * step; L[2] += (cz - L[2]) / out * step; }
     return;
   }
-  let x0 = p[0], x1 = p[0], z0 = p[2], z1 = p[2];
+  const q0 = home(S);   // (the box starts on him — or, in a tutorial's seat with nobody of his on the floor, on the men alone)
+  let x0 = q0[0], x1 = x0, z0 = q0[2], z1 = z0;
   for (const m of S.men('all')) { const q = m.char.pos; x0 = Math.min(x0, q[0]); x1 = Math.max(x1, q[0]); z0 = Math.min(z0, q[2]); z1 = Math.max(z1, q[2]); }
   L[0] = Math.max(x0 - K.planPanReachM, Math.min(x1 + K.planPanReachM, L[0])); L[2] = Math.max(z0 - K.planPanReachM, Math.min(z1 + K.planPanReachM, L[2]));
+  // (…and in the seat never past the level's own edge, as the sky seat's view is kept: rails.ts look)
+  if (seat(S)) { L[0] = Math.min(WORLD.max[0], Math.max(WORLD.min[0], L[0])); L[2] = Math.min(WORLD.max[2], Math.max(WORLD.min[2], L[2])); }
 }
 /** the floor his body covers up the screen at the camera's tilt, m: it does not shrink as the camera comes in, so the top edge's room is kept in metres */
 const BODY_M = 1.4;
 /** the view is held near him (CMDRING.planNear) — not where a tutorial frame has taken his feet: he could not walk nearer */
-export function planNear(S: SquadOrders): boolean { return CMDRING.planNear && !S.g.rails?.locks('move'); }
+export function planNear(S: SquadOrders): boolean { return CMDRING.planNear && !seat(S) && !S.g.rails?.locks('move'); }
 /** what the follow camera follows in Sam's place (Game.followPos; null: him) */
 export function planLook(S: SquadOrders): Vec3 | null {
   const P = S.plan; if (P.up) return P.look;
@@ -365,7 +392,7 @@ export function planLook(S: SquadOrders): Vec3 | null {
   const e = k * k * (3 - 2 * k), p = S.g.player.char.pos; return [B.from[0] + (p[0] - B.from[0]) * e, 0, B.from[2] + (p[2] - B.from[2]) * e];
 }
 /** is he on a knee at the radio right now (player.ts: the gun low, the left hand at the handset) */
-export function planKnee(S: SquadOrders): boolean { const pl = S.g.player; return CMDRING.planKnee && S.plan.up && !!S.plan.look && !pl.down && !pl.dragging && !pl.holding && !pl.takedown && !pl.kick; }   // (never with a man in his arm, a body in tow, a boot or a takedown under way: those are their own carriage)
+export function planKnee(S: SquadOrders): boolean { const pl = S.g.player; return CMDRING.planKnee && S.plan.up && !!S.plan.look && !seat(S) && !pl.down && !pl.dragging && !pl.holding && !pl.takedown && !pl.kick; }   // (never with a man in his arm, a body in tow, a boot or a takedown under way: those are their own carriage)
 /** the mode taken down by the squad going (orders.ts: nobody to order, or he is down) and not by his hand: he is off the knee, nothing eased */
 export function planTorn(S: SquadOrders): void { const P = S.plan, g = S.g, pl = g.player; P.rdown = null; if (P.stood === null) return; if (P.stood && !pl.down && !pl.dragging && canStand(g)) pl.crouch = false; P.stood = null; }
 
@@ -381,15 +408,19 @@ export function planInput(S: SquadOrders, input: Input, cam: FollowCamera, canva
   const P = S.plan, K = CMDRING;
   if (!K.plan || !K.on) { if (P.up || P.chains.length || P.pick) { down(S, input); P.chains = []; P.pick = null; } return; }
   tick(S);
-  const shift = input.down('ShiftLeft') || input.down('ShiftRight');
+  const shift = input.down('ShiftLeft') || input.down('ShiftRight'), kept = seat(S);
+  // (a tutorial's seat holds the mode up — rails.ts RAILS.skyUp: it is up while there is a man to order, and the pair is nobody's key there)
+  if (kept) { if (!P.up && S.men('all').length) up(S); if (planShift(S, input) && !S.cmdRing && S.backFree()) input.pressed.delete(K.key); }
   // (the toggle is the ring's key where the ring's key is free: with something for it to back out of — a menu, a Space list, a verb, the launcher's arc — it backs out, Shift or no)
-  if (planShift(S, input) && !S.cmdRing && S.backFree() && input.pressed.delete(K.key)) { PLAN_STATS.toggled++; if (P.up) down(S, input); else up(S); }
-  if (P.up && K.planRun && !S.cmdRing && S.backFree() && backTake(input)) { PLAN_STATS.toggled++; down(S, input); }   // (the back key takes the mode down, once nothing nearer is up to back out of: backkey.ts)
+  else if (planShift(S, input) && !S.cmdRing && S.backFree() && input.pressed.delete(K.key)) { PLAN_STATS.toggled++; if (P.up) down(S, input); else up(S); }
+  if (!kept && P.up && K.planRun && !S.cmdRing && S.backFree() && backTake(input)) { PLAN_STATS.toggled++; down(S, input); }   // (the back key takes the mode down, once nothing nearer is up to back out of: backkey.ts)
   word(S, input);
   if (!P.up) return;
   if (input.pressed.has('Blur')) { P.drag = null; P.rmbT = -1; P.rdown = null; }
   if (S.menu || S.cmdRing) { P.drag = null; P.rmbT = -1; P.rdown = null; return; }   // (a menu or the ring is up: the buttons are its own this frame — planAfter takes what is left of them from Sam)
   if (K.planRts) pan(S, input, cam, dt);
+  // (the digits pick the men — never with the ring's key down: a digit inside that press is the ring's own wedge, CMDRING.stayDigit)
+  if (K.planDigits && !input.down(K.key)) for (let d = 1; d <= PLAN_ALL; d++) if (input.pressed.delete(`Digit${d}`)) pickDigit(S, d, shift);
   const held = (input.buttons & 1) !== 0, lmb = (input.clicked & 1) !== 0, rmb = (input.clicked & 4) !== 0, mx = input.mouseX, my = input.mouseY;
   const w = canvas.clientWidth, h = canvas.clientHeight, now = S.recipients();
   if (lmb) P.drag = { x0: mx, y0: my, x1: mx, y1: my };   // (a press is a box begun, wherever it lands: let go where it went down, it was a click)
@@ -403,7 +434,7 @@ export function planInput(S: SquadOrders, input: Input, cam: FollowCamera, canva
         const k = stop ? -1 : S.manAt(input, cam, canvas), man = k >= 0 ? S.squad()[k] : null;
         if (stop) { if (!wordLocked(S)) cycle(S, stop.C, stop.i); }   // (a stop of a chain: its waits, not a choice of men)
         else if (man) { PLAN_STATS.picked++; choose(S, !shift ? [man] : now.includes(man) ? now.filter(m => m !== man) : [...now, man]); }
-        else if (!shift) choose(S, []);   // (a click on nothing: everyone)
+        else if (!shift && planGroundAll(S)) choose(S, []);   // (a click on nothing: everyone — or, the digits picking the men, nothing: who was picked stays picked)
       } else {
         const x0 = Math.min(D.x0, D.x1), x1 = Math.max(D.x0, D.x1), y0 = Math.min(D.y0, D.y1), y1 = Math.max(D.y0, D.y1);
         const inside = S.men('all').filter(m => { const [sx, sy, front] = cam.project(m.char.pos, w, h); return front && sx >= x0 && sx <= x1 && sy >= y0 && sy <= y1; });
@@ -457,7 +488,7 @@ export function planRestore(S: SquadOrders, s: PlanSnap | null | undefined): voi
   const P = S.plan; P.drag = null; P.giving = false; P.restoredT = -1; P.rmbT = -1; P.rdown = null; P.look = P.aim = null; P.back = s?.back ? { from: v3c(s.back.from), t0: s.back.t0 } : null; P.stood = s?.up ? s.stood ?? null : null;
   if (!s) { P.up = false; P.pick = null; P.chains = []; P.showT = -1e9; return; }
   P.restoredT = S.g.time; P.up = s.up; P.pick = s.pick ? [...s.pick] : null; P.chains = copyChains(s.chains); P.showT = s.showT;
-  if (s.up && CMDRING.planRts) { const p = S.g.player.char.pos; P.look = s.look ? v3c(s.look) : [p[0], 0, p[2]]; P.aim = s.aim ? v3c(s.aim) : null; }   // (a file from before the view was the hand's: it starts on him)
+  if (s.up && CMDRING.planRts) { P.look = s.look ? v3c(s.look) : home(S); P.aim = s.aim ? v3c(s.aim) : null; }   // (a file from before the view was the hand's: it starts on him)
 }
 
 /** the picture (null: nothing to draw — the mode down and no chain touched within `planShowSecs`). A tutorial mission's SKY SEAT is drawn as the mode up
@@ -480,6 +511,6 @@ export function planView(S: SquadOrders): PlanView | null {
     });
     chains.push({ tone: S.toneOf(men), from, stops });
   }
-  return { up: P.up, frame: P.up || sky, drag: P.up ? P.drag : null, sam: P.up && P.look ? [g.player.char.pos[0], 0, g.player.char.pos[2]] : null, men: P.up || sky ? S.men('all').map(m => ({ at: at(m), tone: S.pairOf(m) ?? undefined, picked: now.includes(m) })) : [], chains, key: DOORTOOLS.blowKey.replace(/^Key/, ''),
+  return { up: P.up, frame: P.up || sky, drag: P.up ? P.drag : null, sam: P.up && P.look && !seat(S) ? [g.player.char.pos[0], 0, g.player.char.pos[2]] : null, men: P.up || sky ? S.men('all').map(m => ({ at: at(m), tone: S.pairOf(m) ?? undefined, picked: now.includes(m), n: P.up ? digitOf(S, m) : 0 })) : [], chains, key: DOORTOOLS.blowKey.replace(/^Key/, ''),
     aim: P.up && P.rdown?.drag ? { from: [P.rdown.t.at[0], 0, P.rdown.t.at[2]], to: [P.rdown.to[0], 0, P.rdown.to[2]] } : null };
 }

@@ -6,6 +6,7 @@ import { makeBuffer, writeWordsIfChanged } from '../gpu/device';
 import { CutPlane, CutGlass, cutConfig, cutClip, CUT_CLIP, packCut, CUT_STRIDE, BOX_CUT_BIT, MAX_CUT_PLANES } from './cut';
 import { AIR_ROWS } from './airGrid';
 import { groundRayConfig, GH_ROWS } from './groundField';
+import { roundConfig, packRoundRows, ROUND_CORE_W } from './round';
 import { MarkingDef, MARKING_TEXEL, MAX_MARKS_PER_BOX, MARK_TABLE_ROWS, MARK_SLOT_SHIFT, MARK_SLOT_MAX, markStats, markRecordRows, packMarking, secondaryAlbedo, AREA_LIT_MARKS } from './markings';
 
 export const BoxFlag = {
@@ -26,9 +27,16 @@ export const BoxFlag = {
   // composite / fgather / direct test view and shadow segments against it analytically (Fresnel reflection + tint + dust glow; common.wgsl glassTrace).
   // CPU: movement collision and sound treat it as a wall, sight passes through it (collision.ts segmentBlocked's `through`), a round / kick / bang breaks it.
   Glass: 1 << 17,
+  // A THIN THING THAT STANDS FREE (scene/thin.ts thinLevel, as a level is stood up: a stovepipe, a window's bar, a lone post). CPU-only, like SoundSeal (bits
+  // 18-31 of the GPU word are the marking row): the fog of war's own sight passes it while FOG.thin is on (game/fogofwar.ts: segmentBlocked's `through`), and
+  // the picture's fog eye learns which boxes carry it from the sight table's own bit list (render/fogofwar.ts FogFrame.thinBits), not from the box's word.
+  Thin: 1 << 18,
 } as const;
 /** the most panes SceneInfo.glass carries to the GPU (nearest to the camera's look-at first when a level has more) */
 export const MAX_GLASS = 32;
+/** the GPU flag bit of a ROUND box (common.wgsl GEO_ROUND; scene/round.ts). Bit 3 of the geo flags word, which on the CPU is Dynamic: no shader reads that one, and
+ *  with the round's GPU half up it is not sent (BoxWorld.packBox). */
+export const BOX_ROUND_BIT = 8;
 
 export interface Box {
   c: Vec3;            // center
@@ -67,6 +75,10 @@ export interface Box {
   /** × the emission of this box's emissive markings (runtime: game/lighting.ts writes a switchable's supply factor here — a blackout, the OCP, a flicker —
    *  next to the box's own emissive; absent = 1) */
   markGain?: number;
+  /** THE PICTURE'S EMISSION, where it is not the box's own (render-only: game/fogofwar.ts FOG.kept — a lamp's face under the fog of war as the team last saw
+   *  it, lit or dark): the upload takes these in place of `emissive` / `markGain`; nothing in the game reads them, and `emissive` itself stays the lamp's real
+   *  state. Absent = the box's own. Read only: several boxes may be handed one array */
+  fogEmit?: Readonly<Vec3>; fogMark?: number;
   /** MOTION IDENTITY (renderer v3, image-quality program E1): a key that names THIS part of THIS object across frames — a door's leaf, a chair's seat, a flying
    *  can's band, the torch in a man's hand (MKEY ranges below; the code that emits the box sets it). With it the g-buffer's motion vector for the box comes from
    *  the transform the SAME part had a frame ago wherever it sat in the dynamic list; without it (sparks, tracers, one-frame effects) the old rule stands: the
@@ -94,6 +106,13 @@ export interface Box {
   /** AN OLD BREAK (the same trial): the cut faces were not made a moment ago. Picture only, packed with the record: on the look page they take the look's paint
    *  as a face of the core's stuff, and on a snow level the snow lies on the ones that face up. A blast's fresh cut never sets it. Not with cutGlass. */
   cutOld?: boolean;
+  /** ROUND (scene/round.ts — read its head): this box is a ROUND THING, the cylinder about its own y of radius h[0] (= h[2]) and half height h[1]. Every CPU ray
+   *  and segment (rayBox, collision.ts lineBox) and what walks against it (collideCircle) meet the cylinder; with roundConfig.gpu so do the picture (the cut pass)
+   *  and every GPU ray. Set by round.ts roundLevel as a level is stood up; never with a cut record. */
+  round?: boolean;
+  /** what round.ts roundLevel made this box FROM (the kit's slab as the level file has it): its centre, half extents, flags and marks, put back when the level is
+   *  stood up with the switch down, and what the level's fingerprint is taken over */
+  was?: { c: Vec3; h: Vec3; yaw: number; flags: number; marks?: MarkingDef[] };
 }
 /** MKEY ranges (Box.mkey): the system in the top byte, its own numbering below — doors (index × 4 + part), props (id × 16 + part), items (serial × 8 + part), the
  *  rig props on a character (owner << 8 | ordinal this frame; the owner-0 lasers stay unkeyed), devices (ordinal over the frame's device boxes), staging / QA boxes
@@ -306,6 +325,10 @@ export class BoxWorld {
   // `visible` ([visibleCount, visibleCount + visibleCutCount)): the g-buffer draws them with its cut pipeline. Switch off = none of it exists: no bit, no table, no
   // second list — the words and the buffer of the build without it.
   readonly cutOn: boolean;
+  /** ROUND THINGS (scene/round.ts): the GPU's half is up — a round box carries GEO_ROUND in its flags word (bit 3: the CPU's Dynamic, which no shader reads), its
+   *  prism's planes in its rows of the cut table (for the cut pass alone: no BOX_CUT_BIT, no ray reads them), and it is drawn from the cut list's picture-only end
+   *  (cut always: every ray program holds the round rule from boot). Needs the cut switch, whose table and pipeline these are. */
+  readonly roundOn: boolean;
   private cutData = new Float32Array(0);
   private cutLo = 1 << 30; private cutHi = -1; private cutLoD = 1 << 30; private cutHiD = -1; private cutSplit = 0;   // the rows packed this frame, as two index ranges: the statics' (below cutSplit) and the dynamics'
   /** how many of this frame's visible boxes are cut (they follow the plain ones in `visible`) */
@@ -332,7 +355,7 @@ export class BoxWorld {
     this.matData = new Float32Array(maxBoxes * MAT_STRIDE);
     const S = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST;
     this.geoBuf = makeBuffer(device, maxBoxes * GEO_STRIDE * 4, S | GPUBufferUsage.COPY_SRC, 'boxGeo');   // (COPY_SRC: the g-buffer snapshots both into its 'previous frame' buffer for the motion vectors — render/gbuffer.ts snapshotPrev)
-    this.cutOn = cutConfig.on;
+    this.cutOn = cutConfig.on; this.roundOn = this.cutOn && roundConfig.gpu;
     this.groundOn = groundRayConfig.on;
     if (this.cutOn) this.cutData = new Float32Array(maxBoxes * CUT_STRIDE * 4);
     this.matBuf = makeBuffer(device, maxBoxes * MAT_STRIDE * 4 + MARK_TABLE_ROWS * 16 + GB_ROWS * 16 + AIR_ROWS * 16 + (this.cutOn ? maxBoxes * CUT_STRIDE * 16 : 0) + (this.groundOn ? GH_ROWS * 16 : 0), S | GPUBufferUsage.COPY_SRC, 'boxMat');   // + the marking table in its tail (+ the glass-breaking cell table after it: GB_ROWS, zero unless a pane has come apart)
@@ -486,13 +509,13 @@ export class BoxWorld {
     if (this.statShadow.length < nStat * SS) { this.statShadow = new Float64Array(Math.max(nStat, this.maxBoxes) * SS); this.statMarked = new Uint8Array(Math.max(nStat, this.maxBoxes)); this.statShadowMarks.length = 0; this.statShadowCut.length = 0; this.statShadowN = 0; }
     const forceAll = this.statEpoch !== this.packEpoch || this.statMarksOn !== marksOn || this.statShadowN !== nStat;
     const S = this.statShadow, SM = this.statShadowMarks, SK = this.statMarked;
-    const cutOn = this.cutOn, SC = this.statShadowCut; let nc = 0, nct = 0; this.cutSplit = nStat;
+    const cutOn = this.cutOn, roundOn = this.roundOn, SC = this.statShadowCut; let nc = 0, nct = 0; this.cutSplit = nStat;
     let np = Math.max(this.cutVisible.length, cutOn ? this.maxBoxes : 0);   // (the cut list is filled from both ends: traceable boxes from the front, picture-only ones from the back)
     if (cutOn && this.cutVisible.length < this.maxBoxes) this.cutVisible = new Uint32Array(this.maxBoxes);
     const cv = this.cutVisible;
     for (let i = 0; i < nStat; i++) {
-      const b = all[i]; const so = i * SS; const c = b.c, h = b.h, al = b.albedo, em = b.emissive, rot = b.rot, marks = b.marks;
-      const mw = matWord(b), mg = b.markGain ?? 1, wk = b.wetK ?? 1, ml = marks === undefined ? -1 : marks.length;
+      const b = all[i]; const so = i * SS; const c = b.c, h = b.h, al = b.albedo, em = b.fogEmit ?? b.emissive, rot = b.rot, marks = b.marks;
+      const mw = matWord(b), mg = b.fogMark ?? b.markGain ?? 1, wk = b.wetK ?? 1, ml = marks === undefined ? -1 : marks.length;
       if (!forceAll && S[so] === c[0] && S[so + 1] === c[1] && S[so + 2] === c[2] && S[so + 3] === b.yaw && S[so + 4] === h[0] && S[so + 5] === h[1] && S[so + 6] === h[2]
         && S[so + 7] === b.flags && S[so + 8] === b.owner && S[so + 9] === al[0] * wk && S[so + 10] === al[1] * wk && S[so + 11] === al[2] * wk && S[so + 12] === em[0] && S[so + 13] === em[1] && S[so + 14] === em[2]
         && S[so + 15] === b.cutHeight && S[so + 16] === mw && S[so + 17] === mg && S[so + 23] === ml && SM[i] === marks && (!cutOn || SC[i] === b.cut)
@@ -508,7 +531,8 @@ export class BoxWorld {
       }
       if (cutOn && b.cut !== undefined && b.cut.length > 0 && !(b.flags & BoxFlag.NoShadow)) nct++;
       if (!(b.flags & (BoxFlag.NoPrimary | BoxFlag.Glass))) {   // (a static's word is its bare index: pslot 0 = the index rule; a pane is never rasterised)
-        if (cutOn && b.cut !== undefined && b.cut.length > 0) { if (b.flags & BoxFlag.NoShadow) cv[--np] = i; else cv[nc++] = i; } else this.visible[nv++] = i;   // (CUT BOXES: a cut static goes to the cut list, drawn by the cut pipeline)
+        if (roundOn && b.round === true) cv[--np] = i;   // (ROUND THINGS: drawn by the cut pipeline, cut always — the rays' round rule is in every program)
+        else if (cutOn && b.cut !== undefined && b.cut.length > 0) { if (b.flags & BoxFlag.NoShadow) cv[--np] = i; else cv[nc++] = i; } else this.visible[nv++] = i;   // (CUT BOXES: a cut static goes to the cut list, drawn by the cut pipeline)
       }
     }
     this.statEpoch = this.packEpoch; this.statMarksOn = marksOn; this.statShadowN = nStat;
@@ -526,7 +550,8 @@ export class BoxWorld {
         let pslot = 0;
         if (this.motionIds && b.mkey !== undefined) { const pi = this.mkeyPrev.get(b.mkey); if (pi === undefined) { pslot = 0xFFFF; fresh++; } else { pslot = pi + 1; matched++; } this.mkeyCur.set(b.mkey, i); }
         else unkeyed++;
-        if (cutOn && b.cut !== undefined && b.cut.length > 0) { if (b.flags & BoxFlag.NoShadow) cv[--np] = i | (pslot << 16); else cv[nc++] = i | (pslot << 16); } else this.visible[nv++] = i | (pslot << 16);
+        if (roundOn && b.round === true) cv[--np] = i | (pslot << 16);
+        else if (cutOn && b.cut !== undefined && b.cut.length > 0) { if (b.flags & BoxFlag.NoShadow) cv[--np] = i | (pslot << 16); else cv[nc++] = i | (pslot << 16); } else this.visible[nv++] = i | (pslot << 16);
       } else if (this.motionIds && b.mkey !== undefined) this.mkeyCur.set(b.mkey, i);
     }
     if (between) this.mkeyCur.clear();
@@ -561,26 +586,31 @@ export class BoxWorld {
   /** box i's geo + mat words (the pack proper — statement for statement what upload's one loop did per box; returns whether it counted as marked) */
   private packBox(i: number, b: Box, marksOn: boolean): boolean {
     const gf = this.geoF32, gu = this.geoU32, mf = this.matData; const o = i * GEO_STRIDE; let marked = false;
-    let flags = (b.flags & 0xff) | ((b.owner & 0xff) << 8) | (b.rot ? BoxFlag.Rot : 0) | (b.flags & BoxFlag.Glass);   // GPU word: flag bits 0-7, owner byte 8-15 (boxOwner() in common.wgsl), Glass at bit 17 (the one CPU flag ≥ 1<<16 that is passed through: BOX_GLASS), the marking slot in 18-31 (below); everything else up there is CPU-only and never reaches the GPU
-    if (b.emissive[0] + b.emissive[1] + b.emissive[2] > 0) flags |= BoxFlag.Emissive;
+    const round = this.roundOn && b.round === true;   // (round wins over a cut record, here as in rayBox and lineBox: nothing gives a round box one)
+    let flags = (b.flags & (this.roundOn ? 0xf7 : 0xff)) | (round ? BOX_ROUND_BIT : 0) | ((b.owner & 0xff) << 8) | (b.rot ? BoxFlag.Rot : 0) | (b.flags & BoxFlag.Glass);   // GPU word: flag bits 0-7, owner byte 8-15 (boxOwner() in common.wgsl), Glass at bit 17 (the one CPU flag ≥ 1<<16 that is passed through: BOX_GLASS), the marking slot in 18-31 (below); everything else up there is CPU-only and never reaches the GPU
+    const em = b.fogEmit ?? b.emissive;   // (the picture's emission: Box.fogEmit)
+    if (em[0] + em[1] + em[2] > 0) flags |= BoxFlag.Emissive;
     const wk = b.wetK ?? 1;   // (render-only: see Box.wetK)
     let s0 = b.albedo[0] * wk, s1 = b.albedo[1] * wk, s2a = b.albedo[2] * wk;   // the secondary albedo (4th mat row): the albedo itself unless markings fold in
     if (marksOn && b.marks !== undefined && b.marks.length > 0 && !b.rot) {   // (a tilted box never carries markings: the face frame assumes yaw only)
       const mk = this.markSlotOf(b);
       if (mk.slot > 0 && mk.slot <= MARK_SLOT_MAX) { flags |= mk.slot << MARK_SLOT_SHIFT; s0 = mk.sec[0] * wk; s1 = mk.sec[1] * wk; s2a = mk.sec[2] * wk; marked = true; }
     }
-    if (this.cutOn && b.cut !== undefined && b.cut.length > 0) {   // CUT BOXES: the flag bit + this index's rows of the cut table (uploaded by upload() over the packed range)
-      flags |= BOX_CUT_BIT; packCut(b.cut, this.cutData, i * CUT_STRIDE * 4, b.cutCore, b.cutGlass, b.cutRound, b.cutOld, b.cutArc);
-      if (i < this.cutSplit) { if (i < this.cutLo) this.cutLo = i; if (i > this.cutHi) this.cutHi = i; } else { if (i < this.cutLoD) this.cutLoD = i; if (i > this.cutHiD) this.cutHiD = i; }
+    const cutRows = round || (this.cutOn && b.cut !== undefined && b.cut.length > 0);
+    if (round) {   // ROUND THINGS: the picture's prism in this index's rows of the cut table (no cut bit: a ray meets the cylinder — common.wgsl isectBox)
+      const q = i * CUT_STRIDE * 4; packRoundRows(this.cutData, q, b.h[0]); this.cutData[q + 32] = 0; this.cutData[q + 33] = 0; this.cutData[q + 34] = 0; this.cutData[q + 35] = ROUND_CORE_W;
+    } else if (cutRows) {   // CUT BOXES: the flag bit + this index's rows of the cut table (uploaded by upload() over the packed range)
+      flags |= BOX_CUT_BIT; packCut(b.cut!, this.cutData, i * CUT_STRIDE * 4, b.cutCore, b.cutGlass, b.cutRound, b.cutOld, b.cutArc);
     }
+    if (cutRows) { if (i < this.cutSplit) { if (i < this.cutLo) this.cutLo = i; if (i > this.cutHi) this.cutHi = i; } else { if (i < this.cutLoD) this.cutLoD = i; if (i > this.cutHiD) this.cutHiD = i; } }
     gf[o] = b.c[0]; gf[o + 1] = b.c[1]; gf[o + 2] = b.c[2]; gu[o + 3] = pack2x16f(Math.cos(b.yaw), Math.sin(b.yaw));
     gf[o + 4] = b.h[0]; gf[o + 5] = b.h[1]; gf[o + 6] = b.h[2]; gu[o + 7] = flags >>> 0;
     const m = i * MAT_STRIDE;
     mf[m] = b.albedo[0] * wk; mf[m + 1] = b.albedo[1] * wk; mf[m + 2] = b.albedo[2] * wk; mf[m + 3] = b.cutHeight;
-    mf[m + 4] = b.emissive[0]; mf[m + 5] = b.emissive[1]; mf[m + 6] = b.emissive[2]; mf[m + 7] = matWord(b);   // (the finish: read through common.wgsl boxFinish by the g-buffer / reflect.wgsl — every other shader ignores the word, as it ignored the owner that sat here)
+    mf[m + 4] = em[0]; mf[m + 5] = em[1]; mf[m + 6] = em[2]; mf[m + 7] = matWord(b);   // (the finish: read through common.wgsl boxFinish by the g-buffer / reflect.wgsl — every other shader ignores the word, as it ignored the owner that sat here)
     if (b.rot) { mf[m + 8] = b.rot[0]; mf[m + 9] = b.rot[1]; mf[m + 10] = b.rot[2]; mf[m + 11] = b.rot[3]; }
     else { const s2 = Math.sin(b.yaw / 2), c2 = Math.cos(b.yaw / 2); mf[m + 8] = 0; mf[m + 9] = s2; mf[m + 10] = 0; mf[m + 11] = c2; }   // yaw about +Y (local +X → (cos, 0, −sin), +Z → (sin, 0, cos): the same convention as the packed yaw the rays use)
-    mf[m + 12] = s0; mf[m + 13] = s1; mf[m + 14] = s2a; mf[m + 15] = b.markGain ?? 1;   // secondary albedo + the marking emission gain (game/lighting.ts drives it with the switchable's supply)
+    mf[m + 12] = s0; mf[m + 13] = s1; mf[m + 14] = s2a; mf[m + 15] = b.fogMark ?? b.markGain ?? 1;   // secondary albedo + the marking emission gain (game/lighting.ts drives it with the switchable's supply)
     return marked;
   }
 
@@ -860,6 +890,7 @@ export class BoxWorld {
 }
 
 export function rayBox(ro: Vec3, rd: Vec3, b: Box, tmax: number): { t: number; n: Vec3 } | null {
+  if (b.round === true) return rayBoxRound(ro, rd, b, tmax);   // ROUND THINGS (scene/round.ts): the cylinder (below)
   if (b.cut !== undefined && cutConfig.on && b.cut.length > 0) return rayBoxCut(ro, rd, b, tmax);   // CUT BOXES: the cut solid (below) — every other box takes the lines it always took
   if (b.rot) return rayBoxRot(ro, rd, b, tmax);
   // (the CPU-frame lane: the slab loop written out over the three axes and scalars — the same statements in the same order as the array form it replaces, so t and n are the same bits; the two
@@ -930,4 +961,33 @@ function rayBoxCut(ro: Vec3, rd: Vec3, b: Box, tmax: number): { t: number; n: Ve
   if (k >= 0) { const n = b.cut![k].n; ln = [n[0], n[1], n[2]]; } else { ln = [0, 0, 0]; ln[axis] = sgn; }
   if (b.rot) return { t: CUT_CLIP.t0, n: quat.rotate(b.rot, ln) };
   return { t: CUT_CLIP.t0, n: [cs * ln[0] + sn * ln[2], ln[1], -sn * ln[0] + cs * ln[2]] };
+}
+
+/** ROUND THINGS (scene/round.ts): the same test against a round box — the cylinder about its own y, radius h[0], between its two end faces. The ray's stay inside
+ *  is one interval: its stay between the ends, cut down to its stay inside the circle (common.wgsl isectRound's statements). The normal is the end's, or points
+ *  straight out from the axis at the place the ray meets the side. Origin inside = no hit, the rule rayBox documents. */
+function rayBoxRound(ro: Vec3, rd: Vec3, b: Box, tmax: number): { t: number; n: Vec3 } | null {
+  let ox: number, oy: number, oz: number, dx: number, dy: number, dz: number; let cs = 1, sn = 0;
+  const px = ro[0] - b.c[0], py = ro[1] - b.c[1], pz = ro[2] - b.c[2];
+  if (b.rot) {   // (rayBoxRot's expressions over scalars)
+    const R = b.rot; const qx = -R[0], qy = -R[1], qz = -R[2], qw = R[3];
+    let tx = 2 * (qy * pz - qz * py), ty = 2 * (qz * px - qx * pz), tz = 2 * (qx * py - qy * px);
+    ox = px + qw * tx + (qy * tz - qz * ty); oy = py + qw * ty + (qz * tx - qx * tz); oz = pz + qw * tz + (qx * ty - qy * tx);
+    const vx = rd[0], vy = rd[1], vz = rd[2];
+    tx = 2 * (qy * vz - qz * vy); ty = 2 * (qz * vx - qx * vz); tz = 2 * (qx * vy - qy * vx);
+    dx = vx + qw * tx + (qy * tz - qz * ty); dy = vy + qw * ty + (qz * tx - qx * tz); dz = vz + qw * tz + (qx * ty - qy * tx);
+  } else {
+    cs = Math.cos(b.yaw); sn = Math.sin(b.yaw);
+    ox = cs * px - sn * pz; oy = py; oz = sn * px + cs * pz; dx = cs * rd[0] - sn * rd[2]; dy = rd[1]; dz = sn * rd[0] + cs * rd[2];
+  }
+  const R = b.h[0], hy = b.h[1]; let t0 = 0, t1 = tmax; let face = 0, sgn = 0;   // face: 0 = none entered (the origin is inside), 1 = an end, 2 = the side
+  { const inv = 1 / (dy || 1e-20); let ta = (-hy - oy) * inv, tb = (hy - oy) * inv; let s = -1; if (ta > tb) { const tmp = ta; ta = tb; tb = tmp; s = 1; } if (ta > t0) { t0 = ta; face = 1; sgn = s; } if (tb < t1) t1 = tb; if (t0 > t1) return null; }
+  const a = dx * dx + dz * dz, hb = ox * dx + oz * dz, c = ox * ox + oz * oz - R * R;
+  if (a < 1e-18) { if (c > 0) return null; }   // along the axis: inside the circle for every t, or never
+  else { const disc = hb * hb - a * c; if (disc < 0) return null; const s = Math.sqrt(disc), ta = (-hb - s) / a, tb = (-hb + s) / a; if (ta > t0) { t0 = ta; face = 2; } if (tb < t1) t1 = tb; if (t0 > t1) return null; }
+  if (face === 0) return null;   // origin inside
+  let l0 = 0, l1 = sgn, l2 = 0;
+  if (face === 2) { const hx = ox + dx * t0, hz = oz + dz * t0, il = 1 / (Math.sqrt(hx * hx + hz * hz) || 1); l0 = hx * il; l1 = 0; l2 = hz * il; }
+  if (b.rot) return { t: t0, n: quat.rotate(b.rot, [l0, l1, l2]) };
+  return { t: t0, n: [cs * l0 + sn * l2, l1, -sn * l0 + cs * l2] };
 }

@@ -43,6 +43,7 @@ import type { Prop } from './props';
 import type { Character } from './character';
 import { gpuFx, emitDust, paletteName, surfOf, fixtureShatterFx, lensShatterFx, type Surf } from './particleFx';
 import { lampGlass } from './carlamps';
+import { fireHolds, fireStir, fireStruck } from './fire';   // a blast does not put a fire out (FIRE.hardy)
 import { Debris, hash01, type ChunkKind } from './debris';
 import { PLAYER_ID, NOBODY_ID } from './consts';
 import { chronLightShot } from './chronicle';
@@ -428,7 +429,8 @@ export class Destruction {
    *  It hurts nobody, flashes nothing and files no hearing event: the caller does its own. With THE ONE SWITCH off it is the old bang(at, who) and nothing else
    *  (returns zeros; nothing at all with `chaos: false` or at chaos 0), so a grenade that calls this is the grenade it was before the engine;
    *  with only tune.wallBreak off, steps 1 and 3 still run. */
-  blast(at: Vec3, opts: BlastOpts = {}): BlastResult {
+  blast(at: Vec3, opts: BlastOpts = {}): BlastResult { return this.g.fogOfWar.doing(opts.who, () => this.blastRaw(at, opts)); }   // (what it throws is its cause's doing: fogofwar.ts FOG.ours)
+  private blastRaw(at: Vec3, opts: BlastOpts): BlastResult {
     const g = this.g; const chaos = chaosOf(g); const res: BlastResult = { walls: 0, cover: 0, doors: 0, panes: 0, opened: 0, serial: this.walls.serial };
     if (chaos <= 0 || !DESTRUCTION.on) { if (opts.chaos !== false) this.bang(at, opts.who); return res; }   // (off: a caller that used to call bang() and now calls blast() — a grenade — gets exactly the bang() it had; at chaos 0 that returns on its first line)
     const power = opts.power ?? 1, radius = (opts.radius ?? WALLS.blast.radius) * power, who = opts.who || NOBODY_ID;
@@ -524,9 +526,9 @@ export class Destruction {
     if (loud) {   // the loud levels: …and off the floor round where it lay (over the next frames, inside the puff caps), and the fixtures it went off beside go dark
       this.dustBurst([at[0], Math.max(0.06, at[1]), at[2]], [0, 1, 0], Math.round(CHAOS.loud.blastDustPuffs * pw), CHAOS.loud.blastDustFloor * Math.min(1.5, reach), 'concrete', 0.5 * reach);
       const R = (stun ? CHAOS.loud.stunFixtureM : CHAOS.loud.fixtureBlastM) * reach;
-      for (const t of g.targets) { if (!this.fixtureLive(t) || v3.dist(t.pos, at) > R) continue; const to = v3.sub(t.pos, eye), L = v3.len(to);
+      for (const t of g.targets) { const fire = fireHolds(t); if (!(fire || this.fixtureLive(t)) || v3.dist(t.pos, at) > R) continue; const to = v3.sub(t.pos, eye), L = v3.len(to);
         if (L > 0.3) { const hit = g.col.raycast(eye, v3.scale(to, 1 / L), L); if (hit && hit.t < L - 0.06 && !(hit.index !== undefined && t.boxes.includes(hit.index))) continue; }   // (the first solid thing on the line is the fixture itself, or nothing: a lamp on the far side of a partition stays lit)
-        this.killFixture(t, at, 'blast', true); }
+        if (fire) fireStir(g, t); else this.killFixture(t, at, 'blast', true); }   // (fire.ts FIRE.hardy: a blast stirs a fire — a crack and a throw of embers — and does not put it out; a fire whose own box is blown away still goes with it, breakFixtureBox)
     }
     this.bangImpulse(at, eye, chaos, who);   // …and everything already lying within a few metres — the leaves of the LAST burst, the chips, the mug it knocked off before — goes up again
   }
@@ -589,7 +591,7 @@ export class Destruction {
   }
 
   /** a lit screen's light target out (the OCP / round rule's own bit: updateTargets takes its emissive and its markings' gain to 0 the same frame), remembered for reset() */
-  private breakTarget(t: LightTarget): boolean { if (t.broken) return false; const wasLit = t.interactive && (t.on || t.factor > 0); t.broken = true; this.broke.add(t); if (wasLit) this.g.lightEvent(t); return wasLit; }   // (→ whether a LIGHT went out: a dark / dead screen breaks silently — nobody notices a light that was not on, combat.ts's fixture rule)
+  private breakTarget(t: LightTarget): boolean { if (t.broken) return false;  const wasLit = t.interactive && (t.on || t.factor > 0); t.broken = true; this.broke.add(t); if (wasLit) this.g.lightEvent(t); return wasLit; }   // (→ whether a LIGHT went out: a dark / dead screen breaks silently — nobody notices a light that was not on, combat.ts's fixture rule)
 
   private killScreen(item: Destructible, hitP: Vec3, n: Vec3, byPlayer: boolean) {
     const g = this.g;
@@ -833,7 +835,7 @@ export class Destruction {
   // ---------------------------------------------------------------- fixtures under fire (the loud levels: the destruction switch on)
   /** a fixture a stray round, a blast or a shaken ceiling can put out: a lit, interactive lamp or panel — never the breaker (a blackout stays somebody's decision), never a
    *  device (cameras and beam emitters die by devices.ts's own rules), never scenery, never one already dead */
-  private fixtureLive(t: LightTarget): boolean { return !t.broken && t.interactive && (t.kind === 'emissive' || t.kind === 'analytic') && (t.on || t.factor > 0 || lampGlass(t)); }   // (carlamps.ts: a vehicle's lamp is glass whether it burns or not — the same word the player's own round is given, combat.ts)
+  private fixtureLive(t: LightTarget): boolean { return !t.broken && t.interactive && (t.kind === 'emissive' || t.kind === 'analytic') && (t.on || t.factor > 0 || lampGlass(t)) && !fireHolds(t); }   // (carlamps.ts: a vehicle's lamp is glass whether it burns or not — the same word the player's own round is given, combat.ts)
   /** put `t` out: the light target's own broken bit (updateTargets takes its light and its emissive the same frame; guards with a line to it notice — lighting.ts
    *  lightEvent), the tube's glass coming down, counted against the encounter's cap (`force`: a blast ignores the gap, not the cap). Returns whether it went. */
   private killFixture(t: LightTarget, from: Vec3, why: string, force = false): boolean {
@@ -848,7 +850,8 @@ export class Destruction {
    *  aim-assisted rule stands beside it untouched): a fixture whose box it stopped in, or that its flight passed within CHAOS.loud.fixtureHitM of, goes dark. */
   fixtureRound(muzzle: Vec3, dir: Vec3, tHit: number, index: number | undefined) {
     const g = this.g; if (!loudNow(g) || chaosOf(g) <= 0) return;
-    if (index !== undefined && index < 1e6) { const t = this.targetOfBox.get(index); if (t && this.fixtureLive(t)) { this.killFixture(t, muzzle, 'round'); return; } }
+    if (index !== undefined && index < 1e6) { const t = this.targetOfBox.get(index); if (t && fireHolds(t)) { fireStir(g, t); return; } if (t && this.fixtureLive(t)) { this.killFixture(t, muzzle, 'round'); return; }
+      const at = v3.mad(muzzle, dir, tHit), fire = g.targets.find(x => fireHolds(x) && fireStruck(g, x, at, index)); if (fire) { fireStir(g, fire); return; } }   // (… or in the drum it burns in, which is no box of the fire's)
     const R = CHAOS.loud.fixtureHitM;
     for (const t of g.targets) {
       if (!this.fixtureLive(t)) continue;

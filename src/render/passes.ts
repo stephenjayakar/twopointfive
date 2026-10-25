@@ -20,7 +20,7 @@ import { dustLookVol } from './dustLookVol';
 import { DUST_DRAW } from '../smoke/dustTint';
 import volCommon from './shaders/vol_common.wgsl' with { type: 'text' };
 import compositeSrc from './shaders/composite.wgsl' with { type: 'text' };
-import fireSrc from './shaders/fire.wgsl' with { type: 'text' };   // the open fires' flame and embers (game/fire.ts): compiled into the composite, ahead of its own text
+import fireSrc from './shaders/fire.wgsl' with { type: 'text' };   // the open fires' flame, coals and drawn smoke (game/fire.ts): compiled into the composite, ahead of its own text
 import fxaaSrc from './shaders/fxaa.wgsl' with { type: 'text' };
 import softblurSrc from './shaders/softblur.wgsl' with { type: 'text' };
 import temporalSrc from './shaders/temporal.wgsl' with { type: 'text' };
@@ -98,9 +98,9 @@ export interface TaauFrame { prevViewProjU: Mat4; jitter: [number, number]; bypa
 const TAAU_PARAM_BYTES = 144;   // struct TaauParams in taau.wgsl: mat4 (64) + 3 vec2 + 11 scalars → 132, rounded to the struct's 16-byte alignment
 /** restir.wgsl RestirU ahead of prevLights: cfg (16) + cfg2 (16) + jitter (16) + mot (16) + fwd (64) + inv (64) = 192 B (was 176 before the MOTION vec4 — direct-motion lane) */
 /** lasers / tracers handed to the reflection pass (setBeams): segments at most, and the uniform's size — 16 B of count + 48 B a segment (reflect.wgsl `Beams`) */
-const BEAM_MAX = 8, BEAM_HEAD = 32, BEAM_SEG_BYTES = BEAM_HEAD + BEAM_MAX * 48, FIRE_MAX = 4, FIRE_REC = 128, FIRE_AT = BEAM_SEG_BYTES, BEAM_BYTES = FIRE_AT + 16 + FIRE_MAX * FIRE_REC;   // (header: n, flags, 2 spare words, then k: vec4f — reflect.wgsl / composite.wgsl `Beams` … and behind the segments, for the composite alone, THE OPEN FIRES: a count word + FIRE_MAX records of 8 vec4f — fire.wgsl FireRec, setFires)
+const BEAM_MAX = 8, BEAM_HEAD = 32, BEAM_SEG_BYTES = BEAM_HEAD + BEAM_MAX * 48, FIRE_MAX = 4, FIRE_REC = 64, FIRE_AT = BEAM_SEG_BYTES, FIRE_LOOK_AT = FIRE_AT + 16 + FIRE_MAX * FIRE_REC, FIRE_LOOK_FLOATS = 16, BEAM_BYTES = FIRE_LOOK_AT + FIRE_LOOK_FLOATS * 4;   // (header: n, flags, 2 spare words, then k: vec4f — reflect.wgsl / composite.wgsl `Beams` … and behind the segments, for the composite alone, THE OPEN FIRES: a count word + FIRE_MAX records of 4 vec4f — fire.wgsl FireRec, setFires — and behind those the look's twelve numbers, fire.wgsl FireLook, setFireLook)
 /** one open fire as the composite draws it (game/fire.ts makes them; shaders/fire.wgsl FireRec) */
-export interface FireRecord { pos: ArrayLike<number>; r: number; h: number; heat: number; seed: number; time: number; wind: ArrayLike<number>; flick: number; embers: number; pops: ArrayLike<number>; /** the bed of coals' radius, m (0 or absent = none drawn) */ bed?: number }
+export interface FireRecord { pos: ArrayLike<number>; r: number; h: number; heat: number; seed: number; time: number; wind: ArrayLike<number>; flick: number; /** the bed of coals' radius, m (0 or absent = none drawn) */ bed?: number; /** under the fog of war (RtLight.fog's numbers): 0 or absent = drawn wherever it stands · 1 = only where the team sees · 2 = only where it does not */ fog?: number; /** how much of its flame is the smoke solver's gas (0‥1; game/fire.ts FIRE.gas) */ gas?: number }
 const RESTIR_U_HEAD = 192, RESTIR_U_FWD = 64, RESTIR_U_INV = 128;
 const TF = { Reset: 1, Bypass: 2, Particles: 4, Velocity: 8 } as const;   // TaauParams.flags (TF_* in taau.wgsl)
 /** composite.wgsl as bundled (the scene tweak panel lists its constants off it: render/shaderTune.ts shaderConsts) */
@@ -368,7 +368,7 @@ export class LightingPasses implements CutSwappable {
     return hide.size ? hide : null;
   }
   /** THE OPEN FIRES (game/fire.ts → engine.fires): the nearest FIRE_MAX as records behind the beam segments, in the same uniform — the composite's fireOver draws
-   *  each one's flame and embers along the pixel's ray (shaders/fire.wgsl). Picture only. None = a zero count, written once: the composite as it was. */
+   *  each one's flame, coals and drawn smoke along the pixel's ray (shaders/fire.wgsl). Picture only. None = a zero count, written once: the composite as it was. */
   private fireData = new Float32Array((16 + FIRE_MAX * FIRE_REC) / 4); private fireN = -1;
   setFires(list: readonly FireRecord[] | null | undefined) {
     const n = Math.min(list?.length ?? 0, FIRE_MAX);
@@ -377,10 +377,18 @@ export class LightingPasses implements CutSwappable {
     for (let i = 0; i < n; i++) { const r = list![i], o = 4 + i * (FIRE_REC / 4);
       F[o] = r.pos[0]; F[o + 1] = r.pos[1]; F[o + 2] = r.pos[2]; F[o + 3] = r.r;
       F[o + 4] = r.h; F[o + 5] = r.heat; F[o + 6] = r.seed; F[o + 7] = r.time;
-      F[o + 8] = r.wind[0]; F[o + 9] = r.wind[1]; F[o + 10] = r.flick; F[o + 11] = r.embers;
-      F[o + 12] = r.bed ?? 0; F[o + 13] = 0; F[o + 14] = 0; F[o + 15] = 0;
-      for (let k = 0; k < 4; k++) { F[o + 16 + k * 4] = r.pops[k * 3] ?? -1; F[o + 17 + k * 4] = r.pops[k * 3 + 1] ?? 0; F[o + 18 + k * 4] = r.pops[k * 3 + 2] ?? 0; F[o + 19 + k * 4] = 0; } }
+      F[o + 8] = r.wind[0]; F[o + 9] = r.wind[1]; F[o + 10] = r.flick; F[o + 11] = r.gas ?? 0;
+      F[o + 12] = r.bed ?? 0; F[o + 13] = r.fog ?? 0; F[o + 14] = 0; F[o + 15] = 0; }
     this.fireN = n; this.device.queue.writeBuffer(this.beamBuf, FIRE_AT, F.buffer, 0, 16 + n * FIRE_REC);
+  }
+  /** … and THE LOOK'S NUMBERS every fire is drawn with (game/fire.ts FIRE.look → engine.fireLook; fire.wgsl FireLook: sixteen floats in its order), written when they move */
+  private fireLook = new Float32Array(FIRE_LOOK_FLOATS); private fireLookSet = false;
+  setFireLook(look: ArrayLike<number> | null | undefined) {
+    if (!look) return;
+    const L = this.fireLook; let same = this.fireLookSet;
+    for (let i = 0; i < FIRE_LOOK_FLOATS; i++) { const v = Math.fround(+look[i] || 0); if (L[i] !== v) { L[i] = v; same = false; } }
+    if (same) return;
+    this.fireLookSet = true; this.device.queue.writeBuffer(this.beamBuf, FIRE_LOOK_AT, L.buffer, 0, FIRE_LOOK_FLOATS * 4);
   }
   private lRefl: GPUBindGroupLayout; private pRefl!: GPUComputePipeline; private bgRefl: GPUBindGroup | null = null;   // main's reflection pass, untouched (every tier with the phase-5 bits down)
   private lReflP5: GPUBindGroupLayout; private pReflP5!: GPUComputePipeline; private bgReflP5: (GPUBindGroup | null)[] = [null, null];   // phase 5's variant (reflect_p5.wgsl): + the hit records, per parity (reads reflHit[1−p], writes reflHit[p]); dispatched instead while frame.p5Cfg.z ≠ 0 (`rtP5`, engine.render mirrors it)

@@ -10,6 +10,7 @@ const IK = 'Space';
 const { v3, quat } = await import(`${ROOT}/src/math/vec.ts`);
 const { startGrab, freeHeld } = await import(`${ROOT}/src/game/player.ts`);
 const { HOLD } = await import(`${ROOT}/src/game/character.ts`);
+const { CLOSE } = await import(`${ROOT}/src/game/close.ts`);
 const { TAKEDOWN } = await import(`${ROOT}/src/game/takedown.ts`);
 const { KNIFE_TAG } = await import(`${ROOT}/src/game/rigProps.ts`);
 const { KITANIM } = await import(`${ROOT}/src/game/kitanim.ts`);
@@ -18,6 +19,10 @@ const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
+/** hold-knife is a check of the KNIFE: the page has none since the no-knife rule (CLOSE.noKnife, on there; `?noknife=0` gives it back), and a stand-up on the
+ *  shipped stand writes the rule on — so while that probe runs, every stage writes the rule: down (the knife is back), or up under HOLDKNIFE_BREAK=1 (with
+ *  CLOSE.on, which the rule needs: no knife on either stand, and (a) and (c) must FAIL). null = as the stand has it (every other probe here) */
+let knifeRule: boolean | null = null;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const f2 = (x: number) => x.toFixed(2), mm = (x: number) => (x * 1000).toFixed(1);
 function place(gd: any, p: Vec3, yaw: number) { gd.char.pos = v3.copy(p); gd.char.vel = [0, 0, 0]; gd.speed = 0; gd.char.bodyYaw = gd.char.aimYaw = yaw; gd.char.aimPitch = 0; gd.path = []; gd.pathGoal = null; gd.char.update(0); gd.char.update(DT); }
@@ -26,7 +31,7 @@ function park(gd: any, i: number) { gd.hold = true; gd.pinned = true; gd.heardUp
  *  hold and its knife) unless `gun` (→ drawn: the pistol-to-the-head hold, no knife); `drawn`: A carries his own pistol drawn (an edgy floor) instead of the torch */
 async function stage(seed: number, gun = false, drawn = false) {
   Math.random = seeded(seed);
-  const W = await standUp(); const { game } = W;
+  const W = await standUp(); const { game } = W; if (knifeRule !== null) { CLOSE.noKnife = knifeRule; if (knifeRule) CLOSE.on = true; }
   game.godMode = true; game.player.visibility = 0.02;
   for (let i = 0; i < 5; i++) W.step(DT);
   const [A, B, C] = game.guards; park(B, 1); park(C, 2);
@@ -93,7 +98,8 @@ function nanBones(...cs: any[]): number { let n = 0; for (const c of cs) for (co
 // ================================================================ (1) the knife: in the fist for exactly the life of a hands-empty hold, and nowhere else
 export async function holdKnife() {
   console.log('\n=== hold-knife: the combat knife is drawn in Sam\'s right fist while — and only while — he holds a man with his hands empty; never in the pistol hold, never on anyone else ===');
-  let allPass = true;
+  let allPass = true; const bare = CLOSE.noKnife, closeOn = CLOSE.on; knifeRule = process.env.HOLDKNIFE_BREAK === '1';
+  try {
   // ---- (a) the arm hold all the way through a choke: none before, four boxes every frame from the grab's first to the man dropping, none from that frame on
   {
     const S = await stage(71); const { W, game, A } = S;
@@ -153,7 +159,8 @@ export async function holdKnife() {
     console.log(`- ${ok ? 'PASS' : 'FAIL'} — (b) pistol hold → whip: variant ${variant}; knife seen on ${seen} of ${frames} frames; A ${A.downKind}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
   }
   // ---- (c) the other ends: Sam shot down with him in the arm (freeHeld 'shot'), the tour / a teleport taking the hands (freeHeld 'cancel') — gone that frame; and a
-  //      man grabbed with his OWN pistol drawn keeps it in the raised fist (his boxes are his, the knife's are Sam's)
+  //      man grabbed with his OWN pistol drawn keeps it in the raised fist (his boxes are his, the knife's are Sam's) — unless the grab disarms him (HOLD.disarm under
+  //      HOLD.dropGun, both on in the page): then Sam has had it out of his hand by now, and the fist is empty
   for (const why of ['shot', 'cancel'] as const) {
     const S = await stage(73 + (why === 'shot' ? 0 : 1), false, true); const { W, game, A } = S;
     const fails: string[] = [];
@@ -166,11 +173,13 @@ export async function holdKnife() {
     const away = sheathe(W, game, 91), after1 = away.first, after = away.peak;
     if (during !== 4 || faults.length) fails.push(`while holding: ${during} boxes, faults ${faults.join(', ') || 'none'}`);
     if (foreign) fails.push(`${foreign} knife boxes owned by somebody other than Sam`);
-    if (!armed) fails.push(`the drawn man's heldPose.armed = ${armed} (want true: his pistol stays in the raised fist)`);
+    const taken = HOLD.disarm && HOLD.dropGun;
+    if (!!armed === taken) fails.push(taken ? `the drawn man's heldPose.armed = ${armed} a second and a half into a hold that disarms him (want false: Sam took it)` : `the drawn man's heldPose.armed = ${armed} (want true: his pistol stays in the raised fist)`);
     fails.push(...sheatheFaults(away, `freeHeld('${why}')`));
     const ok = fails.length === 0; allPass &&= ok;
     console.log(`- ${ok ? 'PASS' : 'FAIL'} — (c) freeHeld('${why}') on a drawn man: ${during} boxes while holding (armed ${armed}), ${after1} the frame after, ${after} later, last drawn +${f2(away.last * DT)} s${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
   }
+  } finally { knifeRule = null; CLOSE.noKnife = bare; CLOSE.on = closeOn; }
   console.log(`=== hold-knife: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
   return allPass;
 }

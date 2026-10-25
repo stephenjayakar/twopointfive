@@ -74,13 +74,15 @@ struct BoxCutVOut {
     }
   }
   o.wpPrev = wpPrev;
-  o.mark = select(markSlotOf(b.flags), 0u, vi >= 36u && cutRoundAxis(bi) < 0);   // markings live on the box's own faces; a cut face shows the bare material (a ROUND prism's faces are one face: its marks run round it)
+  o.mark = select(markSlotOf(b.flags), 0u, vi >= 36u && cutRoundAxis(bi) < 0);   // markings live on the box's own faces; a cut face shows the bare material (a ROUND's prism faces are one face: its marks run round it)
   o.lc = lc; o.hf = vec4f(h, select(face, -1.0, cap));
   return o;
 }
 
-/** ROUND (Box.cutRound, the core row's w: scene/cut.ts packCut): the axis (0‥2) this prism stands for a round thing about, −1 = an ordinary cut box */
-fn cutRoundAxis(bi: u32) -> i32 { return i32((u32(max(cutCoreRow(bi).w, 0.0)) >> 7u) & 3u) - 1; }
+/** ROUND: the axis (0‥2) this prism stands for a round thing about, −1 = an ordinary cut box. Two writers (the core row's w, scene/cut.ts packCut): a ROUND THING of
+ *  the level (scene/round.ts, ROUND_CORE_W = 128: about the box's own y, and every ray meets the cylinder inside the prism) and the look page's trials (Box.cutRound,
+ *  1024 × (1 + the axis): a prism every ray meets as it is). No ray reads either here. */
+fn cutRoundAxis(bi: u32) -> i32 { let w = u32(max(cutCoreRow(bi).w, 0.0)); if ((w & 128u) != 0u) { return 1; } return i32((w >> 10u) & 3u) - 1; }
 
 /** GBAA across a cut: one edge candidate — a line where `coord` (some linear function of the box-local position, screen gradient g per pixel) reaches `edge`.
  *  boxEdgeOffset's arithmetic per candidate: the perpendicular distance in pixels picks the nearest, which is stored along its major screen axis. */
@@ -122,7 +124,7 @@ fn cutEdgeTake(s0: f32, g: vec2f, best: ptr<function, f32>, d: ptr<function, vec
   // toward a grazing view (a sheet seen edge-on mirrors) — inside a rim, which with the cut faces and the box's side faces shows the core: the bright edge of sheet
   // glass. The pattern is per pixel, stepped along the TAAU jitter's cycle when asked, so the resolve averages the door to a tint. Picture only.
   let core = cutCoreRow(bi); let cw = u32(max(core.w, 0.0));
-  // ROUND (Box.cutRound; a geometry trial, scene/geoTry.ts): the prism's faces round its axis are ONE round face to the picture. Their normal turns with the
+  // ROUND (a ROUND THING, scene/round.ts, about the box's own y; or Box.cutRound, a geometry trial, scene/geoTry.ts): the prism's faces round its axis are ONE round face to the picture. Their normal turns with the
   // point (the silhouette and every ray keep the flat faces); marks and the look's paint read them as the box face that normal leans to (flatN: a rule that
   // runs ALONG a face is asked a quarter of the round at a time, and what it leans the normal by is turned back onto the round), the look with the distance
   // round the box unrolled; the end face gets the rolled rim of a drum's lid. Picture only. (The snow hook below knows a round about y only.)

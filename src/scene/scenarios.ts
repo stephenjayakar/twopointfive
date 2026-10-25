@@ -240,12 +240,18 @@ export interface LessonStep {
   menuLine?: string;
   /** the line while a page UNDER the ring's first is showing (the first page's key pressed: what is left to press — absent: `menuLine`) */
   pageLine?: string;
+  /** the line while the squad's ring is up as ONE ring of every order of the thing (a mission whose `rails.flatRing` is set, game/rails.ts RAILS.flatRing:
+   *  what to press in it — absent: `menuLine`). The digit it names is the wedge the row is on with this level's `rails.orders` (tools/qa/rails-check.ts asks) */
+  flatLine?: string;
   /** the line while plan mode is DOWN on a step that is done in the mode (a checkpoint put back, the mode put away by hand: what puts it up again —
    *  absent: `line`) */
   planLine?: string;
   done: LessonTest;
   /** seconds the test must stay true before the step counts (absent: the frame it turns true) */
   hold?: number;
+  /** seconds the step waits AFTER it has counted before the next one comes up, whether or not the test stays true: the moment plays out (the man falls,
+   *  the blast clears) before the next line or card is over it (absent: none). Not waited by a step whose test was already true as it came up */
+  settle?: number;
   /** where the HUD's marker points while the step is up (absent: no marker) */
   at?: Vec3;
   /** the marker rides on a MAN instead: the one on the patrol route of this name, while he is on his feet (then `at`, if the step has one) — 'come up
@@ -266,8 +272,11 @@ export interface LessonStep {
    *  The picture's alone: the squad knows nothing through it (rails.ts RAILS.eyeView) */
   eye?: { at: Vec3; yaw: number; fov?: number };
   /** A CARD that pauses the page when the step comes up (ui/railcard.ts): a heading and a few sentences on a rule of the game no key press shows — a new
-   *  line in `text` is a new paragraph, a key in brackets is drawn as a key. Closed with Enter or a click; then the step's line is what to try. Once a run */
-  explain?: { title?: string; text: string };
+   *  line in `text` is a new paragraph, a key in brackets is drawn as a key. Closed with Enter or a click; then the step's line is what to try. Once a run.
+   *  A card lands a beat after the deed before it (rails.ts RAILS.cardBeat: the step before it settles, and this step's cue, checkpoint and keys come with
+   *  the card). `quiet`: the deed before this card sets off a fight the player is there to watch (his squad sent at a gate, into a room) — the card also
+   *  waits until that fight has gone quiet, to a cap. `now`: no beat at all, for a card whose news is the fight itself ('They're behind you') */
+  explain?: { title?: string; text: string; quiet?: boolean; now?: boolean };
   /** an ARROW on the ground in place of the ring: from the step's `at` it points at this place ('walk into the wall': which way) */
   toward?: Vec3;
   /** once a man of the squad is under an order to the step's mark: the sky seat's view goes back to the squad (the hand's shift eased out, the mark no
@@ -292,12 +301,20 @@ export interface RailsData {
    *  knows nothing through it — rails.ts RAILS.eyeView) */
   sky?: { park: Vec3; reach?: number; eye?: { at: Vec3; yaw: number; fov?: number };
     /** the squad holds ON A KNEE where the mission stood it until its first order (men behind their trucks under fire), not at the low ready on its feet */
-    low?: boolean };
+    low?: boolean;
+    /** PLAN MODE IS UP IN THIS SEAT, from the first tick to the last, and no key puts it down (rails.ts RAILS.skyUp, planmode.ts): the mission teaches the
+     *  mode's own orders — the box, the right click, the word — with nobody of the player's on the floor. Its view starts on the squad and the walk keys
+     *  move it as the mode moves it (`reach` is not read) */
+    plan?: boolean };
   /** false: no teammate shows an aiming laser on this level, red or infrared (game/irlaser.ts laserOn) */
   lasers?: boolean;
   /** the orders the squad's menu lists on this level, by id (orders.ts rowsFor: 'move', 'stack', 'go', 'walltools', 'wallCharge', 'work' …): a row not named is
    *  not there, on the ring or under the quick key. Absent: every row the game has */
   orders?: string[];
+  /** the squad's ring on this mission is the game's flat tree (game/cmdring.ts CMDRING.flat: every order of the thing on one ring, no pages), as it
+   *  is off the tutorial — and a step that names a digit of it says so in `flatLine` (game/rails.ts RAILS.flatRing; absent: the menu's pages, whose
+   *  digits `menuLine` and `pageLine` name) */
+  flatRing?: boolean;
   /** the verbs Space offers on this level (an Interactable row's `verb`: 'grab', 'pick', 'code'…): a thing in reach whose verb is not here has
    *  no row, so a tap never lands on something no step taught (absent: every row, as on any level) */
   rows?: string[];
@@ -321,7 +338,10 @@ export interface ParData { gold: number; silver: number; bronze: number; lossSec
 export interface IssueCard { weapon?: 'rifle' | 'pistol' | 'shotgun'; suppressed?: boolean; light?: boolean; nvg?: boolean; bangs?: number; charges?: number; smoke?: number; frags?: number; walls?: number; shells?: number;
   /** yours alone, on a card with the rifle: the launcher's sponge rounds, 0‥5 (game/kit.ts RINGS_MAX). A mission that names your card hands none over it
    *  (kit.ts ISSUE.whole), so one that wants them on the tube says how many: with any, the launcher comes up on them, the grenades its next load */
-  rings?: number }
+  rings?: number;
+  /** yours alone, on a card with the rifle: the load the launcher COMES UP ON, where he carries any of it (absent: the sponge rounds where he has any,
+   *  as above). The stealth tutorial names the grenade, so that its lesson is the swap to the sponge round before the right button is his */
+  loaded?: 'ring' | 'he40' }
 export interface IssueData { members: { [place: string]: IssueCard } }
 /** A SNATCH (game/snatch.ts — an overlay on a level's ROOM CLEAR, as a lesson is one on a mission): ONE unarmed man the team has to take alive. He is a
  *  civilian of the usual make (game/civilians.ts: his eyes, his ears, his run, his hands on his head), put on the floor at every staging of the room clear;

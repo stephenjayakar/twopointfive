@@ -1060,7 +1060,8 @@ export class WallCharge {
   // ------------------------------------------------------------ the blast
   /** Sam's trigger on one charge (F, the menu's 'blow the charge', a probe): the wall opened through the engine's blast entry point, the stun charge's report
    *  and flash with nobody on its list, the door charge's rule for the men near it — and the squad that set it goes in behind it */
-  blow(c: SetWallCharge | null = this.nearest(), pressed = true): { hole: boolean; knocked: number; stunned: number; backblast: number; lost: number } | null {
+  blow(c: SetWallCharge | null = this.nearest(), pressed = true): { hole: boolean; knocked: number; stunned: number; backblast: number; lost: number } | null { return this.g.fogOfWar.doing(PLAYER_ID, () => this.blowRaw(c, pressed)); }   // (the whole blast — the hole, the pall, the mess — is the team's doing: fogofwar.ts FOG.ours)
+  private blowRaw(c: SetWallCharge | null, pressed: boolean): { hole: boolean; knocked: number; stunned: number; backblast: number; lost: number } | null {
     if (!c) return null; const g = this.g, K = DOORTOOLS, W = c.wall, i = this.set.indexOf(c); if (i < 0) return null; this.set.splice(i, 1);
     holdFireOrder(g, 'wallCharge', { blown: true });   // (holdfire.ts: a charge starts the fight when it GOES, not when it is set)
     const T = thick(W), at = chargeAt(W);

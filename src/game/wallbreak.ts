@@ -217,7 +217,7 @@ export class WallBreak {
       let nx = 1, ny = 1, nz = 1; const yb: number[] = [-b.h[1], b.h[1]];
       const div = (len: number) => Math.max(1, Math.round(len / WALLS.col));
       if (kind === 'wall') { if (sx >= sz) nx = Math.min(32, div(sx)); else nz = Math.min(32, div(sz)); ny = 2; yb.splice(1, 0, -b.h[1] + (WALLS.sill - y0)); }
-      else { nx = div(sx); nz = div(sz); while (nx * nz > WALLS.coverMaxCells) { if (nx >= nz) nx--; else nz--; } }
+      else if (b.round !== true) { nx = div(sx); nz = div(sz); while (nx * nz > WALLS.coverMaxCells) { if (nx >= nz) nx--; else nz--; } }   // (ROUND THINGS, scene/round.ts: a round thing is one cell — it goes whole, for its pieces would be cut from the box round it)
       const n = nx * ny * nz;
       const B: Breakable = { id: i, kind, surf, box: b, flags0: b.flags, nx, ny, nz, yb, open: new Uint8Array(n), dmg: new Float32Array(n), slots: [], live: 0, nOpen: 0 };
       this.list.push(B); this.owner.set(i, B);
@@ -340,7 +340,8 @@ export class WallBreak {
       const k = rects.length + j; const c = this.toWorld(B, studs[j].c), h = studs[j].h; let p: Box;
       if (k < B.slots.length) { p = g.col.boxes[B.slots[k]]; p.c = c; p.h = h; p.flags = B.flags0; if (p.cut) { p.cut = undefined; p.cutCore = undefined; } }
       else { p = makeBox({ c, h, yaw: B.box.yaw, flags: B.flags0 }); const i = g.col.addStatic(p, B.box); world.addStatic(p); B.slots.push(i); this.owner.set(i, B); }
-      p.name = 'stud'; p.albedo = v3.copy(studs[j].albedo); p.rough = studs[j].rough; p.metal = studs[j].metal;
+      p.name = 'stud'; p.flags |= BoxFlag.Thin;   // (a bare stud, 4 cm across in an opened wall: the fog of war's eye goes round it — scene/thin.ts, FOG.thin; read by nothing else)
+      p.albedo = v3.copy(studs[j].albedo); p.rough = studs[j].rough; p.metal = studs[j].metal;
     }
     for (let k = rects.length + studs.length; k < B.slots.length; k++) g.col.boxes[B.slots[k]].flags |= HIDE;
     B.live = rects.length + studs.length; B.box.flags = B.flags0 | HIDE; this.bump();

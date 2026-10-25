@@ -209,7 +209,7 @@ export interface CutGlass { see: number; rim: number; anim?: boolean }
 /** the record as the GPU gets it: CUT_STRIDE vec4 rows at dst[o‥o + CUT_STRIDE × 4) — CUT_ROWS plane rows (n.xyz, d), the unused ones CUT_PAD, then the core row
  *  (core.rgb, w), all zero without a core colour and without glass. w = 1 (a core colour) + 2 (glass) + 4 (its pattern steps) + 8 × the rim in quarter pixels, + the
  *  see-through share as its fraction: 1 exactly = a plain core, as before glass existed (gbuffer_cut.wgsl fsBoxCut decodes it). `round` (Box.cutRound, 1‥3; not with
- *  glass) adds 128 × itself: the picture shades the prism's faces round that axis as one round face. `old` (Box.cutOld; not with glass) adds 512: an old break.
+ *  glass) adds 1024 × itself: the picture shades the prism's faces round that axis as one round face. `old` (Box.cutOld; not with glass) adds 512: an old break.
  *  `arc` (Box.cutArc; with `round`, and only where the record leaves its last row unused) rides in that unused row's w as CUT_PAD's 1 + arc: no reader of a
  *  plane looks past a zero normal. */
 export function packCut(cut: readonly CutPlane[], dst: Float32Array, o: number, core?: Vec3, glass?: CutGlass, round = 0, old = false, arc = 0) {
@@ -222,7 +222,7 @@ export function packCut(cut: readonly CutPlane[], dst: Float32Array, o: number, 
   const q = o + CUT_ROWS * 4;
   if (core) { dst[q] = core[0]; dst[q + 1] = core[1]; dst[q + 2] = core[2]; dst[q + 3] = 1; } else { dst[q] = 0; dst[q + 1] = 0; dst[q + 2] = 0; dst[q + 3] = 0; }
   if (glass) dst[q + 3] += 2 + (glass.anim ? 4 : 0) + 8 * Math.round(Math.min(3.75, Math.max(0, glass.rim)) * 4) + Math.min(0.98, Math.max(0, glass.see));
-  else dst[q + 3] += (round >= 1 && round <= 3 ? 128 * round : 0) + (old ? 512 : 0);   // (Box.cutRound: 128 × (1 + the axis), above the rim's four bits; Box.cutOld: 512 — never with glass)
+  else dst[q + 3] += (round >= 1 && round <= 3 ? 1024 * round : 0) + (old ? 512 : 0);   // (Box.cutRound: 1024 × (1 + the axis); Box.cutOld: 512 — never with glass. 128 is a ROUND THING's own bit, scene/round.ts ROUND_CORE_W)
 }
 
 /** THE CPU CLIP every ray / segment test shares: the interval [t0, t1] of the local line o + t·d already inside the uncut box, cut down by the record. Result in

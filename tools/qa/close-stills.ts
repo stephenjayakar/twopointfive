@@ -12,6 +12,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 const { standUp, ROOT } = await import('./headless.ts');
 const { CLOSE } = await import(`${ROOT}/src/game/close.ts`);
+const { STALK } = await import(`${ROOT}/src/game/stalk.ts`);
 const { startGrab } = await import(`${ROOT}/src/game/player.ts`);
 const { HOLD } = await import(`${ROOT}/src/game/character.ts`);
 const { handProps } = await import(`${ROOT}/src/game/combat.ts`);
@@ -78,8 +79,8 @@ async function lobby(seed: number) {
   for (let i = 0; i < 5; i++) W.step(DT);
   const [A, ...rest] = g.guards; rest.forEach((gd: any, i: number) => { gd.hold = true; gd.pinned = true; place(gd, [37.5, 0, 6 + i * 1.5], EAST); gd.heardUpTo = 1e12; }); place(A, LOBBY, EAST); A.wp = 1; A.hold = true; A.pinned = true;
   W.cam.yaw = 0; W.cam.rebuild?.();
-  const look = { ahead: false };   // (the cursor on the man — or, with him in the arm, a point ahead of Sam: the hold turns to the cursor)
-  const aim = () => { const c = g.player.char; W.cursorAt(look.ahead ? [c.pos[0] + Math.sin(c.bodyYaw) * 6, 1.0, c.pos[2] + Math.cos(c.bodyYaw) * 6] : [A.char.pos[0], 1.2, A.char.pos[2]]); };
+  const look = { ahead: false, still: false };   // (the cursor on the man — or, with him in the arm, a point ahead of Sam: the hold turns to the cursor)
+  const aim = () => { const c = g.player.char; W.cursorAt(look.ahead && look.still ? [c.pos[0], 0.45, c.pos[2]] : look.ahead ? [c.pos[0] + Math.sin(c.bodyYaw) * 6, 1.0, c.pos[2] + Math.cos(c.bodyYaw) * 6] : [A.char.pos[0], 1.2, A.char.pos[2]]); };
   const step = (n = 1) => { for (let i = 0; i < n; i++) { aim(); W.step(DT); g.player.visibility = 0.02; } };
   const samAt = (d: number, crouch: boolean) => { g.teleportPlayer([A.char.pos[0] - d, 0, A.char.pos[2]]); g.player.crouch = crouch; const pl = g.player.char; pl.bodyYaw = pl.aimYaw = EAST; step(30); };
   const gap = () => A.char.pos[0] - g.player.char.pos[0];
@@ -137,18 +138,24 @@ async function disarm(scene: string, who: 'pistol' | 'rifle', gun: boolean) {
 }
 /** THE STALK (game/stalk.ts): the left button held on him from 2.9 m at the crouch — moments on the way in by the gap, then the grab it becomes, beat by beat
  *  (`who` 'rifle': a carbine in his hands, so the grab is the disarm's). `pause`: let go at 1.4 m, the pose a moment later and a second later, then pressed again. */
-async function stalk(scene: string, who: 'calm' | 'rifle', pause: boolean) {
+async function stalk(scene: string, who: 'calm' | 'rifle', pause: boolean, hit = false) {
   const S = await lobby(7305), { W, g, A } = S; g.tune.carbineGuards = who === 'rifle' ? 'all' : 'none';
   S.samAt(2.9, true); S.step(30); const R = recorder(scene, g, A, who === 'rifle');
   const press = () => { W.input.buttons |= 1; W.input.clicked |= 1; S.step(1); }, lift = () => { W.input.buttons &= ~1; };
   R.snap(`crouched · ${S.gap().toFixed(2)} m`); press(); let n = 0;
-  const marks = pause ? [2.4, 1.9, 1.4] : [2.5, 2.1, 1.8, 1.5, 1.3, 1.12, 1.0];
+  const marks = pause ? [2.4, 1.9, 1.4] : hit ? [1.0] : [2.5, 2.1, 1.8, 1.5, 1.3, 1.12, 1.0];
   for (const d of marks) { while (S.gap() > d && !g.player.holding && n++ < 1200) S.step(1); if (!g.player.holding) R.snap(`creeping · ${S.gap().toFixed(2)} m`); }
   if (pause) { lift(); for (const t of [0.15, 0.5, 1.2]) { S.step(Math.round(t * 60) - (t === 0.15 ? 0 : t === 0.5 ? 9 : 30)); R.snap(`let go ${t.toFixed(2)} s · ${S.gap().toFixed(2)} m`); } press(); for (const d of [1.2, 1.0]) { while (S.gap() > d && !g.player.holding && n++ < 2400) S.step(1); if (!g.player.holding) R.snap(`pressed again · ${S.gap().toFixed(2)} m`); } }
+  if (STALK.key) {   // (the key finishes it: he eases to a stop in reach and waits; the row's key is the grab)
+    const pc = g.player.char; let still = 0; while (still < 12 && n++ < 2400) { S.step(1); still = Math.hypot(pc.vel[0], pc.vel[2]) < 0.02 ? still + 1 : 0; }
+    if (!hit) R.snap(`in reach, waiting · ${S.gap().toFixed(2)} m`);
+    if (g.selectVerb('guard', 'grab')) W.input.pressed.add('Space');
+  }
   while (!g.player.holding && n++ < 2400) S.step(1);
   if (!g.player.holding) { console.log(`  [${scene}] THE GRAB NEVER CAME (gap ${S.gap().toFixed(2)} m)`); return R; }
-  lift(); S.look.ahead = true; R.snap('the grab · frame 0'); let f = 0; const to = (t: number, label: string) => { const k = Math.round(t * 60); if (k > f) { S.step(k - f); f = k; } R.snap(label); };
-  for (const t of [0.07, 0.14, 0.22, 0.34, 0.5, 0.7, 0.95, 1.5]) to(t, `grab ${t.toFixed(2)} s`);
+  // (still: the cursor at his own feet, inside the hold's 0.6 m — a point six metres ahead is picked a little off his line through this harness's camera, and the pair came round to it a few degrees a frame: a quarter turn by the last still that no player's mouse asked for)
+  lift(); S.look.ahead = S.look.still = true; R.snap('the grab · frame 0'); let f = 0; const to = (t: number, label: string) => { const k = Math.round(t * 60); if (k > f) { S.step(k - f); f = k; } R.snap(label); };
+  for (const t of hit ? [0.2, 0.27, 0.3, 0.33, 0.37, 0.42, 0.48, 0.56, 0.7] : [0.07, 0.14, 0.22, 0.34, 0.5, 0.7, 0.95, 1.5]) to(t, `grab ${t.toFixed(2)} s`);   // (hit: the frames either side of the step's landing)
   return R;
 }
 /** THE STALK BROKEN OFF (stalk.ts end): the creep from 2.9 m, and at 1.6 m the man turns round to face him — the frames after, as the reach and the rise let go */
@@ -185,11 +192,36 @@ async function cornerWait(scene: string) {
   for (const s of [0.07, 0.14, 0.22, 0.34, 0.5, 0.95]) to(s, `grab ${s.toFixed(2)} s`);
   return R;
 }
+/** PASSING A MAN (samlook.ts): Sam at the crouch walks east down a lane `side` m off the man — who faces `facing` (EAST + that many degrees) — from 3.4 m short
+ *  of him to 2.4 m past: his head on the man, the lean away, the sink and the low arm as he comes level, and the head following as he goes by */
+async function pass(scene: string, facingDeg: number, side: number) {
+  const S = await lobby(7310), { W, g, A } = S; place(A, LOBBY, EAST + facingDeg * Math.PI / 180); const R = recorder(scene, g, A), c = g.player.char;
+  g.teleportPlayer([LOBBY[0] - 3.4, 0, LOBBY[2] + side]); g.player.crouch = true; c.bodyYaw = c.aimYaw = EAST;
+  const step = (n = 1) => { for (let i = 0; i < n; i++) { W.cursorAt([c.pos[0] + 6, 1.0, c.pos[2]]); W.step(DT); g.player.visibility = 0.02; } };
+  step(40); R.snap('3.4 m short, at rest'); W.input.keys.add('KeyD'); let n = 0;
+  for (const x of [-2.4, -1.6, -0.9, -0.3, 0.3, 0.9, 1.6, 2.4]) { while (c.pos[0] - LOBBY[0] < x && n++ < 1500) step(1); R.snap(`${x < 0 ? (-x).toFixed(1) + ' m short of him' : x.toFixed(1) + ' m past him'}`); }
+  W.input.keys.delete('KeyD');
+  return R;
+}
+/** SHIFT IN A CROUCH (player.ts CROUCHRUN): the fast crouch walk, six moments of one stride */
+async function dash(scene: string) {
+  const S = await lobby(7311), { W, g, A } = S; const R = recorder(scene, g, A), c = g.player.char;
+  g.teleportPlayer([LOBBY[0] - 4, 0, LOBBY[2] + 2.2]); g.player.crouch = true; c.bodyYaw = c.aimYaw = EAST;
+  const step = (n = 1) => { for (let i = 0; i < n; i++) { W.cursorAt([c.pos[0] + 6, 1.0, c.pos[2]]); W.step(DT); g.player.visibility = 0.02; } };
+  step(30); W.input.keys.add('KeyD'); step(50); R.snap(`the crouch walk · ${Math.hypot(c.vel[0], c.vel[2]).toFixed(2)} m/s`);
+  W.input.keys.add('ShiftLeft'); step(45); for (let k = 0; k < 6; k++) { R.snap(`Shift held · ${Math.hypot(c.vel[0], c.vel[2]).toFixed(2)} m/s · crouched ${g.player.crouch}`); step(7); }
+  W.input.keys.delete('ShiftLeft'); W.input.keys.delete('KeyD');
+  return R;
+}
 const SCENES: Record<string, { title: string; run: (name: string) => Promise<any> }> = {
+  'pass': { title: 'passing a man who faces him, a metre off his side: the head, the lean away, the low arm', run: n => pass(n, 180, 1.15) },
+  'pass-back': { title: 'passing behind a man\'s back, a metre off', run: n => pass(n, -90, 1.15) },
+  'dash': { title: 'Shift in a crouch: the fast crouch walk', run: n => dash(n) },
   'disarm': { title: 'the grab disarms him: a drawn pistol stripped out of his hand and let down', run: n => disarm(n, 'pistol', false) },
   'disarm-rifle': { title: 'the grab disarms him: a carbine torn out of his hands', run: n => disarm(n, 'rifle', false) },
   'disarm-gun': { title: 'the grab with Sam\'s pistol drawn: the gun rapped out of his hand', run: n => disarm(n, 'pistol', true) },
   'stalk': { title: 'the stalk: the held click from 2.9 m, the arm and the rise by distance, into the grab', run: n => stalk(n, 'calm', false) },
+  'stalk-hit': { title: 'the stalk\'s grab as the body lands: the frames either side of the step\'s landing', run: n => stalk(n, 'calm', false, true) },
   'stalk-rifle': { title: 'the stalk into a rifleman: the creep, then the grab that takes his carbine', run: n => stalk(n, 'rifle', false) },
   'stalk-corner': { title: 'the wait at a corner: back on a wall, the button held, a man walks past and is taken', run: n => cornerWait(n) },
   'stalk-turn': { title: 'the stalk broken off: at 1.6 m he turns round, the button still down', run: n => stalkTurn(n) },

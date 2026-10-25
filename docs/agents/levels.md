@@ -196,12 +196,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   that list, in the order a level is made (before you touch anything · the idea · the file · rooms, doors, walls · lived-in rooms · light, hour, weather ·
   the mission in the file · the team and its kit · what the player reads · measure it, then say it), every need with what was SEEN when it was learnt and
   the command that checks it; what no tool can ask is marked by eye or by play. `bun run tools/qa/level-needs.ts [name …] [--run] [--jobs 4] [--skip need,…]
-  [--quiet] [--md f] [--json f]` asks the eighteen needs a file can answer about what stands AROUND a level (generator · mission · row · music · picture ·
-  kit picture · look · lived · floor · ground · leak · lamps · moon · doorway · roof · kit · response · said) of one level or all, in about a second, a look twin with its plain file.
+  [--quiet] [--md f] [--json f]` asks the nineteen needs a file can answer about what stands AROUND a level (generator · mission · row · music · picture ·
+  kit picture · look · lived · floor · ground · leak · key · lamps · moon · doorway · roof · kit · response · said) of one level or all, in about a second, a look twin with its plain file.
   The floor itself stays `tools/qa/map-check.ts`'s (structure, size, nav, the scripted runs): `--run` runs that with `--no-runs` and the level's other own
   checks as they stand (export `--check`, level-lint, door-size, second-way-check, lived-check, kitview-plan, level-names-check, floor-order-check,
   quiet-check, lesson-check), four at a time: about 13 s for one level, 90 to 120 s for all. Exit 1 on a FAIL; a NOTE never fails. `NEEDS_BREAK=1` plants
-  gaps in sixteen needs on one level in memory (the kit's by emptying every card, whatever the issue table gives) and must find each by its own words
+  gaps in seventeen needs on one level in memory (the kit's by emptying every card, whatever the issue table gives) and must find each by its own words
   (exit 1; a MISSED one exits 0). THREE NEEDS ARE NEW CHECKS: `doorway` (a wall decal across a door's opening: the dado rule had no check), `roof` (a drawn
   slab in `weather.ts roofsOf`'s band: the floodlit shed's), `kit` (as issued, through the game's own cards and pouches, at every size the row offers, who
   comes with nothing but a gun; the team's size is set before a card is read, so an issue shared out over the men who come is read as shared). AS THE 36
@@ -363,11 +363,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `BASE_REVS`' commit is red (it was "a new level, nothing to hold it to", and with the list closed nothing would ever have taken it in); the same level
   not yet in a commit is a warn line that says what it will need once it is. `--base <rev>` still
   holds every level named to one commit. WHAT OF A LESSON NEEDS NO ROW MOVE (`LESSON_FREE`, read from today's file): its WORDS (`title`; a step's `line`,
-  `setupLine`, `ringLine`, `blowLine`, `menuLine`, `pageLine`, `planLine`, `noTap`, its card `explain`, its `after`): furniture cannot touch one, none
+  `setupLine`, `ringLine`, `blowLine`, `menuLine`, `pageLine`, `flatLine`, `planLine`, `noTap`, its card `explain`, its `after`): furniture cannot touch one, none
   names a place and none is a rule; no check holds the wording, on purpose (the loader takes their shape, `lesson-check` reads the first line on the
   objective row). HELD (`LESSON_HELD`): the steps' number and order, a step's `id`, its `done` test and `hold`, every place (`at`, `atMan`, `toward`,
   `eye`, the frame's `sky`), `cue`, `checkpoint`, `fog`, `onWay`, `respawn`, `lasers`, AND THE LISTS OF WHAT THE FRAME OFFERS (a step's `allow` / `deny`;
-  the frame's `allow`, `orders`, `rows`): they are rules, and a word too many in an `allow` opens a key a step early with nothing else red (a scripted
+  the frame's `allow`, `orders`, `rows`, and `flatRing`, which ring the mission has): they are rules, and a word too many in an `allow` opens a key a step early with nothing else red (a scripted
   player only shows a key that is missing). They were free for one step (897) and are held again; a list changed on purpose is its level's one row move.
   A lesson's key in NEITHER table is a red line: whoever adds a key says which (with no file named this is asked of every level with a lesson,
   furniture or none). GONE: the rule that a lesson with another number of steps was read
@@ -427,3 +427,88 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   leaf, for `doors` carry no finish in this tool; a prop), and the weaker share of the same blend in the diffuse gather and on presets with no
   traced reflections, which the named and strong counts are the place to look for. A mend for the reflections was being handed in when this was
   written; this number will not move with it.
+- **Round things are round** (`ROUND`, `src/scene/round.ts`, 10-23; the maintainer's pick on the geometry trial: round drums and tyres into the
+  game). ON in the page, `?round=0` puts it off; OFF in the module and on the frozen stand, `TPS_ROUND=1`; a `FROZEN_HOLDS` row; in the knob
+  registry and the journal. THE SWITCH IS READ ONCE, AS A LEVEL IS STOOD UP (`host/standup.ts populateHost`, before the boxes go to the world and
+  before `new Game`): a recording from before the table has it put down before its level stands (`roundTape`, called by `replay/engineplay.ts
+  tables()` and `tools/qa/rerun.ts tables()`; `applyKnobs` says the same afterwards; `tools/qa/replay.ts` says the file's word for its one
+  stand-up), and the debugger's row 'round things are round (reloads)' reloads the page with the word on the address. The level files are not
+  touched. The kit (`gwotKit.ts round`, radius 0.2 m or more: drums, tyres, stoves, the oven, the water tank) and three older generators (round
+  table tops and drums in lived-in rooms) write a round thing as FOUR slabs through one centre, 45° apart, their tops stepped 2 or 3 mm;
+  `findOctagons` finds them by that shape, and `roundLevel` makes the first slab ONE box with `Box.round` (the cylinder about the box's own y,
+  radius `h[0]` = 1.026 × the slabs' half length, the circle with the octagon's area, which is 0.985 of the radius the kit was asked for; half
+  height `h[1]`; yaw 0) and the other three specks that carry NoPrimary | NoShadow, so every box keeps its index. What each box was is kept on
+  it (`Box.was`), `roundLevel(…, false)` puts every box back, and the level's fingerprint is taken over the boxes as authored (`authoredC /
+  authoredH`).
+  ONE MODEL: CPU rays and segments (`boxes.ts rayBoxRound` behind `rayBox`, `collision.ts lineBox`, and the two fast paths in `segmentBlocked`
+  and the dynamic walk hand a round box to them), MOVEMENT (`collideCircle` pushes a body straight out from the axis, `circleTouches` asks circle
+  against circle, so the walk grid is baked round too), GPU rays (`common.wgsl isectRound`, called from `isectBox` behind the scene prelude's
+  `const ROUND_BOXES` on a box whose flags word carries `GEO_ROUND`; the side answers the code `ROUND_SIDE` and the closest-hit walks ask
+  `roundNormalAt`), and the picture (the g-buffer's cut pass draws a twelve-sided prism standing round the cylinder, shaded with one turning
+  normal, its marks run round it, a rolled rim on the lid: `gbuffer_cut.wgsl`, the ROUND block). Round wins over a cut record in every one of
+  them; nothing gives a round box one. THE GPU HALF RIDES THE CUT TABLE AND THE CUT PIPELINE BUT NOT THE CUT RULE: `roundConfig.gpu` is set at
+  boot (`main.ts`: the switch AND the cut switch); a round box has no `BOX_CUT_BIT`, its prism's eight planes sit in its own rows of the cut
+  table with `ROUND_CORE_W` in the core row, it is listed at the cut list's picture-only end, and `BoxWorld.cutTraced` does not count it, so the
+  cut swap (`render/cutSwap.ts`, "a calm room pays nothing") is as it was and every ray program holds the round rule from boot. `GEO_ROUND` is
+  bit 3 of the GPU flags word, which is the CPU's `Dynamic`: no shader reads that bit, and it is masked out of the word only while the round's
+  GPU half is up, so with it down the words are as they were. THE SWITCH IS THE SIMULATION'S: a picture setting may not move it. On a page with
+  `?nocutboxes` (or if the cut pipeline fails to compile) a round thing is DRAWN, and traced by the GPU, as the square box round it, while the
+  game still meets the cylinder.
+  WHAT STILL MEETS THE BOX ROUND IT (a square of side twice the radius, along the world's axes): the trace grid's registration (a superset), a
+  shoved prop's, a ragdoll's and a piece of debris's own contact (up to 0.41 of the radius of air at a corner), the smoke solver's obstacle
+  bake, the replay's map, and a blast, which takes a round thing as that box (`furnblast.ts`: its footprint for grouping is the square, and what
+  flies is cut from it). UNDER FIRE (`wallbreak.ts`): a round thing in a paint the wall engine chews is ONE breakable of ONE cell where the
+  octagon was four of one each, so it goes whole on one cell's damage and never stands as pieces of the square (32 of the 343: 30 drums in a
+  paint read as wood, and the compound's cardboard drum in its two files, which was four cells a slab). THAT MOVES A TALLY nobody has measured in a fight: such
+  a drum is cover for about a quarter as long. Snow caps on a drum's lid and on tyres are still the level's squares. Round things under 0.2 m
+  (the kit's two crossed squares) are left alone. CHECKPOINTS ACROSS THE SWITCH: the fingerprint is the same, so a save loads with the switch
+  the other way as long as it names no part of a round thing as broken; one that does (a blast took a drum, rounds shot one out) is refused by
+  `canLoad` with the static's name, in both directions — also a save from before this rule, loaded on the page as it opens.
+  CHECK: `tools/qa/round-check.ts` (`probes.ts round`; `ROUND_BREAK=1` must fail) on BOTH stands: every level file's count against a pinned
+  table (282 across 18 files as the files have them, 343 across 28 with lived-in rooms; add a row when a level gains a round thing; a ring of
+  four slabs the rule did not take is red), each made one round box and three specks and put back box for box; `rayBox`, `lineBox` and the
+  shader's rule put into TypeScript over f32 against a point-in-cylinder reference (4800 seeded rays, the GPU rule within 0.2 mm and on the
+  same kind of face); at the pass's brazier 64 lines of sight just inside the radius all stopped and 64 just outside all free (the octagon: 56
+  and 48), a pushed body at one distance all the way round (the octagon: 0.578 to 0.601 m), Sam put inside it stood outside at one distance, a
+  round stopped on the curve; tut-pair's seven chewable drums one cell each; a save loading with the switch as saved and across it; a lone
+  round's walk grid a disc; ten seconds of the pass with the switch down the same run by digest on a level that was rounded and put back;
+  fingerprint, stands, an old recording; the box world's words, rows and lists with the GPU half up and down. PAGE: `node
+  tools/qa/round-page.cjs --root . --out <dir>` boots the pass twice on the software adapter (`round=0` and as it opens), wants every pipeline
+  compiled and no console or GPU error, and writes a still of the brazier from each.
+  NOT MEASURED, NOT SEEN: no tour, soak or mission tally was run with the switch up (the office, which those run on, has no round thing; the
+  check's ten seconds of the pass meet none); nobody has played it; NEVER SEEN ON A GPU — the stills are the software adapter's at the lowest
+  preset, so motion, a round's edge against bright ground, the marks' seams round a drum and what the round branch costs a frame are unknown.
+- **The level skill carries lighting guidelines, and the level command names two lights that face each other (`key`, the nineteenth need, 10-23).**
+  The maintainer, of the plan tutorial's yard: "this tutorial level just looks really *flat*", then "seems like we should generally (even independent of
+  this thread) have some lighting guidlines that we put in our level skill". The graphics work read the cause from the level file and a still drawn on
+  the software renderer. Opened by a link with no hour the level is its file's own night: two of the kit's floodlights (`gwotKit floodLight`: 210
+  over 20 m, a 70 degree cone) at the yard's two gates look at each other, and pale walls go to white. The mission's own row plays at midday, where
+  the photocell has both floods out and the sun stands at 56 degrees, a flat angle for a camera that looks down. Walls, blast walls and ground are
+  close in value either way. THE SKILL (section 5, "How the light should look", eight rules, each saying what it rests on; guidelines, not misses,
+  and said so there): one key light a court from one side; the key comes in low (a shadow is the wall's height over the tangent: 2.5 heights at 22
+  degrees, 1.7 at 30, 0.67 at 56); lamps make pools, never a wash; every outside frame keeps a dark part and nothing big goes white; warm against
+  cool; ground, walls and things a value step apart; a light changed for the look changes the play; look from the play camera before shipping. The
+  wording is the graphics work's draft, cut down; a dark third and 0.4 for a pale wall (by luminance) are judgement. THE NEED (`facingLights`): two
+  spot lights that burn as authored, neither a quarter of the other's strength or less (by the colour's luminance), each heading within 60 degrees
+  of the line to the other and the two headings more than 120 apart, each one's pool reaching the middle of the ground between (the pool: its range
+  and its cone's far edge from its height), and nothing ceiling-high (the leak's cut, hoisted to `planWalls`) on the line between them: a NOTE with
+  the pair, which says when every row of the level plays at an hour that puts both out (`hours.ts`, group `exterior`). On the build of that evening,
+  both stands the same: `tut-plan` alone of 39 levels (`flood_gate` and `flood_road`, 28 m; out at its midday). The yard lamps of `barracks` and
+  `warehouse` face each other with a building between; `quiet-relay`'s `flood_w` and `lamp_west` face each other and the lamp's pool stops 6.5 m
+  out of 18. `NEEDS_BREAK=1` plants a facing pair and asks 18 things of made rooms; each of the rule's six tests was taken out in turn and the red
+  path went green each time. TRIED AND PUT DOWN: a measure of the ground the two share (squares both light from opposite sides at like strength,
+  and squares in one's wall shadow that the other lights). On `tut-plan` the huts stand between the floods: 119 m² in all, 22 shared and 97 of shadow filled;
+  but `barracks` (91), `sneak-lab` (77), `office` (67) and `block` (63) come near it by the same sum, mostly round a building, which is two courts
+  with a key each and not a flaw. So one line stands for the ground between: a stub of wall on it hides a pair, a wall beside it does not part one. NOT IN IT: lights that
+  are not spots, the moon's or sun's height, a spot's falloff, how pale the walls are, the picture's exposure; those are the skill's by eye. A
+  review found 9 things; mended: the hour, the pool, the colour, the red path's hold on each test, a wrong pointer and the pale wall's measure in the
+  skill; said and left: the one-line wall test, the plan and lamp list built again per need. On that build the `leak` need notes 29 of 39 levels
+  (four training levels have left the tree). Nothing here was seen on a GPU.
+  CORRECTED the same evening: the cause above is wrong in one thing, and the skill and the need's words said it too. A mission row's own hour is
+  written over the link (`game/rowset.ts rowSettings`; `?rowset=0` is the link as written), so the maintainer's shot of `tut-plan` was MIDDAY and both
+  floodlights were out on the photocell: nobody has seen the two floods wash that yard, and its night has not been drawn. What the pictures carry
+  (the graphics work's stills on the software renderer, the same frame): at midday, the sun 56 degrees up, a pale wash with or without materials; at
+  dusk, 22 degrees, long shadows and walls that hold below white. So in the skill the rule on a low key and the rules on white walls and value steps
+  are the seen ones, "one key light a court" is judgement, and a rule is added in front of them: judge a level's light at the hour its row plays at,
+  and read which lights are lit. The `key` need's line now says that a link opens at the row's hour too. Its measure is as it was.
+

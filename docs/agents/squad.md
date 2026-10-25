@@ -355,7 +355,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   on. That mission's hall and two gates are 19 m from where he is parked and its guardroom view asks for 5.5 m, so to hold the bound it would
   have to walk him or move him between its parts, and until it does the lesson teaches a reach the game no longer has (its thread's, and the
   maintainer's call). SINCE 10-23 IT WALKS HIM (the maintainer's pick, "You walk to each spot, then plan"): three walk steps, his feet from the first
-  of them, and the bound holds there from that step on (`docs/agents/missions.md`, the plan mission's "He walks to three spots"). NOT BOUNDED: where an order may be given (anything on the screen takes a right click: from an edge about 15 m from him at
+  of them, and the bound holds there from that step on (`docs/agents/missions.md`, the plan mission's "He walks to three spots"). AND SINCE LATER THAT DAY NOBODY OF HIS IS ON ITS FLOOR (the maintainer: "we should remove the player character"): the mission's seat holds the mode up (`rails.sky.plan`, `RAILS.skyUp`) and the bound does not hold in such a seat at all (`planNear` is false there; the view is boxed by the men and the level's edge), same file, "Nobody of his on the floor". NOT BOUNDED: where an order may be given (anything on the screen takes a right click: from an edge about 15 m from him at
   the camera's own distance, about 22 m zoomed all the way out), chains already laid (they walk on and the word still frees them wherever they
   wait) and a mark of the plan outside the view (it is off the screen). CHECK `probes.ts plannear` (9 lines, both stands, one deal: the rule has
   no die in it; `PLANNEAR_BREAK=1` fails lines 1, 2, 3, 4 and 6 on both): a walk key for five seconds and a second key to the corner; all eight
@@ -378,13 +378,41 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   door never takes is not offered (`gone`: a wall charge with none brought, a charge or the big slot's tool on steel, the big slot's tool on an
   open door), one off only for now stays greyed; the posture row is the last of every second ring and gives up its place first when rows
   overflow. No key sets loud or quiet, before or now. A TUTORIAL MISSION (rails live) KEEPS THE PAGED TREE: its lines name the old digits
-  ("[X], then press [3]", "Press [5], then [3]"), the tutorial's own to move. THE CURSOR (`plainHint`): the outline on the floor of what the
-  key orders on, no glyph beside the cursor or in the ring's middle. THE SQUAD'S CORNER cut down to its key lines (his same notes) is NOT here:
+  ("[X], then press [3]", "Press [5], then [3]"), the tutorial's own to move — and moved for the first one, whose level takes the flat tree
+  (`lesson.rails.flatRing`, `RAILS.flatRing`, `?railflat=0`: `missions.md`, the last bullet). THE CURSOR (`plainHint`): the outline on the floor of what the
+  key orders on, no glyph beside the cursor or in the ring's middle. AND NO OUTLINE (`CMDRING.bareHint`, later the same day, his play note at
+  a wall with the ring up: "the line and circle are weird, don't need them"): `hintView` answers null, so nothing of the squad's cursor mark is
+  drawn, at rest, with the key down or under a ring; ON in the page, `?barehint=0`; off in the module and on the frozen stand, `TPS_BAREHINT=1`;
+  a tick; the journal; ringflat lines 9 and 9b; `cmdring-check` holds it off in its rig; the Options row "Order mark at the cursor" is not
+  listed while it is on. What a tap orders, and on what, is then only the corner's line on the key. THE SQUAD'S CORNER cut down to its key lines (his same notes) is NOT here:
   it is the page's own layer's, which reads `orders.hud()` whole, so the order book's lines are as they were. CHECK `probes.ts ringflat`
   (family squadorders; 12 lines, both stands, one deal seed 3: the rules have no die in them; `RINGFLAT_BREAK=1` fails lines 1 to 6 and 9 on
   both). `qonly-check` holds `flat` off in its rig (its lines ask the ring by the menu's pages). Neighbours' files touched for it:
   `wallcharge.ts`, `doortools.ts` (the `gone` rows), `squadthrow.ts` (the throw's arc on a flat ring), `ui/cmdring.ts` (one line, the glyph),
   `ui/options.ts` (the hint's words). Nobody has played it; never seen on a GPU.
+- **Plan mode's circles are fainter, and a slider sets them** (2026-10-24; `src/ui/planlook.ts`, `ui/cmdring.ts updatePlan`, index.html
+  `.planmode .pm` / `.pself`; picture only: no stand, no knob table, no recording knows of it; the maintainer, 10-24: "plan mode circles should be
+  fainter -- can you add a slider in the settings and remind me to tweak?"). The circle at each man's feet with plan mode up, and the player's own, is
+  its built strength (0.6 a man's, 0.95 a picked man's and his own) times `--pm-k`, which the layer writes from `planRings()`. THE PAGE OPENS AT 0.5
+  (`PLANLOOK_PAGE`; with nobody picked by hand every man is picked, so what he sees is 0.95 going to about 0.48). THE SLIDER is Options > Game >
+  "Plan mode circles", 0 to 100 %, kept on this machine (`twopointsix.planlook`), put back by Reset to defaults; the debugger has the same value
+  ('plan mode ▸ circles, strength'). `?planrings=<0..1>` is a visit's own word and is never kept; `?planrings=1` = as it was built. `window.__planlook`
+  moves it from a page check. CHECK `probes.ts planlook` (family ui; 5 lines, no game stood up, the same on both stands; `PLANLOOK_BREAK=1` asks them
+  of a `?planrings=1` visit: lines 1 and 2 fail) and, on the real page, `PORT=<port> node tools/qa/planlook-page.cjs` (the circles' own computed
+  opacity; the software adapter). NOT SEEN: the right default is the maintainer's to find on his GPU; 0.5 is a first guess.
+- **Plan mode: the digits pick the men** (2026-10-24; `CMDRING.planDigits`, `planmode.ts planInput` / `pickDigit` / `planGroundAll`; the maintainer,
+  10-24: "1 2 3 4 in plan mode should select the appropriate squad members, and 5 selects all of them? and then we should remove clicking on the
+  ground selects all"). With the mode up and no ring or menu up: 1 to 4 pick that man alone in the squad's own order (Red One, Red Two, Blue One,
+  Blue Two; a man keeps his digit when another is down, and a digit with no living man is nothing), Shift + the digit puts him in the picked set or
+  takes him out as a Shift click does, 5 picks everyone, and his digit is drawn up and to the right of each man's circle (`PlanView.men[].n`,
+  `.planmode .pn`). A LEFT CLICK ON BARE GROUND THEN PICKS NOBODY NEW: who was picked stays picked; a click on a man and a box still pick. A digit
+  with the ring's key down is left for the ring (`stayDigit`). A TUTORIAL MISSION (rails live) KEEPS THE GROUND CLICK: mission 2's lines say
+  "Left-click on empty ground to pick your whole squad again" and its scripted player does it, the plan tutorial's own to move (told); the digits
+  work there too. ON in the page with the mode (`?plandigits=0` off), OFF in the module and on the frozen stand (`TPS_PLANDIGITS=1`, beside
+  `TPS_QPLAN=1`); a `FROZEN_HOLDS` row; the journal (a recording from before the key replays with it off); a tick ('Tab ▸ plan mode ▸ the digits
+  pick the men'). CHECK `probes.ts plandigits` (family squadorders; 8 lines on plan mode's own rig, both stands, one deal seed 3: the rule has no die
+  in it; `PLANDIGITS_BREAK=1` fails lines 1 to 5). `planmode-check`'s rig holds the switch off: its lines pick by the mouse and ask that a click on
+  nothing is everyone, as the mode was built. NOT PLAYED: whether the drawn digits read as clutter beside the fainter circles; never seen on a GPU.
 - **A held door's key lights when the men say so** (2026-10-23; `PLAN.thrTold`, `floorplan.ts waitsOnKey` / `PlanDoor.ready`; picture only, on on
   both stands like `PLAN.keyLit`, `?thrtold=0`, a tick in the debugger). Found by the squad's own behaviour work: on a door held from outside the
   word pressed before the men's "holding · on your word" call cuts their slice of the room short, and the key's cap was lit from the moment their
@@ -806,7 +834,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   BUDGETS: ten characters (`SQUAD4_BUDGET`, `UnitOpts.budget` lifts spawnUnit's 8 up to skinning's 16); the proxy table still holds 8, so while a night breach is up
   game.ts draws the LIVING first once more than 8 are drawn (bodies lose shadow / reflection proxies first; with all ten up the last two defenders spawned go
   without); steady lights 63 of 64 by spawnUnit's count; the PROBE's 32 queries a frame: nine units' meters + lines would be 35, so with more than 8 guards the
-  smoke lines of men not hostile to Sam are not asked (29 measured headless, fog's ≤ 6 on top are the first dropped); fog of war takes FIVE eyes (`FOG_EYES`, the
+  smoke lines of men not hostile to Sam are not asked (29 measured headless, fog's ≤ 6 on top are the first dropped); fog of war took FIVE eyes (seven in the page since 10-24: `FOG.eyes`, `docs/agents/stealth.md`; the room is `FOG_EYES`, the
   kernel's two arrays carry the literal). QA: `probes.ts foursquad` (off / stage / follow / stack / clear — incl. charge, outside, lanes — / drill / budget).
   THE PAIRS APART (all behind `orders.big` = more than two men; the pair build is untouched — `probes.ts pairs-off`): `orders.give(id, t, who, { onWord })`; a door order
   goes to the side of the door THE MEN can reach without crossing the room (`forMen` → `sideFor`: penalised nav paths per face; else Sam's side — a pair-aware menu
@@ -1029,7 +1057,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **The squad reaches you, and the quick key says why** (`src/game/squadnet.ts`, table `SQUADNET`, one `SquadNet` on the Game as `game.squadNet`;
   drawn by `src/ui/bubbles.ts`; Tab ▸ 'Squad net'). The maintainer picked it from the AI legibility doc: "The squad reaches you, and Q says why.
   Off-screen teammate lines arrive near you with a radio click, a man down has its own sound, the Q row says 'Bang and clear. Nobody's been in
-  there.', and 'clear' means clear." Three rules from that pick and a fourth found while building it, a switch each, all ON in the page and OFF in the
+  there.', and 'clear' means clear." Three rules from that pick, a fourth found while building it and a fifth from his first play note, a switch each, all ON in the page and OFF in the
   module and on the frozen stand.
   FAR LINES (`SQUADNET.on`, `?squadnet=0`, `TPS_SQUADNET=1`): a bubble was drawn only over a head on the screen, so a teammate's line said two
   rooms off was said to nobody. With the rule his bubble is drawn NEAR YOU (`SQUADNET.near` × the view's shorter side from you, toward where he
@@ -1042,6 +1070,20 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   writes a `Guard.bubble`: the run with it on is the run with it off by digest (the check holds it). A man already down when a run starts or a
   checkpoint loads is not called; a roster stood up again under the same names is. NOT DONE: a line said on the screen whose man the camera
   then leaves moves to the near place with no click; a cue's own bubble (`cues.aside`) on a far teammate is drawn near and does not click.
+  AT THE EDGE (`SQUADNET.edge`, `?netedge=0`, `TPS_NETEDGE=1`): his note on playing the first rule, "the off screen 'red two: moving' is nice,
+  but it should be more towards the edge of the screen". `squadnet.ts netPlace()` is the one place `bubbles.ts` asks where a far line goes:
+  with the rule, where the straight way from you (the middle of the view while you are off it) to the man leaves the view, `SQUADNET.edgeIn`
+  (0.04 of the view's shorter side, a slider under Tab ▸ 'Squad net') inside the border with the line's own box kept whole, or at him where
+  he is inside that; off, `near` out from you and up a row from a taken one, as it was. Where you stand out by the border yourself the way is
+  laid from a point 0.15 of the shorter side further in, so a man past your border does not put the line on you and it does not jump as his
+  bearing crosses straight up. A spot that lies on something moves ALONG THE BORDER it is at, the nearest free place first: up or down a row
+  at a side border; at the top or the bottom a row or two in (two men off the same way read as a list), then sideways. What it keeps clear
+  of: the far lines already drawn, the HUD's cards, and with the rule your own figure (a box about it) and the objective's mark (its diamond
+  and metres, read off the mark's own element). A teammate behind the eye's plane (far down the screen with the view zoomed in) was dropped
+  with no line though the net had clicked: with the rule he is called at the edge his way (off: dropped, as it was). The page's alone: no run
+  reads it. A man-down row off the screen goes by it too. NOT SEEN: any of it on a GPU or in play; the objective's mark and a far line
+  together; a line for a man behind the eye; a view zoomed by the text size setting. A line whose edge place is under a wide card can end
+  several rows or a line's width from where the way to him leaves the view.
   WHY (`SQUADNET.why`, `?qwhy=0`, `TPS_QWHY=1`): `squadnet.ts whyWords(pick)` gives the reason when the autopilot's pick on a door the men wait
   on is not a plain open: at the end of the quick key's row (`orders.ts hud()`, one `autoPick` a frame for the words and the reason) and in the
   answer of the man who takes the order (`GiveOpts.ack`, in place of the row's own; `autoQuick` and a plan's `quickFor` both pass it):
@@ -1069,7 +1111,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   head it was merged on). The pre-existing named call has no such guard: a response team that ends an entry in a listed room of a room clear
   would call it by name, as it did before any of this (not seen, not changed here).
   CHECK `bun run tools/qa/squadnet-check.ts` (also `probes.ts squadnet`: why · clear · end · net · off; `end` runs under `doortools` too;
-  `SQUADNET_BREAK=1` fails all five), both stands, the room clear on the office with four, seeds 5, 7 and 11, and the response team on seed
+  `SQUADNET_BREAK=1` fails all five; `net` holds where a far line is put by `netPlace`: eight ways out, you out by the border, a spot under a card or on another line, 960 placings none off the view), both stands, the room clear on the office with four, seeds 5, 7 and 11, and the response team on seed
   41. It reads what a man SAID off his bubble, a frame at a time. MEASURED on the office (the squad of four, the quick key's own pick, the
   defenders of the room beyond left as dealt, every switch on): entries into the room clear's four listed rooms, seeds 1–4 on the shipped
   stand, 16 of 16 called by name (all `clear`; floor unseen 0 or 1 cell, under the bar); entries into the conference room, which is on no
@@ -1081,7 +1123,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   no-name call. ON THE PAGE (`PORT=<port> node
   tools/qa/squadnet-look.cjs <dir>`, software adapter): the far lines and the down row are read off the HUD's own elements with where they lie
   against you and against the man; `ENTRY=1` in front of it drives an entry into the conference room and read `↑ Red Two: room clear.` as a
-  far line near you (the lead off the screen), counted once, no page or console errors. Never seen on a GPU, never played, never heard: the click's level and pitch and the pitched-down click for a
+  far line near you (the lead off the screen; read before the edge rule), counted once, no page or console errors. THE EDGE, read the same way
+  on a 960 by 540 view: with the squad off the bottom of the view two lines sat at the bottom edge, one a row in from the other (712, 494 and
+  673, 468; rule off 655, 386 and 638, 419, about 100 px from you), and the man-down row at 679, 494 (off: 658, 425); with the squad off the
+  bottom left corner, where the kit card stands, the two sat side by side on the bottom edge to the right of the card (303, 494 and 489, 494;
+  off 535, 333 and 533, 303). No page or console errors either way. Never seen on a GPU, never played, never heard: the click's level and pitch and the pitched-down click for a
   man down are guesses. The words are lower case like the rows and answers beside them. OPEN: where the reason sits on the quick key's row is
   the commanding work's to settle (its flat wheel and the corner panel draw that row); the reason for a charge is not on the HUD's line (the
   hint does not ask the lock, so it shows the open it will not do).

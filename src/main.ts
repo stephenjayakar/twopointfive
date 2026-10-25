@@ -9,6 +9,7 @@ import { bootTextSize } from './ui/textsize';
 import { BACKKEY } from './game/backkey';
 import { loadoutFromQuery, wireMissions } from './ui/loadout';
 import { sneakLabAsked, sneakLabBoot, sneakLabFrame } from './host/sneaklab';
+import { fireLabAsked, fireLabBoot, fireLabFrame } from './host/firelab';
 import { kitSoloIf, kitFresh, kitShow, kitPlayer, kitGun, kitLessonPage, kitLoad, kitRows, KIT, ISSUE, SUITS, TRIMS } from './game/kit';
 import { kitBoot } from './ui/kitPreview';
 import { missionsBusy, reopenMissionsAfterLoad, openMissionsIfAsked, OFFLIST_UI } from './ui/missions';
@@ -36,6 +37,7 @@ import { lookTidy, lookDoors } from './scene/lookTidy';
 import { stepFrame, showCaption, FIXEDSTEP, type LoopCtx } from './host/loop';
 import { bindFindMe, watchCtrlTaps, FINDME, setFindMe } from './host/findme';
 import { findMeOutline } from './ui/findme';
+import { planRings, setPlanRings } from './ui/planlook';
 import { makeOutlineFrame } from './render/outline';
 import { TWEEN, Tween } from './host/tween';
 import { v3, Vec3, quat } from './math/vec';
@@ -53,6 +55,7 @@ import { dressFront } from './scene/frontTry';
 import { dressLorry } from './scene/lorryTry';
 import { charLookSides } from './render/charMaterials';
 import { groundRayConfig } from './scene/groundField';
+import { ROUND, ROUND_STATS, roundConfig } from './scene/round';
 import { cutSwap } from './render/cutSwap';
 import { makeBox, BoxFlag, MKEY } from './scene/boxes';
 import { GLASSBREAK, GB_STATS, glassBreakPersisted, glassBreakLive, saveGlassBreak } from './game/glassbreak';
@@ -319,6 +322,7 @@ async function main() {
   worldHooks(engine, game, audio);
   const input = new Input(canvas);
   (window as any).__findme = { table: FINDME, set: setFindMe };   // (host/findme.ts: the Options rows for finding your own man, for a page check to move without the screen)
+  (window as any).__planlook = { get: planRings, set: setPlanRings };   // (ui/planlook.ts: how strongly plan mode's circles are drawn, for a page check to move without the screen)
   bindFindMe(cam); const ctrlTwice = watchCtrlTaps(window, () => !!input.lockExcept, keymap.camKey);   // (host/findme.ts: the player's kept aim pan onto the follow camera; the camera key tapped twice)
   window.__cam = cam;   // (the follow camera standGame put on the spawn)
   const overlay = new Overlay(); if (tape || q.get('cards') === '0') overlay.cards = false;   // (a replay's tape shows no tutorial card, nor does `?cards=0`: ui/railcard.ts)
@@ -399,6 +403,7 @@ async function main() {
   const panel = new Panel();
   buildPanel(panel, engine, game, smoke, cam, overlay, audio, quality, () => ({ fps: fpsSm, union: unionSm }));   // (the status strip reads the frame loop's own smoothed numbers — only ever called from the panel's refresh, long after they exist)
   if (sneakLabAsked(new URLSearchParams(location.search))) sneakLabBoot(game, panel);   // ?sneaklab: the lab's own system in the panel, open (host/sneaklab.ts) — without the word nothing of it is made
+  if (fireLabAsked(new URLSearchParams(location.search))) fireLabBoot(game, panel);   // ?firelab: the fire's numbers live in the panel (host/firelab.ts), nothing of it made without the word
   // ?tweak: the one off scene tweak panel (ui/sceneTweak.ts) — the picture's layers with their switches and numbers, live; without the word nothing of it is made or read
   if (new URLSearchParams(location.search).has('tweak')) (window as any).__tweak = new SceneTweak(sceneLayers(engine, game), { scene: levelNameOf(game.level) ?? 'office' });
   input.keyVeto = e => (overlay.cardUp && !menu.isOpen && overlay.cardKey(e)) || panel.onKey(e);   // (a tutorial step's card first: the Enter or Space that closes it is no game key — ui/railcard.ts)
@@ -823,6 +828,7 @@ async function main() {
       else { const K = runEnded(vKey, vStreak, { won: R.won, approach: R.approach, clean: R.clean, secs: R.secs }); VD.kept = vNote(K.rec, K.streak, K.fresh); } } };
   function step(dt: number, lastOfBurst = true) {
     sneakLabFrame(game, cam);   // (?sneaklab: the lab's two sandbox flags as its panel has them; a return on its first line otherwise)
+    fireLabFrame(game);   // (?firelab: its two sandbox flags; a return on its first line otherwise)
     lastOfBurstNow = lastOfBurst;
     stressTick(game);   // (?extra=N / the panel's stress row: the asked-for extra enemies stood again after a restart — a return on its first line while off)
     lookTidy(engine.world);   // (picture only: a dado / damp foot the default look laid on a wall goes with that wall when it is holed — scene/lookTidy.ts)
@@ -911,7 +917,8 @@ function urlFlagsBeforeEngine(q: URLSearchParams) {
   { const tv = Number(q.get('trace')); if (q.has('trace') && Number.isFinite(tv) && tv >= 0) traceConfig.variant = tv | 0; }
   if (glassMod.glassFxBoot() && (q.has('glassbreak') ? q.get('glassbreak') !== '0' : glassBreakPersisted())) glassBreakConfig.on = true;   // GLASS BREAKING (game/glassbreak.ts): the renderer's half is the scene prelude's compile-time const — raised here, before the Engine builds a pipeline, from the switch kept on this machine (Tab ▸ Destruction ▸ Glass; ?glassbreak / ?glassbreak=0 force it for one boot without touching the stored switch); off = every shader is main's program   // ?trace=N: the ray-traversal lab's compile-time variant const in every scene shader (render/frame.ts traceConfig, docs/internal/trace-perf.md; only 0 = today's walk exists on main) — must be set before the Engine builds any pipeline
   groundRayConfig.on = hillRaysOn(q); if (groundRayConfig.on && q.has('roll')) { const r = Number(q.get('roll')); if (Number.isFinite(r)) groundRayConfig.roll = Math.max(0, Math.min(0.25, r)); }   // (?roll=<m>: the open ground's snow swells this deep — the trial's second half, off unless asked)
-  initCutSwitch(); if (geoTryOn(q) || frontTryOn(q) || lorryTryOn(q)) cutConfig.swap = false;   // (A GEOMETRY TRIAL, scene/geoTry.ts: its cut boxes stand from the first frame to the last, so the one set of ray programs with the cut rule is compiled at boot)   // CUT BOXES (scene/cut.ts): on in the page unless ?nocutboxes / ?cutboxes=0 / localStorage twopointsix.cutboxes = '0' — the scene prelude's CUT_BOXES const, the cut table's rows in boxMat and the second g-buffer pipeline all follow it, so it is read before the Engine exists (a reload flips it)
+  initCutSwitch(); if (geoTryOn(q) || frontTryOn(q) || lorryTryOn(q)) cutConfig.swap = false;   // (A GEOMETRY TRIAL, scene/geoTry.ts: its cut boxes stand from the first frame to the last, so the one set of ray programs with the cut rule is compiled at boot)
+  roundConfig.gpu = ROUND.on && cutConfig.on;   // (ROUND THINGS, scene/round.ts: the GPU's half — the prelude's ROUND_BOXES const, the round bit, the prism's rows — set once, before the first pipeline. It needs the cut switch, whose table and pipeline draw a round: without that one a round is drawn and traced as the box round it, and the game meets the cylinder all the same)   // CUT BOXES (scene/cut.ts): on in the page unless ?nocutboxes / ?cutboxes=0 / localStorage twopointsix.cutboxes = '0' — the scene prelude's CUT_BOXES const, the cut table's rows in boxMat and the second g-buffer pipeline all follow it, so it is read before the Engine exists (a reload flips it)
   { const ds = Number(q.get('decalStress')); if (ds > 1) decalDebug.repeat = Math.min(64, ds | 0); }   // measurement only (?decalStress=N): the decal lookup N× per g-buffer fragment (render/decals.ts decalDebug), so its cost can be read above the timer's noise; must be set before the Engine builds the g-buffer shader
 }
 
@@ -1143,6 +1150,7 @@ function squadFlagsAndHooks(q: URLSearchParams, engine: Engine, game: Game) {
   (window as any).__autopilot = { knobs: AUTOPILOT, stats: AUTOPILOT_STATS, pick: (at: [number, number, number]) => autoPick(game, game.orders.targetAt(at)) };
   (window as any).__squadthrow = { knobs: SQUADTHROW, stats: SQUADTHROW_STATS, plans: () => squadThrowPlans(game), plan: (at: [number, number, number], kind: 'frag' | 'stun', who: 'all' | 'red' | 'blue' = 'all') => squadThrowPlan(game, game.orders.men(who), at, kind, true) };   // teammates' throws on order (game/squadthrow.ts): .plans() = what the overlay draws (who, his walk, the arc), .plan(at, kind) = who would throw there and from where
   (window as any).__lightswitch = { knobs: LIGHTSWITCH, stats: LIGHTSWITCH_STATS, list: () => wallSwitches(game), lit: (i: number) => { const sw = wallSwitches(game)[i]; return sw ? switchLit(sw) : null; } };   // a room's wall switches (game/lightswitch.ts): tools/qa/lightswitch-page.cjs reads the plates and works one through the page's own Space
+  (window as any).__round = { knobs: ROUND, config: roundConfig, stats: ROUND_STATS, list: () => engine.world.statics.map((b, i) => ({ i, b })).filter(e => e.b.round === true) };   // round things (scene/round.ts): the switch, its GPU half, and the level's round boxes
   (window as any).__carlamps = { knobs: CARLAMPS, stats: CARLAMPS_STATS, list: () => game.targets.filter(t => t.group === VEHICLE_GROUP) };   // a parked vehicle's lamps as light targets (game/carlamps.ts): what the level gave and how many a round has met
   (window as any).__cleanrestart = { knobs: CLEANRESTART, stats: CLEANRESTART_STATS };   // a restart gives a clean level (game/cleanrestart.ts): tools/qa/cleanrestart-page.cjs reads what a restart did
   (window as any).__squad40 = { knobs: SQUAD40, stats: SQUAD40_STATS, log: SQUAD40_LOG, left: () => squad40Left(game), brought: () => squad40Brought(game), of: (i: number) => squad40Of(game, game.orders.squad()[i]), plans: () => squad40Plans(game), summary: () => squad40Summary(game),
@@ -1438,7 +1446,7 @@ function destructionWeatherFlagsAndHooks(engine: Engine, game: Game) {
     // … and its lying snow's look (render/snowField.ts SNOW_SURF): change a number, then relook()
     get look() { return SNOW_SURF; }, get field() { return game.snowField?.stats ?? null; }, relook: () => { engine.gbuffer.setSnowCfg(snowCfgRows(game.snowField, game.snowTracks ? TRACK_RES : 0)); },
     // … and the prints boots press into it (game/snowTracks.ts): the numbers (they reach the next print), the counts
-    get tracks() { return SNOWTRACKS; }, get trackStats() { const T = game.snowTracks; return T ? { prints: T.prints, hollows: T.hollows, craters: T.craters, w: T.w, h: T.h } : null; } };
+    get tracks() { return SNOWTRACKS; }, get trackStats() { const T = game.snowTracks; return T ? { prints: T.prints, hollows: T.hollows, craters: T.craters, w: T.w, h: T.h, unseen: T.kept, found: T.found, lost: T.lost } : null; } };
   Object.defineProperties((window as any).__snow, { grains: { get: () => snowMod.SNOWGRAINS }, grainStats: { get: () => snowMod.grainStats(game) } });   // … and the fine grains that ride the air near the view (game/snowFx.ts): the numbers live
   Object.defineProperty((window as any).__snow, 'oneAir', { get: () => snowMod.oneAirActive(game) });   // … is the snow one snow in one air this frame (SNOW_LOOK.oneAir, with a field to read)
   Object.defineProperties((window as any).__snow, { blast: { get: () => snowBlastMod.SNOWBLAST }, blastStats: { get: () => snowBlastMod.snowBlastStats(game) }, blastAt: { value: (x: number, z: number, radius = 2.5, y = 0.2) => snowBlastMod.snowBlastAt(game, [x, y, z], radius) } });   // … and what a blast does to it (game/snowBlast.ts): the numbers live; blastAt marks the snow as a blast there would, with no blast

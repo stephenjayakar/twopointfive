@@ -59,7 +59,7 @@ fn sparkBounce(vel: vec3f, n: vec3f, seed: u32, salt: u32) -> vec3f {
   for (var k = 0u; k < em.numRecs; k++) { let rc = em.recs[k]; if (i >= rc.first && i < rc.first + rc.count) { r = k; break; } }
   let rec = em.recs[r];
   let j = i - rec.first;                                   // index within the record
-  let kind = rec.k.x & 15u; let owner = (rec.k.x >> 8u) & 255u; let ring = (rec.k.x >> 16u) & 3u;
+  let kind = rec.k.x & 15u; let owner = (rec.k.x >> 8u) & 255u; let ring = (rec.k.x >> 16u) & 3u; let ours = (rec.k.x >> 18u) & 1u;
   var w = em.win[ring & 1u]; if (ring == 2u) { w = em.rainWin; }   // (ring 2 = the rain ring in the block's tail — particle rain experiment)
   let slot = w.start + (rec.k.z + j) % w.size;
   let seed = pcg(rec.k.y ^ (j * 0x85EBCA6Bu + 1u));       // this particle's own seed (kept: the shading twinkle / the resting angle draw from it)
@@ -129,7 +129,7 @@ fn sparkBounce(vel: vec3f, n: vec3f, seed: u32, salt: u32) -> vec3f {
   vel.y -= g * f;
   p.pos = pos + vel * f; p.age = f;
   p.vel = vel; p.life = max(life, 0.02);
-  p.size = max(size, 0.0005); p.bits = kind | PB_NEW | (owner << 8u); p.seed = seed; p.color = rec.k.w;
+  p.size = max(size, 0.0005); p.bits = kind | PB_NEW | (owner << 8u) | (ours * PB_OURS); p.seed = seed; p.color = rec.k.w;
   if (kind == P_SPARK && sparkBounceOn() && (em.flags & 2u) != 0u) {   // sparks off surfaces: the birth frame's stretch swept (see sparkBounce)
     let mv0 = vel * f; let len0 = length(mv0);
     if (len0 > 1e-6) {
@@ -424,7 +424,7 @@ fn applyImpulses(p: ptr<function, Particle>, kind: u32, slot: u32, sn: ptr<funct
   }
   if (kick <= 0.0) { return false; }
   let lay = *asleep;
-  if (lay) { if (kick < G.w) { return false; } *asleep = false; (*p).bits &= ~PB_ASLEEP; }
+  if (lay) { if (kick < G.w) { return false; } *asleep = false; (*p).bits &= ~(PB_ASLEEP | PB_OURS | PB_KEPT); }   // (woken where it lay: whoever kicked it, it is no longer the team's own doing — the fog cuts it again where nobody sees)
   var v = (*p).vel + dv; let sp = length(v); if (sp > G.z) { v *= G.z / sp; } (*p).vel = v;
   if (kind == P_SHEET) {
     sheetKickShape(p, slot, sn, sw, gust, aspect, kick, kseed, lay);
@@ -467,7 +467,8 @@ fn applyImpulses(p: ptr<function, Particle>, kind: u32, slot: u32, sn: ptr<funct
   // flies takes its drag against the moving air below
   var vAir = vec3f(0.0); let wk = windKnobs();
   let windy = numWinds() > 0u && !isNew && dt > 0.0;
-  if (windy) { vAir = windAir(p.pos, kind, select(-1e9, p.pos.y - 0.012, asleep)) * windCoupling(kind, wk.debrisK); }
+  let ember = emberIs(kind, p.color);   // (an ember off a fire goes with the air as a puff of dust does — the wind's records name the kinds they move, and no record names a spark — where a spark does not: particles_common.wgsl EMBER)
+  if (windy) { vAir = windAir(p.pos, select(kind, P_DUST, ember), select(-1e9, p.pos.y - 0.012, asleep)) * select(windCoupling(kind, wk.debrisK), 1.0, ember); }
   if (windy && isSheet && asleep) {
     let spd = length(vAir);
     if (spd > 0.03) {
@@ -480,7 +481,7 @@ fn applyImpulses(p: ptr<function, Particle>, kind: u32, slot: u32, sn: ptr<funct
         let spEff = spd * (0.8 + 0.4 * rnd(wh, 33u));                                                            // (the air over THIS leaf: a pile is not one leaf)
         let pw = clamp((spEff - wk.wake) / max(wk.wake, 0.05), 0.0, 1.0) * WIND_WAKE_PMAX;
         if (spEff > wk.wake && rnd(wh, 34u) < pw) {
-          asleep = false; p.bits &= ~PB_ASLEEP;
+          asleep = false; p.bits &= ~(PB_ASLEEP | PB_OURS | PB_KEPT);
           let kick = spEff * wk.kick;
           var kd = vec3f(vAir.x, 0.0, vAir.z); let kl = length(kd); kd = select(vec3f(0.0), kd / kl, kl > 1e-4);
           p.vel += normalize(kd + vec3f(0.0, WIND_WAKE_UP, 0.0)) * kick;                                          // along the air over it, edge lifted into it …
@@ -498,6 +499,7 @@ fn applyImpulses(p: ptr<function, Particle>, kind: u32, slot: u32, sn: ptr<funct
       shardAir(&p, &sn, &sw, k0, dt);
     } else {
       p.vel.y -= k0.x * dt;
+      if (emberIs(kind, p.color)) { let ph = f32(p.seed & 1023u) * 0.00614; p.vel += vec3f(EMBER_SWIRL * sin(p.age * 5.1 + ph), k0.x + EMBER_LIFT, EMBER_SWIRL * cos(p.age * 4.3 + ph * 1.7)) * dt; }   // EMBER (game/fire.ts): lighter than the hot air it left the fire in — it climbs, wandering, until it burns out
       if (kind == P_DUST && steamIs(p.color)) { p.vel.y += 2.0 * k0.x * dt; }   // STEAM (snowBreath.ts): warm breath is lighter than the air — the puff's own slow settling, the other way up
       p.vel = vAir + (p.vel - vAir) * exp(-k0.y * dt);   // drag against the MOVING air (vAir = 0: × e^−k·dt exactly as it was)
     }
@@ -576,13 +578,14 @@ fn applyImpulses(p: ptr<function, Particle>, kind: u32, slot: u32, sn: ptr<funct
     atomicAdd(&pool.hdr[1], 1u);
     // resting: is what it rests on still there? (a leaf swung away, a chair shoved) — one short ray down every 16th frame, staggered by slot
     if (((frame.frameIdx + slot) & 15u) == 0u && dt > 0.0) {
-      if (!occluded(p.pos + vec3f(0.0, 0.02, 0.0), vec3f(0.0, -1.0, 0.0), 0.02 + p.size * 0.5 + 0.03, owner)) { p.bits &= ~PB_ASLEEP; asleep = false; }
+      if (!occluded(p.pos + vec3f(0.0, 0.02, 0.0), vec3f(0.0, -1.0, 0.0), 0.02 + p.size * 0.5 + 0.03, owner)) { p.bits &= ~(PB_ASLEEP | PB_OURS | PB_KEPT); asleep = false; }
+      else if (fogKeptOn() && (p.bits & PB_KEPT) == 0u && fogSeenBins(p.pos) >= 0.5) { p.bits |= PB_KEPT; }   // (FOG.kept: at rest where the team sees it — it stays in the picture when they look away, until it is woken; the draw asks the row too, so with the row off a marked one is cut as ever)
     }
   }
   // ---- shade
   let u = p.age / p.life;
   if (kind == P_SPARK) {
-    p.shade = sparkRadiance(u, k1.y, k1.w);
+    if (emberIs(kind, p.color)) { p.shade = emberRadiance(u, p.color, k1.w, p.seed, p.age); } else { p.shade = sparkRadiance(u, k1.y, k1.w); }
   } else if (isSheet) {
     // the face the eye sees: light falling on it, TRANS of what falls on the other face (a leaf against a torch glows), the cache's ambient — facing up at rest,
     // the sphere's mean in the air (both faces)

@@ -15,8 +15,9 @@ import { CMDRING, ringPin, type RingHint, type RingState, type RingView } from '
 import { handRingView } from '../game/interact';
 import { planView } from '../game/planmode';
 import { hoverKept } from './hoverkept';
+import { planRings } from './planlook';
 import { HANDRING } from '../game/handring';
-import { RING_BOX, RING_HOLE, RING_RIM, lonePill, loneWedge, wedgeMid, wedgeWords, type RingPlace } from '../game/ringlone';
+import { RING_BOX, RING_HOLE, RING_RIM, lonePill, loneWedge, wedgeMid, wedgeWords, type LonePill, type RingPlace } from '../game/ringlone';
 
 const NS = 'http://www.w3.org/2000/svg';
 /** a line from one point of the layer to another with a head on its far end (too short to read: nothing) */
@@ -68,16 +69,20 @@ class RingDraw {
     const hub = this.hub = document.createElementNS(NS, 'circle') as SVGCircleElement; hub.setAttribute('class', 'ch'); hub.setAttribute('r', String(RING_HOLE)); hub.style.display = 'none'; g.appendChild(hub);
     const cap = this.cap = document.createElementNS(NS, 'text') as SVGTextElement; cap.setAttribute('class', 'cc'); cap.setAttribute('y', String(RC)); g.appendChild(cap);
   }
-  /** a wedge's outline, digit and words put where `at` says (its own place on the wheel, or a pill's: `as` names which), written only when that changes;
-   *  `len`: the width its words are set to (a pill's: the game reads the same pill — ringlone.ts) */
-  private place(e: WedgeEls, at: RingPlace, as: string, len = 0) {
-    if (e.as === as) return; e.as = as; const f = (v: number) => v.toFixed(1);
+  /** a wedge's outline and digit put where `at` says (its own place on the wheel, or a pill's: `as` names which), written only when that changes. A
+   *  pill's words are written here too, each line set to the width counted for it (the game reads the same pill — ringlone.ts): one line, or a long
+   *  label's two (loneLines), with the whole label kept as the element's name */
+  private place(e: WedgeEls, at: RingPlace | LonePill, as: string, words = '') {
+    if (e.as === as) return; e.as = as; const f = (v: number) => v.toFixed(1), lines = 'lines' in at ? at.lines : null, one = lines?.length === 1 ? lines[0] : null;
     e.path.setAttribute('d', at.d); e.num.setAttribute('x', f(at.nx)); e.num.setAttribute('y', f(at.ny)); e.text.setAttribute('x', f(at.tx)); e.text.setAttribute('y', f(at.ty)); e.text.setAttribute('text-anchor', at.anchor);
-    if (len > 0) e.text.setAttribute('textLength', f(len)); else e.text.removeAttribute('textLength');
+    if (one) e.text.setAttribute('textLength', f(one.w)); else e.text.removeAttribute('textLength');
+    if (lines && !one) e.text.setAttribute('aria-label', words); else e.text.removeAttribute('aria-label');
+    if (one) e.text.textContent = one.s;
+    else if (lines) e.text.replaceChildren(...lines.map(l => { const t = document.createElementNS(NS, 'tspan'); t.textContent = l.s; t.setAttribute('x', f(at.tx)); t.setAttribute('y', f(l.y)); t.setAttribute('textLength', f(l.w)); return t; }));
   }
   draw(V: RingView | null, tz: number) {
     if (!V) { if (this.was) { this.was = ''; if (this.g) this.g.style.display = 'none'; } return; }
-    const sc = V.zoom / tz, key = `${V.x.toFixed(0)},${V.y.toFixed(0)},${sc.toFixed(2)}|${V.lit}|${V.tone ?? ''}|${V.caption}|${HANDRING.lone}|${V.wedges.map(w => `${w.key}${w.off ? '-' : ''}${w.opens ? '>' : ''}${w.text}`).join('|')}`;
+    const sc = V.zoom / tz, key = `${V.x.toFixed(0)},${V.y.toFixed(0)},${sc.toFixed(2)}|${V.lit}|${V.tone ?? ''}|${V.caption}|${HANDRING.lone}${HANDRING.loneWrap}|${V.wedges.map(w => `${w.key}${w.off ? '-' : ''}${w.opens ? '>' : ''}${w.text}`).join('|')}`;
     if (key === this.was) return; this.was = key;
     if (!this.g || this.els.length !== CMDRING.wedges) { this.g?.remove(); this.els = []; this.build(CMDRING.wedges); }
     const g = this.g!; g.style.display = ''; g.setAttribute('transform', `translate(${(V.x / tz).toFixed(1)},${(V.y / tz).toFixed(1)}) scale(${sc.toFixed(3)})`);
@@ -87,8 +92,9 @@ class RingDraw {
     this.els.forEach((e, k) => { const w = V.wedges.find(x => x.key === k + 1);
       e.g.style.display = w ? '' : 'none'; if (!w) return;
       e.g.setAttribute('class', `${V.lit === w.key ? 'lit' : ''}${w.off ? ' off' : ''}${one ? ' lone' : ''}`.trim());
-      const words = wedgeWords(w); e.text.textContent = words;
-      if (one) { const P = lonePill(w, this.els.length); this.place(e, P, `pill ${words}`, P.textW); } else this.place(e, e.home, 'wheel'); });
+      const words = wedgeWords(w);
+      if (one) { const as = `pill|${HANDRING.loneWrap ? 2 : 1}|${words}`; if (e.as !== as) this.place(e, lonePill(w, this.els.length), as, words); }   // (the pill is worked out only when its words change)
+      else { e.text.textContent = words; this.place(e, e.home, 'wheel'); } });
   }
 }
 
@@ -100,6 +106,7 @@ export class CmdRingViz {
   private hintWas = '';
   private plan: SVGGElement | null = null;
   private planWas = '';
+  private planK = '';
   constructor(private svg: SVGSVGElement) { this.orders = new RingDraw(svg); this.hands = new RingDraw(svg); }
   /** the hint of what the ring would open on (orders.ts hintView): the thing's outline on the floor and a glyph beside the cursor — in the ring's middle
    *  once a ring is up */
@@ -132,7 +139,9 @@ export class CmdRingViz {
     let s = V.frame ? `<rect class="pf" x="3" y="3" width="${(w - 6).toFixed(0)}" height="${(h - 6).toFixed(0)}" rx="4"/><text class="pt" x="${(w / 2).toFixed(0)}" y="${(h - 14).toFixed(0)}">PLAN</text>` : '';
     for (const m of V.men) { const out: string[] = [];
       for (let i = 0; i < HINT_N; i++) { const t = i / HINT_N * 2 * Math.PI, q = xy([m.at[0] + Math.cos(t) * CMDRING.hintManM, m.at[1], m.at[2] + Math.sin(t) * CMDRING.hintManM]); if (!q) { out.length = 0; break; } out.push(`${q[0].toFixed(1)},${q[1].toFixed(1)}`); }
-      if (out.length) s += `<path class="pm${tone(m.tone)}${m.picked ? ' picked' : ''}" d="M${out.join('L')}Z"/>`; }
+      if (out.length) s += `<path class="pm${tone(m.tone)}${m.picked ? ' picked' : ''}" d="M${out.join('L')}Z"/>`;
+      const c = out.length && m.n ? xy([m.at[0], m.at[1], m.at[2]]) : null;   // (the digit that picks him, up and to the right of his circle: planmode.ts planDigits)
+      if (c) s += `<text class="pn${tone(m.tone)}" x="${(c[0] + 15).toFixed(1)}" y="${(c[1] - 11).toFixed(1)}">${m.n}</text>`; }
     if (V.sam) {   // Sam's own mark: a ring at his feet — or, the view gone from him, a head at its edge pointing the way back
       const q = xy(V.sam), m = 34;
       if (q && q[0] >= m && q[0] <= w - m && q[1] >= m && q[1] <= h - m) { const out: string[] = [];
@@ -152,8 +161,11 @@ export class CmdRingViz {
       s += '</g>'; }
     if (V.aim) { const a = xy(V.aim.from), b = xy(V.aim.to); if (a && b) s += arrow(a[0], a[1], b[0], b[1], 'pa drag'); }   // (a right press being dragged: the way it will set)
     if (V.drag) { const D = V.drag; s += `<rect class="pb" x="${(Math.min(D.x0, D.x1) / tz).toFixed(1)}" y="${(Math.min(D.y0, D.y1) / tz).toFixed(1)}" width="${(Math.abs(D.x1 - D.x0) / tz).toFixed(1)}" height="${(Math.abs(D.y1 - D.y0) / tz).toFixed(1)}"/>`; }
-    if (s === this.planWas) return; this.planWas = s;
+    const k = planRings().toFixed(2);   // (how strongly the circles at the men's feet are drawn: ui/planlook.ts — the look's own `--pm-k`, written only when it has changed)
+    if (s === this.planWas && k === this.planK) return;
     if (!this.plan) { const g = this.plan = document.createElementNS(NS, 'g') as SVGGElement; g.setAttribute('class', 'planmode'); this.svg.insertBefore(g, this.svg.firstChild); }
+    if (k !== this.planK) { this.planK = k; this.plan.style.setProperty('--pm-k', k); }
+    if (s === this.planWas) return; this.planWas = s;
     this.plan.style.display = ''; this.plan.innerHTML = s;
   }
   /** A ring that stays on its point (CMDRING.pin), where THIS picture's camera puts it, in the view's px: the game's own place for it (RingState.ax / ay) was
@@ -170,7 +182,12 @@ export class CmdRingViz {
     const V0 = CMDRING.on || game.orders.cmdRing ? game.orders.ringView() : null, P = V0 && CMDRING.pin ? this.pinned(game.orders.cmdRing, cam, w, h, tz) : null, V = V0 && P ? { ...V0, x: P[0], y: P[1] } : V0;
     const H0 = game.player.sel.ring ? handRingView(game) : null, HP = H0 ? this.pinned(game.player.sel.ring, cam, w, h, tz) : null, H = H0 && HP ? { ...H0, x: HP[0], y: HP[1] } : H0;   // (his own ring on its thing: handring.ts onThing)
     this.orders.draw(V, tz); this.hands.draw(H, tz); this.clear(V, H, tz);
+    const D = this.discs; D.length = 0; for (const R of [V, H]) if (R) D.push(R.x / tz, R.y / tz, R1 * R.zoom / tz);
   }
+  /** the rings drawn now as discs of the layer, to the rim (x, y, r in threes) */
+  private discs: number[] = [];
+  /** is this point of the layer (the same px the overlay places its marks in) under a ring that is drawn (ui/overlay.ts: a tutorial step's mark gives way, RAILS.markClear) */
+  covers(x: number, y: number): boolean { const D = this.discs; for (let i = 0; i < D.length; i += 3) if (Math.hypot(x - D[i], y - D[i + 1]) <= D[i + 2]) return true; return false; }
   private overKey = '';
   /** a ring is drawn (the tutorial's big line is at home under one, its step clear of your men stood down: ui/overlay.ts) */
   get ringUp(): boolean { return this.overKey !== ''; }

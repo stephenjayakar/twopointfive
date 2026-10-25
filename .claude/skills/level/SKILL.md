@@ -155,6 +155,51 @@ like that."
 
 ## 5. Light, hour, weather
 
+**How the light should look.** The maintainer, of a yard under a midday sun: "this tutorial level just looks really
+*flat*". The camera looks down, so the ground is most of the picture, and what gives a thing its shape is the shadow it
+throws on that ground. The touchstone's rooms are the model: one raking light carries the room and most of the frame
+stays dark. These are guidelines, not misses like the rest of this page: each says whether it was seen in a picture
+(drawn on the software renderer), read from the code, or is judgement. None of it has been seen on a GPU.
+
+- **Judge the light at the hour the mission plays at.** A mission row's own hour and weather are written over the
+  link (`src/game/rowset.ts`; `?rowset=0` is the link as written), so a level's file may be a night nobody plays. Open
+  it as its row does, and read which lights are lit: the photocell has every `exterior` lamp out at midday and under
+  overcast. **seen** the first account of that flat yard blamed two floodlights at its gates. They were out: the
+  row plays at midday.
+- **The key comes in low.** A wall's shadow is its height over the tangent of the light's height: two and a half wall
+  heights at 22 degrees (dawn and dusk), one and three quarters at 30 (the moon most files have), two thirds at 56
+  (midday), and from above most of that sliver is hidden at the wall's foot. Choose the mission's hour and the moon's
+  height for long shadows where the mission lets you. A level that has to play at midday gets its shape from paint
+  and ground instead (below, and `ground`). **seen** the plan tutorial's yard at its midday is a pale wash, with or
+  without materials on its walls; the same frame at dusk has long shadows and walls that hold below white. **read**
+  `src/game/hours.ts`. **By eye.**
+- **`key` · One key light a court, from one side.** Never two lights of like strength facing each other across the
+  same ground: each lights what the other shadows. A second light on that ground is a fill at a quarter of the key or
+  less, or it belongs to another court. Judgement, not seen: the plan tutorial's file has two of the kit's floodlights
+  at its two gates, 28 m apart, looking at each other, and its night has not been drawn. **check** `key` (a NOTE for
+  each pair of spot lights of like strength that face each other, each reaching the middle of the ground between,
+  with nothing ceiling-high on the line from one to the other; it says when the mission's hour has both out; it sees
+  spots only, and a road lit from both ends may be meant).
+- **Lamps make pools, never a wash.** A lamp lights a door, a gate, a table: a few metres (the kit's lantern is 4.5
+  over 5.5 m, a room bulb 26 over 7 m). Between two pools there is ground that neither lights. The kit's floodlight
+  (210 over 20 m, a 70 degree cone) is the one that washes: aim it at one stretch and let it be the only one there. A
+  court that is bright all over is the moon's or the sun's work. Judgement, from the rule above; not tried.
+- **Every outside frame keeps a dark part, and nothing big goes white.** Stand the camera where the player starts and
+  where he fights: about a third of the ground in shadow. A pale wall (0.4 and over by luminance: a blast wall near
+  0.45, light plaster near 0.47, whitewash; bare block sits just under at 0.39) under a key light goes white first.
+  Turn the light off it, darken the paint a step, or let the light graze it. **seen** that yard's walls at midday; the
+  numbers are judgement. **By eye.**
+- **Warm against cool.** The far light is cool (the moon 0.55 0.7 1.0, a floodlight 0.92 0.96 1.0) and what burns is
+  warm (a lantern 1.0 0.6 0.28, a bulb, a fire). A night frame wants both in it. **By eye.**
+- **Ground, walls and things sit a step apart before any light falls**: a dust yard near 0.2 under mud walls near 0.33
+  (luminance again) under dark or strongly coloured things. Pale walls on pale ground with pale drums is flat under
+  any light. **seen** that yard at midday. **By eye**; the ground's own steps are `ground`.
+- **A light changed for the look changes the play.** Guards and the HUD read the light the picture shows, so a lamp
+  moved or put out moves where a man can hide. Run the mission's own check after, and its page check where it says a
+  spot is dark ("Starts are dark and unseen" and "The headless light meter has no moon and no bounce", below).
+- **Look before you ship, from the play camera.** A still of each court at the camera's own height. Can you tell at a
+  glance where the light comes from, and is there a shadow on the ground longer than a man? If not, it is flat.
+
 - **Authored as a night**: one moon (a directional light in group `exterior`: the hour's sun goes in at its place), lamps
   outside in group `exterior` (the photocell puts them out at midday). A lamp the mission switches itself is the exception:
   say so. **check** `moon`, `lamps`.
@@ -180,7 +225,7 @@ like that."
   before you ship and say in the level's notes that you did. Another wall for the unit, a rougher finish or a lamp
   further off is a way round, never a rule. **seen** "some weird light leakage on bookshelf?": the manager's steel
   shelves against the lit store. **check** `leak` (a NOTE where a thing of such metal stands so, with the rooms and
-  lamps; every other finish is counted and passes; 28 of 42 levels are noted today, so where to look and never a pass
+  lamps; every other finish is counted and passes; 29 of 39 levels are noted today, so where to look and never a pass
   mark; it does not see a frame in the wall itself, nor a wooden thing a steel one beside it reflects), then **by
   eye** in a real browser on the ultra preset (high traces no reflection above 0.45, medium above 0.35, low none)
   with the near room dark: the debugger's specular view (the cache irradiance view blends through every wall and

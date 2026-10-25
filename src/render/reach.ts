@@ -62,6 +62,7 @@ export function buildWallRaster(statics: Box[], doors: ReachDoor[] = []): Uint8A
   for (const b of statics) {
     if (b.flags & (BoxFlag.NoShadow | BoxFlag.Dynamic | BoxFlag.Glass)) continue;  // invisible to rays / moving / a glass pane (light passes it): open ground
     if (b.cut !== undefined && b.cut.length > 0 && cutConfig.on) continue;        // CUT BOXES (scene/cut.ts): part of it is cut away and rays pass there — open ground, the safe direction (a ray decides)
+    if (b.round === true) continue;                                                // ROUND THINGS (scene/round.ts): rays pass the corners of the box round it — open ground, the safe direction
     if (b.rot || Math.abs(Math.sin(b.yaw ?? 0)) > 1e-6) continue;                  // rotated / yawed (the Rot GPU bit is synthesized at upload, not on Box.flags): its unrotated box would block where it isn't — open ground, the safe direction
     const y0 = b.c[1] - b.h[1], y1 = b.c[1] + b.h[1];
     if (y0 > WALL_Y0 || y1 < WALL_Y1) continue;                                    // not floor-to-head-height: light passes over or under it somewhere

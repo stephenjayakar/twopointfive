@@ -24,7 +24,6 @@
 //             moving with the air where they enter the slab, dragged toward it as they fall (a drop answers a gust over ~0.9 s, as a real one does), so the streaks SLANT with
 //             the storm and swing with its gusts; the LATTICE far field is handed the same mean air (frame shear = −air ÷ 9 m/s, low-passed by the drops' own response) so near
 //             and far lean alike; births are thinned into drifting SHEETS (a value noise carried downwind) so curtains of denser rain cross the lot.
-import { SideMap } from '../math/side';
 import { Vec3, clamp } from '../math/vec';
 import type { Game } from './game';
 import type { FollowCamera } from './camera';
@@ -110,8 +109,8 @@ export const RAIN_FX = {
 
 interface DripPoint { pos: Vec3; fall: number; box: number; }
 /** the drip lines being found again in shares (BLAST_PACE): the walk where it stopped — the box, its edge and the sample along it, `paid` when that sample's share
- *  was already taken, and the lines found so far —, the statics it is over, the samples left of this frame's share. PLAIN DATA, not a generator: a walk half done
- *  is in a rollback snapshot (rollback.ts) and goes on from where the snapshot saw it, which a generator's own place in its code cannot */
+ *  was already taken, and the lines found so far —, the statics it is over, the samples left of this frame's share. Plain data in the host's book (below): a
+ *  put-back drops it with the book, and the walk starts over on the walls that stand then */
 interface DripJob { boxes: number; serial: number; left: number; hold: number; bi: number; ei: number; k: number; paid: boolean; out: DripPoint[]; }
 const dripJob = (boxes: number, serial: number, left: number, hold: number): DripJob => ({ boxes, serial, left, hold, bi: 0, ei: 0, k: 0, paid: false, out: [] });
 interface RainState {
@@ -124,14 +123,20 @@ interface RainState {
   dripLifeMax: number;
   /** v2 WIND: the lattice's lean this frame (frame shear x / z, low-passed toward −air ÷ 9 by the drops' own response), the drifting sheets' offset (∫ mean air dt, m), the storm's mean air handed to both (m/s, for the panel) */
   shear: [number, number]; bandOff: [number, number]; air: [number, number]; shearInit: boolean;
+  /** the drip walk's own query stamps (scene/collision.ts `aside`): its rays write none of the game's */
+  aside: { s?: object; q?: object };
 }
 export interface RainStatsCpu { active: boolean; why: string; radius: number; centre: [number, number]; areaOut: number; latticePerM2: number; target: number; capped: boolean; keep: number; fill: number; birthsPerSec: number; births: number; drips: number; edgesActive: number; edgesTotal: number; frames: number; totalBirths: number; totalDrips: number; }
-const states = new SideMap<Game, RainState>('rainFx.states');
-function stateOf(g: Game): RainState {
-  let s = states.get(g);
-  if (!s) { s = { seed: 0x5eed1e5, birthAcc: 0, dripAcc: 0, wasActive: false, edges: null, edgeBoxes: 0, job: null, serial: 1, pop: 0, popLog: [], clock: 0, lastC: null, dripLifeMax: 0, shear: [0, 0], bandOff: [0, 0], air: [0, 0], shearInit: false, stats: { active: false, why: 'off', radius: 0, centre: [0, 0], areaOut: 0, latticePerM2: 0, target: 0, capped: false, keep: 1, fill: 0, birthsPerSec: 0, births: 0, drips: 0, edgesActive: 0, edgesTotal: 0, frames: 0, totalBirths: 0, totalDrips: 0 } }; states.set(g, s); }
-  return s;
-}
+/** WHOSE THIS TABLE IS. Every value in it follows what the host draws with: the births and the dice follow the particle pool (a host with none files nothing and
+ *  rolls nothing), the disc follows the camera, the drip lines are found only where the particle rain's switch is on, the tallies count records. No rule of the
+ *  game reads one. So it is a HOST BOOK (host/api.ts `HostBooks.rain`), not game state: a game on a host with a pool and the same game on a host with none hold the
+ *  same state, which is what a server with no picture and a client with one must agree on. The host drops the bag whole when it puts the game back (a save loaded,
+ *  a restart) in the same call that empties the pool's ring, so a fresh book meets an empty ring: the lattice stands in under the disc while the drops fall in
+ *  again, the dice start over, the sheets' drift and the lattice's lean start from where the wind is, and the drip lines are found again (at once where rain is
+ *  drawn, in shares where it is not). The drip walk asks the collision world aside (`aside`: its own query stamps), so it writes nothing of the game's either. */
+export type RainShown = RainState;
+const freshBook = (): RainState => ({ seed: 0x5eed1e5, birthAcc: 0, dripAcc: 0, wasActive: false, edges: null, edgeBoxes: 0, job: null, serial: 1, pop: 0, popLog: [], clock: 0, lastC: null, dripLifeMax: 0, shear: [0, 0], bandOff: [0, 0], air: [0, 0], shearInit: false, aside: {}, stats: { active: false, why: 'off', radius: 0, centre: [0, 0], areaOut: 0, latticePerM2: 0, target: 0, capped: false, keep: 1, fill: 0, birthsPerSec: 0, births: 0, drips: 0, edgesActive: 0, edgesTotal: 0, frames: 0, totalBirths: 0, totalDrips: 0 } });
+function stateOf(g: Game): RainState { const B = (g.engine.hostBooks ??= {}); return B.rain ??= freshBook(); }
 /** mulberry32 step on the state's own word (never Math.random: the harness seeds that one for the game, and rain must not shift it) */
 function rnd(s: RainState): number { s.seed = (s.seed + 0x6D2B79F5) >>> 0; const a = s.seed; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
 function nextSeed(s: RainState): number { let x = (s.serial++ * 2654435761) >>> 0; x = (x ^ 61) ^ (x >>> 16); x = (x + (x << 3)) >>> 0; x ^= x >>> 4; x = Math.imul(x, 0x27d4eb2d) >>> 0; x ^= x >>> 15; return x >>> 0; }
@@ -264,7 +269,7 @@ const num = (v: unknown, d: number) => typeof v === 'number' && Number.isFinite(
  *  (a solid at least edgeMinFall below the point just outside the edge) — sampled every edgeStep along each edge, 3.5 cm proud of the face and a hair under the top.
  *  Roof rims (the NoPrimary slab included: invisible, but where the water comes off), car roofs / bonnets, the van, the dumpster's lid, the AC units, the lamp heads. */
 function buildDripEdges(g: Game, st: RainState) {
-  const job = dripJob(0, 0, Infinity, 0); dripWalk(g, job);   // (a share with no end: one call is the whole walk)
+  const job = dripJob(0, 0, Infinity, 0); g.col.aside(st.aside, () => dripWalk(g, job));   // (a share with no end: one call is the whole walk)
   setDripEdges(st, job.out, g.engine.world.statics.length);
 }
 function setDripEdges(st: RainState, out: DripPoint[], boxes: number) {
@@ -280,7 +285,7 @@ function paceDripEdges(g: Game, st: RainState, now: boolean) {
   if (!st.job || st.job.boxes !== n || st.job.serial !== serial) st.job = dripJob(n, serial, 0, st.edges ? BLAST_PACE.dripHold : 0);
   const job = st.job; if (!now && job.hold-- > 0) return;
   job.left = now ? Infinity : BLAST_PACE.dripSamples;
-  if (dripWalk(g, job)) setDripEdges(st, job.out, n);
+  if (g.col.aside(st.aside, () => dripWalk(g, job))) setDripEdges(st, job.out, n);
 }
 /** the walk itself, from where `job` stands: it stops (false) whenever `job.left` samples are used up — a sample that gets as far as its ray tests is one, sixteen
  *  turned away before them another — and the next call goes on with that same sample; true = over, `job.out` is every line */

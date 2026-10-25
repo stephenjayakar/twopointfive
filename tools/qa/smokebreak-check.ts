@@ -21,6 +21,7 @@
 //   off       switch off, the same order: no light, no source, no puff, the hand never asked — and the game's digest is the one of a man never told to smoke
 //   old       a recording from before the key replays with it off (journal.ts applyKnobs)
 import { standUp, ROOT } from './headless.ts';
+import { hostPutBack } from './putback-host.ts';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -110,24 +111,29 @@ export async function smokeBreakCheck(o: { verbose?: boolean } = {}): Promise<bo
       // … and what remembers the smoke filed with a solver is the HOST'S (smokebreak.ts SmokeShown, on the engine): the game whose man smoked on a solver for
       // twenty seconds and the one nothing drew are the same game, row for row of this file's table
       { const RB = await import(`${ROOT}/src/game/rollback.ts`), B = await rig(true, false); B.step(10); order(B.gd, { goal: null, upper: 'torch', smoke: true }); B.step(20 * 60);
-        // (this file's own rows of the two states, taken out and laid side by side: the whole-state diff stops at the first table whose shape differs, and
-        //  when this was written the breath in the cold, snowBreath.ts, kept the solver's word in its own table: read row by row, another table's shape cannot hide this one's)
-        const rows = (g: any) => { const F = RB.stateFlat(g); return F.paths.map((p: string, i: number) => [p, F.toks[i]] as [string, unknown]).filter(([p]: [string, unknown]) => p.includes('smokebreak.')); };   // (the men's own rows are filed as 'the table at smokebreak.states…')
-        const ra = rows(A.g), rb = rows(B.g), own = ra.length !== rb.length ? [`${ra.length} rows against ${rb.length}`] : ra.flatMap(([p, t]: [string, unknown], i: number) => p === rb[i][0] && t === rb[i][1] ? [] : [`${p}: ${t} | ${rb[i][1]}`]);
-        const cut = !ra.some(([p]: [string, unknown]) => p.endsWith('.emberT')) || !ra.some(([p]: [string, unknown]) => p.endsWith('.stats.breaths')), P = smokeShown(A.g), Q = smokeShown(B.g);
+        // (the two games gone through value for value, rollback.ts stateAlike: it pairs what stands in the same place and goes on past a thing that differs, so
+        //  another module's row cannot hide this one's — and it lays neither state out flat, which was two whole games' rows held as text. That it READS this
+        //  file's rows is shown, not supposed: one number of his row changed by hand in one game must come back as a line of this file's, and no line once put back)
+        const mine = (): string[] => (RB.stateAlike(A.g, B.g, 400) as string[]).filter(l => l.includes('smokebreak'));
+        const own = mine(), { sideRegistry } = await import(`${ROOT}/src/math/side.ts`), tab: any = (sideRegistry().tables as any[]).find(t => t.sideName === 'smokebreak.states'), row: any = tab?.get(A.g)?.men.get(A.gd.char), T: any = smokeBreakStats(A.g);
+        let cut = true; if (row && typeof row.emberT === 'number') { const e = row.emberT; row.emberT = e + 1; T.breaths++; const seen = mine(); row.emberT = e; T.breaths--; cut = !seen.some(l => l.includes('emberT')) || !seen.some(l => l.includes('breaths')) || mine().length !== own.length; }
+        const P = smokeShown(A.g), Q = smokeShown(B.g);
         verdict(A.sw && B.sw && own.length === 0 && !cut && P?.threads === 1 && Q?.threads === 0 && smokeBreakStats(A.g).breaths === smokeBreakStats(B.g).breaths && smokeBreakStats(B.g).breaths >= 2,
           'smoke — … and what remembers the smoke on the solver is the host\'s, not the game\'s: after twenty seconds the game whose man smoked on a solver and the one nothing drew differ in nothing of the smoke break\'s',
-          `rows of the smoke break's that differ: ${own.length ? own.slice(0, 6).join(' · ') : 'none'} of ${ra.length}${cut ? ' (HIS OWN ROWS OR THE COUNTS WERE NOT READ)' : ''} · the host's book: ${P?.threads ?? '-'} thread against ${Q?.threads ?? '-'} · breaths counted ${smokeBreakStats(A.g).breaths} and ${smokeBreakStats(B.g).breaths}`); }
+          `rows of the smoke break's that differ: ${own.length ? own.slice(0, 6).join(' · ') : 'none'}${cut ? ' (HIS OWN ROW OR THE COUNTS WERE NOT READ: a number changed by hand in each gave no line)' : ' (a number changed by hand in his row and in the counts gives a line each, and none once put back)'} · the host's book: ${P?.threads ?? '-'} thread against ${Q?.threads ?? '-'} · breaths counted ${smokeBreakStats(A.g).breaths} and ${smokeBreakStats(B.g).breaths}`); }
       // … and the book is never taken at its word: the solver lets a source go without telling whoever filed it, and the thread is filed again
       { const C = await rig(true, true), smoke = { goal: null, upper: 'torch', smoke: true }; C.step(10); order(C.gd, smoke); C.step(8 * 60);
         const th = () => C.sources.filter(e => e.kind === 'breath' && e.tint && e.ttl > 60), up = () => C.held.filter((e: any) => e.ttl > 60 && !!e.track()).length, one = () => `${th().length} filed, ${up()} on the solver`;
         const t0 = one(), ok0 = th().length === 1 && up() === 1;
         C.g.smoke.clearAll(); C.step(2); const none = up(); C.step(60); const t1 = one(), ok1 = none === 0 && th().length === 2 && up() === 1;   // (a script's clear, the panel's: the men as they were)
         C.held.length = 0; C.step(60); const t2 = one(), ok2 = th().length === 3 && up() === 1;   // (its ttl run out, or dropped off a full list)
-        C.g.engine.smokeShown = undefined; C.step(2); const t3 = one(), ok3 = th().length === 4 && up() === 1 && th().slice(0, 3).every(e => e.track() === null);   // (host/putback.ts's own line: at once, and the old one answers 'gone')
-        C.g.restartEncounter(); const gd = C.g.guards.find((x: any) => x.route?.name === 'court') ?? C.g.guards[1]; C.step(10); order(gd, smoke); C.step(8 * 60); const t4 = one(), ok4 = th().length === 5 && up() === 1;   // (the same man's id, a fresh man, an emptied solver)
-        verdict(ok0 && ok1 && ok2 && ok3 && ok4, 'smoke — … and the host\'s book is never taken at its word: the solver emptied, the source dropped without a word, the book dropped as a save put back drops it, the encounter restarted — each time one thread rides his hand again, and never two',
-          `lit: ${t0} · the solver cleared: ${none} on it two frames on, then ${t1} · the source dropped: ${t2} · the book dropped: ${t3} · the encounter restarted and the order given again: ${t4}`); }
+        // (the host's REAL put-back, host/putback.ts, as the page calls it: run headless by putback-host.ts, the one stand-in list every such check shares — at once, and the old one answers 'gone')
+        await hostPutBack(C.g); const put = smokeShown(C.g) === undefined; C.step(2); const t3 = one(), ok3 = put && th().length === 4 && up() === 1 && th().slice(0, 3).every(e => e.track() === null);
+        C.g.restartEncounter(); const gone = smokeShown(C.g) === undefined, gd = C.g.guards.find((x: any) => x.route?.name === 'court') ?? C.g.guards[1]; C.step(10); order(gd, smoke); C.step(8 * 60); const t4 = one(), ok4 = gone && th().length === 5 && up() === 1;   // (the same man's id, a fresh man, an emptied solver: the old man's rows are nobody's)
+        // … and nothing live shows in the fog: the thread filed in view is let go while he is hidden, and one rides his hand again when he is seen
+        const F: any = C.g.fogOfWar; F.hidden = () => true; C.step(3); const fogged = up(); delete F.hidden; C.step(3); const t5 = one(), ok5 = fogged === 0 && th().length === 6 && up() === 1;
+        verdict(ok0 && ok1 && ok2 && ok3 && ok4 && ok5, 'smoke — … and the host\'s book is never taken at its word: the solver emptied, the source dropped without a word, the host\'s own put-back, the encounter restarted (the book dropped with it), the man gone into the fog and seen again — each time one thread rides his hand again, and never two',
+          `lit: ${t0} · the solver cleared: ${none} on it two frames on, then ${t1} · the source dropped: ${t2} · the host's put-back (book dropped ${put}): ${t3} · the encounter restarted (book dropped ${gone}) and the order given again: ${t4} · hidden: ${fogged} on the solver, seen again: ${t5}`); }
       endGuardScript(A.gd, 'patrol'); A.step(2);
       verdict(threads.length === 1 && threads[0].track() === null, 'smoke — … and the thread is dropped the frame his script lets him go', `its track says ${threads.length === 1 && threads[0].track() === null ? 'gone' : 'still there'}`);
     }

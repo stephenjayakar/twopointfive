@@ -80,10 +80,13 @@ import { AIMCOST, feetHold } from './aimcost';
 import { friendInCone, ffHeld } from './friendlyfire';
 import { wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
+import { railsDown } from './rails';   // (a spared teammate on his knee stops no defender on the move: asked inside tickMove only)
 
 /** The module's switches and the few numbers that are not a side's. */
 /** the check's own break word (tools/qa coverkeep-probes.ts): the cover rule's switch reads on and the rule does nothing */
 const COVER_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.COVERKEEP_BREAK === '1';
+/** the check's own break word (tools/qa doorshots-check.ts): the doorway rule's switch reads on and the rule does nothing */
+const DOORSHOT_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.DOORSHOTS_BREAK === '1';
 export const ROOMFIGHT = {
   /** off = nothing here runs and the night breach is its branch's (staged exchange, plan-forced aims) */
   on: true,
@@ -177,6 +180,16 @@ export const ROOMFIGHT = {
    *  the least turn looks (off = as it was: nobody turned for a door, and men in a taken room were shot in the back through one they had heard pulled open
    *  three seconds before). KNOWN: a look lights his weapon light like any turn, and a man an entry left on a room's OTHER door is free by this rule */
   doorEars: true, doorLookSecs: 3.5,
+  /** ROUNDS THROUGH A DOORWAY KEEP HIS GUN ON IT (the maintainer, on a replay of a stack on a door an enemy had opened: "enemy was immediately in front of
+   *  them and shooting, nothing happened"). A hostile's round turned a teammate only when he had a line to the SHOOTER; a man firing through an open
+   *  doorway, tucked behind its frame, turned nobody, and the stack's rear men stood with their guns the other way a metre and a half from his muzzle (the one
+   *  who had looked for the door coming open looked away again after `doorLookSecs`). With `doorShots` a round that FLEW THROUGH an open doorway towards his side of its wall (the
+   *  shot's own muzzle and stop, fired within `doorShotM` of the frame), by a man he has no line to, turns every teammate with a line to that doorway onto it, each after his own beat, for `doorLookSecs`
+   *  after the LAST such round: the gun is there when the man steps into the opening, and the sighting is a cued one. A shooter in his line takes the look
+   *  over, as ever, and so do a mate's call, a footfall and a door just opened; a man on his way to a door's mark keeps his corner; a man holding a dealt arc
+   *  answers only inside it; a gun an order has on another door keeps that door. Nothing is fired at a noise: whether
+   *  there is a man to shoot stays his eyes'. ON in the page (?doorshots=0), off here and on the frozen stand (TPS_DOORSHOTS=1) */
+  doorShots: false, doorShotM: 8,
   /** a teammate in the fight whose line to his man (or to what he is looking for) runs through SAM lowers his muzzle until Sam is out of it — he was already
    *  holding his fire; now he also takes the gun off him (off = as it was: held, with the gun up on Sam's back) */
   samLine: true,
@@ -379,7 +392,7 @@ export class RoomFight {
    *  either, a teammate looks as a hunting man looks (the sight gain's ×2.2, a sighting enough to shoot on — he has no 'alert' of his own under a script) */
   hotT = -100;
   /** hostile rounds of the last second: who fired, when (a teammate's cue to look) */
-  private reports: { by: Guard; t: number }[] = []; private heardEv = new SideSet<object>();
+  private reports: { by: Guard; t: number; from?: Vec3; to?: Vec3 }[] = []; private heardEv = new SideSet<object>();
   /** how fast the player is really getting anywhere (ROOMFIGHT.samTravel): each frame's displacement of his root, eased over about a quarter second — a
    *  shuffle on the spot nets nothing, a walk into a wall is no walk. `samFor` = s of frames behind the figure (under a quarter second: not known yet) */
   private samAt = { x: 0, z: 0, t: -Infinity }; private samV: [number, number] = [0, 0]; private samFor = 0;
@@ -498,7 +511,7 @@ export class RoomFight {
       if (!gunfire && e.kind !== 'bang' && e.kind !== 'kick') continue;
       this.heardEv.add(e);
       for (const O of this.ops) if (O.gd.state !== 'dead' && v3.dist(e.pos, O.gd.char.pos) <= (e.kind === 'kick' ? 40 : 80) && e.time > O.hotT) O.hotT = e.time;
-      if (e.kind === 'guardShot') { const w = g.guards.find(x => x.char.id === e.who); if (w && w.team === 'hostile') this.reports.push({ by: w, t: e.time }); }
+      if (e.kind === 'guardShot') { const w = g.guards.find(x => x.char.id === e.who); if (w && w.team === 'hostile') this.reports.push(ROOMFIGHT.doorShots && e.from && e.to ? { by: w, t: e.time, from: e.from, to: e.to } : { by: w, t: e.time }); }   // (doorShots: the way the round flew, for the doorway it came through)
     }
     while (this.reports.length && g.time - this.reports[0].t > 2) this.reports.shift();
     this.smoke();
@@ -843,7 +856,7 @@ export class RoomFight {
     if (g.time >= gd.dazzledUntil) {
       const from = g.time < D.boltUntil ? D.boltFrom : null;   // (startle.ts's bolt: the one he ran from does not stop him for its first strides; null for every other man)
       if (from !== 'player' && isHostile(gd.team, 'player') && !g.player.down && !g.playerInvisible) { const vis = canSee(g, gd); if (vis.visible && vis.dist < ROOMFIGHT.moveEngageM && sightGain(g, gd, vis.dist) > 0.25) contact = 'player'; }
-      for (const o of g.guards) { if (contact) break; if (o === from || o.state === 'dead' || !isHostile(gd.team, o.team)) continue; const vis = canSeeChar(g, gd, o.char, false); if (vis.visible && vis.dist < ROOMFIGHT.moveEngageM && sightGainOn(g, gd, o, vis.dist) > 0.25) contact = o; }
+      for (const o of g.guards) { if (contact) break; if (o === from || o.state === 'dead' || !isHostile(gd.team, o.team) || railsDown(g, o)) continue; const vis = canSeeChar(g, gd, o.char, false); if (vis.visible && vis.dist < ROOMFIGHT.moveEngageM && sightGainOn(g, gd, o, vis.dist) > 0.25) contact = o; }
     }
     if (contact) {
       const fc = contact === 'player' ? g.player.char : contact.char;
@@ -1113,7 +1126,26 @@ export class RoomFight {
     if (DB && (g.time - DB.t >= 0.6 || DB.by.state === 'dead' || (look && look.door === DB.door))) O.doorBy = null;   // (stale, or the door he is already looking at)
     else if (DB && !who && DB.by !== gone && !DB.door.latched && Math.abs(DB.door.angle) > 0.1 && !(A && A.door && !A.arrived)   // a door an enemy's hand has OPENED in his sight (a rattle, a pick, a leaf slammed to or latched is no opening): he looks at its doorway
       && (arc === null || Math.abs(wrapAngle(v3.yawTo(c.pos, DB.at) - arc)) < ROOMFIGHT.arcHalfDeg * DEG)) { who = DB.by; call = true; pt = DB.at; secs = ROOMFIGHT.doorLookSecs; door = DB.door; O.doorBy = null; this.note(O.gd, 'a door has come open in his sight: he looks at it'); }
-    if (who) O.turn = { to: who, at: look && look.to === who ? (door ? look.at : Math.min(look.at, g.time)) : g.time + pick(S.react) + (call ? 0.25 : 0), until: g.time + secs, pt, t0: g.time, door };   // (the man he was already looking for by ear, now in his line: no second beat)
+    let shotDoor: Door | null = null;   // (ROOMFIGHT.doorShots, last of all: a man in his line, a mate's call, a footfall and a door just opened each come first)
+    if (!who && ROOMFIGHT.doorShots && !DOORSHOT_BREAK && !(A && A.door && !A.arrived)) { const DS = this.doorShot(O, eye, gone, arc, A, look && look.door ? look.door : null); if (DS) { who = DS.by; pt = DS.at; secs = ROOMFIGHT.doorLookSecs; door = shotDoor = DS.door; if (!look || look.door !== DS.door) this.note(O.gd, 'rounds are coming through a doorway in his sight: he looks at it'); } }
+    if (who) O.turn = { to: who, at: look && (look.to === who || (shotDoor && look.door === shotDoor)) ? (door ? look.at : Math.min(look.at, g.time)) : g.time + pick(S.react) + (call ? 0.25 : 0), until: g.time + secs, pt, t0: g.time, door };   // (the man he was already looking for by ear, now in his line: no second beat)
+  }
+  /** ROOMFIGHT.doorShots: the nearest OPEN doorway he can see that a hostile's round has just flown through towards his side of its wall, with no line of his
+   *  to the shooter — who fired, the point of the doorway to look at, and the door. `only`: the door his look is already on (no other is asked). */
+  private doorShot(O: Op, eye: Vec3, gone: Guard | null, arc: number | null, A: ReturnType<Game['orders']['of']>, only: Door | null): { by: Guard; at: Vec3; door: Door } | null {
+    const g = this.g, R = ROOMFIGHT, p = O.gd.char.pos; let best: { by: Guard; at: Vec3; door: Door } | null = null, bd = Infinity;
+    for (const r of this.reports) { const a = r.from, b = r.to; if (!a || !b || g.time - r.t > 0.6 || r.by.state === 'dead' || r.by === gone || this.coverPasses(g, O, r.by)) continue;
+      for (const d of g.doors.list) { if ((only && d !== only) || (!d.off && (d.latched || Math.abs(d.angle) <= 0.1))) continue;   // (a door he is already looking at keeps his look until it lapses: no flapping between two · a shut leaf is no opening)
+        if (A && A.arrived && A.door && A.door !== d && !A.spare && A.watch && flat(A.watch, A.door.frameCentre) < 1.6) continue;   // (a gun an order has on ANOTHER door keeps it, as it does for a door that opens: doorEars)
+        const fc = d.frameCentre, far = flat(fc, a), near = flat(fc, p); if (far > R.doorShotM || near > 9 || near < 0.5 || near >= bd) continue;
+        const th = d.def.closedDir, nx = -Math.sin(th), nz = Math.cos(th), sa = (a[0] - fc[0]) * nx + (a[2] - fc[2]) * nz, sb = (b[0] - fc[0]) * nx + (b[2] - fc[2]) * nz;
+        if (sa * sb >= 0 || sa * ((p[0] - fc[0]) * nx + (p[2] - fc[2]) * nz) >= 0) continue;   // (the round did not cross that wall's line · or it was fired from his own side of it)
+        const k = sa / (sa - sb), cx = a[0] + (b[0] - a[0]) * k, cz = a[2] + (b[2] - a[2]) * k;
+        if (Math.abs((cx - fc[0]) * Math.cos(th) + (cz - fc[2]) * Math.sin(th)) > d.def.width / 2 + 0.1) continue;   // (… or crossed it somewhere else than this opening)
+        const q = 0.35 / near, at: Vec3 = [fc[0] + (p[0] - fc[0]) * q, 1.1, fc[2] + (p[2] - fc[2]) * q];   // (the doorway as he sees it, as a door that opens is looked at)
+        if (g.col.segmentBlocked(eye, at) || (arc !== null && Math.abs(wrapAngle(v3.yawTo(p, at) - arc)) >= R.arcHalfDeg * DEG)) continue;
+        bd = near; best = { by: r.by, at, door: d }; } }
+    return best;
   }
   /** the feet half of LIGHTS.litMan — in the dark on a lit man, Sam in the line to him, and an order's walk still to make: his feet wait (orders.ts reads
    *  short() and asks his legs for nothing; the order, its mark and its carriage are untouched and are his again a quarter of a second after this stops being stamped) */

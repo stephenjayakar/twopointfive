@@ -36,9 +36,10 @@ import { GLASSBREAK, GLASSREAL } from './glassbreak';
 import { GLASSPEN } from './glasspen';
 import { SHARDS } from './shards';
 import { TALK_TUNE } from './dialogue';
-import { HOLD, MOVES, MV, TURN, HARDBREATH } from './character';
+import { HOLD, MOVES, MV, TURN, HARDBREATH, DASH, WATCH } from './character';
 import { SUPPRESSION } from './suppression';
-import { RIFLE_SPREAD, FOOTFALL, TWOGEARS } from './player';
+import { RIFLE_SPREAD, FOOTFALL, TWOGEARS, CROUCHRUN } from './player';
+import { SAMLOOK } from './samlook';
 import { STALK } from './stalk';
 import { OVERHEAR } from './devices';
 import { SCORE, BADGE } from './chronicle';
@@ -135,6 +136,8 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   'FLINCH',
   // a parked vehicle's lamps are light targets (carlamps.ts CARLAMPS): a recording made with it on has them on its floor, one from before has none
   'CARLAMPS',
+  // round things are round (scene/round.ts ROUND): a recording made with it on has its drums and tyres round to every ray and foot, one from before has the kit's octagons
+  'ROUND',
   // a restart gives a clean level (cleanrestart.ts CLEANRESTART): a recording made with it on replays its restarts clean, one from before as they were
   'CLEANRESTART',
   // the saves roll and one is kept in memory with a team on the floor (savestate.ts SAVETIMELINE): a recording from before it has no such save to go back to
@@ -168,7 +171,17 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   'GLASSREAL',
   // a mission that leans loud is not graded as a sneak (verdict.ts VERDICT.loudCard): the two lines the mission says at its end are worded by it, so a recording
   // made with it on replays them without the grade, and one from before the key (or the table) with it
-  'VERDICT', 'IR', 'LIGHTS', 'PAIR', 'ROOMFIGHT'];
+  'VERDICT', 'IR', 'LIGHTS', 'PAIR', 'ROOMFIGHT',
+  // Shift in a crouch is a fast crouch walk (player.ts CROUCHRUN): his pace and his footfalls, so a recording made with it on replays them and one from
+  // before the table stands him up into the sprint. SAMLOOK (samlook.ts): his head on a man and the room he gives one in passing — poses, carried so that
+  // a replay shows what was seen
+  'CROUCHRUN', 'SAMLOOK',
+  // …and their poses' numbers (character.ts): DASH's stride sets the crouch cycle's cadence and so when a footfall is filed, WATCH's turn and lean move the
+  // head and chest joints the eyes that look for him read. The sneak lab moves both, so a recording carries them
+  'DASH', 'WATCH',
+  // a wall hold counts as sneaking once his back has been on it a beat (unseen.ts UNSEEN.wallBeat): when the squad drops into its sneak, so a recording made with it on
+  // replays its squad loud through a brushed wall, and one from before the table was carried sneaks from the hold's first step
+  'UNSEEN'];
 import { GUNWALL } from './gunwall';
 import { CLOSE } from './close';
 import { PLAN } from './floorplan';
@@ -264,6 +277,7 @@ import { LOOK } from '../scene/look';
 import { MUSIC } from '../audio/pieces';   // (the score's pieces switch: not a game module, no cycle)
 import { LIVED } from '../scene/lived';
 import { UNDERFOOT } from '../scene/collision';   // (a scene table: no cycle)
+import { ROUND } from '../scene/round';   // (a scene table: no cycle)
 import { CASTOR } from './props';
 
 /** A table's keys that are NOT knobs: data it was loaded with, or what it found at load. knobsCopy leaves them out, so putting a copy back never touches them.
@@ -285,7 +299,7 @@ export function knobRegistry(): Record<string, object> {
   const all: Record<string, object | undefined> = {
     // what a recording carries (JOURNAL_KNOBS)
     AIM, TRAINED, AI_TUNE, BODY_LIGHT, GUARD_EYE, NEEDS, WHISTLE, WET, WIND, CIV, CHAOS, RING, LAUNCHER, HE40, LAUNCHER40, FRAG, SHOTGUN, GLASS, GLASSFX, GLASSBREAK, GLASSPEN, SHARDS,
-    TALK_TUNE, HOLD, SUPPRESSION, RIFLE_SPREAD, FOOTFALL, TWOGEARS, STALK, OVERHEAR, SCORE, BADGE, CKPT, FOG, MOVES, MV, TURN, WOUND, DOORPATH, WALLS, WALLCHARGE, WALLSHOT, WALLKILL, HARDBREATH, CASTOR, WALLREACT, COVERFIRE, FURNBLAST, DOORWAY, DOORBLAST, DOORSHOT, DOORTHROW, OPENING,
+    TALK_TUNE, HOLD, SUPPRESSION, RIFLE_SPREAD, FOOTFALL, TWOGEARS, CROUCHRUN, SAMLOOK, DASH, WATCH, STALK, OVERHEAR, SCORE, BADGE, CKPT, FOG, MOVES, MV, TURN, WOUND, DOORPATH, WALLS, WALLCHARGE, WALLSHOT, WALLKILL, HARDBREATH, CASTOR, WALLREACT, COVERFIRE, FURNBLAST, DOORWAY, DOORBLAST, DOORSHOT, DOORTHROW, OPENING,
     DOORSTAY, HANDLE, DOORMANNERS,
     // what breaks into what, by material (breakTable.ts), and how a blast treats furniture (furnblast.ts): the sim reads both, so a recording carries them
     BREAKS, FURN,
@@ -444,6 +458,8 @@ export function knobRegistry(): Record<string, object> {
     LIVED,
     // what the walk grid calls floor, feet cross (scene/collision.ts): a walker's circle test begins where the grid's bake begins
     UNDERFOOT,
+    // round things are round (scene/round.ts): whether a level's octagons are stood up as round boxes; read when a level is stood up
+    ROUND,
     // the squad's feel (teamfeel.ts keeps rows of these per machine; FOG, FRAG and DOORMANNERS are above)
     FLASH, PACE, LIGHTS, NVG, IR, IRLIGHT, WALLPEN, LASER, DOORTOOLS, ROOMFIGHT, ORDERS, COVER, ROOMFIT, ENTRY, REAR, SILENT, PAIR,
     // the scenario's and the defenders' tables (a play-through's --set reaches them)

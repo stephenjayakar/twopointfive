@@ -17,13 +17,14 @@ import { gearText } from '../game/gear';
 import { menuTheme } from './theme';
 import { TABKEY, tabChoices, setTabKey, tabSettle, tabKept, tabLoad } from './tabkey';
 import { BACKKEY } from '../game/backkey';
-import { TWOGEARS } from '../game/player';
+import { TWOGEARS, CROUCHRUN } from '../game/player';
 import { WALLSNAP } from '../game/wallsnap';
 import { CMDRING } from '../game/cmdring';
 import { HANDRING } from '../game/handring';
 import { SLOTSETUP } from '../game/slotsetup';   // (read when the Controls list is drawn: the gun's setup took the selector's key and the light's)
 import { SAVETIMELINE } from '../game/savestate';   // (read when the screen is drawn)
 import { findMeRows } from './findme';
+import { planRings, setPlanRings, resetPlanRings } from './planlook';
 import { TEXTSIZE, TEXT_EVENT, textStep, setTextStep } from './textsize';
 import { KEYMAP, cmdOnQ, keyText, keysOf, resetKeys, slotNow, camCap, capNow } from '../host/keymap';   // (the player's own keys: the Controls tab rebinds them)
 import { AUTOCAM } from '../host/autocam';
@@ -57,11 +58,14 @@ const ACT_WHAT = 'Do the highlighted action', WHISTLE_WHAT = 'Whistle';
 const RING_SMALL = 'hold it a moment for a ring of everything you can do here, then pick with 1 to 5 or a click', WHISTLE_SMALL = 'the nearest guard will come to look. the whistle is on the ring';
 /** the auto camera's row (host/autocam.ts): the camera's key tapped twice */
 const AUTO_WHAT = 'Tap twice for the auto camera';
-const PACE_WHAT = 'Walking pace';
+const PACE_WHAT = 'Walking pace', SPRINT_WHAT = 'Sprint';
+/** the sprint's row while Shift in a crouch is a fast crouch walk (game/player.ts CROUCHRUN): what the same key does crouched, and that it is heard
+ *  (each footfall louder than a walk's: it is no sneak) */
+export const sprintSmall = (): string | undefined => CROUCHRUN.on ? "hold it while you're crouched to stay low and move faster, but it's louder than walking" : undefined;
 const KEYS: { group: string; rows: [string[], string, string?][] }[] = [
   { group: 'Move', rows: [
     [['W', 'A', 'S', 'D'], 'Move'],
-    [['Shift'], 'Sprint'],
+    [['Shift'], SPRINT_WHAT],
     [['C'], 'Crouch'],
     [['Wheel'], PACE_WHAT, 'slower is quieter'],
     [['Q'], WALL_WHAT, WALL_SMALL],   // (wallLine below: its words while the row has no key)
@@ -310,7 +314,8 @@ function render(S: Screen) {
       'The game saves a checkpoint by itself when the mission moves on, when you first enter a room, when you hide a body, and after every minute and a half of quiet play. It never saves while anyone is onto you. Press Enter when you\'re down to load the newest one.');
     flip(body, 'Interaction hints', () => overlay.showLightDots, v => { overlay.showLightDots = v; keep(); }, `Show faint dots on what ${capNow('Space')} and right-click can act on, like lights, doors and bodies.`);
     if (WALLSNAP.on) flip(body, 'Walk into a wall to take it', () => WALLSNAP.press, v => { WALLSNAP.press = v; pressKept = v; pressUrl = false; keep(); }, wallWay() === 'key' ? keyText('Keep holding a move key into a wall to put your back to it. Q does the same either way.') : cmdOnQ() ? 'Keep holding a move key into a wall to put your back to it. When this is off, the wall hold needs a key from Controls.' : 'Keep holding a move key into a wall to put your back to it. When this is off, press Q instead.');   // (Q the squad's command key — host/keymap.ts qCmd: the wall hold never falls back to it)
-    flip(body, 'Order mark at the cursor', () => CMDRING.hint, v => { CMDRING.hint = v; hintKept = v; hintUrl = false; keep(); }, keyText(CMDRING.plainHint ? 'Show an outline on the floor for what B would order there.' : 'Show a small mark beside the cursor and an outline on the floor for what B would order there.'));
+    if (!CMDRING.bareHint) flip(body, 'Order mark at the cursor', () => CMDRING.hint, v => { CMDRING.hint = v; hintKept = v; hintUrl = false; keep(); }, keyText(CMDRING.plainHint ? 'Show an outline on the floor for what B would order there.' : 'Show a small mark beside the cursor and an outline on the floor for what B would order there.'));
+    if (CMDRING.plan) range(body, 'Plan mode circles', 0, 100, 5, () => Math.round(planRings() * 100), v => setPlanRings(v / 100), v => `${v.toFixed(0)} %`, 'Set how bright the circles at your squad\'s feet are while plan mode is up.');   // (ui/planlook.ts: a picture only, kept on this machine)
     const tabOpts = tabChoices(BACKKEY.tab);   // (while Tab is the back key the first choice reads 'Nothing more' and every line says so: ui/tabkey.ts)
     seg(body, 'Tab key', tabOpts, () => TABKEY.does, v => { setTabKey(v); TABKEY.kept = v; TABKEY.picked = true; TABKEY.url = false; keep(); }, () => tabOpts.find(c => c.v === TABKEY.does)?.line ?? '');
     const findReset = findMeRows({ sec, flip, seg, range }, body);   // (ui/findme.ts: finding your own man on the screen and how the camera answers the hand — twelve rows on trial, kept by host/findme.ts)
@@ -318,7 +323,7 @@ function render(S: Screen) {
     flip(body, 'God mode', () => game.godMode, v => { game.godMode = v; saveSandbox(game, 'god'); }, 'Enemies still see you and shoot you, but hits don\'t hurt. This is saved on this machine.', ['On', 'Off']);
     flip(body, 'Enemies don\'t think', () => !game.aiEnabled, v => { game.aiEnabled = !v; saveSandbox(game, 'noAi'); }, 'Everybody stays where they are, and nobody patrols, hears or sees. This is saved on this machine.', ['On', 'Off']);
     flip(body, 'Unlimited ammunition', () => game.infiniteAmmo, v => { game.infiniteAmmo = v; saveSandbox(game, 'ammo'); }, gearText('Bottomless magazines, canisters, ring airfoils and wall charges. This is saved on this machine.'), ['On', 'Off']);
-    reset = () => { game.saves.setEnabled(true); overlay.showLightDots = true; WALLSNAP.press = true; pressKept = null; pressUrl = false; CMDRING.hint = false; hintKept = null; hintUrl = false; TABKEY.kept = 'off'; TABKEY.picked = false; TABKEY.url = false; tabSettle(); keep(); findReset();
+    reset = () => { game.saves.setEnabled(true); overlay.showLightDots = true; WALLSNAP.press = true; pressKept = null; pressUrl = false; CMDRING.hint = false; hintKept = null; hintUrl = false; TABKEY.kept = 'off'; TABKEY.picked = false; TABKEY.url = false; tabSettle(); keep(); findReset(); resetPlanRings();
       if (game.godMode) { game.godMode = false; saveSandbox(game, 'god'); } if (!game.aiEnabled) { game.aiEnabled = true; saveSandbox(game, 'noAi'); } if (game.infiniteAmmo) { game.infiniteAmmo = false; saveSandbox(game, 'ammo'); } };
   }
   if (reset) { const run = reset, b = el('button', 'op-btn', 'Reset to defaults') as HTMLButtonElement; b.dataset.act = 'reset'; b.onclick = () => { run(); S.paint(); }; foot.appendChild(b); }
@@ -375,7 +380,8 @@ function controls(body: HTMLElement, host: KeyHost) {
     const back: typeof g.rows = BACKKEY.tab && g.group === 'Game' ? g.rows.flatMap(r => r[0][0] === 'Esc' ? [r, [['Tab'], 'Back out of a list'] as typeof r] : [r]) : g.rows;   // (game/backkey.ts: the key Esc gave up)
     const tabbed = tab && tab.group === g.group ? back.flatMap(r => r[0][0] === tab.after && r[1] !== 'Back out of a list' ? [r, tab.row] : [r]) : back;
     const geared = !TWOGEARS.on ? tabbed : tabbed.flatMap(r => r[1] === PACE_WHAT ? [] : r[1] === 'Crouch' ? [[r[0], r[1], 'slower and quiet'] as typeof r] : [r]);   // (game/player.ts TWOGEARS: the wheel is nobody's pace, the crouch is the sneak)
-    const rows = !slotNow() ? geared : g.group === 'Kit' ? [SLOT_ROW, ...geared] : geared.filter(r => r[1] !== E_WHAT || keysOf('KeyE').length > 0);   // (E's row put on a key by hand is still his to see and move)
+    const low = sprintSmall(), paced = !low ? geared : geared.map(r => r[1] === SPRINT_WHAT ? [r[0], r[1], low] as typeof r : r);   // (CROUCHRUN: Shift is not only the sprint)
+    const rows = !slotNow() ? paced : g.group === 'Kit' ? [SLOT_ROW, ...paced] : paced.filter(r => r[1] !== E_WHAT || keysOf('KeyE').length > 0);   // (E's row put on a key by hand is still his to see and move)
     for (const [caps, what, small0] of rows) {
       const small1 = !HANDRING.on ? small0 : what === ACT_WHAT ? RING_SMALL : what === WHISTLE_WHAT ? WHISTLE_SMALL : small0;
       if (caps[0] === 'F5' && !SAVETIMELINE.on) continue;   // (the save by hand is the save timeline's key: game/savestate.ts)

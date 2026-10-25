@@ -36,8 +36,7 @@ const SC = await import(`${ROOT}/src/game/stickycam.ts`);
 const { STICKY, STICKY_STATS, stickyIssue, fireCam, stickyEyes, camLens, stickyMarks } = SC;
 const K = await import(`${ROOT}/src/game/kit.ts`);
 const QF = await import(`${ROOT}/src/game/quietfog.ts`);
-const { FOG_EYES } = await import(`${ROOT}/src/render/fogofwar.ts`);
-const { FOG, fieldDeg } = await import(`${ROOT}/src/game/fogofwar.ts`);
+const { FOG, fieldDeg, fogEyeCount } = await import(`${ROOT}/src/game/fogofwar.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
@@ -252,7 +251,8 @@ export async function stickyFog(): Promise<boolean> {
         'three out and ONE feed: the newest stuck camera alone is an eye (its lens the one drawn red) — the older two stay on the wall and show nothing, so a newer camera that sees nothing of him gives up what they saw',
         `out ${out.length} · eyes ${eyes0} → ${one} · sending ${sends.length} (the newest ${sends[0] === newest}) · eye at its lens ${dLens.toFixed(4)} m · ${pick.callsign} shown ${shown}, with the newest lying at his own feet ${lost} · red lenses ${lensPaint.reds}`);
       STICKY.live = 3; steps(W, 5); const full = fog.eyes.length; STICKY.live = LIVE_WAS;
-      F.verdict(full === Math.min(FOG_EYES, eyes0 + 3) && full <= FOG_EYES, 'with every feed live (the rule as it first shipped: live 3) every one is an eye, and the fog\'s five are never passed', `eyes ${full} of ${FOG_EYES}`);
+      const eyeCap = fogEyeCount(FOG.eyes);   // (how many eyes lift the fog: game/fogofwar.ts FOG.eyes — five on the frozen stand, seven in the page)
+      F.verdict(full === Math.min(eyeCap, eyes0 + 3) && full <= eyeCap, 'with every feed live (the rule as it first shipped: live 3) every one is an eye, and the fog\'s places are never passed', `eyes ${full} of ${eyeCap}`);
     }
     // no fog on the floor: a camera is no eye and changes nothing anybody is shown
     const B = await quietFloor(21, 'police-post.json', ''), fb = B.g.fogOfWar; stickyIssue(B.g.player, 2);

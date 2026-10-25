@@ -110,7 +110,7 @@ export const SCENE_NOTES: Record<string, string> = {
   'SNOWTRACKS.puffMost': 'the most one mark throws',
   'SNOWTRACKS.puffRecs': 'kicks filed a frame, the hardest first (snowFx.ts markKicks: each is a particle record, and a frame has twelve for everything)',
   'SNOWTRACKS.puffWait': 'this many may wait for the next frame',
-  'SNOWTRACKS.puffKeep': 's: a kick still not filed after this is dropped (formSnowTracks)',
+  'SNOWTRACKS.puffKeep': 's: a kick leaves the list after this, filed or not (formSnowTracks): one still not filed by then never is',
   'SNOWBLAST.sizeK': '× the blast\'s destruction radius (a frag\'s 2.5 m → a pan 0.65 m across the half)',
   'SNOWBLAST.sizeMin': 'm',
   'SNOWBLAST.sizeMax': 'm',

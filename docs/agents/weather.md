@@ -153,7 +153,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `jetVel` / `stormVel` in wind.ts repeat it on the CPU — `windAt(g, p)`, the moths, `__wind.at`). `Wind.update(dt)` (game.ts after weather + wet) folds each source's
   state into ONE speed a frame — vent = authored × `WIND.ventK` × spin `on` (its cycle; the MAINS: `g.blackout.active` spins every mains vent down over `rampDown` 4 s,
   the restrike back over `rampUp` 3) × gust (1 ± `gustAmp` 0.25 on a value noise of the game clock keyed by the name's hash) × tune.wind — and hands the SAME records
-  to (1) the particles: `Particles.setWind(≤ WIND_GPU_MAX 8 nearest the view + the storm, knobs)` → packed as ImpulseRec read another way BEHIND the frame's
+  to (1) the particles: `Particles.setWind(≤ WIND_GPU_MAX 8 nearest the view + the storm, knobs)` (that list, `wind.forParticles`, is the HOST'S, a `math/side.ts HostOwned` holder since 10-23: it is filled only where a particle pool is, by distance from the view's focus, and rebuilt every frame, so no snapshot or state hash holds it — `probes.ts breathsteam`'s `pool` line, red with the holder made a plain object; and the working vectors of `Wind.at` / `stormShare` are module scratch, where as fields of the Wind whoever asked last — the pool's path, the panel's probe at the cursor — left his numbers in the state: the same line asks one game alone for the air and is red on the fields; never seen on a GPU, nothing drawn changes) → packed as ImpulseRec read another way BEHIND the frame's
   impulses in the same 16 slots (impulses first — a bang is never short; `flags` bits 16‥20 = numWinds; a jet = pos+reach · axis+speed · (tanSpread, r0, dMax) ·
   floorY · kinds · iflags 2, the storm = interior rect / annex rect / wind, iflags 6; the four knobs as f16 pairs in seed / spare); `particles.wgsl windAir` sums the
   air at the particle (a RESTING one hands its own surface as the floor, so the desk turns the jet too) and the update takes drag AGAINST THE MOVING AIR — dust /
@@ -313,9 +313,66 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     broad phase, no glint, nothing refracted, lit by the lamps that reach it AND by the sky's dome (a white scatterer shows against a dark yard; a drop of water does not) (`particles.wgsl rainStep`, `particles_draw.wgsl rainFragment`, all under `snowNow()`: dead code on every other page). `SNOWFX` holds the
     numbers (`__snow.fx` live on the console; `__snow.stats / .ring / .summary()`). No moths fly in it. `?norain2` / the panel's particle-rain box put
     the flakes off with the ring they ride. One make-up fill waits on the ring at a time (an undrawn tick, two ticks to a frame under `?fixedstep`), never more than the ring has room for.
+  - **Whose the recycler's table is** (10-23; no switch: it changes what a snapshot holds, nothing a player sees but the frame after a save is put back): the
+    HOST's, `engine.hostBooks.snow` (`snowFx.ts SnowShown`, in `host/api.ts HostBooks` beside the fires' and the smoke break's). It was `snowFx.states`, a table in
+    the game's state, and every field of it follows the particle pool (what the ring took, whether there is one), the view the update is handed and the
+    render settings. MEASURED before the move: twins on the pass, seed 7, 300 frames, one with a stand-in pool and one with none, parted at 22 rows of it
+    and nowhere else of the snow's (`stateDiff` with `own`). NO RULE READS IT: its readers are the module, the panel's layers (`ui/sceneLayers.ts`,
+    `ui/sweepSnow.ts`), the page's `__snow` hook and the checks. THE BOOK IS DROPPED, with the ring emptied in the same call, by a save in memory put back
+    (`host/putback.ts`) and by a restart or a load (`game.ts restartEncounter`): the next frame begins a fresh book over an empty ring and fills the air through
+    the slab's whole height at once, as on a level's first frame; the curtains' drift starts from nothing, the record seeds from their first, and a seed set
+    by `__snow.seed(n)` is gone with the book. Flakes in the air are never wound back (nothing on the GPU is). THE KICKS went the same way: the pool's path
+    sorted and cut the game's own list (`SnowTracks.kicks`), so a game over a pool and the same game without parted at it on every frame a boot met snow
+    (found on the shipped stand by the new line: two kicks listed after two frames of the stood game). The list is only read now: each kick carries its number
+    (`n`, `SnowTracks.kicked`, never wound back by a restart), the book keeps the last it saw and those waiting (`kickSeen`, `kickQ`), and only time, a
+    restart and the cap empty the list. The cap went 64 to 256 with it (`snowTracks.ts KICKS_MOST`): the list is now a quarter second's kicks, filed or not,
+    where it was one frame's backlog. Where the game's count stands behind the book's (the harness's put-back, which tells no host) the book files none of the
+    listed kicks. CHECKS, both stands: `snow-check` line `book` (the game's state hash before any snow frame, after sixty over a pool, after a snapshot of
+    frame thirty put back, and sixty frames on: one word each side of the host's put-back; the book dropped, the ring emptied, one make-up fill on the next
+    frame) and `snowmarks-check` line `kickbook` (nine marks: owed 9, 6, 3, 0 over the frames, nine records at nine places, the game's list and state hash
+    as they were). `SNOWBOOK_BREAK=1` fails each (the book hung on the game; the list cut as the pool's path once did). NOT YET THE WHOLE OF THE SNOW: with
+    an air field the same update's pool path still writes the air's row (`airSim.states`: it exists only where a field does, `want`, `stats.why`, `puffs`),
+    measured 10-23 on the shipped stand; a blast's owed snow and the rain's own recycler went to the host after it (the next bullet), and the wind's two
+    scratch vectors left the state the same day (`wind.ts`). `book` passes because it has no air field. ALSO MEASURED, the snapshot's own: the host's put-back moves the game's state hash by itself, because the books of what was last sent to the GPU
+    are in the state (`world.visibleSent` 7711 values and `gbSent` 4608, `game.chars.instSent` 744, the epochs, `game.snowLookWas`): a hash taken after
+    `hostAfterPutBack` is not the saved moment's (`docs/agents/replays.md`, the rollback snapshot's KNOWN LIMITS). ON A PAGE (headless Chromium, the software
+    adapter, very low quality, the pass's room clear with four, 40 frames): 119 pipelines, none failed; snowing with 800 of 800 flakes reckoned in the air after
+    ten frames; a save kept in memory loaded — a fresh book on the next frame, 640 flakes laid at once, 800 of 800 eight frames on, and the kicks the game
+    still listed thrown up again (14 to 33 filed across the load); a restart the same; no console, page or GPU error. Never seen on a real GPU, and
+    nobody has looked at the frame after a load on a snow level.
+  - **Whose the rain's table and a blast's owed snow are** (10-23, no switch: the picture's own books moved, nothing a rule reads). Two more tables of the
+    kind the bullet above names were in the game's state. `rainFx.states`, the particle rain's whole recycler (the births and their dice, the drops under
+    the disc, the drip lines and the walk that finds them, the lattice's lean, the read-outs), is `engine.hostBooks.rain` (`rainFx.ts RainShown`).
+    MEASURED on the office's storm, seed 7, 300 frames, the particle rain's switch on in two games and a stand-in pool under one: seven values of the table
+    apart (`seed`, `serial` 560 against 1, `birthAcc`, `dripAcc`, `pop` 1394 against 0, `popLog`, `wasActive`) AND 649 of the collision world's query stamps
+    (`game.col.stamp` 235, `cellStamp` 414): the drip walk's rays and gathers ran whole on the host with a pool and in shares on the one without. The walk
+    asks the collision world aside now (`scene/collision.ts aside`, its own stamps kept in the book), so a host that looks for drip lines and one that does
+    not hold one state too. After: 0 values apart, one state word. What a blast in the snow owes the pool (`puffLeft`, `flakeLeft`), whose turn the grains'
+    throw is and the three records' counts (`puffs`, `thrown`, `throwFrames`) are `engine.hostBooks.snowBlast` (`snowBlast.ts SnowBlastShown`); MEASURED on
+    the pass, shipped stand, one blast: `puffs` 28 over a pool, 0 over none, and the game's state of the blast the same in both. What changed in the GAME's
+    table to make that so: a blast is kept half a second on any host (`LIVE_S`, or its throw's time where tuned longer; it was let go at 0.14 s once a pool
+    had taken everything, at 0.5 s where none had), and `snowBlastStats` is a copy that makes no row (asking the read-out of a game nobody had blasted used
+    to add a row to its state: the Scene panel's Blast line did it on the page). WHAT A PUT-BACK DOES, both books dropped whole with the bag in the call that
+    empties the ring (a save loaded, a restart): the rain's dice, drift and lean start over and the lattice stands in under the disc while drops fall in again
+    (as a restart always did); the drip lines are found again, at once where rain is drawn (the office's 973 points: 7 ms the median of fifteen walks under
+    bun, 20 ms the worst), where a restart used to keep them; a blast still live is owed whole again (a blast under half a second old at a load throws its
+    puff into the emptied ring once more). The game put back with the host NOT told (a check's own restore, a tick played again) files nothing twice: a
+    live blast whose serial the book has met and has no row for is owed nothing, as the kicks are. CHECKS, both stands: `bun run tools/qa/rainbook-check.ts`
+    (`probes.ts rainbook`, in `weather`), 4 lines — twins (240 frames, one state word, 0 values apart, 447 records taken) / aside (the whole walk leaves the
+    state word alone) / putback (the host's own put-back: the book gone, the ring empty, the same drip lines found on the next frame, the air full 120
+    frames on, the twins one state) / restart; `RAINBOOK_BREAK=1` (the book hung on the game) fails 3 of 4. `snowblast-check` line `owed` (pool against
+    none, the read-out asked of a fresh game, two restores with the host not told, the host's put-back with a blast live); `SNOWBLASTBOOK_BREAK=1` fails
+    it. NOT DONE, and whose: the drip lines are found again only when the COUNT of statics changes (furniture blown away in its own slot keeps its drip
+    points: an older rule of the rain's, the reviewer measured nine such points in the office), and each book tells a put-back it was not told of by its
+    own sign (the kicks and the blasts by a count gone back, the rain by the ring's count) where one signal from the snapshot would serve all. ON A PAGE
+    (headless Chromium, the software adapter, very low quality): the office's storm, 118 pipelines, none failed — raining with 973 drip lines; a save kept
+    in memory loaded: a fresh book on the next frame with the same 973 lines, the ring begun again from 55 drops; a restart the same. The pass, 119
+    pipelines: one blast marked, 28 wisps and 180 flakes filed on its frame; the save taken then and loaded: a fresh book filed the 28 and the 180 again,
+    and the blast was let go by the game's own clock (no row left twenty frames on). No console, page or GPU error. Never seen on a real GPU: nobody has
+    looked at rain, or at a blast's powder, on the frame after a load.
   - **The rain is as it was**: no rain number, shader path or still changes on a page that is not a snow level (the `WX_SNOW` branches are compile-time false there).
-  - **Check**: `bun run tools/qa/snow-check.ts` (`probes.ts snow`, in `weather`), 10 lines — born / off / others / row / senses / same / flakes ×2 / save / old; 10 of 10 on BOTH stands,
-    `SNOW_BREAK=1` (the switch never raised) fails 7 of 10 on both. `same` is five PLAYED runs of the pass's room clear (`playthrough.ts --one pass-four:<seed>`, `PT_DIGEST=1`, a process
+  - **Check**: `bun run tools/qa/snow-check.ts` (`probes.ts snow`, in `weather`), 12 lines — born / off / others / row / senses / same / flakes ×2 / book / walls / save / old; 12 of 12 on BOTH stands
+    (10-23), `SNOW_BREAK=1` (the switch never raised) fails 9 of 12 on both. `same` is five PLAYED runs of the pass's room clear (`playthrough.ts --one pass-four:<seed>`, `PT_DIGEST=1`, a process
     each): seeds 1 and 2, one digest every half second in snow and under Overcast with the switch off (frozen, the level as committed: 124 s and 127 s, both taken; shipped: 90 s and 105 s, both taken), and a different
     one for seed 1 in fog (the control — a 40 s run with nobody ordered anywhere, the first cut of this line, had one digest under EVERY weather and proved nothing).
   - **A file made in other weather** is refused on a snow level (`Weather.refuses`), and `restore` takes none of its rain, wind or wet: a checkpoint made on the pass with the switch
@@ -341,7 +398,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     his pace: an absolute speed alone read a slow crouch's swinging foot as down and its trail was a smear); it presses a sole (a capsule heel → toe, the heel `heel`
     of the ball's width) where the field holds snow (`cover` ≥ 0.5: none under a roof, none on swept earth), once every `apart`. A man who is down (dead, or his hips
     under `bodyLow` over where he stands) presses the hollow of his trunk and legs once he has lain `rest` s with his hips slower than `restV` — where he comes to
-    rest, not where he fell through. A guard or a civilian the fog of war hides presses nothing while hidden (nothing live shows in the fog); civilians not on the
+    rest, not where he fell through. A guard or a civilian the fog of war hides puts nothing on the map while hidden (nothing live shows in the fog): with `FOG.tracks` his
+    marks are kept off it and laid whole when the team next sees that snow after having had it out of sight (`docs/agents/stealth.md`), with it off he presses nothing; civilians not on the
     floor press nothing. The byte is a signed distance about the outline (255 inside, 128 on it, 0 half a `skirt` out): the shader reads its inner half as the
     print's wall and its outer half as the rim of pushed-up snow, slopes the lying snow's normal by it, breaks the pressed floor and the rim into clods (rough, no
     glints), and paints the floor darker and bluer. Deeper where a drift's skirt stands, shallower on trodden and old snow.
@@ -726,7 +784,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     (fogofwar.ts 4d, as a hidden man's boots): a thing on floor the team does not see (`fog.spotSeen`) marks nothing while it is there, and is not caught up.
     Kicks: the hardest `puffRecs` (3) a frame are filed, each a particle record of the frame's twelve; one outside 0.7 of the view's disc is dropped (the flakes'
     wrap would raise its puff from bare floor); one still unfiled `puffKeep` (0.25 s) after it was queued is dropped (`formSnowTracks` ages them: with the
-    flakes off it is never thrown up late at an old place). Check `snowmarks` (13 lines; `SNOWMARKS_BREAK=1` fails 8) on both stands; the game's digest is
+    flakes off it is never thrown up late at an old place). The list is the game's and the pool only reads it (10-23: which kicks were taken is the host's
+    book, see "Whose the recycler's table is" above). Check `snowmarks` (14 lines with `kickbook`; `SNOWMARKS_BREAK=1` fails 9) on both stands; the game's digest is
     one with it on and off over 242 frames with a chair shoved across the yard. **Never seen on a GPU, never seen moving**: the forming's timing, the kick's size
     and whether three or four flakes off a walker's boot read at all, a furrow under a real push (the pass's chairs stand indoors: he pushed one out).
   - **THROWN THINGS BOG DOWN IN LYING SNOW — PLAY, NOT PICTURE** (`SNOWBOG.on`, `game/snowBog.ts`; `?snowbog=0`, frozen `TPS_SNOWBOG=1`; in the knob registry and
@@ -893,7 +952,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   breath. **Switch**: `SNOW_LOOK.steam` — ON in the page (`?breathsteam=0` = the puffs as they were), OFF in the module and on the frozen stand
   (`TPS_BREATHSTEAM=1`); a `FROZEN_HOLDS` row; the journal carries `SNOW_LOOK`, and a recording from before the key replays with it off. The numbers
   are `BREATHSTEAM` (authored data like `SNOWBREATH`, not player switches: `__snow.steam` on the console, twelve rows on the debugger's Breath layer).
-  **Check**: `bun run tools/qa/probes.ts breathsteam` (families `snow`, `weather`), 10 lines on both stands; `BREATHSTEAM_BREAK=1` (the switch never
+  **Check**: `bun run tools/qa/probes.ts breathsteam` (families `snow`, `weather`), 11 lines on both stands; `BREATHSTEAM_BREAK=1` (the switch never
   raised) fails 8 on both. Its `digest` line: 300 frames of the pass's room clear stepped by the game with the sources handed over and with none,
   one run digest, and the same with the senses on the CPU. **MEASURED in the page on the software adapter**
   (`node tools/qa/breathsteam-page.cjs`: the pass's room clear, verylow, 640 wide, the player in the gateway under `lamp_gate`, five men steaming,
@@ -922,11 +981,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   **WHOSE** (the step after the fire's host book, same pattern): the run digest could not tell, but the STATE could — `snowBreath.states` kept, per
   man, whether this breath was steam and which source rode his mouth, and its counts and its `why` followed the solver's word, the view's focus and
   the particle pool. A snapshot or a state hash is the game's alone, and those three are the host's. Now the game's table keeps what the game decides
-  (the rhythm, who shows, breaths begun: `BreathCount`) and the rest is `engine.breathShown` (`snowBreath.ts BreathShown`, declared in
+  (the rhythm, who shows, breaths begun: `BreathCount`) and the rest is `engine.hostBooks.breath` (`snowBreath.ts BreathShown`, a member of the one bag of host books declared in
   `host/api.ts`): how the breath is shown this frame, per man the breath that was asked and its live source, the sources and puff records filed.
-  THE BOOK IS DROPPED when a save is put back (`host/putback.ts`), by `seedBreath`, with the breath switched off or off a snow level, and by itself
+  THE BOOK IS DROPPED when a save is put back (with the whole bag: `host/putback.ts`'s one line), by `seedBreath`, with the breath switched off or off a snow level, and by itself
   where the game's frame count is not the one after the book's last (a snapshot put back by a road that does not tell the host: the harness's). A
-  RESTART or a file's load keeps the frame count and builds the men anew under their old ids, so a row is bound to the Character it was written for
+  RESTART drops the whole bag too (`game.ts restartEncounter`, since the smoke break's step). A restart or a file's load also keeps the frame count
+  and builds the men anew under their old ids, so, whoever drops what, a row is bound to the Character it was written for
   (`who`): a fresh man starts a fresh row (found in review: without it a restart a moment after a man's first breath took his next breath 1 for
   filed, and it went out with no steam). Behind a drop a breath in the air is asked for afresh on its next record, so a man in mid breath can file a
   second source at his mouth for what is left of it (look only). NOT COVERED: a solver emptied under the same men with the book kept (a script's or
@@ -935,15 +995,18 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `steam`, `by`) run from the book's opening, so behind a drop they start again while `breaths` goes on (the panel's line can read more breaths than
   records). The check's `whose` line, on both stands: the pass stood plainly twice; stepped 900 frames by the game's own step with a drawing solver
   and the view on the player, and with a solver that draws nothing and the view 400 m off, the two are ONE STATE HASH (`rollback.ts stateHash`);
-  the same with a particle pool that takes the breath's puffs and one that takes none of them (both have a pool: with one against none,
-  `game.wind.forParticles` differs, the wind's own book of what it handed a pool, told to the merge); the second dealt off another seed, the hash
-  parts. Run against the module as it was, the line is red and names the old rows (`stats.why`, `stats.steam`, `stats.steaming`, a man's `steam`;
-  with the pool `stats.records`, `births`, `by`). By hash and not by `stateDiff`'s row walk because the walk holds both states flat: 6.4 GB on the
-  shipped stand as first written, 650 MB now; `BREATHSTEAM_WHY=1` on a red run asks the walk for the rows. By the game's own
+  the same with a particle pool that takes the breath's puffs and one that takes none of them; the second dealt off another seed, the hash parts.
+  Run against the module as it was, the line is red and names the old rows (`stats.why`, `stats.steam`, `stats.steaming`, a man's `steam`; with
+  the pool `stats.records`, `births`, `by`). The compares pass `own` (two games stood in one process, without what the modules share), and a red
+  run asks `stateDiff` for the rows (light since the walk was rebuilt; the line first held 6.4 GB on the shipped stand through the old walk). Its
+  `pool` line: a game with a particle pool against one with NONE, ten seconds: no row of the breath's parts them and none of the wind's (below);
+  what else parts them is printed and not judged (the falling snow's `why` words, with its owner). By the game's own
   roads: a snapshot of the filing frame put back at once with the host's real hook run files the breath's source again (red with the hook's line
   taken out), a snapshot from before the breath put back with no hook plays the breath again WITH its source (red with the frame-count test taken
   out), and a real restart a third of a second after a man's first source leaves 3 sources for the 3 breaths of the next ten seconds (2 with the
-  row's binding taken out). The line also found the check's own old red on the shipped stand (the `digest` line, red there since the open fire
+  row's binding taken out), and the book keeps no row for a man who is gone: a row whose man was not asked about this frame is struck, so the men of
+  the game before a restart are let go on its first frame (1 row held there before this was added). `breathStats` read on a game nobody has
+  breathed in makes no state row (it did; by reading, no check). The put-back road runs through `tools/qa/putback-host.ts`. The line also found the check's own old red on the shipped stand (the `digest` line, red there since the open fire
   landed): its solver stand-in counted the fire's plume, one source a second, as breaths; it counts `kind: 'breath'` alone now. No rule read any of
   this and no digest moved: nothing a player sees changes but a breath refiled behind a put back. IN THE PAGE on the software adapter after the move
   (`breathsteam-page.cjs`, 16 steps): 119 of 119 pipelines, no console error, five breaths all steam, no puff record, the panel's row read as before.

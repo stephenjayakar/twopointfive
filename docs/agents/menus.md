@@ -832,7 +832,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the lamp behind the door shows it dim and warm; no cone in the air (the lowest preset drew none at `volumetric` 0.2: the key is not
   set). Never seen: any of it on a GPU or at speed; the walk across the doorway in motion; the solo night's picture (the same framing, under a roof: no slab drawn); any quiet way but the vault's and the crossing's on a page.
 - **The start page** (`src/ui/menu.ts`; under `?cards`) opens on the SHORT LIST (no heading over it since 10-11; `src/scene/picks.ts PICKS` + `src/ui/picks.ts`: compound, registry, warehouse, depot,
-  barracks-day, night-breach, solo — a row is a link that deploys straight in; `?nopicks` = the old card, `?pick=<id>`). **Missions** opens the mission list
+  barracks-day, solo (the night breach's row left it 10-24: the bullet at the foot of this file) — a row is a link that deploys straight in; `?nopicks` = the old card, `?pick=<id>`). **Missions** opens the mission list
   (`src/ui/missions.ts`: the solo night + one row per `SCENARIOS` entry, Hour / Weather rows on its sheet), a pick opens the **Loadout** screen (`src/ui/loadout.ts` +
   `src/ui/kitCard.ts`: how many come, each man's kit card, the Squad kit row; `?loadout=<mission id>`), and Deploy is a PAGE LOAD of the mission's URL.
 
@@ -1577,6 +1577,115 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   fire: all mended, and the rate came down from 26° to 11.5° a second on that reading. Real page: `autocam-page.cjs` walks across the view with the mode on
   (the lean, the cap, home). One floor, one seed. NOBODY HAS SEEN OR PLAYED IT, NEVER ON A GPU: whether a view that turns under a held walk key and a live
   cursor is welcome in a fight is the maintainer's to say, and every number is a first guess.
+- **The auto camera's numbers are the player's: a mode and rows on Options, gentle where nobody has chosen** (`AUTOCAM.tune`, the foot of
+  `src/host/autocam.ts`, the rows in `src/ui/findme.ts autoRows`, 10-23; the maintainer, of his first play of the mode: "I was getting a little bit
+  motion sick with my first test of the auto camera. I think it's from like having too much rotation ... come up with like a ton of different
+  options of like modes or like sliders to configure in the settings panel, then we can iterate on that"). WHAT WAS FOUND IN THE CODE: a turn of
+  the mode's own took a share of what was left each second (`turnRate` 5), so it BEGAN at its fastest: a quarter turn opened at about 450 degrees a
+  second, and the double tap's swing (`BEHIND.rate` 12) at more than twice that. A turn at rest for the thing framed on the lens's side is also
+  most of a half turn, each time he stops at a door the lens is past.
+  SWITCH: on in the page (`?autotune=0` = every number the module's, the camera of the two bullets above, and no rows), OFF in the module and on
+  the frozen stand (`FROZEN_HOLDS['AUTOCAM.tune']` and a row for each number gentle moves, `TPS_AUTOTUNE=1`; pinned in `host/standup.ts`). It
+  rides `AUTOCAM`: a recording from before the key replays with the switch off and the numbers it has no word for at the module's, the ones it
+  carries left alone (`autoTuneOld`, `journal.ts applyKnobs`). The view is the seat's input, so no recording and no digest can tell one tuning
+  from another.
+  THE MODES (`AUTO_MODES`; `AUTOTUNE.mode`): `free` = the numbers as built · `gentle` (THE START) = a turn at rest only for a wall that hides
+  him (`restAhead` off), every turn of its own EASED (`turnCap` 30 degrees a second) and the double tap's swing eased too (`swingCap` 180), the
+  fight's lean 15 degrees at 6 a second and none for the way he walks · `rest` = those turns and no lean · `never` = the view turns only by
+  the hand and by the double tap he asks it with (the frame and the zoom go on).
+  THE EASED TURN (`turnEase`, `host/loop.ts comeRound`): a critically damped spring with a top speed and a ramp up to it (`turnRamp` 0.6 s),
+  whose rate is the top speed over `turnLand` (0.24 rad), so it starts from rest, brakes over the same angle at any speed, and lands without
+  going past or stepping; a goal gone round to the other side, or a speed handed on from a faster turn, is braked no harder than a landing
+  brakes. One ended by a walk key, a button or the hand's own turn dies away (`turnCoast`); one under way as the view goes to somebody else
+  (plan mode, the sky seat, a show) ends there. Rules changed WITH it, and only where `turnCap` is over none: the hand's mouse does not end it
+  and his aim is not carried through it (it is seconds long, and slow enough for the hand to follow, as the sway is; a quick turn as built
+  still carries the aim and ends at the mouse); `gap` is counted from where an eased turn or swing is SEEN TO STOP (`turnSeen`, a degree a
+  second: from where it began, a turn stopped midway began again at once; the last of its settling is not waited out). The swing in the mode
+  goes by the same spring under `swingCap`: it keeps the aim carry (the tap is "look where I look"), a walk key does not end it (he may tap
+  on the run, and walks an arc while it turns), a shot does, and the hand taking the view back ends it.
+  THE ROWS, each read off the table and written through `setAutoTune`, a row over a mode kept only while it differs from the mode's own (the
+  mode stays lit and its line reads "This is Gentle with your own changes below"): turn when a wall hides you (`rest`) and turn to face the
+  door ahead (`restAhead`), each on its own; turn speed (`turnCap`; one notch past the fastest is "Quick", the share as built); wait before it
+  turns (`still`); time between turns (`gap`); turn in a fight (`swayFightMax`, to `swayMax`; at none a fight leans nothing for his walk
+  either); lean when you move sideways (`swayMove`); lean speed (`swayRate`; over the speed as built the sway's spring is that much stiffer, or
+  a small lean never reached it); swing when you double tap (`swing`: off, the tap that puts the mode on turns nothing); swing speed
+  (`swingCap`, "Quick" as above); framing (`leanK`, a share of every lean of the frame, to none); framing speed (`lean`); zoom (`zoomAmt`, a
+  share of how far the zoom leaves the hand's own, to none); zoom speed (`zoomRate`); stay on the squad (`beatSecs`). A slider's ends are
+  `AUTO_RANGE`, in the table's units; the notch a mode's own number shows as puts back that number.
+  KEPT PER MACHINE (localStorage `twopointsix.autotune`: the mode and the rows over it; nothing where it is the start), read once as the
+  module loads: a line whose mode this build has not is not read at all, a key of the wrong kind is dropped, a number is held to `AUTO_RANGE`.
+  Reset on Options puts the start back. `?autoturn=0`, `?autozoom=0` and `?autosway=0` still stand over all of it.
+  CHECK: `autocam` lines 17 to 20 (lines 1 to 16 run with the tuning off, on the numbers as built), both stands, `AUTOTUNE_BREAK=1` red on 17,
+  18 and 19: the modes, what is kept and what is refused; gentle's turns and each reason on its own row; the eased turn (from rest, under its
+  top speed, no step, there without going past, every notch a quicker turn, ended midway it dies away); the sway's two mends; the two shares;
+  and through the whole Game on the free and the fixed step: the swing off, the swing eased, a shot ending a slow swing, a wall's turn tick by
+  tick with the mouse moved in the middle of it, a walk key ending it, and the next turn waiting out the gap from there. Not in a line: a turn
+  under way as plan mode opens, and an eased turn meeting a lean of the sway's (lines 17 to 19 run with the sway parked off). `tools/qa/autocam-page.cjs` drives the real page:
+  its old lines under `?autotune=0`, then the page as it opens (a real double tap's swing frame by frame, the rows, a mode clicked, rows slid,
+  a reload, Reset; `ONLY=tune` for those alone).
+  MEASURED (one floor, one seed, headless): a wall's 45 degrees at 10 / 20 / 30 / 40 / 60 / 80 / 100 / 120 degrees a second takes 15.4 / 8.0 /
+  5.5 / 4.2 / 3.0 / 2.4 / 2.0 / 1.7 s, the last part of each a slow settle; its first step is 2.8% of the top speed's, where the turn as
+  built covered 10 degrees of a 120 degree turn in its first frame; a half turn of the swing at 180 degrees a second takes 2.0 s; a walk key
+  at 30 degrees a second leaves 2.5 degrees more.
+  NOT DONE: nothing on the HUD says the mode came on when the swing is off; the springs of the sway and of the turn are two copies of one
+  idea; a recording played back writes its own numbers into the table until the visit ends (the mode's line then says they are not the
+  mode's). The modes' numbers are FIRST GUESSES for his hand to settle (a row he settles on becomes a mode's own). Never seen on a GPU.
+  NOBODY HAS PLAYED IT: whether gentle is calm enough, and whether a slow turn that does not carry his aim reads right, are his to say.
+- **The auto camera comes in on a man he sneaks up on: the soft lock** (`AUTOCAM.lock`, `src/host/autocam.ts` read and frame, 10-23; the
+  maintainer, of a review of Chaos Theory's "closer than ever" chapter: "there's definitely stuff for the auto camera mode to learn"). WHAT THE
+  REVIEW SAYS OF THAT CAMERA (from a machine's rough transcript of its narration, so in our words): with an enemy on screen the camera shifts
+  its focus to him, more strongly the nearer the player gets, as if softly locked on, and most players never notice; in a narrow hall it shifts
+  to the side he is not on to show what is ahead; at a corner it moves out a little to see round it. WHAT WAS FOUND IN THE CODE: the mode leaned
+  the frame half way to the middle of the men he could shoot, never came in on a man in his line ("it never comes in on a fight"), and a held
+  button stilled the frame, so through the whole of a stalk (the held click) the camera did nothing.
+  THE RULE: the man he is stalking (`game/stalk.ts`, while its click is held), or else the nearest hostile man the picture shows in his line
+  who is not `alert` and whom he could take (`close.ts closeSubject`; one searching counts, as for a stalk), is the lock's man from `lockM`
+  (8 m) in. The man it has is kept until another is `lockStick` (0.75 m) nearer and through `lockLinger` (1 s) out of his line (a pillar he
+  passes). NOBODY is the lock's man in a FIGHT: while any hostile man is alert, in the picture or not, and for `lockCalm` (4 s) after; and but for a stalk
+  nobody is while he is not sneaking (the close-in mode's list less the wall hold: the rifle up, a sprint, a body in tow, a kick, a lock, the
+  wand, hands at work; and a throw being aimed. The list is kept by hand beside `close.ts modeNow`). Its strength goes from none at `lockM` to full
+  at `lockNearM` (2 m), eased (`lockEase`). By that strength the frame goes from the middle of the men he could shoot to the middle of the two
+  of them (`lockK`), and the camera goes from where it would be toward the lock's own distance: the place's zoom less `lockIn` (40%), never so
+  near that another man he could shoot leaves the picture's reach (`fitMost` stands; a door ahead and the squad's beat hold the zoom out under
+  it, not the lock in full). The zoom as it was is worked out untouched under it (`A.goal`: the place's own zoom, the band; the lock's is
+  `A.lockTo`), so it begins with no step under the sky and in a room alike. `lockIn` goes by the hand's share of the zoom (`zoomAmt`): with
+  either at none the distance is as it was to the bit. One rule of the zoom gives way to it: "it never comes in on a fight" holds the zoom
+  out while any man is in his line, and the lock's man lets it back in by the lock's strength (else a zoom gone out to fit men earlier would
+  starve it). A man out of his line for the linger, or stalked from behind something, is framed as he was in it. A man he holds keeps the
+  camera in close (the close-in mode's zoom under it) and leaves the frame as it is. A held button stills it as it stills the frame (the
+  strength, and the share it takes: the men he could shoot are still kept in the picture), but for the held click of a stalk or of the wait
+  at a corner (it aims at nothing; the wait is read off the stalk polish's own picture, `stalkWait`), a man in his arm, and letting go once a
+  fight has begun (a stalk the man broke, the button still down: the camera goes back out; a man shot under a held aim with nobody onto him:
+  it waits for the button). A fight stamped ahead of the clock (a checkpoint loaded) is none. The view gone to somebody else (plan mode, a
+  show): the lock lets go at once and the distance is the zoom's own (`autoRest`).
+  NO TURN is added: it moves and zooms the frame only.
+  SWITCH: on in the page (`?autolock=0` = the frame and the zoom as they were), OFF in the module and on the frozen stand
+  (`FROZEN_HOLDS['AUTOCAM.lock']`, `TPS_AUTOLOCK=1`; pinned in `host/standup.ts`). It rides `AUTOCAM`; a recording from before the key replays
+  with it off (`journal.ts applyKnobs`). The view is the seat's input: no digest can tell it on from off.
+  ROWS (under the tuning's, only with the lock on): "Zoom in when you sneak up" (`lockIn`, none to 60%) and "Start zooming in from" (`lockM`,
+  4 to 12 m). They are numbers of every mode, kept as the tuning's rows are.
+  CHECK: `autocam` lines 21 to 23, both stands, `AUTOLOCK_BREAK=1` red on 21 and 22 (`AUTOCAM_BREAK=1` on 22 too). 21, the frame function:
+  the frame and the zoom by the lock's strength from rest with no step; the place's zoom at 1.15 and at 0.92; a plain held button, a stalk's,
+  and the button still down with his man gone (kept in close with nobody onto him, let go in a fight); two men with the lock's share told
+  apart from the fight's; a man in his arm; a second man kept in reach and a door ahead that does not hold it out; `lockIn` at none and
+  `zoomAmt` at none and at a half; the zoom held out for a man in his line as it was (no lock's man, a fight, the lock's zoom at none, the
+  switch off: the last two to the bit) and let in by the lock's man; his man out of the line framed as in it; the view gone to somebody
+  else. 22, the
+  whole Game on the free and the fixed step: a man stood at the end of a clear line and closed on in stages, a button held as he is moved back
+  out, a second man 0.4 m and 1.5 m nearer, the stalked man over the nearest, a man in his arm, half a second and a second and a half out of
+  his line, the rifle up, a body in tow, the corner wait's click, the man onto him, the calm after, and a fight stamped ahead of the clock.
+  NOT in a line: a real stalk begun by the held click and a man really held (the lock is handed its man), and a walk up to him past a door
+  (he is put there in stages). `tools/qa/autocam-page.cjs` (`ONLY=tune`) does 9 m and 3 m on the real page.
+  MEASURED (one floor, one seed, headless, the frozen stand): the hand's distance 21 m; at 8 / 7 / 5.5 / 4 / 3 / 2 m from him the camera at
+  20.6 / 20.0 / 17.5 / 14.3 / 12.5 / 11.7 m (the page's stand ends at 10.2 m: the close-in mode's own zoom is under it there); a button held
+  and he 6 m off again: 15.8 m, 17.0 once it is up.
+  NOT DONE, from the same review: the corridor's side shift and the move out at a corner (the frame already leans to the room he is in and to
+  the door ahead; neither was built or measured against these); his head turning to the man is the sneak's, which may ask the camera for its
+  man (`autoLock`). KNOWN: the hand taking the view back in the middle of a sneak puts the distance back to the hand's own, as it always did,
+  and from full lock that is a long way out (eased by the camera's own damping); a stalk's click still held after its man is lost with
+  nobody onto him is a plain held button, and the camera stays in until it is up; with the stalk polish off the corner wait's click is a
+  plain button too. Nobody has played it, and it has never been seen on a GPU: whether 40% is too much, and whether coming back out when a man turns on him
+  reads as a lurch, are his to judge.
 - **A mission's page loads behind that mission's brief and waits for Start** (2026-10-19; the maintainer, after watching a first-time player: "having
   the loading screen make more sense (e.g. being a pre mission brief) that you then click through rather than flashing the controls"; that player's
   notes: "stay on loading screen longer, would like to read"). `src/ui/loadbrief.ts`. BEFORE: a page whose address names a mission booted behind the
@@ -1648,7 +1757,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   takes the layout under 1200 × 675 of its own pixels (the smallest window the screens hold whole at, measured with the page check on the build before):
   where the largest step asks for more room than there is, the larger steps share what there is (1366 × 768: 1.04, 1.08, 1.14; 1280 × 720: up to
   1.07), and on a window of 1200 × 675 or less they do nothing. THE KEYS: Ctrl or ⌘ with + and − step it from anywhere, with 0 it is the window's
-  again; those chords, Ctrl + wheel and a pinch are taken from the browser (Ctrl + wheel over the picture is still the camera's).
+  again; those chords, Ctrl + wheel and a pinch are taken from the browser (over the picture a wheel that says Ctrl is still `game/input.ts`'s: a pinch zooms the camera, the wheel under a held Ctrl key is nothing, `player.md` CTRL AND THE WHEEL).
   FOUR THINGS A ZOOMED LAYER DOES NOT DO BY ITSELF, and a new screen has to: a viewport unit in a layer is written `calc(25vw / var(--tz, 1))` (the
   check is red on a bare one in `index.html` or `src/ui`); an `@media` width or height is rewritten by the module to ask for px × factor (also when a
   style sheet joins later, one microtask after it joins), and a script asks `uiMatch('(max-width: 720px)')` in place of `matchMedia`; a rectangle a
@@ -1805,3 +1914,25 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   neighbour's file); the break reaching the list and the page lines (both are fixed inputs: a break there would be by fiat). NOT DONE: a
   lesson's frame does not teach or lock it (the frame's key locks do not know Tab's card); nobody tracks what a man himself has left (the pool is the squad's), so a man's counts stay
   what he started with; a run's end line still says to press Enter while the card holds the game (Tab or Esc first). Never seen on a GPU. NOBODY HAS PLAYED IT.
+- **Enter deploys a mission that has no kit step (2026-10-23; `ui/startpage.ts` `noKit` / `onward`).** The maintainer: "bug for tutorial 1 where hitting
+  enter (rather than clicking deploy) goes to an empty loadout screen rather than starting". A mission played with the kit as issued (`kitAsIssued`: a
+  tutorial mission with no kit plan of its own, `.nokit` on the page) draws Deploy as the block on the MISSION step, but Enter on its row still stepped
+  into TEAM & KIT, where there is nothing to pick. Now nothing on the page leads there for such a mission: Enter or Space on its row is Deploy, the key
+  line under the list reads "Enter deploy", the head names one step, the rail has no Team & kit row, and `setPane` itself refuses the kit step, so
+  `?loadout=<that mission>` opens on its rows. A mission with a kit steps into it as before. No switch (a page's navigation; nothing a run reads).
+  CHECK: `tools/qa/startpage-look.cjs`, two lines ("a mission with no kit to pick", "a mission WITH a kit still steps into it"), on the real page with no
+  adapter under it; the look's group name 'Training' was stale since the old lessons went and reads 'Tutorial' now. Nobody has pressed it on a GPU page.
+- **The night breach is cut from the mission list and from the short list** (2026-10-24; the maintainer: "let's also remove "night breach" since it's
+  unnecessary now"). `night-breach` carries `offList: true` (`scene/scenarioList.ts`) and its row is out of `PICKS` (`scene/picks.ts`: six rows now —
+  compound, registry, warehouse, depot, barracks-day, solo; the barracks' "next" is the solo night). THE SWITCH is the cut rows' own, `OFFLIST_UI.on`:
+  `?offlist=0` draws the row again (the short list's row does not come back with it); off in the module and in every harness, so every list probe still
+  pins the whole table. NOTHING IS DELETED, and little could be: the row, its address `?nightbreach`, `?loadout=night-breach`, its picture and its
+  `scenarios.nightBreach` block stay; `game/nightbreach.ts` is the staging the room clear and the rescue are built on (the team, the pairs, the stack);
+  about a hundred files under `tools/` stage the one-room fight by its id (moves, wounds, kit, restart, the co-op and threshold fixtures), and a kept run
+  or a recording of it still loads. WHAT STILL NAMES IT TO A PLAYER, left as it was (not this step's): the Hard difficulty's long line
+  (`game/difficulty.ts`: "On the night breach the defenders are drilled…"), and the debugger's section 'Room fight staging (night breach · every room
+  clear)' with its start button. The Raids tile's picture is its first listed mission's, as it always was. CHECK: `probes.ts offlist` (the table's cut
+  rows are the five named, and line 6, new: no row of the short list starts a cut row; `OFFLIST_BREAK=1` fails it), both stands; the real page by
+  `PORT=<port> node tools/qa/unplayed-page.cjs` (no adapter under it: 31 cards, none the night breach's; 36 under `?offlist=0`; no page error) and its
+  still of the Raids group, six cards. `tools/qa/card-digest.ts` asks its pause card of the depot's pick now, and `startpage-look.cjs` and the verify
+  notes list six. Nobody has opened the page on a GPU since.

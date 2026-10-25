@@ -35,6 +35,9 @@
 //   idleOk?: string[]                          step ids that may already be true when they come up (said why in the script)
 //   fightOk?: string[]                         step ids a fight on the floor may finish before the player does (a line inside a live fight: the room can fall
 //                                              while it is up, or before it comes up; said why in the script). Such a step is logged as gone by with the fight
+//   fightRun?: number                          how many such steps IN A ROW may go by before the script reaches them (default 1: one line lost to a fight is
+//                                              the fight; two in a row are lessons nobody played — a hall taken through its window before the window's
+//                                              step came up took three lines with it and the run still ended 24 of 24). A script that raises it says why
 //   mode?: { unseen?: boolean; god?: boolean; moon?: boolean; sky?: boolean; glow?: boolean; floor?: number }   the arm this lesson's run needs when no flag says otherwise (said why in the script; --plain overrides unseen / god; --floor N overrides floor)
 //   raises?: Record<string, string>   words raised for this lesson's run alone on the frozen stand, put back after it (a switch the level's one way on rides on)
 //                                       (PT_DESTR: '1' among them raises the destruction's one switch for the run, which no stand word reaches)
@@ -105,7 +108,9 @@ if (import.meta.main) {
 function tutorial(file: string): boolean { try { return /"rails"\s*:/.test(readFileSync(file, 'utf8')); } catch { return false; } }
 
 export interface LessonRunOpts { seed?: number; unseen?: boolean; god?: boolean; plain?: boolean; verbose?: boolean; digest?: boolean; lesson?: boolean; moon?: boolean; /** the sky's light on EVERY meter (the head: --sky) */ sky?: boolean; /** false: --sky without the night sky's own light, the moon alone (--noglow) */ glow?: boolean; hard?: boolean; floor?: number }
-export interface LessonRunOut { code: 0 | 1 | 2; why: string; lines: string[]; digest?: string; steps: { id: string; t: number }[]; secs: number }
+export interface LessonRunOut { code: 0 | 1 | 2; why: string; lines: string[]; digest?: string; steps: { id: string; t: number }[]; secs: number;
+  /** the `fightOk` steps that went by before the script reached them, with how long each was up (s) */
+  byFight: { id: string; up: number }[] }
 
 /** A scripted player may name the words its level cannot be played without on the frozen stand (`raises`, e.g. a switch its one door row rides on). They are
  *  raised for that run alone and put back after it: said at the script's own import they stayed up for every row the same process played next */
@@ -126,7 +131,7 @@ async function playLesson(name: string, o: LessonRunOpts = {}, loud = false): Pr
   try { return await playLessonAs(name, o, loud); } finally { if (K) { K.kitIssuedPage(false); K.KIT_SOLO.on = !!solo; } }
 }
 async function playLessonAs(name: string, o: LessonRunOpts = {}, loud = false): Promise<LessonRunOut> {
-  const lines: string[] = [], out: LessonRunOut = { code: 0, why: '', lines, steps: [], secs: 0 };
+  const lines: string[] = [], out: LessonRunOut = { code: 0, why: '', lines, steps: [], secs: 0, byFight: [] };
   const file = resolve(ROOT, 'levels', `${name}.json`), scriptFile = resolve(import.meta.dir, 'lessons', `${name}.ts`);
   if (!existsSync(file)) return { ...out, code: 2, why: `no levels/${name}.json` };
   if (!existsSync(scriptFile)) return { ...out, code: 2, why: `no tools/qa/lessons/${name}.ts` };
@@ -152,6 +157,7 @@ async function playLessonAs(name: string, o: LessonRunOpts = {}, loud = false): 
   const { lightEstimateAt } = await import(`${ROOT}/src/game/guards.ts`);
   const { isHourSun, hourOf } = await import(`${ROOT}/src/game/hours.ts`);
   const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
+  const { RAILS } = await import(`${ROOT}/src/game/rails.ts`);
   const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
   const { LESSON, checkLesson } = await import(`${ROOT}/src/game/lesson.ts`);
   const log = console.log, err = console.error, warn = console.warn;
@@ -208,8 +214,10 @@ async function playLessonAs(name: string, o: LessonRunOpts = {}, loud = false): 
     g.lightAt = (k: string) => { const p = mine(k) ? asked.get(k) : undefined; return p ? Math.max(Ef, lightEstimateAt(g, p) + (sky ? moonAt(p) + glowAt(p) : 0)) : a0(k); };   // (--nosky with a floor: the floor alone)
     g.lightForget = (k: string) => { asked.delete(k); f0(k); }; }
   const cap = Number(flag('--cap') ?? 600);
+  const upAt: number[] = [];   // (the run's clock when each step of the lesson first came up: how long a step the fight finished was there to be read)
   function step(n = 1) {
     for (let i = 0; i < n; i++) {
+      if (lessonOn && upAt[g.lesson.i] === undefined) upAt[g.lesson.i] = t;
       for (const k of ['KeyW', 'KeyA', 'KeyS', 'KeyD']) I.keys.delete(k);
       const P = g.player;
       if (goal && !P.down) { const dx = goal[0] - pos()[0], dz = goal[2] - pos()[2], d = Math.hypot(dx, dz);
@@ -241,8 +249,10 @@ async function playLessonAs(name: string, o: LessonRunOpts = {}, loud = false): 
       if (g.nearby.some((r: any) => r.kind === kind && r.verb === v) && g.selectVerb(kind, v)) { I.pressed.add('Space'); step(2); say(`  Space: ${kind} ▸ ${v}`); return true; } }
     if (kind === 'guard' && v === 'grab' && !g.player.holding) {   // (stalk.ts: with the held click the only way to a man there is no such row — the left button held on the nearest man is the grab)
       let gd: any = null, bd = 4; for (const x of g.guards) { if (x.state === 'dead' || x.civ) continue; const d = flat(pos(), x.char.pos); if (d < bd) { gd = x; bd = d; } }
-      if (gd) { for (let i = 0; i < 300 && !g.player.holding; i++) { const c = gd.char.pos; aim([c[0], 1.2, c[2]]); I.buttons |= 1; if (i === 0) I.clicked |= 1; step(); }
-        I.buttons &= ~1; if (g.player.holding) { say(`  left button held: the stalk ▸ grab`); return true; } }
+      let keyed = false;   // (…and with the key the finish, stalk.ts `key`, the held button only brings him into reach: the row is back there, and its key is the grab)
+      if (gd) { for (let i = 0; i < 300 && !g.player.holding; i++) { const c = gd.char.pos; aim([c[0], 1.2, c[2]]); I.buttons |= 1; if (i === 0) I.clicked |= 1;
+          if (g.nearby.some((r: any) => r.kind === kind && r.verb === v && r.guard === gd) && g.selectVerb(kind, v)) { I.pressed.add('Space'); keyed = true; } step(); }
+        I.buttons &= ~1; if (g.player.holding) { say(keyed ? `  left button held, then Space: the stalk ▸ grab` : `  left button held: the stalk ▸ grab`); return true; } }
     }
     say(`  no '${kind} ▸ ${v}' row (rows: ${g.nearby.map((r: any) => `${r.kind}:${r.verb}`).join(' ') || 'none'})`); return false;
   }
@@ -282,7 +292,7 @@ async function playLessonAs(name: string, o: LessonRunOpts = {}, loud = false): 
     fail: (why) => { throw new Stop(why); },
   };
 
-  const idleOk = new Set<string>(script.idleOk ?? []), fightOk = new Set<string>(script.fightOk ?? []);
+  const idleOk = new Set<string>(script.idleOk ?? []), fightOk = new Set<string>(script.fightOk ?? []), fightRun: number = script.fightRun ?? 1; let unplayed = 0;
   // (two gears — player.ts TWOGEARS — gives the wheel to nobody, so a step that asks for a pace has nothing to ask for and goes by, as lesson.ts says: it is run all the same)
   if ((await import(`${ROOT}/src/game/player.ts`)).TWOGEARS.on) for (const T of L.steps) if (T.done?.is === 'pace') idleOk.add(T.id);
   try {
@@ -290,18 +300,25 @@ async function playLessonAs(name: string, o: LessonRunOpts = {}, loud = false): 
     for (let i = 0; i < L.steps.length; i++) {
       const T = L.steps[i];
       const byFight = () => { say(`step ${i + 1}/${L.steps.length} '${T.id}' went by with the fight`); out.steps.push({ id: T.id, t: Number(t.toFixed(2)) }); };
-      if (lessonOn && g.lesson.i > i && fightOk.has(T.id)) { byFight(); continue; }
+      // (…before the script reached it: nobody played it. One such is the fight; a run of them is a part of the mission that taught nothing — `fightRun`)
+      if (lessonOn && g.lesson.i > i && fightOk.has(T.id)) { const up = Number(Math.max(0, (upAt[i + 1] ?? t) - (upAt[i] ?? t)).toFixed(1)); out.byFight.push({ id: T.id, up }); unplayed++;
+        say(`step ${i + 1}/${L.steps.length} '${T.id}' went by with the fight before its turn (it was up ${up} s)`); out.steps.push({ id: T.id, t: Number(t.toFixed(2)) });
+        if (unplayed > fightRun) throw new Stop(`${unplayed} steps in a row went by with the fight before the script reached them (${out.byFight.slice(-unplayed).map(x => `'${x.id}' up ${x.up} s`).join(', ')}): lessons nobody played (the script's fightRun allows ${fightRun})`);
+        continue; }
+      unplayed = 0;
       // (a step whose honest alternative an earlier deed already made true may have GONE BY when its turn comes — `idleOk`: its half second, its reader's pause and
       //  its script are run all the same, frame for frame as the arm with no lesson runs them)
       const gone = lessonOn && g.lesson.i > i && idleOk.has(T.id);
       if (lessonOn && !gone && g.lesson.i !== i) throw new Stop(`step ${i + 1} '${T.id}' is not the step that is up (the lesson is on ${g.lesson.i + 1}: ${g.lesson.summary()})`);
       step(30);   // half a second of nothing: the line must not move on by itself
-      if (lessonOn && g.lesson.i !== i && fightOk.has(T.id)) { byFight(); continue; }
-      if (lessonOn && g.lesson.i !== i && !idleOk.has(T.id)) throw new Stop(`step ${i + 1} '${T.id}' went by with nothing done (its test was already true when it came up)`);
+      if (lessonOn && (g.lesson.i !== i || g.lesson.settling) && fightOk.has(T.id)) { until(() => g.lesson.i > i, RAILS.cardMax + 3); byFight(); continue; }   // (…or is done by it and settles before a card: the same thing a beat later)
+      if (lessonOn && (g.lesson.i !== i || g.lesson.settling) && !idleOk.has(T.id)) throw new Stop(`step ${i + 1} '${T.id}' went by with nothing done (its test was already true when it came up)`);
       if (PACE > 0) step(Math.round(PACE * 60));   // --pace: a reader's seconds on the line (a step that only WAITS for the floor may well go by while he reads: its script then finds its wait already over)
       say(`step ${i + 1}/${L.steps.length} '${T.id}': ${g.lesson.objective()?.text.split(' ▸ ')[1] ?? T.line}${gone ? ' (it had already gone by: idleOk)' : ''}`);   // (the line as the row reads it: a step may carry another for the keys as they stand)
       script.steps[T.id](B);
       step(30);   // (the same half second in both arms — a step with a `hold` longer than that waits in its own script)
+      // (a step before a card SETTLES — rails.ts RAILS.cardBeat: its deed done, it stays up for the card's beat and, for a card marked quiet, while a fight of his is on, to the cap)
+      if (lessonOn && g.lesson.i <= i && g.lesson.settling) until(() => g.lesson.i > i, RAILS.cardMax + 3);
       if (lessonOn && g.lesson.i <= i) throw new Stop(`step ${i + 1} '${T.id}' did not go by after its script (player at ${at(pos())}, stage ${g.mission.stage}; test ${JSON.stringify(T.done)})`);
       out.steps.push({ id: T.id, t: Number(t.toFixed(2)) });
       if (g.player.down) throw new Stop(`the player went down in step '${T.id}'`);
@@ -321,6 +338,6 @@ async function playLessonAs(name: string, o: LessonRunOpts = {}, loud = false): 
   }
   out.secs = Number(t.toFixed(1));
   if (o.digest) { out.digest = (fold >>> 0).toString(16).padStart(8, '0'); lines.push(`digest ${out.digest} over ${frames} frames (${lessonOn ? 'lesson on' : 'lesson OFF'})`); }
-  lines.push(`${name}: ${out.steps.length}/${L.steps.length} steps · ${out.secs} s of play · ${o.unseen ? 'meter pinned (unseen)' : `meter fed from the floor\'s lights${o.moon ? ' and the moon' : ''}`}${sky ? ` · the sky\'s light on every man\'s meter${o.glow === false ? ' (the moon alone)' : ''}` : ''}${o.floor ? ` · never under ${o.floor}` : ''}${o.hard ? ' · hard' : ''}${o.god ? ' · god mode' : ''} · seed ${seed}`);
+  lines.push(`${name}: ${out.steps.length}/${L.steps.length} steps${out.byFight.length ? ` (${out.byFight.length} went by with the fight before their turn: ${out.byFight.map(x => x.id).join(', ')})` : ''} · ${out.secs} s of play · ${o.unseen ? 'meter pinned (unseen)' : `meter fed from the floor\'s lights${o.moon ? ' and the moon' : ''}`}${sky ? ` · the sky\'s light on every man\'s meter${o.glow === false ? ' (the moon alone)' : ''}` : ''}${o.floor ? ` · never under ${o.floor}` : ''}${o.hard ? ' · hard' : ''}${o.god ? ' · god mode' : ''} · seed ${seed}`);
   return out;
 }

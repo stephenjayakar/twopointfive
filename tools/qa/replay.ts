@@ -55,12 +55,13 @@ export async function replaySession(F: any, name: string, opts: ReplayOpts = {})
   // (… and whether a vehicle's lamps were light targets — src/game/carlamps.ts: the Game reads that switch as it is built, so a file from before the table, or one
   //  recorded with it off, is stood up with none; said the same way, put back the same way)
   const saidLamps = process.env.TPS_CARLAMPS; process.env.TPS_CARLAMPS = (F.knobs as any)?.tables?.CARLAMPS?.on ? '1' : '0';
+  const saidRound = process.env.TPS_ROUND; process.env.TPS_ROUND = (F.knobs as any)?.tables?.ROUND?.on ? '1' : '0';   // (…and round things: the level's boxes are read as it is stood up — src/scene/round.ts)
   let W: Awaited<ReturnType<typeof standUp>>;
-  try { W = await standUp({ env: F.env }); } finally { if (saidExact === undefined) delete process.env.TPS_EXACT; else process.env.TPS_EXACT = saidExact; if (saidLamps === undefined) delete process.env.TPS_CARLAMPS; else process.env.TPS_CARLAMPS = saidLamps; }
+  try { W = await standUp({ env: F.env }); } finally { if (saidExact === undefined) delete process.env.TPS_EXACT; else process.env.TPS_EXACT = saidExact; if (saidLamps === undefined) delete process.env.TPS_CARLAMPS; else process.env.TPS_CARLAMPS = saidLamps; if (saidRound === undefined) delete process.env.TPS_ROUND; else process.env.TPS_ROUND = saidRound; }
   const { game, input, cam, canvas } = W;
   const fp = levelFingerprint(game); if (fp.fp !== F.level?.fp) { R.bad = `another level (file ${F.level?.fp} ${F.level?.boxes} boxes, this build ${fp.fp} ${fp.boxes} boxes) — re-record`; return R; }
   const whyNot = canLoad(game, F.save); if (whyNot) { R.bad = `the checkpoint will not load: ${whyNot}`; return R; }
-  J.applyKnobs(game, F.knobs);            // (tune before the load too: loadState reads nothing of it, but a module that would is covered)
+  J.applyKnobs(game, F.knobs);            // (tune before the load too: loadState reads the tables — FOG.filed, whether the fog's memory in the file is handed back — so a tape from before a key loads with it off)
   loadState(game, F.save);
   J.applyKnobs(game, F.knobs); J.applyEnvGame(game, F.env);
   Math.random = simDie(F.seed >>> 0, (Math.random as any).sys ?? Math.random);

@@ -28,6 +28,8 @@ const PB_KIND: u32 = 15u;         // low 4 bits: kind
 const PB_ASLEEP: u32 = 16u;       // resting on an up-facing surface: no integration, support re-tested now and then
 const PB_NEW: u32 = 32u;          // born this frame (the emit kernel pre-integrated it a random fraction of dt): the update kernel skips its step once
 const PB_BOUNCED: u32 = 64u;      // has met geometry at least once
+const PB_OURS: u32 = 128u;        // the team's own doing (the record's bit 18 — particles.ts Particles.ours): drawn over floor the fog of war hides too, until it has lain and is woken (the kernel takes the bit off)
+const PB_KEPT: u32 = 65536u;      // at rest, and the team has seen it lying there (FOG.kept: the update kernel puts it on over seen floor, a wake takes it off): drawn over floor the fog hides too while the row is on. Bit 16: the owner has bits 8‥15
 // bits 8..15: owner — the character id whose capsules / boxes this particle's rays ignore (a casing leaves the port INSIDE the shooter's arm capsules)
 
 struct Particle {
@@ -147,7 +149,7 @@ struct EmitRec {
   vadd: vec3f, shape: u32,        // velocity inherited from the emitter (the shooter's stride); 0 cone about dir · 1 ground burst (spread / lift) · 2 ring in XZ · 3 puff (sphere)
   p: vec4f,                       // x spread (cone half-angle rad | burst spread), y life s, z size m, w speed jitter 0..1 (speed × (1 − w·r))
   q: vec4f,                       // x life jitter (life × (1 − x + 2x·r)), y lift (burst / ring: vertical share), z size jitter, w position jitter radius m
-  k: vec4u,                       // x kind | owner << 8 | ring << 16, y seed, z slot offset within the ring of particle 0, w colour rgba8
+  k: vec4u,                       // x kind | owner << 8 | ring << 16 | the team's own doing << 18 (PB_OURS), y seed, z slot offset within the ring of particle 0, w colour rgba8
 };
 const MAX_EMITS: u32 = 128u;
 // IMPULSES (render/particles.ts Particles.impulse; game/destruction.ts is where they come from — a stun charge, a round landing beside settled litter, a body /
@@ -327,3 +329,16 @@ fn sparkRadiance(u: f32, hold: f32, brightness: f32) -> vec3f {
 // peak opacity, and it rises where a puff of dust settles. Every other record carries 255 there: 1 from this, and nothing of theirs is changed.
 fn steamIs(color: u32) -> bool { return (color >> 24u) != 255u; }
 fn steamOf(color: u32) -> f32 { return select(1.0, f32(color >> 24u) * (1.0 / 254.0), steamIs(color)); }
+// EMBER (game/fire.ts; render/particles.ts EmitOpts.ember): a SPARK whose colour word's top byte is under 255 is an ember off an open fire — that byte ÷ 254 is ×
+// its light. It rides the fire's hot air up (EMBER_LIFT over its own weight, against the kind's drag: about two metres a second at most), wanders as it goes
+// (EMBER_SWIRL) and goes with the wind, where a spark flies and falls; and it cools slowly, yellow off the fire, then orange, then a red that dies. Every other
+// spark carries 255 there and is as it was.
+const EMBER_LIFT: f32 = 3.2;     // m/s²
+const EMBER_SWIRL: f32 = 1.4;    // m/s² across, turning
+fn emberIs(kind: u32, color: u32) -> bool { return kind == P_SPARK && (color >> 24u) != 255u; }
+fn emberRadiance(u: f32, color: u32, brightness: f32, seed: u32, age: f32) -> vec3f {
+  let ph = f32(seed & 1023u) * 0.00614;
+  let tw = 0.65 + 0.35 * sin(age * 31.0 + ph * 3.0);                                   // (no two alike, and none steady)
+  let e = brightness * SPARK_EMISSIVE * (f32(color >> 24u) * (1.0 / 254.0)) * pow(max(1.0 - u, 0.0), 1.6) * tw;
+  return e * mix(mix(vec3f(1.0, 0.5, 0.09), vec3f(1.0, 0.24, 0.02), smoothstep(0.0, 0.35, u)), vec3f(0.8, 0.07, 0.004), smoothstep(0.3, 0.9, u));
+}

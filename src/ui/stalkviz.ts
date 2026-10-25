@@ -5,8 +5,7 @@
 import type { Vec3 } from '../math/vec';
 import type { Game, Guard } from '../game/game';
 import type { FollowCamera } from '../game/camera';
-import { STALK, stalkOn } from '../game/stalk';
-import { CLOSE } from '../game/close';
+import { STALK, stalkOn, stalkBeginM, stalkOutM } from '../game/stalk';
 
 export const STALKVIZ = { on: false };
 const NS = 'http://www.w3.org/2000/svg', FLOOR = 0.05, SEG = 40;
@@ -33,8 +32,8 @@ export class StalkViz {
     const spoke = (b: number, r: number) => { const pts: Vec3[] = []; for (let i = 0; i <= 8; i++) pts.push(at(b, 0.3 + (r - 0.3) * i / 8)); return path(pts); };
     const set = (k: Part, d: string) => { if (this.d[k] !== d) { this.d[k] = d; this.p[k].setAttribute('d', d); } };
     const bBegin = Math.acos(Math.max(-1, Math.min(1, STALK.beginCos))), bOut = Math.acos(Math.max(-1, Math.min(1, STALK.outCos))), station = at(Math.PI, STALK.stationM);
-    set('begin', ring(c, CLOSE.modeM)); set('out', ring(c, CLOSE.modeOutM));
-    set('arc', spoke(bBegin, CLOSE.modeM) + spoke(-bBegin, CLOSE.modeM)); set('arcOut', spoke(bOut, CLOSE.modeOutM) + spoke(-bOut, CLOSE.modeOutM));
+    set('begin', ring(c, stalkBeginM())); set('out', ring(c, stalkOutM()));
+    set('arc', spoke(bBegin, stalkBeginM()) + spoke(-bBegin, stalkBeginM())); set('arcOut', spoke(bOut, stalkOutM()) + spoke(-bOut, stalkOutM()));
     set('grab', ring(c, STALK.grabM)); set('station', ring(station, 0.12));
     set('line', stalkOn(game) === gd ? path(Array.from({ length: 9 }, (_v, i): Vec3 => [pl[0] + (station[0] - pl[0]) * i / 8, FLOOR, pl[2] + (station[2] - pl[2]) * i / 8])) : '');
   }

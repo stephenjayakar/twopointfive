@@ -20,7 +20,7 @@ const skyReads = (B: Bot) => (B.g as { __sky?: { reads: number } }).__sky?.reads
 /** THE HALL'S STREET WINDOW IS GLASS, and the frozen stand stands the glass's parts at off (a pane is a wall to a round there: host/standup.ts): the
  *  window's step cannot be done on it. The runner raises the parts for this run alone; the page's stand has them. (GLASSPARTS and not GLASSFX: that
  *  word is read by game/glass.ts as the module loads, which is before any runner can raise it) */
-export const raises = { GLASSPARTS: 'on' };
+export const raises = { GLASSPARTS: 'on', TPS_TABBACK: '1', TPS_PLANNEAR: '1' };   // (and the back key that closes plan mode and the mode's near view, which the page has and the frozen run's plan words leave out)
 /** its steps are a tutorial mission's (game/rails.ts): TPS_RAILS=1 on the frozen stand, or the shipped stand */
 export const needs = 'rails';
 
@@ -67,6 +67,26 @@ function goIn(B: Bot, door: string, room: string) {
   if (!B.until(() => cleared(B, room), 60)) B.fail(`${room} was not cleared`);
 }
 
+/** plan mode (game/planmode.ts): its state · the door a man is on a stack up on · how far the mode's view is from the player */
+const plan = (B: Bot) => (B.g.orders as unknown as { plan: { up: boolean; look: number[] | null } }).plan;
+const stackedOn = (B: Bot, m: Man): string | null => { const A = O(B).of(m) as { order?: string; door?: { def: { name: string } } } | undefined; return A?.order === 'stack' && A.door ? A.door.def.name : null; };
+const viewOff = (B: Bot) => { const L = plan(B).look, s = B.pos(); return L ? Math.hypot(L[0] - s[0], L[2] - s[2]) : 0; };
+/** the mode up (Shift held over a tap of the command key), if it is not. `walk`: with a walk key held, as a hand that never stopped walking presses it */
+function modeUp(B: Bot, walk?: string) {
+  if (plan(B).up) return;
+  const k = walk ? [walk] : [];
+  B.hold(['ShiftLeft', ...k], 2 / 60); B.I.pressed.add('KeyB'); B.hold(['ShiftLeft', 'KeyB', ...k], 2 / 60); B.hold(['ShiftLeft', ...k], 2 / 60); B.step(2);
+  if (!plan(B).up) B.fail(`Shift + the command key${walk ? ' with a walk key held' : ''} did not put plan mode up`);
+}
+/** the mode's right button on a door (the button down as well as its edge: the mode reads both) */
+function rclick(B: Bot, door: string) { onDoor(B, door); B.step(3); B.I.clicked |= 4; B.I.buttons |= 4; B.step(); B.I.buttons &= ~4; B.step(3); }
+/** TUT_SQUAD_FRAG=wide: the frag lands on the road past the nest and both of its men outlive it — the way round the nest, past the hall's window,
+ *  with a gun still up and the line still 'Take the gun nest' (what a first throw often is) */
+const FRAG_WIDE = process.env.TUT_SQUAD_FRAG === 'wide', WIDE = [36.8, 1.0, 12.0];
+/** TUT_SQUAD_INSIDE=1: the room is taken from INSIDE plan mode (a second right click on the stacked door is the entry), which the walk's step must not
+ *  pass on with the mode still up: its line is the key that puts the mode away, and it holds until that key */
+const INSIDE = process.env.TUT_SQUAD_INSIDE === '1';
+
 const raised = (B: Bot, name: string): boolean => !!B.g.director.signalled(name);
 const man = (B: Bot, callsign: string) => B.g.guards.find((x: { callsign: string }) => x.callsign === callsign) as { state: string; script: unknown; char: { pos: number[] } } | undefined;
 
@@ -93,11 +113,24 @@ function reload(B: Bot) { const r = B.g.player.rifle; if (r && r.mag === 0 && !r
 const chest = (ch: { pos: number[]; bones?: { chest?: number[] } }): number[] => ch.bones?.chest ?? [ch.pos[0], 1.25, ch.pos[2]];
 /** the rifle at whoever of a room's men still stands, a press at a time, until the room is clear or the seconds are up (he aims at the man: where he is
  *  is read off the room's own list, as eyes would) */
-function shootMen(B: Bot, room: string, secs: number) {
+function shootMen(B: Bot, room: string, secs: number, seen = false) {
   const R = rooms(B).find(r => r.def.id === room) as unknown as { defenders: { state: string; char: { pos: number[]; bones?: { chest?: number[] } } }[] } | undefined, t0 = B.t();
   // (the nearest of them: a hand shoots the man in front of it, not the first on the roster, who may be two walls off)
-  const near = () => { const me = B.pos(); return R?.defenders.filter(x => x.state !== 'dead').sort((a, b) => Math.hypot(a.char.pos[0] - me[0], a.char.pos[2] - me[2]) - Math.hypot(b.char.pos[0] - me[0], b.char.pos[2] - me[2]))[0]; };
+  // (`seen`: only a man he has a line to, as a hand at a window shoots — the hall's two walk into its line, and a round at a man still behind the wall is a round in the wall)
+  const line = (x: { char: { pos: number[]; bones?: { chest?: number[] } } }) => { const me = B.pos(); return !(B.g as unknown as { col: { segmentBlocked(a: number[], b: number[]): boolean } }).col.segmentBlocked([me[0], 1.5, me[2]], chest(x.char)); };
+  const near = () => { const me = B.pos(); return R?.defenders.filter(x => x.state !== 'dead' && (!seen || line(x))).sort((a, b) => Math.hypot(a.char.pos[0] - me[0], a.char.pos[2] - me[2]) - Math.hypot(b.char.pos[0] - me[0], b.char.pos[2] - me[2]))[0]; };
   while (!cleared(B, room) && B.t() - t0 < secs) { const m = near(); if (!m) { B.wait(0.3); continue; } reload(B); B.click(1, chest(m.char)); B.wait(0.2); }
+}
+/** THE HALL IS ITS OWN STEPS': its two wait out of the window's line until the window's step is up (its cue; the level's script, beat 'hall'), so
+ *  nobody's rifle finds them while another line is on the screen. A man of them down BEFORE that step came up is the failure — the window's, the door's
+ *  and the lock's lines then go by unread, and the runner calls a step that went by the fight's — so it is asked at 'window' and again at 'hall', the
+ *  first step after them that cannot go by. (Down AFTER it came up, to a teammate at the glass while a slow reader reads, is the squad doing what the
+ *  line says: said, not failed.) TUT_SQUAD_HALL=any: not held */
+function hallEarly(B: Bot) {
+  if (process.env.TUT_SQUAD_HALL === 'any') return;
+  const up = parseFloat(((B.g as unknown as { lesson: { log: string[] } }).lesson.log.find(l => /done \d+\/\d+ 'nest'/.test(l)) ?? 'NaN'));
+  const men = (rooms(B).find(r => r.def.id === 'hall') as unknown as { defenders: { state: string; callsign: string; diedAt: number }[] } | undefined)?.defenders.filter(x => x.state === 'dead' && !(x.diedAt >= up)) ?? [];
+  if (men.length) B.fail(`${men.map(m => `${m.callsign} (at ${m.diedAt.toFixed(1)} s)`).join(' and ')} of the hall went down before the window's step came up (${Number.isFinite(up) ? `${up.toFixed(1)} s` : 'it never did'}): the hall's lines went by with nobody having read them`);
 }
 /** how many of the nest's two are down by a round that was not the player's own (character id 1: consts.ts PLAYER_ID) */
 const nestTaken = (B: Bot) => (rooms(B).find(r => r.def.id === 'nest') as unknown as { defenders: { state: string; killerId: number }[] } | undefined)?.defenders.filter(x => x.state === 'dead' && x.killerId !== 1).length ?? 0;
@@ -132,7 +165,8 @@ const RAW: Record<string, (B: Bot) => void> = {
   // (the staged moment itself is held to have happened: a round of his out of the doorway, the man in the script's hand, standing in the line the level
   //  keeps the team's feet out of and, where the fog of war runs, drawn)
   out: B => { B.go(SHOP_VIEW, 30); },
-  side: B => {
+  // PLAN MODE, opened and closed (the mission's own lesson of it): the pair from the street, the mode's right button on the side door, the back key, the walk
+  mode: B => {
     if (!cleared(B, 'workshop')) {
       if (!B.until(() => raised(B, 'done:shop') || cleared(B, 'workshop'), 14)) B.fail("the workshop's man never fired out of his doorway (no 'done:shop')");
       const m = man(B, 'Tango 4'), F = B.g.fogOfWar;
@@ -145,10 +179,34 @@ const RAW: Record<string, (B: Bot) => void> = {
         if (Math.abs(cs * px - sn * pz) > V.h[0] + 0.5 || Math.abs(sn * px + cs * pz) > V.h[2]) B.fail(`the workshop's man fires from ${m.char.pos.map((v: number) => v.toFixed(2))}, off the line the level's 'shop_line' volume watches`);
       }
       const d = B.door('workshop'); if (d.isClosed()) B.fail("the workshop's lane door is shut: nobody can see him or his rounds");
+      // (a tap of the squad's key first, as a hand that learnt the two rooms before this would: the step teaches the pair, and the tap gives nothing.
+      //  Then the pair with a walk key still down: his sprint is locked for the step, so that is the mode too and never a sprinting tap)
+      { const n = O(B).log.length; onDoor(B, 'workshop_side'); B.press('KeyB', 4); if (O(B).log.length !== n) B.fail(`a tap of the squad's key on the side door gave ${last(B)?.order} while the step asks for plan mode`); }
+      modeUp(B, 'KeyD');
     }
-    stack(B, 'workshop_side');
   },
-  round: B => { B.go(ALLEY, 60, { noDoors: true }); },
+  side: B => {
+    if (cleared(B, 'workshop')) return;
+    modeUp(B);   // (the mode put away by hand: the line then asks for it again)
+    const d = B.door('workshop_side'), c = d.frameCentre as number[], w = B.W.canvas.clientWidth, h = B.W.canvas.clientHeight, [x, y] = B.W.cam.project([c[0], 1, c[2]], w, h);
+    if (x < 40 || x > w - 40 || y < 40 || y > h - 40) B.fail(`from the street the side door is not on the picture in plan mode (${x.toFixed(0)}, ${y.toFixed(0)} of ${w} x ${h}): the line asks for a click he cannot make`);
+    rclick(B, 'workshop_side');
+    if (!O(B).men('all').some(m => stackedOn(B, m) === 'workshop_side')) B.fail(`plan mode's right button on the side door put nobody on it (the last order: ${last(B) ? `${last(B)!.order} on ${last(B)!.target}` : 'none'})`);
+    B.say(`  plan mode: the right button on the side door, from (${B.pos()[0].toFixed(1)}, ${B.pos()[2].toFixed(1)}); the view's point ${viewOff(B).toFixed(1)} m from him`);
+  },
+  round: B => {
+    if (INSIDE && plan(B).up && !cleared(B, 'workshop')) {
+      if (!B.until(() => set(B) || cleared(B, 'workshop'), 40)) B.fail("the squad never stood on 'workshop_side'");
+      rclick(B, 'workshop_side');
+      if (!B.until(() => cleared(B, 'workshop'), 60)) B.fail('a second right click on the stacked side door, in plan mode, did not take the workshop');
+      const P = B.g.rails.prompt() as { line: string; n: number } | null;
+      if (!plan(B).up) B.fail('plan mode went down by itself while the room was taken from inside it');
+      if (!P || !/close plan mode/.test(P.line)) B.fail(`the workshop taken from inside plan mode, the mode still up, and the line is '${P?.line}' (step ${P?.n}): nothing tells him to put the mode away`);
+      B.say(`  the workshop taken from inside plan mode: the line is still '${P?.line}'`);
+    }
+    if (plan(B).up) { B.press('Tab', 3); if (plan(B).up) B.fail('the back key did not put plan mode away'); B.say('  the back key put plan mode away'); }
+    if (!cleared(B, 'workshop')) B.go(ALLEY, 60, { noDoors: true });
+  },
   shop: B => { goIn(B, 'workshop_side', 'workshop'); },
   // the nest: the squad called in, the wall's end, rounds at the gun, the blocks, a grenade over the bags
   follow: B => { menu(B, { ground: B.pos() }, 3); if (!gave(B, 'fallIn')) B.fail(`the menu's 3 gave ${last(B)?.order}`); },
@@ -159,7 +217,7 @@ const RAW: Record<string, (B: Bot) => void> = {
     if (B.g.player.frags < 1) B.fail('no frag to throw'); if (FRAG_WAIT > 0) B.wait(FRAG_WAIT);
     // (the lesson is HIS throw: a nest the squad has already shot a man out of is the lesson gone by, whatever the step's test says)
     { const n = nestTaken(B); if (n) B.fail(`the squad shot ${n} of the nest's two before the frag was thrown (${FRAG_WAIT} s at the blocks)`); }
-    B.press('Digit5', 10); B.click(1, NEST); B.wait(3.5); B.press('Digit2', 10);
+    B.press('Digit5', 10); B.click(1, FRAG_WIDE ? WIDE : NEST); B.wait(3.5); B.press('Digit2', 10);
   },
   // (a man left behind the bags cannot be hit from the blocks: round the nest's open side, as a player would walk)
   // (from where he stands; then from the far end of the strip behind the nest; then from its open side, in between the arms of the bags: the frag can
@@ -169,8 +227,11 @@ const RAW: Record<string, (B: Bot) => void> = {
     if (!B.until(() => cleared(B, 'nest'), 30)) B.fail('the nest was not taken'); },
   // the hall: its men shot through a street window from outside
   window: B => {
+    hallEarly(B); if (cleared(B, 'hall')) B.say("  the hall fell to the squad at the glass while the window's line was being read");
     if (SKY) B.say(`  the sky on every meter: ${skyReads(B)} readings so far`); B.wait(1.5);
-    if (!B.go(WINDOW, 60, { stop: () => cleared(B, 'hall') })) B.say(`  did not reach the window: at ${B.pos().map(v => v.toFixed(1))}`); shootMen(B, 'hall', 40); if (!B.until(() => cleared(B, 'hall'), 60)) B.fail('the hall was not cleared'); hallBy(B); },
+    // (square on to the glass, as the ring puts a player: a pace along the wall the rifle's line is the jamb, and a gun at a wall is not fired)
+    if (!B.go(WINDOW, 60, { stop: () => cleared(B, 'hall'), near: 0.18 }) && !cleared(B, 'hall')) B.say(`  did not reach the window: at ${B.pos().map(v => v.toFixed(1))}`);
+    shootMen(B, 'hall', 40, true); if (!B.until(() => cleared(B, 'hall'), 60)) B.fail('the hall was not cleared'); hallBy(B); },
   // the hall's door: round to the passage, square on to the leaf, and the boot (a frame that held it is kicked again)
   door: B => { hallBy(B); B.go(HALL_SIDE, 60, { noDoors: true }); },
   lock: B => {
@@ -180,6 +241,7 @@ const RAW: Record<string, (B: Bot) => void> = {
     if (d.isClosed() && !d.lockBroken) B.fail(`the hall door would not give to a boot (locked ${d.locked})`);
   },
   hall: B => {
+    hallEarly(B);
     B.go([31.0, 0, 19.75], 30); },
   // the picket: behind the bags, the road gate held, the squad turned to the alley
   // (where the page keeps saves of a squad's run — in memory, the shipped stand — the checkpoint this step wrote as it came up is LOADED before anything is
@@ -217,7 +279,7 @@ export const steps: Record<string, (B: Bot) => void> = Object.fromEntries(Object
  *  rule (runner.ts), and he opens his own locked door on the way out, so the door's lines go by with nobody kicking it (seen on one die of twelve).
  *  'frag' IS NOT ONE OF THEM: the gun is the script's until the frag is thrown, so a nest that falls before that step's throw is the squad taking the
  *  lesson out of the player's hand (the first play on the page), and the run fails on it */
-export const fightOk = ['go-store', 'out', 'side', 'round', 'shop', 'gun', 'blocks', 'nest', 'window', 'door', 'lock', 'front', 'back', 'hold'];
+export const fightOk = ['go-store', 'out', 'mode', 'side', 'round', 'shop', 'gun', 'blocks', 'nest', 'window', 'door', 'lock', 'front', 'back', 'hold'];
 /** a room clear's own end: every defender down ('structure taken') */
 export const ended = (g: { roomClear: { end: string } }) => g.roomClear.end === 'taken';
 export function finish(B: Bot) {

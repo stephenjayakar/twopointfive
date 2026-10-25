@@ -23,10 +23,20 @@ import type { BreathShown } from '../game/snowBreath';
 import type { Vec3 } from '../math/vec';
 import type { FireRecord } from '../render/passes';
 import type { FireShown } from '../game/fire';
+import type { RainShown } from '../game/rainFx';
+import type { SnowBlastShown } from '../game/snowBlast';
+import type { SnowShown } from '../game/snowFx';
 import type { SmokeShown } from '../game/smokebreak';
 
-/** the host books, one member a module (see `hostBooks` below): `fire` = game/fire.ts FireShown, the open fires' smoke filed and bed voices asked for */
-export interface HostBooks { fire?: FireShown }
+/** the host books, one member a module (see `hostBooks` below): `fire` = game/fire.ts FireShown, the open fires' smoke filed and bed voices asked for ·
+ *  `smokeBreak` = game/smokebreak.ts SmokeShown, a smoke break's thread filed with the solver and puffs owed to the pool (dropped too when its switch goes off;
+ *  a thread the solver let go is filed afresh whoever dropped it) · `breath` = game/snowBreath.ts BreathShown, what a breath was shown as (steam through the
+ *  solver or puffs, whose source rides whose mouth, the records filed) · `snow` = game/snowFx.ts SnowShown, the falling snow's whole recycler (what the ring
+ *  took of flakes, wisps and grains, the record seeds, the kicks taken, the read-outs) · `snowBlast` = game/snowBlast.ts SnowBlastShown, what each blast in the
+ *  snow still owes the pool of its puff and its thrown flakes, whose turn the grains' throw is, the records filed · `rain` = game/rainFx.ts RainShown, the
+ *  particle rain's whole recycler (the births and their dice, the drops in the air under the disc, the drip lines and the walk that finds them, the lattice's
+ *  lean, the read-outs) */
+export interface HostBooks { fire?: FireShown; smokeBreak?: SmokeShown; breath?: BreathShown; snow?: SnowShown; snowBlast?: SnowBlastShown; rain?: RainShown }
 export interface HostApi {
   // ---- per frame
   /** the CPU box world: statics, dynamics, raycasts, upload (scene/boxes.ts) — host-neutral */
@@ -53,19 +63,14 @@ export interface HostApi {
   readonly effectiveScale: number;
   /** the view's look-at point as of the last render (the smoke solver spends its pool by distance from it; wind.ts reads it) */
   viewFocus?: Vec3;
-  /** the breath's book of what was shown (game/snowBreath.ts BreathShown: steam through the solver or puffs, whose source rides whose mouth, the records
-   *  filed): the host's, so in no snapshot. Dropped when a save in memory is put back (host/putback.ts), by a reseed, and by the breath itself where the game's
-   *  frame count jumps; a row is bound to the man it was written for, so a restart's fresh men start fresh rows */
-  breathShown?: BreathShown;
   /** the open fires to draw this frame (game/fire.ts writes the list; the engine hands it to the composite — render/passes.ts setFires). Absent on a stand-in */
   fires?: FireRecord[];
+  /** the look's numbers every fire is drawn with (game/fire.ts) */
+  fireLook?: number[] | null;
   /** THE HOST BOOKS: what a game module remembers of the HOST's side of its work (what it filed with the smoke solver, asked of the mixer, handed to the
    *  particle pool) — the host's, so in no snapshot. One bag, so that one line drops them all when a save in memory is put back (host/putback.ts): a module's
    *  new book is a member of HostBooks, read as `engine.hostBooks?.x` and written as `(engine.hostBooks ??= {}).x = …`, and needs no line of its own there */
   hostBooks?: HostBooks;
-  /** a smoke break's book of what was filed with the smoke solver and the particle pool (game/smokebreak.ts SmokeShown): the host's, so in no snapshot.
-   *  Dropped when a save in memory is put back (host/putback.ts) and when the switch goes off; a thread the solver let go is filed afresh either way */
-  smokeShown?: SmokeShown;
   /** the light rig swapped wholesale (day ↔ night): the radiance cache re-primes (game/lighting.ts calls it `?.()`) */
   invalidateWorldCache?(): void;
   /** the level was put back to its start under the picture (game/cleanrestart.ts): every temporal history and the radiance cache start from nothing, as on a boot's
