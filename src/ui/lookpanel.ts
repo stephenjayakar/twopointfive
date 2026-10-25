@@ -20,7 +20,7 @@ const ROWS: readonly [keyof typeof lookAmounts, string, string, number][] = [
   ['ground', 'Snow relief', '× the depth of lying snow\'s drifts, wind ridges and prints (1 = as the game draws it)', 3],
   ['crust', 'Snow crust', 'wind-glazed streaks of snow that hold a lamp\'s sheen', 1.5],
   ['stone', 'Stonework', 'a plinth of field stone under the mud walls and mud brick showing where the render has fallen', 1.5],
-  ['marks', 'Painted marks', 'signs, stripes and rugs drawn as brushed, rubbed paint in place of square cells. 1 = all the way; all the way up (2) is a TEST PICTURE for a GPU where the marks stay square: each mark is drawn in three colours that say what the shader found there', 2],
+  ['marks', 'Painted marks', 'signs, stripes and rugs drawn as old paint in place of square cells: strokes of an uneven width, rubbed off in patches, a shade into the surface under them. 0 = the square cells, 1 = a plain, moderate read, 2 = heavily worn', 2],
   ['men', 'Men', 'the men drawn as cloth, webbing, steel and skin: a print on the uniforms, folds, scuffs, snow caked on their boots', 1.5],
   ['tailor', 'Kit detail', 'what was cut and sewn on the men: seams, pockets and patches, a combat shirt, bar tacks on the webbing, sand boots, knee pads, buttons', 1],
   ['print', 'Printed cloth', "the uniform's print as it is on the bolt: a ground that drifts from tan to sage, green and brown shapes, cream flecks. 0 = the first print", 1],

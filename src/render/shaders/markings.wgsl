@@ -136,25 +136,37 @@ fn markSoftRead(m: MarkRec, x: f32, y: f32) -> vec3f {
   if (nb < 4u && nl < 2u) { o += mkEntry(e) * (5.0 * u * (1.0 - u) * v * (1.0 - v)); }
   return o;
 }
-/** THE LOOK PROTOTYPE (soft > 0 only on that page: gbuffer.wgsl hands lookMarkSoft()): a marking drawn as PAINT, not as cells. The bitmap is read as a soft
- *  picture a cell wide (markSoftRead above: a bilinear ramp between cell centres, with its corner bridge) and cut back at half cover along a line the brush left ragged,
- *  so a staircase of cells is a slanted stroke, a lone cell a dab, a corner round; between two colours the stronger takes the pixel; the paint is thin in
- *  patches where it was rubbed. An entry that BURNS keeps its cells (an LED is a square). `w` = the crisp weights, `ws` = the soft read (the caller's: markSoftRead has ONE call
- *  site in the module, on purpose); returns the weights to use. */
+/** THE LOOK PROTOTYPE (soft > 0 only on that page: gbuffer.wgsl hands lookMarkSoft(), the panel's Painted marks row, 0 to 2): a marking drawn as OLD PAINT,
+ *  not as cells. Four parts, and all but the first keep growing to the top of the row, because at the distance the game is played from a cell is two pixels
+ *  and a rounded corner alone is nothing to see (on a GPU the row read as "doesn't look like it does anything" up to 1):
+ *    THE SHAPE (all of it by 1): the bitmap read as a soft picture a cell wide (markSoftRead above: a bilinear ramp between cell centres, with its corner
+ *      bridge) and cut back to an edge, so a staircase of cells is a slanted stroke, a lone cell a dab, a corner round; between two colours the stronger
+ *      takes the pixel;
+ *    THE HAND: where that cut falls wanders along the stroke (a brush pressed harder and lighter: a stripe a cell wide is 0.7 to 1.3 of one at 1, a third
+ *      to one and a half at 2), over a finer ragged line the bristles left;
+ *    THE WEAR: the paint is rubbed off in patches a hand to a forearm wide, measured in metres on the face and not in cells (a fifth of it at 1, half at 2);
+ *    THE AGE (markTone, the caller's): its colour has gone a shade into the surface under it.
+ *  An entry that BURNS keeps its cells and its colour (an LED is a square). `w` = the crisp weights, `ws` = the soft read (the caller's: markSoftRead has
+ *  ONE call site in the module, on purpose), `t` = metres a cell; returns the weights to use. */
 /** how much of the soft read a pixel takes by its footprint in cells: far off it is the plain coverage again (a tint, never noise) */
 fn markSoftNear(wT: vec2f) -> f32 { return 1.0 - smoothstep(0.75, 1.75, max(wT.x, wT.y)); }
-fn markSoft(m: MarkRec, x: f32, y: f32, wT: vec2f, w: vec3f, soft: f32, salt: f32, ws: vec3f) -> vec3f {
+/** how far an old paint keeps its own colour from the surface under it (× the frame's marking contrast): 0.82 at the row's 1, 0.64 at 2 */
+fn markTone(soft: f32, near: f32) -> f32 { return 1.0 - 0.18 * min(soft, 2.0) * near; }
+fn markSoft(m: MarkRec, x: f32, y: f32, wT: vec2f, w: vec3f, soft: f32, salt: f32, ws: vec3f, t: f32) -> vec3f {
   let foot = max(wT.x, wT.y); let near = markSoftNear(wT);
-  let amt = min(soft, 1.0) * near;
+  let amt = min(soft, 1.0) * near; let age = min(soft, 2.0) * near;
   if (amt <= 0.0) { return w; }
+  let pm = vec2f(x, y) * t;                                            // (metres on the face: the hand and the wear are the painter's and the years', not the bitmap's)
+  let worn = smoothstep(-0.1, 0.1, 0.55 * mkNoise(pm * 3.3 + vec2f(3.0, 9.0 + salt)) + 0.45 * mkNoise(pm * 11.0 + vec2f(salt, 5.0)) - (0.74 - 0.12 * age));
+  let keep = 1.0 - 0.85 * min(age, 1.0) * worn;
   let s = ws.x + ws.y + ws.z;
   if (s <= 0.0) { return w * (1.0 - amt); }
   let eg = clamp(0.5 * foot, 0.07, 0.5);
   let rag = (mkNoise(vec2f(x, y) * 2.3 + vec2f(salt, 1.7)) - 0.5) * 0.3 + (mkNoise(vec2f(x, y) * 0.45 + vec2f(7.0, salt)) - 0.5) * 0.18;
-  let cover = smoothstep(0.5 - eg, 0.5 + eg, s + rag * near);
+  let cut = clamp(0.5 + 0.7 * age * (mkNoise(pm * 9.0 + vec2f(salt, 21.0)) - 0.5), 0.22, 0.82);
+  let cover = smoothstep(cut - min(eg, cut - 0.02), cut + eg, s + rag * near);
   let p4 = ws * ws * ws * ws; let share = p4 / max(p4.x + p4.y + p4.z, 1e-6);
-  let thin = 1.0 - 0.4 * near * smoothstep(0.55, 0.8, 0.6 * mkNoise(vec2f(x, y) * 0.21 + vec2f(3.0, 9.0 + salt)) + 0.4 * mkNoise(vec2f(x, y) * 1.1 + vec2f(salt, 5.0)));
-  var o = share * cover * thin;
+  var o = share * cover * keep;
   o = select(o, w, vec3<bool>((m.emask & 1u) != 0u, (m.emask & 2u) != 0u, (m.emask & 4u) != 0u));
   o = mix(w, o, amt);
   let tot = o.x + o.y + o.z; if (tot > 1.0) { o /= tot; }
@@ -180,16 +192,13 @@ fn markSurfaceGB(slot: u32, bi: u32, wp: vec3f, n: vec3f, dwx: vec3f, dwy: vec3f
       let x = uv.x - f32(m.U0); let y = uv.y - f32(m.V0);
       if (markNear(m, x, y, wT)) {
         var w = markTaps(m, x, y, wT);
+        var tone = 1.0;
         if (soft > 0.0) {
           let near = markSoftNear(wT);
-          if (near > 0.0 || soft > 1.75) {
+          if (near > 0.0) {
             let ws = markSoftRead(m, x, y);   // (the module's one call site: the software adapter builds a copy of the walk for each)
-            // A TEST PICTURE (the panel's Painted marks row all the way up, 2): on the maintainer's GPU the marks stayed square cells where the software
-            // adapter brushed them, and nobody has found why. Here the mark's own patch is painted with what this GPU finds on the way: RED = how much of
-            // the soft read the pixel takes by its footprint (black = "too far, keep the cells"), GREEN = the soft read's cover (a smooth ramp between
-            // cells if it works, flat squares if it does not), BLUE = this record has an entry that burns (those keep their cells by rule).
-            if (soft > 1.75) { o.albedo = vec3f(near, ws.x + ws.y + ws.z, select(0.0, 1.0, m.emask != 0u)); o.rough = 1.0; return o; }
-            w = markSoft(m, x, y, wT, w, soft, f32((bi * 7u + k) % 61u), ws);
+            w = markSoft(m, x, y, wT, w, soft, f32((bi * 7u + k) % 61u), ws, t);
+            tone = markTone(soft, near);
           }
         }
         let sum = w.x + w.y + w.z;
@@ -198,7 +207,7 @@ fn markSurfaceGB(slot: u32, bi: u32, wp: vec3f, n: vec3f, dwx: vec3f, dwy: vec3f
           for (var e = 1u; e <= 3u; e++) {
             let we = w[e - 1u]; if (we <= 0.0) { continue; }
             let pa = markPalA(m, e);
-            let a = select(o.albedo, mix(o.albedo, pa.xyz, frame.markCfg.y), ((m.palFlags >> (e - 1u)) & 1u) != 0u);   // an entry without an albedo of its own keeps the pixel's
+            let a = select(o.albedo, mix(o.albedo, pa.xyz, frame.markCfg.y * select(tone, 1.0, ((m.emask >> (e - 1u)) & 1u) != 0u)), ((m.palFlags >> (e - 1u)) & 1u) != 0u);   // an entry without an albedo of its own keeps the pixel's
             alb += a * we;
             rgh += select(o.rough, pa.w, pa.w >= 0.0) * we;
           }
