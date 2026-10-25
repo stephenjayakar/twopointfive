@@ -966,6 +966,19 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   SEEN ON A GPU: the FIRST build's box, in the maintainer's own shots from the solo tutorial mission (what the notes above answer). NEVER SEEN ON
   A GPU: the one-line box and the panel — looked at as stills of the real page's own markup and styles, and used by real key presses on the
   software adapter with the picture not drawn; nobody has played them.
+- **The box counts the gun's rounds over its magazine's size, with a box for each spare magazine** (`SLOTSETUP.mags`, slotsetup.ts; `ui/handbox.ts`,
+  10-24; the maintainer, of a rifle that read 31 / 60 at a mission's start: "we should say 31/30 and then two spare magazines on the side"). The box
+  of what is in his hands read the rounds in the gun over the rounds in ALL the spares, so a full rifle said 31 / 60 and the 60 read as a magazine's
+  size. NOW the second number is what one magazine holds (31/30: thirty and the one in the chamber) and each spare magazine is a little upright box
+  beside it, fullest first, filled as far as that magazine is (the old column's own `.mags` drawing); one put back part used is a part-full box, an
+  empty one a dim outline. Nothing of the guns changed: the rifle's row is still thirty rounds and two spares (`weapons.ts`), the same on every
+  level. The strip's small number (the rounds ready) and the old column (`?slotsetup=0`) are as they were. SWITCH: `SLOTSETUP.mags`, the box's
+  alone (nothing in the game reads it), OFF in the module and on the frozen stand (`standGame` pins it off; `FROZEN_HOLDS` row with no word), ON in
+  the page (`?magboxes=0` = 31 / 60, as it was); a recording from before the key replays with it off. CHECK: `probes.ts magboxes`
+  (`tools/qa/magboxes-check.ts`, family `kit`; `MAGBOXES_BREAK=1` must fail) on BOTH stands, the box drawn by the real overlay code on the probes'
+  stand-in elements: the rifle at the start, six rounds fired, a reload (the magazine that came out is a box as full as it was), the pistol, the key
+  off, the journal, the stands. NOBODY HAS seen it on a GPU or in play; the picture handed to the maintainer is the box's own elements and styles
+  off the software-adapter page.
 - **Empty hands are a slot on backtick; E is spare; the debugger is on backslash** (`src/game/handslot.ts HANDSLOT {on}`, `HANDSLOT_KEY`, 10-22; the
   maintainer: "having backtick be the empty state", "when holding a guy, we can just have picking empty hands or pistol as the way to change
   equipment", "we can move the debug menu to \ or something like that", "if we have an empty equipment state, we can keep that lmb is knife, rmb is
