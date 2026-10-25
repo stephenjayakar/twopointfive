@@ -36,6 +36,28 @@ if (val('stealth-tape-to')) {
   writeFileSync(val('stealth-tape-to')!, JSON.stringify({ ...buf.file(W.game, 'probe', { url: '', fp: levelFingerprint(W.game) }), probeDigest: hashDigest(digestGame(W.game, true)), probeRule: Kt.kitStealthOn(), probeRings: W.game.player.rifle.rings }));
   process.exit(0);
 }
+// (the `stand` section's third child: the sneak lab as its page plays it — host/sneaklab.ts sneakLabBoot, less its panel: the game's restart wrapped to stage the
+// scenario behind it, Sam stood at a scenario's start before the first step, the lab's two sandbox flags written every frame; then another scenario picked on the
+// panel a few seconds in (between two steps), Shift+Enter (a restart the step makes itself), a debug teleport mid-walk and a slider moved with the control's
+// event heard — taped on whatever stand this process was started on, written to the file named; then nothing else runs)
+if (val('lab-tape-to')) {
+  const { levelOf } = await import('./rerun.ts'), LAB = await import(`${ROOT}/src/host/sneaklab.ts`), { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
+  const url = '?levelFile=sneak-lab.json&solo&sneaklab&scene=3';
+  Math.random = mulberry32(0xbeef);
+  const W: any = await standUp({ seed: 21, level: await levelOf('sneak-lab.json') }), g = W.game; startFromQuery(g, url);
+  { const back = g.restart.bind(g); g.restart = (said?: string) => { back(said); LAB.stage(g); }; }
+  LAB.SNEAKLAB.on = true; LAB.SNEAKLAB.scene = 2; LAB.stage(g);
+  const buf = new ReplayBuffer(); buf.tape.born(g); const TWOGEARS = (await import(`${ROOT}/src/game/knobs.ts`)).knobsNamed().TWOGEARS as { crouch: number };
+  g.replayTap = (dt: number, cmd?: unknown) => { if (cmd) buf.top(g, dt, cmd); else buf.tick(g, dt, W.cam); };
+  for (let f = 0; f < 900; f++) { const I = W.input, s = f / 60; I.keys.clear(); if (s > 1) I.keys.add('KeyW'); I.mouseX = 800 + 300 * Math.sin(s * 0.7); I.mouseY = 420 + 150 * Math.cos(s * 0.5);
+    if (f === 300) { LAB.SNEAKLAB.scene = 1; g.restart(); }
+    if (f === 450) { I.keys.add('ShiftLeft'); I.pressed.add('Enter'); }
+    if (f === 600) g.teleportPlayer([10.7, 0, 12.45]);
+    if (f === 700) { TWOGEARS.crouch = 0.9; buf.tape.touched(); }
+    LAB.sneakLabFrame(g); W.step(1 / 60); }
+  writeFileSync(val('lab-tape-to')!, JSON.stringify({ ...buf.file(g, 'probe', { url, levelFile: 'sneak-lab.json', fp: levelFingerprint(g) }), probeDigest: hashDigest(digestGame(g, true)) }));
+  process.exit(0);
+}
 // (the `stand` section's child: a room clear with the four taped on whatever stand this process was started on, written to the file named — then nothing else runs)
 if (val('tape-to')) {
   const K = await import(`${ROOT}/src/game/knobs.ts`), Kt = await import(`${ROOT}/src/game/kit.ts`), { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
@@ -304,6 +326,7 @@ console.log('\n=== replay buffer ===');
     check(child.exitCode === 0, `stand: a room clear with the four taped on the shipped stand${child.exitCode !== 0 ? ` — the child failed (${child.exitCode}): ${child.stderr.toString().slice(-300)}` : ''}`);
     if (child.exitCode === 0) {
       const file = JSON.parse(readFileSync(at, 'utf8')), rc = file.rerun.recipe, names = Object.keys(rc.tables ?? {});
+      { const poses = (file.rerun.x as any[]).filter(x => x[1] === 'pose'); check(poses.length === 1 && poses[0][0] === 0, `stand: a run nobody stages or moves him in tapes where the player stands once, at its first step (${poses.length} such rows over ${file.rerun.ticks} steps)`); }
       check(rc.stand === 'shipped' && rc.tables?.PACE?.accel === 0.6 && !names.some(n => n in J.knobTables()) && names.length + Object.keys(rc.knobs.tables).length === Object.keys(K.knobsNamed()).length && rc.kit?.members?.[4]?.suit === 'navy',
         `stand: the tape says where it stood and carries the kit and every knob table once (${names.length} beside the ${Object.keys(rc.knobs.tables).length} a recording has)`);
       const same = (R: any) => !R.refuse && !!R.report && R.report.compared > 100 && !R.report.drift && hashDigest(digestGame(R.W.game, true)) === file.probeDigest;
@@ -334,7 +357,32 @@ console.log('\n=== replay buffer ===');
           check(!same(R0) && wore(R0) > 0, `stand: with the card taken off the tape it wears the mission's kit and is another run (${wore(R0)} sponge rounds; ${R0.report?.drift ? `parted at step ${R0.report.drift.n}` : 'the digest differs'})`);
         }
       } }
-  } finally { back(); try { rmSync(at); } catch { /* never written */ } } }
+    // where the player was PUT from outside a step rides in the tape ('pose' rows, runtape.ts): the sneak lab's page stands him at its scenario's start and again
+    // after every restart, and none of that is the game's own (host/sneaklab.ts)
+    { back(); const child3 = Bun.spawnSync([process.execPath, 'run', import.meta.path, '--lab-tape-to', at], { env: { ...process.env, TPS_PROFILE: 'shipped' }, stdout: 'ignore', stderr: 'pipe', timeout: 180000 });
+      check(child3.exitCode === 0, `stand: the sneak lab as its page stages it (a scenario at the start, another picked on the panel, a teleport) taped on the shipped stand${child3.exitCode !== 0 ? ` — the child failed (${child3.exitCode}): ${child3.stderr.toString().slice(-300)}` : ''}`);
+      if (child3.exitCode === 0) {
+        const file = JSON.parse(readFileSync(at, 'utf8')), xs = (file.rerun?.x ?? []) as any[], poses = xs.filter(x => x[1] === 'pose'), ins = xs.filter(x => x[1] === 'posein'), iR = xs.findIndex(x => x[1] === 'restart');
+        check(poses.length === 3 && poses[0][0] === 0 && poses[1][0] === 300 && poses[2][0] === 600 && iR >= 0 && xs[iR][0] === 300 && xs[iR + 1] === poses[1] && xs.filter(x => x[1] === 'restart').length === 1,
+          `stand: the tape has where he was put from outside a step, and nothing else of the kind: at the first step, after the panel's restart (the row behind it) and at the teleport (${poses.length} rows, at steps ${poses.map(p => p[0]).join(', ')})`);
+        check(ins.length === 1 && ins[0][0] === 450, `stand: …and where the restart a step made itself (Shift+Enter) left him, behind the lab's staging (${ins.length} row${ins.length === 1 ? '' : 's'}, at step ${ins.map(p => p[0]).join(', ')})`);
+        { const tb = xs.filter(x => x[1] === 'table' && x[2]?.[0] === 'TWOGEARS'); check(tb.length === 1 && tb[0][0] === 700 && tb[0][2][1].crouch === 0.9, `stand: a slider moved with its control's event heard is taped at the step it first acts on (TWOGEARS at step ${tb.map(t => t[0]).join(', ') || 'none'})`); }
+        const same = (R: any) => !R.refuse && !!R.report && R.report.compared > 100 && !R.report.drift && hashDigest(digestGame(R.W.game, true)) === file.probeDigest, said = (R: any) => R.report?.drift ? `parted at step ${R.report.drift.n}` : R.refuse ? `refused: ${String(R.refuse).slice(0, 120)}` : `${R.report?.compared} samples, worst ${R.report?.worst?.metres.toFixed(3)} m`;
+        const R = await rerun(file, { toN: 900 });
+        check(same(R), `stand: walked here, where no lab was ever opened, it is the same run to the digest (${said(R)})`);
+        // …and with the rows taken off: read as a lab tape from before them it is stood at its address's scenario and holds until the panel's pick, which no such
+        // tape has; with the lab's word off the address too, nobody stands him anywhere and it parts at once
+        const less = (word: boolean, kinds = ['pose', 'posein']) => { const f = JSON.parse(JSON.stringify(file)); f.rerun.x = f.rerun.x.filter((x: any) => !kinds.includes(x[1])); if (!word) f.rerun.recipe.search = f.rerun.recipe.search.replace('&sneaklab', ''); return f; };
+        back(); const R2 = await rerun(less(true, ['posein']), { toN: 900 }), n2 = R2.report?.drift?.n ?? -1;
+        check(!same(R2) && n2 > 450 && n2 < 500, `stand: without the row of the restart made inside a step it is the same run up to that Shift+Enter, and another from it (${said(R2)})`);
+        back(); const R1 = await rerun(less(true), { toN: 900 }), n1 = R1.report?.drift?.n ?? -1;
+        check(!same(R1) && n1 > 300 && n1 < 400 && (R1.report?.warnings ?? []).some((w: string) => /from before the tape carried where the player was put/.test(w)),
+          `stand: without the rows it is read as an older lab tape, stood at its address's scenario and said so: the same run up to the scenario picked on the panel, another after it (${said(R1)})`);
+        back(); const R0 = await rerun(less(false), { toN: 900 }), n0 = R0.report?.drift?.n ?? -1;
+        check(!same(R0) && n0 >= 0 && n0 < 30, `stand: without the rows and the lab's word nobody stands him at the scenario's start, and it parts from the first sample (${said(R0)})`);
+      } }
+  } finally { back(); { const L = (await import(`${ROOT}/src/host/sneaklab.ts`)).SNEAKLAB; L.scene = 0; L.unseen = true; }   // (an older lab tape's re-run stages with the lab's own table: as it was)
+    try { rmSync(at); } catch { /* never written */ } } }
 
 // ---- crash: an error that repeats makes ONE file a minute and three a page load, in a browser that keeps no shelf (bun has no IndexedDB: the shelf's own branch
 // stamps through the same line of ReplayKey.put) ----

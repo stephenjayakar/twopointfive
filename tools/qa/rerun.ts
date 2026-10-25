@@ -84,7 +84,14 @@ export async function rerun(F: ReplayFile, opts: { toN?: number; tol?: number; e
     Kt.kitMission(null);   // (no mission's card stands first in the table while the tape's cards are written into it)
     Kt.kitOwn(c.own === true); Kt.KIT.on = c.on !== false; const cards = Array.from({ length: Kt.KIT_MEMBERS }, (_, i) => Kt.kitSanitize(i, (c.members as unknown[])[i])); Kt.KIT.members.length = 0; Kt.KIT.members.push(...cards);
     Kt.kitStealthSet(c.stealth); };   // (kit.ts KITDEAL.stealth: the stealth card the tape's run wore beside the loud one, or none — never this process's; as the page's player does, engineplay.ts kitOf)
-  let g: Headless['game'];
+  const RT = await import(`${ROOT}/src/game/runtape.ts`);
+  // (A SNEAK LAB TAPE FROM BEFORE THE TAPE CARRIED WHERE THE PLAYER WAS PUT — the page's address has the lab's word and no 'pose' row is on it: the lab's page stood
+  // him at its scenario's start at boot and after every restart, host/sneaklab.ts stage, and nothing of that was taped. Done here from the address's own scene, with
+  // THIS checkout's lab (its scenarios and its staging: the level's fingerprint does not cover them); a scenario picked on the lab's panel later is not on such a
+  // tape, and the men's buttons — a gap, a seat, the lamps — are on no tape)
+  const labQ = new URLSearchParams(rc.search ?? ''), labOld = labQ.has('sneaklab') && !tape.x.some(r => r[1] === 'pose');
+  const LAB = labOld ? await import(`${ROOT}/src/host/sneaklab.ts`) : null, labStage = () => { if (LAB) LAB.stage(g); };
+  let g: Headless['game'], poses: { row(f: number, kind: string, data: unknown): boolean } | null = null;
   /** the tables and the game's tune just before and just after journal.ts applyKnobs (which, beside the tape's own keys, writes the older value of some keys a file lacks) */
   const knobsWere: unknown[] = [], knobShot = (): unknown => JSON.parse(JSON.stringify({ ...reg, tune: g.tune }));
   try {
@@ -101,6 +108,10 @@ export async function rerun(F: ReplayFile, opts: { toN?: number; tol?: number; e
     { const fpo = levelFingerprint(g) as any, fp = typeof fpo === 'string' ? fpo : fpo?.fp; if (F.level.fp && fp !== F.level.fp && !opts.force) return out(`the replay was saved on another level than this checkout's (${F.level.file ?? 'the office'}: fingerprint ${F.level.fp} there, ${fp} here)${F.commit ? `. Check out ${F.commit} (git worktree add ../at-replay ${F.commit}) and run this there` : ''}; --force walks it anyway`); }
     knobsWere.push(knobShot()); J.applyKnobs(g, rc.knobs); knobsWere.push(knobShot()); tables(); J.applyEnvGame(g, rc.env);
     if (rc.search && rc.search.length > 1) { const r = startFromQuery(g, rc.search); if (r.why) warnings.push(`the page's scenario did not start here: ${r.why}`); tables(); }
+    if (LAB) { const n = Number(labQ.get('scene')); LAB.SNEAKLAB.scene = n >= 1 && n <= LAB.SCENES.length ? n - 1 : 0; labStage();
+      { const back = g.restart.bind(g); g.restart = (said?: string) => { back(said); labStage(); }; }   // (a restart the run makes itself, Shift+Enter: wrapped as the lab's page wraps it)
+      warnings.push(`a sneak lab replay from before the tape carried where the player was put: he is stood at the start of the address's scenario (${LAB.SCENES[LAB.SNEAKLAB.scene].name}) as THIS checkout's lab stages it, at the first step and after every restart${F.commit ? ` — the replay's own build is ${F.commit}` : ''}. A scenario picked on the lab's panel during the run is not on this tape`); }
+    poses = RT.tapePoses(g);
   } finally { for (const [k, v] of Object.entries(kept)) setEnv(k, v); }
   // ---- a tape OLDER (or newer) than this build's knobs. tables() and applyKnobs write only the keys the tape has, so a key added to a table (or to Game.tune)
   // since the tape was saved is played at THIS build's value — and what such a key was 'before it existed' is its author's knowledge alone (journal.ts applyKnobs
@@ -146,7 +157,8 @@ export async function rerun(F: ReplayFile, opts: { toN?: number; tol?: number; e
   for (let f = 0; f < toN; f++) {
     // from outside the step, as the page did it
     for (const [, kind, data] of walk.outside()) {
-      if (kind === 'restart') g.restartEncounter();
+      if (kind === 'restart') { g.restartEncounter(); labStage(); }
+      else if (poses?.row(f, kind, data)) { /* where the player was put from outside a step, or by a restart inside the coming one: runtape.ts */ }
       else if (kind === 'flags') { const fl = data as any; g.godMode = !!fl.godMode; g.aiEnabled = fl.aiEnabled !== false; g.infiniteAmmo = !!fl.infiniteAmmo; g.playerInvisible = !!fl.playerInvisible; }
       else if (kind === 'tune') K.assignDeep(g.tune, data as any);
       else if (kind === 'table') { const [name, src] = data as [string, any]; const Tb = reg[name]; if (Tb && plain(src)) put(Tb, src); }
