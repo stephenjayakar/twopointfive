@@ -726,6 +726,14 @@ export const WALL_TUCK = {
   /** gunWall 1‥2: the hand drawn this much further back again, metres (a torso twisted hard round carries the whole carriage forward of his feet) */
   over: 0.12,
 };
+/** SAM SPRINTS WITH BOTH HANDS ON THE PISTOL (the maintainer, 10-25: "sprinting with pistol animation is weird, should keep two hands on it and at low
+ *  ready, like rifle sprinting animation"). A sprint took the pistol's layer off (`upper` 'none'), so the gun rode a pumping fist while the rifle's sprint
+ *  is the long gun's low ready in both hands. With `on`, a figure told `runReady` (player.ts: the sprint, the pistol in his hand) and in no stance of its own
+ *  takes the pistol's LOW READY over the running legs — the stance every man moving between doors already has, arms only — drawn in toward the belt as a
+ *  runner carries it: the low ready's spring targets go to these (STANCES' units; fwd / up from the pelvis, pitch in degrees, tuck 0‥1). Off, or the
+ *  input never raised (every guard, every teammate, the frozen stand): the animator as it was, to the bit. First numbers, off the capsule strips. */
+export const RUNREADY = { on: false, fwd: 0.24, up: -0.185, pitch: -50, tuck: 0.6 };
+
 /** a long carriage's targets pulled toward WALL_TUCK.long by w (0‥1), in place */
 function longTuck(t: number[], gunWall: number): void {
   const w = clamp(gunWall, 0, 1), T = WALL_TUCK.long, to = (i: number, v: number) => { t[i] += (v - t[i]) * w; };
@@ -1529,6 +1537,8 @@ export class CharacterAnimator {
   /** a wall (a leaf, a desk) stands inside the low ready's reach in front of him: 0 none ‥ 1 at his chest (‥ 2: and his torso turned into it) — how far the low carriages are pulled in (WALL_TUCK).
    *  game/gunwall.ts writes it every frame its rule is on; nothing else does, and at 0 nothing here is touched. */
   gunWall = 0;
+  /** RUNREADY (player.ts, asked every frame): he is sprinting with the pistol in his hand — the low ready over the run, while no stance of his own is up */
+  runReady = false;
   /** where the SUPPORT hand takes the long gun, in the trigger hand's gun frame (x the figure's left, y up out of the receiver, z along the bore, from the wrist):
    *  the left wrist's point and the fingers' / back-of-hand directions. rigProps.carbineGrip(RIG) works them out from RIG.carbine (its group adj + gripL) and
    *  whoever arms the figure writes them here (game.ts each frame, the viewer live); the defaults are RIG's shipped numbers */
@@ -2280,11 +2290,12 @@ export class CharacterAnimator {
     if (this.plantW > 0 || this.plantL.dev !== 0 || this.plantR.dev !== 0) this.runPlant(ph, s, dt, this.plantW, wSprint); else this.plantL.pz = this.plantR.pz = NaN;   // (a foot let go mid-swing by a stop still bleeds its offset off; at rest the layer is skipped outright — walk, crouch and sprint pose exactly as they did)
     // ---- stance springs (run always: they hold the shape the arms morph through; the master weight is what comes and goes)
     const st = this.st, ws = this.wst; const SW = 13;   // 90 % there in 0.3 s, soft at both ends
-    const held: Stance = kt >= 0 && kt < 0.55 ? 'highReady' : this.stance;   // the kick pulls whatever carry is up into the compressed high ready (an extended low ready would meet the knee), handing back for the plant
+    const runLow = this.runReady && this.stance === 'none', stance: Stance = runLow ? 'lowReady' : this.stance;   // (RUNREADY: the sprint's low ready is a stance nobody set — false, and `stance` his own, wherever the input is not raised)
+    const held: Stance = kt >= 0 && kt < 0.55 ? 'highReady' : stance;   // the kick pulls whatever carry is up into the compressed high ready (an extended low ready would meet the knee), handing back for the plant
     const shape = held !== 'none' ? STANCES[held] : null; const side = this.stackSide;
     const wWas = Math.max(clamp(st.w.x, 0, 1), wKslow);   // the weight the last frame showed (read before stepping: one 60 Hz step from nothing already carries the master past the snap threshold below)
-    const wSt = clamp(st.w.step(this.stance !== 'none' ? 1 : 0, this.stance === 'none' && this.stanceOut > 0 ? this.stanceOut : this.stanceIn > 0 && this.stance !== 'none' ? this.stanceIn : this.stance === 'wall' || this.stanceSeen === 'wall' ? 22 : SW, dt), 0, 1);   // the master weight follows the stance itself (a kick from no stance shows the carry through wKslow); on and off the wall in ~0.2 s
-    if (this.stanceOut > 0 && (this.stance !== 'none' || wSt < 0.02)) this.stanceOut = 0;   // (the wall's quick way out is for THAT exit: gone once the pose is, or once another stance is asked for)
+    const wSt = clamp(st.w.step(stance !== 'none' ? 1 : 0, stance === 'none' && this.stanceOut > 0 ? this.stanceOut : this.stanceIn > 0 && stance !== 'none' ? this.stanceIn : stance === 'wall' || this.stanceSeen === 'wall' ? 22 : SW, dt), 0, 1);   // the master weight follows the stance itself (a kick from no stance shows the carry through wKslow); on and off the wall in ~0.2 s
+    if (this.stanceOut > 0 && (stance !== 'none' || wSt < 0.02)) this.stanceOut = 0;   // (the wall's quick way out is for THAT exit: gone once the pose is, or once another stance is asked for)
     if (this.stackPress !== this.stackPressSm) this.stackPressSm += clamp(this.stackPress - this.stackPressSm, -0.9 * dt, 0.9 * dt);   // (WALLSNAP: the press walks across at 0.9 m/s — a turn-about is a quarter second of it, never a frame)
     const armed = this.upper === 'relaxed' || this.upper === 'aim' || this.shootT >= 0;   // the pistol is in the hand (the door hand must then be the left)
     const parkNow = 1 - smoothstep(0.12, 0.7, s);                                          // the wall hold: standing on its own foot spots (1) or on the cycle's feet (0)
@@ -2296,8 +2307,9 @@ export class CharacterAnimator {
       }
       this.stanceSeen = held;
       const gw = held === 'lowReady' && this.gunWall > 1e-4 ? clamp(this.gunWall, 0, 1) : 0, TP = WALL_TUCK.pistol, gwo = gw ? clamp(this.gunWall - 1, 0, 1) * WALL_TUCK.over : 0;   // (the low ready pulled in for a wall: WALL_TUCK — 0, the shape's own numbers to the bit)
-      st.fwd.step(gw ? lerp(shape.fwd, TP.fwd, gw) - gwo : shape.fwd, SW, dt); st.up.step(gw ? lerp(shape.up, TP.up, gw) : shape.up, SW, dt); st.side.step(shape.side - 0.02 * side * (shape.blade / 22), SW, dt); st.pitch.step(gw ? lerp(shape.pitch, TP.pitch, gw) : shape.pitch, SW, dt);
-      st.lean.step(shape.lean, SW, dt); st.headPitch.step(shape.headPitch, SW, dt); st.tuck.step(gw ? lerp(shape.tuck, TP.tuck, gw) : shape.tuck, SW, dt);
+      const RR = runLow && held === 'lowReady' ? RUNREADY : shape;   // (the sprint's low ready: the same stance drawn in — `shape` itself everywhere else)
+      st.fwd.step(gw ? lerp(RR.fwd, TP.fwd, gw) - gwo : RR.fwd, SW, dt); st.up.step(gw ? lerp(RR.up, TP.up, gw) : RR.up, SW, dt); st.side.step(shape.side - 0.02 * side * (shape.blade / 22), SW, dt); st.pitch.step(gw ? lerp(RR.pitch, TP.pitch, gw) : RR.pitch, SW, dt);
+      st.lean.step(shape.lean, SW, dt); st.headPitch.step(shape.headPitch, SW, dt); st.tuck.step(gw ? lerp(RR.tuck, TP.tuck, gw) : RR.tuck, SW, dt);
       st.blade.step(-side * shape.blade, SW * 0.8, dt); st.headYaw.step(-side * shape.headYaw, SW, dt); st.squat.step(shape.squat, SW * 0.8, dt);   // (yaw + = to the figure's left; side + = wall on its right)
       ws.wl.step(held === 'wall' ? 1 : 0, this.stanceIn > 0 && held === 'wall' ? this.stanceIn : 22, dt); ws.side.step(side, SW, dt); ws.peek.step(clamp(this.wallPeek, 0, 1), 20, dt);   // (wl at the wall's own brisker rate; the peek is already ramped by the controller)
       ws.park.step(parkNow, parkNow < ws.park.x ? 30 : 12, dt);   // off the spots briskly when he sets off (the feet must be the cycle's within a stride), back onto them over ~0.3 s when he stops — a shuffle into place, not a skate

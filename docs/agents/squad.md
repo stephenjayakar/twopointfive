@@ -393,22 +393,72 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **Plan mode's circles are fainter, and a slider sets them** (2026-10-24; `src/ui/planlook.ts`, `ui/cmdring.ts updatePlan`, index.html
   `.planmode .pm` / `.pself`; picture only: no stand, no knob table, no recording knows of it; the maintainer, 10-24: "plan mode circles should be
   fainter -- can you add a slider in the settings and remind me to tweak?"). The circle at each man's feet with plan mode up, and the player's own, is
-  its built strength (0.6 a man's, 0.95 a picked man's and his own) times `--pm-k`, which the layer writes from `planRings()`. THE PAGE OPENS AT 0.5
-  (`PLANLOOK_PAGE`; with nobody picked by hand every man is picked, so what he sees is 0.95 going to about 0.48). THE SLIDER is Options > Game >
+  its built strength (0.6 a man's, 0.95 a picked man's and his own) times `--pm-k`, which the layer writes from `planRings()`. THE PAGE OPENS AT 0.4 (the maintainer, 10-25: "I'd tune it to 40% and keep the dotted circles"; it was 0.5)
+  (`PLANLOOK_PAGE`; with nobody picked by hand every man is picked, so what he sees is 0.95 going to 0.38). THE SLIDER is Options > Game >
   "Plan mode circles", 0 to 100 %, kept on this machine (`twopointsix.planlook`), put back by Reset to defaults; the debugger has the same value
   ('plan mode ▸ circles, strength'). `?planrings=<0..1>` is a visit's own word and is never kept; `?planrings=1` = as it was built. `window.__planlook`
   moves it from a page check. CHECK `probes.ts planlook` (family ui; 5 lines, no game stood up, the same on both stands; `PLANLOOK_BREAK=1` asks them
   of a `?planrings=1` visit: lines 1 and 2 fail) and, on the real page, `PORT=<port> node tools/qa/planlook-page.cjs` (the circles' own computed
   opacity; the software adapter). NOT SEEN: the right default is the maintainer's to find on his GPU; 0.5 is a first guess.
+- **The wheel with the ring up steps nobody** (2026-10-24; `CMDRING.wheelIdle`, `orders.ts ringInput`). The maintainer, with a recording of the
+  depot: "got into a weird state where my command modes (not plan mode) only selected blue team". The recording has a two-finger scroll with the
+  squad's ring still up. A scroll there stepped who the orders go to (everyone, one pair, the other: "the wheel steps who" in the ring's bullets
+  above is the ring as built), the choice stayed after the ring had gone, only the ring's own caption showed it, and under `only` the who key has
+  no key to step it back. ON: the scroll is still taken out of the frame (it is not his walking pace under the ring) and changes nobody's choice. A
+  click on a man with the ring up is still him, plan mode's picks still choose, and the who key still steps where the player has given it a key.
+  SWITCH: ON in the page (`?wheelidle=0` = the wheel steps who, as built), OFF in the module and on the frozen stand (`TPS_WHEELIDLE=1`); a
+  recording from before the key replays with it off; debugger tick "Tab ▸ the ring ▸ the wheel steps nobody". CHECK: `probes.ts wheelidle` (family
+  squadorders; `tools/qa/wheelidle-check.ts`), six lines on both stands, fed the recording's own twenty wheel records tick for tick: with the switch
+  off they walk everyone, blue, red, everyone, blue and the next tap goes to two men of four; with it on the orders stay everyone's and the tap goes
+  to all four. `WHEELIDLE_BREAK=1` fails lines 1 and 3 on both stands. `cmdring-check` holds the switch off in its rig (its line 7 steps who by the
+  wheel). MEASURED: one deal of the office room clear, squad of four; the rule has no die in it. NOT DONE: nothing on screen outside the ring's
+  caption says the orders are narrowed to a pair or a man, and plan mode put down leaves the orders with whoever was last picked in it. Nobody has
+  played it; no part of it is a picture.
+- **Quick orders are the whole squad's** (2026-10-24; `CMDRING.wholeSquad`, `orders.ts whole()`). The maintainer: "quick Q mode should always do
+  the whole squad. you should only be able to issue commands to parts of the squad in plan mode". ON, with plan mode down, for the player's own
+  squad: `readInput` puts `who` back to everyone each frame however it was left (and the who key steps nobody), `targetUnder` reads a teammate
+  under the cursor as the squad itself (`{ kind: 'none' }` with no `man`: a tap or a ring on him is not his alone), `ringInput` takes a click on a
+  man with the ring up as the ring's own click (it gives the lit wedge where the ring stays; it picks nobody), and `planmode.ts down()` puts the
+  orders back with everyone as the mode goes. IN PLAN MODE nothing changes: a man, a pair or a set is picked by click, box or digit, its order
+  goes to those men, and a chain laid for them keeps them after the mode is down. A caller that names its own men (`give(id, target, who)`: the
+  autopilot, a tutorial's script, a check) is not the player's choice and is untouched. SWITCH: ON in the page with plan mode (`?wholesquad=0` =
+  the choice is stepped and kept outside the mode, as built; `?qonly=0`, the older keys with T back, takes it off too), OFF in the module and on the frozen stand (`TPS_WHOLESQUAD=1`, beside
+  `TPS_QPLAN=1`); a recording from before the key replays with it off; debugger tick "Tab ▸ plan mode ▸ only plan mode picks a part of the squad".
+  CHECK: `probes.ts wholesquad` (family squadorders; `tools/qa/wholesquad-check.ts`), eight lines on plan mode's rig on both stands;
+  `WHOLESQUAD_BREAK=1` fails lines 1 to 5 on both. HELD OFF in the rigs of the checks that step who outside plan mode on purpose: `cmdring-check`,
+  `wheelidle-check`, `orders-probes`, `orderui-probes`, `pressorders-probes`. MEASURED: one deal of the office room clear, squad of four; the rule has no die in it. NOT
+  DONE: Options still offers "Order who" for the Tab key and a key for "who" on its Controls page, and both now do nothing outside plan mode.
+  Nobody has played it; no part of it is a picture.
+- **Plan mode's reach is the same at any zoom** (2026-10-25; `CMDRING.planNearFlat`, `planmode.ts pan`). The maintainer: "max distance for plan
+  mode seems to be based on the zoom level? should be zoom invaraitn". The box `planNear` holds the view's point in (6.5 m to either side of him,
+  4.5 m up the screen, 6 m down it) was scaled by the camera's distance over 21 when zoomed in, so that he stayed on the screen: at the camera's
+  12 the view stopped 3.7 m to the side. ON: the box is its own metres at every zoom, and zoomed in he can be off the screen's edge with the view
+  at the box's. SWITCH: ON in the page with `planNear` (`?plannearflat=0` = the box shrinks as the camera comes in, as built), OFF in the module
+  and on the frozen stand (`TPS_PLANNEARFLAT=1`, beside `TPS_PLANNEAR=1`); a recording from before the key replays with it off; debugger tick
+  "Tab ▸ plan mode ▸ the same reach at any zoom". CHECK: `probes.ts plannearflat` (family squadorders; `tools/qa/plannearflat-check.ts`), four
+  lines on both stands with the camera at 8, 12, 21 and 40; `PLANNEARFLAT_BREAK=1` fails lines 1 and 2. `plannear-check` holds the switch off
+  (its line 3 asks the smaller box zoomed in). MEASURED: one deal of the office room clear. Nobody has played it; never seen on a GPU, and
+  whether he reads as lost off the screen's edge when zoomed in is for the maintainer's eyes.
+- **Plan mode: a click on bare ground deselects** (2026-10-25; `CMDRING.planClear`, `planmode.ts planInput`). The maintainer, with the digits
+  picking the men and the ground click doing nothing: "clicking on the ground to deselect is pretty key". ON, with `planDigits`: a left click on
+  bare ground leaves NOBODY picked (`plan.pick = []`, an empty set that `tick` lets stand): no circle is drawn as picked, a right click orders
+  nobody ("nobody to take that order"), no chain is laid. A click on a man, a box, a digit, Shift + either (it adds to the empty set) or 5 for
+  everyone picks again; the mode put down forgets it and comes up with everyone. A TUTORIAL MISSION KEEPS ITS OWN GROUND CLICK (everyone,
+  `planGroundAll`) while its lines name it. SWITCH: ON in the page with the digits (`?planclear=0` = the click picks nobody new, who was picked
+  stays picked), OFF in the module and on the frozen stand (`TPS_PLANCLEAR=1`, beside `TPS_PLANDIGITS=1`); a recording from before the key
+  replays with it off; debugger tick "Tab ▸ plan mode ▸ a click on the ground deselects". CHECK: `probes.ts planclear` (family squadorders;
+  `tools/qa/planclear-check.ts`), seven lines on plan mode's rig on both stands; `PLANCLEAR_BREAK=1` fails lines 1 to 3. `plandigits-check` holds
+  the switch off (its line 4 asks the click as the digits were built). MEASURED: one deal of the office room clear, squad of four; no die in it.
+  Nobody has played it; the unlit circles have never been seen on a GPU.
 - **Plan mode: the digits pick the men** (2026-10-24; `CMDRING.planDigits`, `planmode.ts planInput` / `pickDigit` / `planGroundAll`; the maintainer,
   10-24: "1 2 3 4 in plan mode should select the appropriate squad members, and 5 selects all of them? and then we should remove clicking on the
   ground selects all"). With the mode up and no ring or menu up: 1 to 4 pick that man alone in the squad's own order (Red One, Red Two, Blue One,
   Blue Two; a man keeps his digit when another is down, and a digit with no living man is nothing), Shift + the digit puts him in the picked set or
   takes him out as a Shift click does, 5 picks everyone, and his digit is drawn up and to the right of each man's circle (`PlanView.men[].n`,
   `.planmode .pn`). A LEFT CLICK ON BARE GROUND THEN PICKS NOBODY NEW: who was picked stays picked; a click on a man and a box still pick. A digit
-  with the ring's key down is left for the ring (`stayDigit`). A TUTORIAL MISSION (rails live) KEEPS THE GROUND CLICK: mission 2's lines say
-  "Left-click on empty ground to pick your whole squad again" and its scripted player does it, the plan tutorial's own to move (told); the digits
-  work there too. ON in the page with the mode (`?plandigits=0` off), OFF in the module and on the frozen stand (`TPS_PLANDIGITS=1`, beside
+  with the ring's key down is left for the ring (`stayDigit`). ON A TUTORIAL MISSION THE SAME HOLDS since 10-24 (`planGroundAll` no longer asks whether rails are live): mission 2's
+  lines teach the digits and [5] is everyone. The frame dropped the digits there until then, whatever this bullet said; `RAILS.planDigits` lets them
+  through and holds every pick until the mission's pick lesson (`docs/agents/missions.md`, the plan mission's bullet on the digits). ON in the page with the mode (`?plandigits=0` off), OFF in the module and on the frozen stand (`TPS_PLANDIGITS=1`, beside
   `TPS_QPLAN=1`); a `FROZEN_HOLDS` row; the journal (a recording from before the key replays with it off); a tick ('Tab ▸ plan mode ▸ the digits
   pick the men'). CHECK `probes.ts plandigits` (family squadorders; 8 lines on plan mode's own rig, both stands, one deal seed 3: the rule has no die
   in it; `PLANDIGITS_BREAK=1` fails lines 1 to 5). `planmode-check`'s rig holds the switch off: its lines pick by the mouse and ask that a click on

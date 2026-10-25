@@ -30,7 +30,8 @@ export async function plannearCheck(): Promise<boolean> {
   const knobs0 = knobsCopy(), rnd0 = Math.random, K = CMDRING;
   console.log(`plannear-check: plan mode's view stays where the player is on the screen${BREAK ? '  (PLANNEAR_BREAK: the rule left off — lines 1, 2, 3, 4 and 6 must fail)' : ''}`);
   try {
-    const R = await rig(3, true, !BREAK), g = R.game, O = R.O, P = O.plan, pl = g.player, I = R.input, cam = R.W.cam, cv = R.W.canvas, w = cv.clientWidth, h = cv.clientHeight;
+    const R = await rig(3, true, !BREAK); K.planNearFlat = false;   // (line 3 asks the box as it was built, smaller as the camera comes in: the reach that is the same at any zoom has its own check, plannearflat-check.ts)
+    const g = R.game, O = R.O, P = O.plan, pl = g.player, I = R.input, cam = R.W.cam, cv = R.W.canvas, w = cv.clientWidth, h = cv.clientHeight;
     const hold = (keys: string[], frames: number) => { for (const k of keys) I.keys.add(k); R.step(frames); for (const k of keys) I.keys.delete(k); R.step(); };
     const zoom = (d: number) => { cam.distance = cam.desiredDistance = d; };
     const home = () => { zoom(21); R.home(true); if (P.look) { P.look[0] = pl.char.pos[0]; P.look[2] = pl.char.pos[2]; } R.step(40); };

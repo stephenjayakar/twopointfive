@@ -49,7 +49,7 @@ import { samStaggered, samRooted, samBlind, samStunPose } from './samstun';
 import { SPRINTDOOR, SPRINTDOOR_STATS, sprintDoorPace, sprintDoorLean, sprintDoorHead } from './sprintdoor';
 import { tearOff } from './doorblast';
 import { aimWeighBegin, aimWeighTurn, aimWeighShot, aimWeighLaunch, aimWeighLaunchKeep } from './aimweight';
-import { THROW_RELEASE, HOLD } from './character';
+import { THROW_RELEASE, HOLD, RUNREADY } from './character';
 import { WALLSNAP, wsTakeSecs, wsEase, wsHit, wsCornerAngle, wsSeenDeg } from './wallsnap';
 import { HANDSLOT, HANDSLOT_KEY } from './handslot';
 import { THROWBACK } from './throwback';
@@ -388,7 +388,7 @@ export function reloadInHand(g: Game, sprinting = false, boltOnly = false): bool
 export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamera) {
   const pl = g.player; const c = pl.char; const T = g.tune; const gun = pl.pistol;
   if (TWOGEARS.on) pl.pace = 1;   // (two gears: a notch a checkpoint or an older visit left on him is nobody's)
-  pl.dash = false; c.anim.dash = 0;   // (CROUCHRUN: this frame's own, set below where his legs are his)
+  pl.dash = false; c.anim.dash = 0; c.anim.runReady = false;   // (CROUCHRUN, RUNREADY: this frame's own, set below where his legs are his)
   cam.peekOffset = null;   // (set again below for the one case that wants it: peeking round the end of a wall)
   aimWeighBegin(pl);   // (aimweight.ts: nothing has weighed his aim this frame yet — only the plain aim branch below does)
   noShoveBegin(g);   // (noshove.ts: nobody has moved him yet this frame, and his own legs start from here — nothing with its switch off)
@@ -632,6 +632,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   c.anim.speed = speed; c.anim.crouchTarget = pl.crouch ? 1 : 0; c.anim.dash = pl.dash ? 1 : 0;
   if (pl.wall) { c.anim.stance = 'wall'; c.anim.stackSide = pl.wall.side; c.anim.wallPeek = pl.wall.peek; c.anim.wallYaw = wrapAngle(Math.atan2(pl.wall.n[0], pl.wall.n[2]) - c.bodyYaw); }   // back flat to the face whatever the legs do (the animator is told which way the wall faces off his front: square behind when parked, 55° round while the legs are turned to sidle), head / hands / lead foot toward the way he last went, leaning out with the peek (character.ts 'wall'; releaseWall takes it off — the tour's beats own the stance the rest of the time)
   c.anim.upper = pl.sprinting || pl.dragging ? 'none' : aiming ? 'aim' : gunUp ? 'relaxed' : 'none';
+  c.anim.runReady = RUNREADY.on && pl.sprinting && gunUp && !c.anim.hideHeldItem;   // (character.ts RUNREADY: the sprint with the pistol in his hand is the low ready in both hands, as the rifle's is the long gun's — false with its switch off, and the sprint's fist as it was)
   { const dp = c.anim.doorPush; const inHands = rifleUp && !c.anim.hideHeldItem; armRifle(g, inHands, !inHands ? null : pl.sprinting ? 'lowLong' : dp && dp.w >= 1 && !aiming ? 'portLong' : 'shoulder'); }   // the FN2000 in both hands = the R1 long-gun solve, its carriage forced by what he is doing (armRifle: shouldered whenever it is in the hands, the low ready for the sprint, the port for a leaf under the hand); slung / no rifle = the pistol's numbers back. hideHeldItem: the lock tools' / a hold's layer still easing out for a few frames after it ended keeps the hands 'busy' — combat.ts handProps draws the rifle on his back by the same flag, so the arms let go of it for exactly those frames too
   // a wall, a jamb or a leaf inside the raised gun's reach on the line he aims along (gunwall.ts; nothing with its switch off): the gun comes to the low ready —
   // the rifle's low carriage, the pistol's stance — and no round leaves it until there is room to bring it up
