@@ -61,6 +61,8 @@ interface Chain {
   /** room to work in while one snapshot is taken: the take that last met each object (`epoch` counts them); what the snapshot it is taken since has of each (its copy,
    *  its keys, `met`: 0 not held, else one more than how many snapshots back it was first held; `fresh`: how many snapshots back its copy was made) */
   stamp: Int32Array; met: Uint8Array; fresh: Uint8Array; epoch: number; readonly last: unknown[]; readonly lastShape: (Shape | undefined)[]; readonly stack: number[];
+  /** a take is under way in this room — or one threw half way and left it as it stood: no snapshot of this chain is taken `since` again (each still restores) */
+  busy: boolean;
 }
 export interface Snapshot {
   /** the Game it was taken from */
@@ -97,9 +99,10 @@ const YOUNG = 3;
  *  from the next snapshot — and what a snapshot may hold too much of is an older object nothing points at any more (a comparison a tick, until the next whole walk). */
 export function takeSnapshot(g: Game, since?: Snapshot): Snapshot {
   const reg = sideRegistry();
-  const from = since !== undefined && since.game === g ? since : null, fc = from ? from.chain : null;
+  const from = since !== undefined && since.game === g && !since.chain.busy ? since : null, fc = from ? from.chain : null;
   const whole = !fc || from!.at.length > WALK_AGAIN * fc.base.n + WALK_SLACK || fc.index.size > CHAIN_GROWS * from!.at.length + CHAIN_SLACK;
-  const chain: Chain = whole ? { index: new Map(), nodes: [], kinds: [], views: [], base: { n: 0 }, stamp: new Int32Array(1 << 16), met: new Uint8Array(1 << 16), fresh: new Uint8Array(1 << 16), epoch: 0, last: [], lastShape: [], stack: [] } : fc;
+  const chain: Chain = whole ? { index: new Map(), nodes: [], kinds: [], views: [], base: { n: 0 }, stamp: new Int32Array(1 << 16), met: new Uint8Array(1 << 16), fresh: new Uint8Array(1 << 16), epoch: 0, last: [], lastShape: [], stack: [], busy: false } : fc;
+  chain.busy = true; if (fc) fc.busy = true;   // (put down again on the way out, below: a take that throws leaves both rooms marked)
   const { index, nodes, kinds, views, stack } = chain, epoch = ++chain.epoch;
   let stamp = chain.stamp, met = chain.met, fresh = chain.fresh, seenN = 0;
   const Game = (g as object).constructor;
@@ -223,7 +226,7 @@ export function takeSnapshot(g: Game, since?: Snapshot): Snapshot {
     if (nFound < found.length) moved = true;
   }
   if (from) { const fa = from.at, fm = fc!.met; for (let j = 0; j < fa.length; j++) { const i = fa[j]; last[i] = undefined; lastShape[i] = undefined; fm[i] = 0; } }
-  data.length = held; shapes.length = held;
+  data.length = held; shapes.length = held; chain.busy = false; if (fc) fc.busy = false;
   if (whole) { chain.base.n = held; ages.fill(255, 0, held); }   // (a whole walk has met everything it holds: all of it is old to the next)
   return { game: g, chain, at: at.subarray(0, held), data, shapes, ages: ages.subarray(0, held), tables, entries, vars, varVals, rawWeak };
 }
