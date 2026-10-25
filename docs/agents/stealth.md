@@ -1787,7 +1787,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   12 = 48 runs): every run the same with the row and with `TPS_FOGMATES=0`, run for run, so on that floor the row changed no fight. THE PAGE
   (software adapter, The Pass, the squad of four, Hard, the pair kept across the mark at (14.10, 11.00) for 30 frames): 119 of 119 pipelines, no
   console or GPU error; the plain line between them stopped and the masked one clear; the teammate's meter on the man to 1 and the man his
-  target on 24 frames; OFFPAGE NOT HELD: (a) never seen on a GPU and never played:
+  target on 24 frames; with `?fogmates=0` the same
+  boot and lines, his meter 0 and no target (the drawn frames were the boot's and one burst: the rule draws nothing). NOT HELD: (a) never seen on a GPU and never played:
   whether a teammate noticing a man past a bar reads as fair is the maintainer's to judge; (b) the planted man above: nothing makes him lean or
   step for a shot past the thing; (c) a teammate's sight of things that are not men (a body, a door, a lamp) is unchanged; (d) one level's marks
   in the sweep, one staging seed, two played seeds; `tour.ts` and `soak.ts` put no teammate on the floor, so the rule cannot act in either and
