@@ -702,7 +702,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   after the level file loads and before its boxes go to the world (`bootLevel`), and sets `cutConfig.swap` false at boot (its cut boxes stand for
   the whole visit, so the one set of ray programs with the cut rule is compiled from the start).
   ROUND THINGS (`roundStacks`): the kit's octagon (`gwotKit.ts round`: four slabs 45° apart) becomes ONE regular twelve-sided prism, the box's four
-  faces + eight planes (the record's whole room), with `Box.cutRound = 2` (packed in the core row's w as 128 × (1 + the axis); never with glass).
+  faces + eight planes (the record's whole room), with `Box.cutRound = 2` (packed in the core row's w as 1024 × (1 + the axis); never with glass. Until the merge of 10-25 it was 128 ×: the build's ROUND THINGS, `scene/round.ts`, took 128 as their own bit, a cylinder about the box's y that every ray meets; `gbuffer_cut.wgsl cutRoundAxis` reads both and shades both with the one block, so on the look page a level's drum is the build's round thing and the trial's prisms are the lorry's wheels and the logs).
   The other three slabs stay in the list, hidden (`NoPrimary | NoShadow`, shrunk): a level file's box indices are names. In `gbuffer_cut.wgsl
   fsBoxCut` a round's side faces are one face: the normal turns with the point, marks run round it (the long face's band is put on all four sides;
   a lid's one-paint patch is drawn again as a disc; a drum's two-paint lid is let go and the shader draws a rolled rim). The look's paint and its clinging snow
