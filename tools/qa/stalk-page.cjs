@@ -6,6 +6,7 @@
 //   let     the same, let go after two thirds of a second: nobody stalked, Sam at rest; pressed again: in his arm.
 //   slider  the lab's first slider moved by its own input event writes the stalk's top speed.
 //   dash    crouched, Shift and a move key held (the keyboard's own events): he stays down and goes at the fast crouch walk's pace, no sprint.
+//   tapstep in the dark corridor a tap of a move key (the keyboard's own events) goes one short step and he stops dead.
 //   look    2.2 m behind the man with the cursor elsewhere his head has the man; a metre off the man's side he leans away with the low arm out; the lab's button
 //           stands two walkers a gap apart, and dead between them he is small and leans into neither.
 //   (with the key the finish, stalk.ts `key`, as a plain address has it: `key` is that E takes him from in reach, and `hold` / `let` that the held button
@@ -174,6 +175,12 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
       const ok = got.every(Boolean), seen = ok ? got.map(c => c.seen) : [];
       say(ok && new Set(got.map(c => c.at)).size === 5 && new Set(got.map(c => c.line)).size === 5 && got.every(c => c.bare && c.low) && seen.join() === 'false,false,true,true,false',
         `the lab's five scenario buttons each put Sam at his own start, hands empty and low, with their own line, and only the dark ones let the men see him (${ok ? got.map(c => c.at).join(' · ') : 'a button is missing'})`);
+    }
+    { // (src/game/tapstep.ts: the keyboard's own events in the dark corridor; a move key is a step, and between steps he stands)
+      await page.evaluate(async () => { [...document.querySelectorAll('#panel button')].find(x => x.textContent.trim() === 'dark corridor').click(); await window.__runFrames(60, 1 / 60, [], 'none'); });
+      const at = () => page.evaluate(() => { const g = window.__game, c = g.player.char; return { x: c.pos[0], z: c.pos[2], v: Math.hypot(c.vel[0], c.vel[2]) }; }); let best = 0, stopped = false;
+      for (const code of ['KeyW', 'KeyS', 'KeyA', 'KeyD']) { const a = await at(); await page.keyboard.down(code); await frames(4); await page.keyboard.up(code); await frames(50); const b = await at(), d = Math.hypot(b.x - a.x, b.z - a.z); if (d > best) { best = d; stopped = b.v < 0.01; } if (best > 0.2) break; }
+      say(best > 0.2 && best < 0.45 && stopped, `in the dark corridor a tap of a move key is one short step and he stops dead (${best.toFixed(2)} m)`);
     }
   }
   if (errors.length) { rows.push(false); console.log(`- FAIL — page errors: ${errors.join(' | ')}`); }

@@ -11,6 +11,7 @@ import type { Panel } from '../ui/panel';
 import type { FollowCamera } from '../game/camera';
 import type { Vec3 } from '../math/vec';
 import { STALK, STALK_STATS, stalkOn } from '../game/stalk';
+import { TAPSTEP, TAPSTEP_STATS } from '../game/tapstep';
 import { CLOSE, closeSeat, closeUnseat, closeSeated } from '../game/close';
 import { TWOGEARS, CROUCHRUN } from '../game/player';
 import { SAMLOOK } from '../game/samlook';
@@ -30,9 +31,10 @@ export const SCENES: { name: string; sam: Vec3; yaw: number; seen: boolean; behi
 ];
 export const SNEAKLAB_SYSTEM = 'Sneak lab';
 type Table = Record<string, unknown>;
-type Grp = 'start' | 'pace' | 'pose' | 'grab' | 'rmb' | 'pass' | 'run' | 'corner' | 'turn' | 'old';
+type Grp = 'step' | 'start' | 'pace' | 'pose' | 'grab' | 'rmb' | 'pass' | 'run' | 'corner' | 'turn' | 'old';
 /** the lab's groups, in the order they are read: a short name, whether it is open on a first visit, and what the group is for (its header's hover) */
 const GROUPS: { id: Grp; name: string; open: boolean; title: string }[] = [
+  { id: 'step', name: 'Tap to step', open: true, title: 'crouched, a press lifts his foot, holding reaches further and letting go plants it. Tap in time with his weight settling and watch the sound bar' },
   { id: 'start', name: 'Start and stop', open: false, title: 'when a press on a man begins the creep and when the creep lets go. Watch the rings and the arc drawn on the floor round the nearest man' },
   { id: 'pace', name: 'Pace', open: true, title: 'how fast he closes on the man and how he starts and stops. Watch "you … m/s, he … m/s" in Right now' },
   { id: 'pose', name: 'Pose', open: true, title: 'what his body does on the way in: how low he gets and where his arms are. Stop a metre and a half behind the man and look at him' },
@@ -97,6 +99,23 @@ const NUMS = (): Num[] => [
   { g: 'grab', t: STALK, name: 'STALK', key: 'catchLong', label: 'long step, times', min: 1, max: 1.3, step: 0.01, tip: 'the most a long step in is stretched. 1 = every step in takes the same time. Much over 1.1 and the haul back has too little of the grab left' },
   { g: 'grab', t: STALK, name: 'STALK', key: 'yank', label: 'haul back m', min: 0, max: 0.6, step: 0.02, tip: 'once the step in has landed the man is pulled this far straight back, Sam going with him. 0 = held where he stood. Look for: the man going off his feet' },
   { g: 'grab', t: STALK, name: 'STALK', key: 'yankRoom', label: 'room behind m', min: 0.2, max: 1, step: 0.05, tip: 'the haul back stops this far short of anything solid behind Sam. Try: grab a man with your back near a wall' },
+  { g: 'step', t: TAPSTEP, name: 'TAPSTEP', key: 'tapM', label: 'a tap is m', min: 0.15, max: 0.6, step: 0.01, tip: 'how far a quick tap takes him. Look for: can you stop exactly where you mean to' },
+  { g: 'step', t: TAPSTEP, name: 'TAPSTEP', key: 'beatM', label: 'a tap on the beat is m', min: 0.2, max: 0.8, step: 0.01, tip: 'how far a tap takes him when you press just as his weight has settled. Try: tap a steady rhythm across the dark room' },
+  { g: 'step', t: TAPSTEP, name: 'TAPSTEP', key: 'reachM', label: 'a held step is m', min: 0.4, max: 1.3, step: 0.01, tip: 'how far one step reaches if you keep the key down. Look for: how far apart his feet get' },
+  { g: 'step', t: TAPSTEP, name: 'TAPSTEP', key: 'pace', label: 'top of a step m/s', min: 0.8, max: 3.5, step: 0.05, tip: 'how fast he goes in the middle of a step' },
+  { g: 'step', t: TAPSTEP, name: 'TAPSTEP', key: 'rate', label: 'step snap', min: 3, max: 25, step: 0.5, tip: 'how hard he takes a step up and sets it down. Low is floaty, high is a hop' },
+  { g: 'step', t: TAPSTEP, name: 'TAPSTEP', key: 'settle', label: 'settles in s', min: 0, max: 0.5, step: 0.01, tip: 'how long his weight takes to come down after a step. Press before it is over and the step scuffs. A held key always waits for it' },
+  { g: 'step', t: TAPSTEP, name: 'TAPSTEP', key: 'beat', label: 'beat lasts s', min: 0, max: 0.4, step: 0.01, tip: 'how long after he settles a press still counts as on the beat' },
+  { g: 'step', t: TAPSTEP, name: 'TAPSTEP', key: 'quiet', label: 'quiet step', min: 0.02, max: 0.2, step: 0.005, tip: 'how loud a step on time is. The crouch walk is 0.125' },
+  { g: 'step', t: TAPSTEP, name: 'TAPSTEP', key: 'scuff', label: 'worst scuff', min: 0.1, max: 0.8, step: 0.01, tip: 'how loud a step is when you press right after the last one. Each 0.1 is heard about 0.7 m further' },
+  { g: 'step', t: TAPSTEP, name: 'TAPSTEP', key: 'maskSecs', label: 'under his step s', min: 0, max: 0.4, step: 0.01, tip: 'a step that lands this soon after a man\'s footfall is covered by it' },
+  { g: 'step', t: TAPSTEP, name: 'TAPSTEP', key: 'maskM', label: 'his step covers inside m', min: 1, max: 12, step: 0.5, tip: 'only a man this near Sam covers his step' },
+  { g: 'step', t: TAPSTEP, name: 'TAPSTEP', key: 'mask', label: 'covered step keeps', min: 0, max: 1, step: 0.05, tip: 'how much of its sound a covered step keeps. 0 = silent' },
+  { g: 'step', t: TAPSTEP, name: 'TAPSTEP', key: 'landM', label: 'finds his back inside m', min: 0.6, max: 2.5, step: 0.05, tip: 'a step toward a man\'s back from this close bends onto the spot behind him and goes all the way there. Look for: does it feel like he chose it' },
+  { g: 'step', t: TAPSTEP, name: 'TAPSTEP', key: 'landCos', label: 'finds his back within', min: 0, max: 0.95, step: 0.05, tip: 'how close to the line of the step his back has to be. 1 = dead ahead, 0 = anywhere in front of him' },
+  { g: 'step', t: TAPSTEP, name: 'TAPSTEP', key: 'follow', label: 'keeps up with him', min: 0, max: 1.5, step: 0.05, tip: 'how much of a walking man\'s speed goes into a step behind him. 0 = the steps can\'t catch him without a scuff' },
+  { g: 'step', t: TAPSTEP, name: 'TAPSTEP', key: 'turn', label: 'steers in the air', min: 2, max: 30, step: 1, tip: 'how quickly a step in the air comes round to the keys' },
+  { g: 'step', t: TAPSTEP, name: 'TAPSTEP', key: 'legs', label: 'legs follow', min: 3, max: 20, step: 0.5, tip: 'how quickly his legs catch up with the ground a step covers' },
   { g: 'grab', t: HOLD.first, name: 'HOLD.first', key: 'take', label: 'gun out at s', min: 0.08, max: 0.2, step: 0.01, tip: 'with "gun out before the arm" on: his gun is out of his hands this long after the grab begins. The arm is at his neck at about 0.27. Try: the rifleman. Look for: Sam\'s right hand reaching the gun before it moves' },
   { g: 'grab', t: HOLD.first, name: 'HOLD.first', key: 'drop', label: 'gun let go at s', min: 0.2, max: 0.42, step: 0.01, tip: 'Sam lets the gun fly this long after the grab begins. Look for: where it lands, and that it has left his hand before the arm closes' },
   { g: 'rmb', t: CLOSE, name: 'CLOSE', key: 'rmbTapSecs', label: 'tap shorter than s', min: 0.08, max: 0.5, step: 0.01, tip: 'let go of the right button inside this and it is the knockout. Keep it down past this behind a man and it is the choke. Try: raise it if your quick clicks turn into chokes' },
@@ -132,6 +151,7 @@ const ARCS: { key: 'beginCos' | 'outCos'; label: string; tip: string }[] = [
 ];
 /** the switches, each in its group: a short name and a hover that says what on and off are and what to try */
 const TOGS = (): { g: Grp; label: string; get: () => boolean; set: (v: boolean) => void; tip: string }[] => [
+  { g: 'step', label: 'keys are steps in a crouch', get: () => TAPSTEP.on, set: v => { TAPSTEP.on = v; }, tip: 'on: crouched, a press lifts his foot, holding reaches and letting go plants it, and between steps he stands still. Shift is still the fast crouch walk. Off = the crouch walk' },
   { g: 'start', label: 'hold click to creep', get: () => STALK.on, set: v => { STALK.on = v; }, tip: 'on: hold the left button on a man from behind and Sam creeps up on him, let go and he stops. Off = the build before it: your own keys all the way in, and the grab on its key' },
   { g: 'start', label: 'drag to steer', get: () => STALK.drag, set: v => { STALK.drag = v; }, tip: 'on: press on a man from behind, keep the button down and drag the mouse the way you want Sam to creep, like a stick centred where you pressed. Further = faster. Back to where you pressed = he holds still. He always faces the man and stops just behind him. Off = the hold walks him in by itself' },
   { g: 'start', label: 'weight in the step', get: () => STALK.heft, set: v => { STALK.heft = v; }, tip: 'on: his back, shoulders and arms go with his legs, a beat behind them. off: the arms as they were, held still. Look for: does he look heavy and careful as he steps, and does he settle when he stops?' },
@@ -182,6 +202,7 @@ export function sneakLabBoot(game: Game, panel: Panel) {
   panel.text(now, () => { const on = stalkOn(game), gd = on ?? nearest(game), p = game.player.char; if (!gd) return 'nobody left on the floor';
     const d = Math.hypot(p.pos[0] - gd.char.pos[0], p.pos[2] - gd.char.pos[2]), b = Math.atan2(p.pos[0] - gd.char.pos[0], p.pos[2] - gd.char.pos[2]) - gd.char.bodyYaw, round = Math.abs(Math.atan2(Math.sin(b), Math.cos(b))) * 180 / Math.PI;
     return `${game.player.holding ? 'you have him' : on ? 'creeping in' : 'not creeping'} · ${d.toFixed(2)} m from him · ${round.toFixed(0)}° round from his nose · you ${Math.hypot(p.vel[0], p.vel[2]).toFixed(2)} m/s, he ${Math.hypot(gd.char.vel[0], gd.char.vel[2]).toFixed(2)} m/s`; });
+  panel.text(now, () => TAPSTEP.on ? `${TAPSTEP_STATS.steps} steps · ${TAPSTEP_STATS.beats} on the beat · ${TAPSTEP_STATS.scuffs} scuffs · ${TAPSTEP_STATS.masked} under his step · the last one: ${TAPSTEP_STATS.last || 'none yet'}` : 'keys walk');
   panel.text(now, () => `${STALK_STATS.grabs} grabs from ${STALK_STATS.begun} holds · the last one ended with: ${WHY[STALK_STATS.last] ?? STALK_STATS.last}`);
   const dark = new Set<Game['targets'][number]>();   // (the lamps the 'lights out' box put out: only those come back on)
   panel.buttons(now, 'the men', [

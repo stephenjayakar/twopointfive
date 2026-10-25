@@ -14,6 +14,7 @@ import { resolve } from 'node:path';
 const { standUp, ROOT } = await import('./headless.ts');
 const { CLOSE } = await import(`${ROOT}/src/game/close.ts`);
 const { STALK } = await import(`${ROOT}/src/game/stalk.ts`);
+const { TAPSTEP } = await import(`${ROOT}/src/game/tapstep.ts`);
 const { startGrab } = await import(`${ROOT}/src/game/player.ts`);
 const { HOLD } = await import(`${ROOT}/src/game/character.ts`);
 const { handProps } = await import(`${ROOT}/src/game/combat.ts`);
@@ -169,6 +170,17 @@ async function stalkClip(scene: string) {
   lift(); go(54); press(); n = 0; const pc = g.player.char; let still = 0; while (still < 80 && n++ < 900) { go(1); still = Math.hypot(pc.vel[0], pc.vel[2]) < 0.02 ? still + 1 : 0; }
   return R;
 }
+/** TAP TO STEP (tapstep.ts): the key held for two steps, then taps with stops between, then the step that lands behind him */
+async function stepClip(scene: string) {
+  const S = await lobby(7305), { W, g, A } = S; g.tune.carbineGuards = 'none'; TAPSTEP.on = true;
+  S.samAt(5.4, true); W.cursorAt([A.char.pos[0], 1.2, A.char.pos[2]]); S.step(30); const R = recorder(scene, g, A), { right } = W.cam.planarBasis();
+  const key = right[0] > 0 ? 'KeyD' : 'KeyA';
+  let f = 0; const go = (n: number) => { for (let i = 0; i < n; i++) { W.cursorAt([A.char.pos[0], 1.2, A.char.pos[2]]); S.step(1); if (f++ % 2 === 0) R.snap(`${S.gap().toFixed(2)} m`); } };
+  go(20); W.input.keys.add(key); go(100); W.input.keys.delete(key); go(50);
+  for (let i = 0; i < 3; i++) { W.input.keys.add(key); go(5); W.input.keys.delete(key); go(44); }
+  W.input.keys.add(key); go(5); W.input.keys.delete(key); go(70);
+  return R;
+}
 /** THE STALK BROKEN OFF (stalk.ts end): the creep from 2.9 m, and at 1.6 m the man turns round to face him — the frames after, as the reach and the rise let go */
 async function stalkTurn(scene: string) {
   const S = await lobby(7307), { W, g, A } = S; g.tune.carbineGuards = 'none';
@@ -234,6 +246,7 @@ const SCENES: Record<string, { title: string; run: (name: string) => Promise<any
   'stalk': { title: 'the stalk: the held click from 2.9 m, the arm and the rise by distance, into the grab', run: n => stalk(n, 'calm', false) },
   'stalk-hit': { title: 'the stalk\'s grab as the body lands: the frames either side of the step\'s landing', run: n => stalk(n, 'calm', false, true) },
   'stalk-rifle': { title: 'the stalk into a rifleman: the creep, then the grab that takes his carbine', run: n => stalk(n, 'rifle', false) },
+  'step-clip': { title: 'tap to step as it moves: a held key, then taps, then the step that lands behind him (tools/qa/pose-clip.py)', run: n => stepClip(n) },
   'stalk-clip': { title: 'the creep as it moves: every second frame from 3.6 m, a stop on the way, into the wait (tools/qa/pose-clip.py)', run: n => stalkClip(n) },
   'stalk-corner': { title: 'the wait at a corner: back on a wall, the button held, a man walks past and is taken', run: n => cornerWait(n) },
   'stalk-turn': { title: 'the stalk broken off: at 1.6 m he turns round, the button still down', run: n => stalkTurn(n) },
