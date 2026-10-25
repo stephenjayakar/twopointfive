@@ -201,7 +201,7 @@ export function nullSmoke(): SmokeSystemLike & { params?: Record<string, unknown
 export function populateHost(host: HostApi, level: Level): void {
   thinClear(level.boxes);   // (a level stood up a second time: last time's thin marks off before the round things are looked for)
   roundLevel(level.boxes, ROUND.on, level.markTexel);   // ROUND THINGS (scene/round.ts): the kit's octagons as one round box each, or every box put back as its file has it — before a box goes to the world and before the Game's collision is built from the list
-  thinLevel(level.boxes, level.doors);   // THIN THINGS THAT STAND FREE (scene/thin.ts): marked for the fog of war's own eyes (FOG.thin), on the list as it now is
+  thinLevel(level.boxes, level.doors);   // THIN THINGS THAT STAND FREE (scene/thin.ts): marked for the fog of war's own eyes (FOG.thin) and a teammate's (FOG.mates), on the list as it now is
   for (const b of level.boxes) host.world.addStatic(b);
   for (const ld of level.lights) host.lights.add(lightFromDef(ld));
 }
@@ -267,6 +267,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_FOGOURS')) FOG.ours = String((globalThis as any).process?.env?.TPS_FOGOURS ?? '') === '1';   // what the team does is always shown (src/game/fogofwar.ts FOG.ours; the picture only): off, so every light's class and the list of loose boxes handed to the renderer are the ones every stored frame was drawn with
     if (pinned('TPS_FOGTHIN')) FOG.thin = String((globalThis as any).process?.env?.TPS_FOGTHIN ?? '') === '1';   // thin things that stand free do not cut the fog's sight (src/game/fogofwar.ts FOG.thin: what the squad's eyes have and the picture's): off, so every stored run and frame has the sight it was recorded with
     if (pinned('TPS_FOGTRACKS')) FOG.tracks = String((globalThis as any).process?.env?.TPS_FOGTRACKS ?? '') === '1';   // a man nobody sees leaves his tracks in the snow, found when the team sees it (src/game/fogofwar.ts FOG.tracks): off, so every stored frame and print count is the one it was
+    if (pinned('TPS_FOGMATES')) FOG.mates = String((globalThis as any).process?.env?.TPS_FOGMATES ?? '') === '1';   // a teammate's own eye passes the thin things the fog's lines pass (src/game/fogofwar.ts FOG.mates): off, so every frozen run has the men noticing whom they noticed
     if (pinned('TPS_FOGFILED')) FOG.filed = String((globalThis as any).process?.env?.TPS_FOGFILED ?? '') === '1';   // a checkpoint carries what the fog holds another way than the world stands (src/game/fogofwar.ts FOG.filed): off, so every stored file and run is the one it was
     if (pinned('TPS_FOGKEPT')) FOG.kept = String((globalThis as any).process?.env?.TPS_FOGKEPT ?? '') === '1';   // what others left behind stays as last seen in the fog's picture (src/game/fogofwar.ts FOG.kept — a lamp's face, litter at rest): off, so every stored frame is the one it was
     if (pinned('TPS_FOGEYES')) FOG.eyes = String((globalThis as any).process?.env?.TPS_FOGEYES ?? '') === '1' ? FOG_EYES_ON : FOG_EYES_WAS;   // how many eyes lift the fog (src/game/fogofwar.ts FOG.eyes: 7 in the page, 5 as it was): 5, so a squad of four leaves a camera no place, as every stored run had it

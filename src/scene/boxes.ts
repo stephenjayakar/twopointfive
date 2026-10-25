@@ -27,7 +27,7 @@ export const BoxFlag = {
   // CPU: movement collision and sound treat it as a wall, sight passes through it (collision.ts segmentBlocked's `through`), a round / kick / bang breaks it.
   Glass: 1 << 17,
   // A THIN THING THAT STANDS FREE (scene/thin.ts thinLevel, as a level is stood up: a stovepipe, a window's bar, a lone post). CPU-only, like SoundSeal (bits
-  // 18-31 of the GPU word are the marking row): the fog of war's own sight passes it while FOG.thin is on (game/fogofwar.ts: segmentBlocked's `through`), and
+  // 18-31 of the GPU word are the marking row): the fog of war's own sight passes it while FOG.thin is on (game/fogofwar.ts: segmentBlocked's `through`; a teammate's own eye too under FOG.mates — game/guards.ts eyeThrough), and
   // the picture's fog eye learns which boxes carry it from the sight table's own bit list (render/fogofwar.ts FogFrame.thinBits), not from the box's word.
   Thin: 1 << 18,
 } as const;

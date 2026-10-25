@@ -15,7 +15,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   boxes such as another man's muzzle flash (`cellSeenAt`: never shown unseen, even a shot at the team), resting litter (`FOG.kept`), marks
   in snow (`FOG.tracks`, `groundLook`), and all of it through a file load (`FOG.filed`). (4) TO SEE MORE, GET MORE EYES ON IT (`FOG.eyes`,
   `fogEyeCount`; a sticky camera, a peek round a wall's end, a thin thing that does not cut the sight: `FOG.thin`). BESIDE THEM: you hear
-  everything; the enemy never reads the fog; there is one fog picture. KEPT ON PURPOSE: a blown wall or broken glass shows at once (it is
+  everything; the enemy never reads the fog; there is one fog picture; a teammate's own eye passes what the fog's lines pass (`FOG.mates`). KEPT ON PURPOSE: a blown wall or broken glass shows at once (it is
   loud); a living man's last-seen mark fades in seconds. NOT YET UNDER THE PRINCIPLES: a furrow, a dent or a crater in snow made by a thing
   nobody sees (`snowMarks.ts`); broken pieces and items after a file load. THE OLDER LOOKS STAY (`FOG.full` off, `FOG.lit` 0, `FOG.flat`
   off and the rest of the fog's `FROZEN_HOLDS` rows): the frozen stand is every frozen digest's ground, so they are not retired; the page
@@ -900,7 +900,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   One test, `common.wgsl fogThinBox`, asked only of a box a ray has already hit, live only while the private `fogEyeThin` is raised by the fog's own
   rays (`fogSeenAt`, the fog pass's `main` and `pre`, the table's kernel). The lines go by the row alone (`FOG.full` stays a
   switch of the picture only); the picture's half rides the sight table, so it is under the FULL picture alone. NOT the picture alone: who the squad has seen can differ behind a pipe, so a digest can. It is
-  the FOG's sight only: a guard's eye, a teammate's own `eyeContact`, a round, a sound and a shadow meet those boxes as ever. SWITCH: ON in the module
+  the FOG's sight only: a guard's eye, a round, a sound and a shadow meet those boxes as ever (a teammate's own eye passes them too since 10-25:
+  `FOG.mates`, its bullet below). SWITCH: ON in the module
   and the page; `?fogthin=0` = every static stops the eye, as it was; the debugger's fog page has the row; frozen stand: off, `TPS_FOGTHIN=1` raises
   it (`FROZEN_HOLDS['FOG.thin']`); the journal carries it (a recording without the key replays with it off); not part of the replay page's look (the
   tape's row decides who was seen). CHECK: `probes.ts fog-thin` (family `fog`; 8 lines; `FOGTHIN_BREAK=1` red on the marks', the lines' and the
@@ -909,9 +910,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   taken away from four eyes, no line shortened, the fog's test across a stovepipe, a wall, every shut door's frame; the block, its bits and the box list they were read off (a frame drawn after a wall is rebuilt and before the
   next fill passes nothing: `FogSight.encode`);
   the shaders as written; the address; the journal; the stands; the night breach with and without, two seeds (92 marked statics on that level: the
-  same digest and dice both ways, on both stands — held: red if the row begins to move that run). The fog, replay and journal gates on both stands. NOT HELD: (a) a teammate can call a contact the
-  fog's line gave him through a window bar while his own `eyeContact` is still blocked by it — whether thin things should stop hiding anyone from
-  anyone is a game rule, the maintainer's call, not made here; (b) loose props at eye height (a shelf, a locker) still stop the PICTURE's eye and
+  same digest and dice both ways, on both stands — held: red if the row begins to move that run). The fog, replay and journal gates on both stands. NOT HELD: (a) ANSWERED 10-25 ("teammates should see whatever we see"): a teammate's own eye now passes the marks too (`FOG.mates`, its bullet below); no other side's eye does; (b) loose props at eye height (a shelf, a locker) still stop the PICTURE's eye and
   never stopped the squad's lines, and a carried box too large for the grid's cells (asked in the walk's own first loop) is not passed; (c) a host that stands boxes up another way (the viewer, the editor's stage) makes no marks: the fog there cuts on thin things as before; (d) while the sight table's program compiles (the first frames), if it fails, or under `?fogfull=0`, the picture is an older fog that does not pass
   them while the squad's lines do (a man behind a pipe is drawn on a sliver the picture still fogs); (e) the rule's numbers are code, not knobs: retuning `THIN_WIDTH` changes what an old recording's level marks; (f) the fans a window's own
   frame and wall thickness cast on Hard (each man a cone) are real sight edges and stay. **Never seen on a GPU**: the page boots with it on the
@@ -1758,3 +1757,42 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   older choke lines of takedown-check.ts (`chokeRun`) and hold-pose-probes.ts hold-struggle (b), whose windows the haul's own motion falls in; the haul's frames
   are haul-check's. Pictures: `close-stills.ts --scene choke` (before: `--set '{"TAKEDOWN":{"haul":false}}'`). NOT SEEN: anything on a GPU or in the page; how
   it reads from the game's camera at play size; the two men's clothes and the cap through each other (bones are read, not meshes); no tally was run.
+- **A teammate sees what the picture shows (`FOG.mates`, 10-25).** The maintainer, asked whether the men's own eyes should pass thin things as
+  the fog's lines do (the open call under `FOG.thin`): "and yeah i think teammates should see whatever we see". Before, the fog's lines passed a
+  static marked thin and free while a teammate's own sight test (`guards.ts eyeContact`) stopped at it: a man behind a window's bar or a
+  stovepipe was in the picture, and could be called, while the teammate standing there did not notice or shoot him. THE RULE: an OPERATIVE's own
+  sight line is handed the mask the fog's lines use. ONE MASK: `fogofwar.ts fogThrough()` (glass, and with `FOG.thin` the thin marks) is what
+  `sightBlocked` asks; `guards.ts teamThrough()` is that under `FOG.mates` and glass alone without; `eyeThrough(gd)` is the team's for an
+  operative and glass alone for every other side. A flag the fog's line learns to pass is added in `fogThrough` and nowhere else. WHERE:
+  `canSeeChar`'s two looks (his eye, and his sights' eye in a room fight); through the bare line `guards.ts eyeBlocked(g, gd, a, b)`, the test of
+  whether a man he just lost went BEHIND something (the lead fix) and the room fight's six lines from a teammate's eye to a man's chest
+  (`roomfight.ts`: who turns to a shot, the turn point, a report's shooter in `cue` and `letGo`, a mate's target, footsteps); and the PLAYER's own
+  line that tells the squad's net of a man the picture shows him (`picture.ts lookSam`: `teamThrough()`), so a man you see past a bar is a man
+  your squad is told of. So a teammate's own test and the fog's line from his head say the same of a man across a thin thing. THE MARKS are a level's
+  (`scene/thin.ts`, made at every stand-up) AND the bare studs of a wall a charge opened (`wallbreak.ts`), as for the fog. SIGHT ONLY: his rounds
+  still meet the thing (`clearShot` holds a shot it is across: a man with a walk left walks on, a planted man waits with his gun on the man and
+  is counted in contact until one of them moves), sound and light are untouched. NO OTHER SIDE'S EYE CHANGES: a defender, a civilian and a camera
+  stop at a thin thing as ever, so across a bar the teammate has the defender and the defender does not have him. It does not need the fog up; it
+  does need the thin row. NOT the picture alone: who a teammate has noticed is the game's, so a digest can move. SWITCH: ON in the module and the
+  page; `?fogmates=0` = his eye stops at a thin thing, as it was; the debugger's fog page has the row; frozen stand: off, `TPS_FOGMATES=1` raises
+  it BUT ACTS ONLY WITH `TPS_FOGTHIN=1` (`FROZEN_HOLDS['FOG.mates']` says so: the frozen stand pins the thin row off too); the journal carries it
+  (a recording without the key replays with it off). CHECK: `probes.ts fog-mates` (`tools/qa/fogmates-check.ts`, family `fog`; 5 lines;
+  `FOGMATES_BREAK=1` reds bar, agrees and stood) on both stands. MEASURED, headless: The Pass, one staging seed: across its 16 thin marks, 1168 pairs of
+  a teammate and a defender (sixteen bearings, nine spacings): the row gives him 707 of them, takes none, and his test differs from the fog's
+  line on none (on 707 without it); the defender's eye is the same on all 1168; with the thin row off the row gives nothing. Stood: the pair kept across one mark for 30 of the game's own frames: with the row the room fight's
+  meter on the man goes to 1.00 and he is the teammate's target on 25 frames; without, meter 0 and no target; the defender never takes the teammate. Played on The Pass,
+  the squad sent at a hidden man, 20 s: with the thin row off the run is the same by digest and dice with and without this row (seed 3), on both
+  stands; with both rows on (seeds 3 and 4) no defender's sight of a teammate differed on any sampled frame. THE ROOM CLEAR'S TALLY
+  on the shipped stand (`roomclear-tally.ts`, the office: 92 marks, 39 of them across a standing man's sight lines; four policies, seeds 1 to
+  12 = 48 runs): every run the same with the row and with `TPS_FOGMATES=0`, run for run, so on that floor the row changed no fight. THE PAGE
+  (software adapter, The Pass, the squad of four, Hard, the pair kept across the mark at (14.10, 11.00) for 30 frames): 119 of 119 pipelines, no
+  console or GPU error; the plain line between them stopped and the masked one clear; the teammate's meter on the man to 1 and the man his
+  target on 24 frames; OFFPAGE NOT HELD: (a) never seen on a GPU and never played:
+  whether a teammate noticing a man past a bar reads as fair is the maintainer's to judge; (b) the planted man above: nothing makes him lean or
+  step for a shot past the thing; (c) a teammate's sight of things that are not men (a body, a door, a lamp) is unchanged; (d) one level's marks
+  in the sweep, one staging seed, two played seeds; `tour.ts` and `soak.ts` put no teammate on the floor, so the rule cannot act in either and
+  neither was run (the tally above is the measurement); (e) the asymmetry is by
+  the maintainer's words (teammates), not a ruling that the enemy should stay blind past a bar: giving every eye the marks is one more row if he
+  asks; (f) the room fight's turn-to lines and the player's line for the net are held only as written (the check counts the calls and asks the bare
+  line across one pair), not by a fought run that needs them; (g) `lanes.ts gunsManned` and `pointInView` (a teammate's view of a place or a
+  body) still stop at a thin thing.
