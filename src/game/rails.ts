@@ -36,6 +36,7 @@ import type { FogEye } from './fogofwar';
 import type { FollowCamera } from './camera';
 import { WORLD } from '../scene/world';
 import { CMDRING } from './cmdring';   // (read inside gate() only: src/game is one import cycle)
+import { planTakesDigits } from './planmode';   // (asked inside gate() only)
 import { stepLine, lessonLine, lessonTokenFaults } from './lesson';   // (called inside prompt() only: src/game is one import cycle)
 import { slotSetupLeft, setupRows } from './slotsetup';   // (asked inside gate() only)
 import { HANDRING } from './handring';
@@ -70,6 +71,14 @@ export const RAILS = { on: false,
    *  mission's lesson). false: that seat is the plain sky seat — the mode down and only drawn — and a mission that asks for a box or a right click
    *  there cannot be played */
   skyUp: true,
+  /** PLAN MODE'S DIGITS ARE THE MODE'S (the maintainer, 10-24: "change the tutorial to teach using 1, 2, 3, 4, and 5 to select squad members"): with the
+   *  mode up on a mission that gives `plan`, a digit pressed is let through to it wherever the page has the digits pick the men (CMDRING.planDigits,
+   *  planmode.ts pickDigit: 1 to 4 a man, Shift + a digit adds him, 5 everyone) — and only there and then: planInput takes every such press, so none
+   *  reaches a slot. AND PICKS WAIT FOR THEIR LESSON: on a mission that teaches picking (a step's test is `picked`) nothing picks a man — no digit, no
+   *  left button — until the first such step is up, so every order before it goes to the whole squad (a stray click on a man there left one man picked,
+   *  and the way back, a click on bare ground, is out of the mode). false: a digit is a locked slot's key and is dropped and the left button is the
+   *  mode's from its first tick, as the build was — and a line that names a digit cannot be done */
+  planDigits: true,
   /** SHIFT WITH THE COMMAND KEY ON THE MOVE: where a step gives him his feet and plan mode but not his sprint, a walk key held is no sprint's — so Shift
    *  with the command key, pressed, is the mode's there too, and the walk keys are out of that one tick (the Shift that gets through never meets a walk
    *  key to run with). false: with a walk key down the pair did nothing at all until he stood still, as it was */
@@ -266,6 +275,12 @@ export class Rails {
   get planSeat(): boolean { return !BREAK && RAILS.skyUp && !!this.data?.sky?.plan; }
   /** …and the mode's own view is the picture's: the mode is up with a point of its own (CMDRING.planRts; without one the seat's view and its pan stand) */
   private get seatView(): boolean { const P = this.g.orders?.plan; return this.planSeat && !!P?.up && !!P.look; }
+  /** picks wait for their lesson (RAILS.planDigits): the mission has a step whose test is `picked`, and the first of them is not up yet */
+  private picksWait(): boolean {
+    const S = this.lesson(); if (!RAILS.planDigits || !S) return false;
+    const asks = (t: unknown): boolean => !!t && typeof t === 'object' && ((t as { is?: unknown }).is === 'picked' || (Array.isArray((t as { of?: unknown }).of) && ((t as { of: unknown[] }).of).some(asks)));
+    const k = S.L.steps.findIndex(T => asks(T.done)); return k >= 0 && S.i < k;
+  }
   private lesson(): { L: LessonData; i: number } | null { const L = this.g.lesson?.data; return L?.rails && RAILS.on ? { L, i: Math.min(this.g.lesson.index, L.steps.length) } : null; }
 
   /** the actions that work now: the record's, each step's own from the moment it came up, less what a step took away — derived from the step that is up */
@@ -374,7 +389,12 @@ export class Rails {
     // (only where the page HAS the mode — `?qplan=0` and the frozen stand do not, and there the key with Shift is the key's own order, which stays locked. A walk
     //  key held is a sprint's only where his feet are his: on a mission that never gives them it cannot stand between Shift and the key)
     const WALK = ACTS.move.keys!, planOn = A.has('plan') && CMDRING.plan, planUp = planOn && !!g.orders?.plan.up, walking = A.has('move') && WALK.some(k => input.keys.has(k));
-    if (planUp) { if (RAILS.planDown) this.planTick = { buttons, shift: A.has('sprint') || enter, walk: A.has('move') }; buttons |= 5; if (CMDRING.planRts) for (const k of WALK) keys.add(k); }   // (the walk keys are the view's only in the mode as an RTS's: without it they are his feet)
+    const picks = planUp && !this.picksWait();   // (RAILS.planDigits: the left button picks men, and it is the mode's only once the mission's first pick is up)
+    if (planUp) { if (RAILS.planDown) this.planTick = { buttons, shift: A.has('sprint') || enter, walk: A.has('move') }; buttons |= picks ? 5 : 4; if (CMDRING.planRts) for (const k of WALK) keys.add(k); }   // (the walk keys are the view's only in the mode as an RTS's: without it they are his feet)
+    // (RAILS.planDigits · …and its digits, where the page has them pick the men and the mission's first pick, if it has one, is up: exactly the presses
+    //  planInput will take this tick — planmode.ts planTakesDigits, its own answer, so the two cannot drift: with a menu, the ring or the ring's key up a digit
+    //  is that menu's own. Only the PRESS is let through, by its own test below and not by `ok`: a digit held is nobody's)
+    const planDigit = picks && RAILS.planDigits && !!g.orders && planTakesDigits(g.orders, input);
     // (RAILS.planWalk · …and where his feet are his and his sprint is not, a walk key held is nobody's sprint: the pair PRESSED with the mode down is the
     //  mode's with a walk key down too, and the walk keys leave that one tick with it — planmode.ts planShift, under `planRun`, reads a walk key as a
     //  run, and a Shift that reached his feet would be one. Only on a press planInput would take: no ring up, nothing nearer for the key to back out of.
@@ -403,7 +423,7 @@ export class Rails {
     // the sky seat's walk keys are the view's, never his feet's: read here, then gone from the tick
     // (…but with plan mode held up in that seat — RAILS.skyUp — they are the mode's own, which moves its view by them: planmode.ts pan)
     if (this.skyOn && !(planUp && this.seatView)) { if (A.has('pan')) this.pan(input, cam, dt); this.keep(input, cam, dt); for (const k of ACTS.move.keys!) { input.keys.delete(k); input.pressed.delete(k); } keys.delete('KeyW'); keys.delete('KeyA'); keys.delete('KeyS'); keys.delete('KeyD'); }
-    for (const k of [...input.pressed]) if (!ok(k)) { input.pressed.delete(k); dropped++; }
+    for (const k of [...input.pressed]) if (!ok(k) && !(planDigit && DIGIT.test(k))) { input.pressed.delete(k); dropped++; }
     for (const k of [...input.keys]) if (!ok(k)) input.keys.delete(k);
     // the command key held is the ring, and with Shift the plan: each its own action over `order`
     if (keys.has('KeyB')) {

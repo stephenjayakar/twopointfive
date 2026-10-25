@@ -114,6 +114,16 @@ function pickDigit(S: SquadOrders, d: number, shift: boolean): void {
 }
 /** the digit that picks everyone (the men's own are below it) */
 const PLAN_ALL = 5;
+/** the digits are the mode's this tick (planInput, with the mode up and no menu or ring over it): never with the ring's key down */
+const digitsFree = (input: Input): boolean => CMDRING.planDigits && !input.down(CMDRING.key);
+/** WOULD planInput TAKE A DIGIT PRESSED THIS TICK AS A PICK? Asked by a tutorial's gate BEFORE the tick is read (rails.ts gate, RAILS.planDigits), which
+ *  lets a digit through on this answer alone: a digit let through and not taken here would be a slot's key. So it is planInput's own road to the line
+ *  that deletes the press, and no wider — the mode up and not on its way down this tick (no press of the ring's key, no back key outside a seat that holds
+ *  the mode up), no menu and no ring over it, and `digitsFree` */
+export function planTakesDigits(S: SquadOrders, input: Input): boolean {
+  const P = S.plan, K = CMDRING;
+  return K.plan && K.on && P.up && !S.menu && !S.cmdRing && digitsFree(input) && !input.pressed.has(K.key) && (seat(S) || !(input.pressed.has('Escape') || input.pressed.has('Tab')));
+}
 /** a left click on bare ground picks everyone, as the mode was built — not once the digits pick the men, except on a tutorial mission, whose lines still
  *  name that click (rails live: the tutorial's own to move) */
 export const planGroundAll = (S: SquadOrders): boolean => !CMDRING.planDigits || !!S.g.rails?.live;
@@ -420,7 +430,7 @@ export function planInput(S: SquadOrders, input: Input, cam: FollowCamera, canva
   if (S.menu || S.cmdRing) { P.drag = null; P.rmbT = -1; P.rdown = null; return; }   // (a menu or the ring is up: the buttons are its own this frame — planAfter takes what is left of them from Sam)
   if (K.planRts) pan(S, input, cam, dt);
   // (the digits pick the men — never with the ring's key down: a digit inside that press is the ring's own wedge, CMDRING.stayDigit)
-  if (K.planDigits && !input.down(K.key)) for (let d = 1; d <= PLAN_ALL; d++) if (input.pressed.delete(`Digit${d}`)) pickDigit(S, d, shift);
+  if (digitsFree(input)) for (let d = 1; d <= PLAN_ALL; d++) if (input.pressed.delete(`Digit${d}`)) pickDigit(S, d, shift);
   const held = (input.buttons & 1) !== 0, lmb = (input.clicked & 1) !== 0, rmb = (input.clicked & 4) !== 0, mx = input.mouseX, my = input.mouseY;
   const w = canvas.clientWidth, h = canvas.clientHeight, now = S.recipients();
   if (lmb) P.drag = { x0: mx, y0: my, x1: mx, y1: my };   // (a press is a box begun, wherever it lands: let go where it went down, it was a click)
