@@ -13,9 +13,9 @@ import type { FollowCamera } from '../game/camera';
 import { castVariantOf, castWear } from '../game/cast';
 
 /** the lab as the panel has it: angles in degrees (yaw 0 looks toward −z), dist and height in metres */
-export const CHARLAB = { on: false, yaw: 150, pitch: 12, dist: 3.2, height: 1.0, turn: false };
+export const CHARLAB = { on: false, yaw: 150, pitch: 12, dist: 3.8, height: 0.95, turn: false };   // (the camera's lens is a long one, 28°: a man is whole in the picture from about 3.6 m)
 const TURN = 24;   // degrees a second, turning slowly
-const NEAR = 1.2;   // metres: nearer than this the eye is too close to see a man whole (the near plane is half a metre out), so another side is looked for
+const KEEP = 0.75;   // of the distance asked: where a wall brings the eye nearer than this, another side is looked for (close in, a long lens shows a belt, not a man)
 const ROOM = 0.25;   // metres the eye keeps off the wall it was brought in from (the near plane's corners reach that far to the sides)
 const was = { outfit: '', unseen: false, safe: false, quiet: false, t: 0, d: 0 };   // (d: the distance the eye stood at last frame, 0 = none yet)   // (unseen / safe: the lab raised that flag itself, and so puts it down on Leave)
 const DEG = Math.PI / 180;
@@ -62,7 +62,7 @@ export function charLabFrame(game: Game, cam: FollowCamera): void {
   // (camera.ts rebuild: the eye is `dist` back from the look point along the view). `clear(a)` = how far back the eye can stand looking from angle a, up to
   // the distance asked. Too near on the angle asked → the roomiest of the twelve angles a twelfth of a turn apart, a nearer one preferred.
   // Coming in is at once (a frame behind a wall is a frame of wall); going back out is eased, so a post passed in a slow turn does not make the picture jump.
-  const cp = Math.cos(pitch), sp = Math.sin(pitch), want = CHARLAB.dist, enough = Math.min(NEAR, want);
+  const cp = Math.cos(pitch), sp = Math.sin(pitch), want = CHARLAB.dist, enough = KEEP * want;
   const eye = (a: number, d: number): [number, number, number] => [look[0] + Math.sin(a) * cp * d, look[1] + sp * d, look[2] + Math.cos(a) * cp * d];
   // (three rays: to the eye and to a point ROOM to either side of it, so a wall the view runs along is kept off the picture's edge as well)
   const blocked = (a: number, d: number): boolean => { const e = eye(a, d), sx = Math.cos(a) * ROOM, sz = -Math.sin(a) * ROOM; return game.col.segmentBlocked(look, e) || game.col.segmentBlocked(look, [e[0] + sx, e[1], e[2] + sz]) || game.col.segmentBlocked(look, [e[0] - sx, e[1], e[2] - sz]); };
