@@ -318,6 +318,18 @@ but synthetic writes still work.
   a frame there taking seconds and the wall's cut put out of reach, so a scene ends by the player's own cut after `CAP` game seconds and the last page's
   tail is the fake page's to prove; `STEP=script` has the check step the scenes with `__runFrames` instead; about 80 minutes at 320x180). NEVER RUN ON A GPU: no number of its report has been read on a real machine, the seven
   minutes are an estimate, and nobody has watched a scene played or looked at the card.
+- **A page's own rows in the F8 sweep** (`ui/perfsweep.ts PerfSweep.extra`, a list of `SweepExtra { id, label, flip, liveOnly?, warm? }`; the page's
+  sweep is `window.__perfsweep`). For a switch that is a page's own and no row of `SWEEP_ROWS` (a prototype page's panel): `flip({ live })` is asked once
+  as the take begins and answers `{ from, to, apply: () => undo, settleMs?, ready? }` or, as a string, why the row is skipped here (`ready` = a `warm`
+  row's own picture draws). Added rows are flipped in the same rounds as the build's own (after them in the first round; later rounds shuffle all the
+  take's rows together, so the build's rows are not in the order of a take without added rows) and named in the take's begin line like any row, so
+  `tools/qa/perf-report.ts` prints them with no change (`from` / `to` are printed as the row's change: small plain values). Skipped, each with its
+  reason under the name `added row '<id>'`, never stopping the take: an id already taken (`base` too), a flip that throws or is not one, values a line
+  cannot carry. A flip must not go through `Quality` (that reads as a hand change and stops the take). The benchmark's sweep (`SweepOpts.inside`) takes
+  the build's rows alone. None added (the game's page) = the take as it was. With these the sweep also runs EVERY undo when one throws (it stopped at
+  the first) and its closing line then says one row's way back failed. The finished take is on `window.__lastPerfDump`, and `serializeDump`
+  (`ui/perfrec.ts`) gives its JSON in parts for a page that cannot download. Check: `bun run tools/qa/perf-sweep-logic.ts` (the hand-change line for
+  a page's own row and the block at its end). Run once on a real page on the software adapter with added rows; never on a GPU.
 - **The missions gate's commander hunts first (tools/qa/missions-gate.ts; the gate only).** It passes `PT_HUNT=first` to its `ships.ts` run: with no room held the scripted
   commander goes for whoever is left before he walks the rooms again. `playthrough.ts`'s default (every room first) is unchanged, so tallies made with it still compare, and
   `ships.ts --seeds 1-2` by itself still stalls where the gate does not. Why: with the last defender standing out in the open the default ran the compound's seed 2 to the 300 s
