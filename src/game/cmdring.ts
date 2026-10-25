@@ -179,15 +179,15 @@ export const CMDRING = {
    *  members, and 5 selects all of them? and then we should remove clicking on the ground selects all"): with the mode up and no ring or menu up, a
    *  digit 1 to 4 picks that man of the squad alone (the squad's own order: a man keeps his digit when another is down), Shift + the digit puts him in
    *  the picked set or takes him out, 5 picks everyone — and a left click on bare ground picks nobody new: the men picked stay picked (a drag still
-   *  boxes, a click on a man is still him). His digit is drawn by each man's circle. A tutorial mission is the same (its lines teach the digits; until
-   *  10-25 it kept the ground click). false: no digit is the mode's, and a click on nothing is everyone, as it was built. Off
+   *  boxes, a click on a man is still him). His digit is drawn by each man's circle. A TUTORIAL MISSION (rails live) KEEPS THE GROUND CLICK until its
+   *  own lines stop naming it; the digits work there too. false: no digit is the mode's, and a click on nothing is everyone, as it was built. Off
    *  here and on the frozen stand (`TPS_PLANDIGITS=1`, beside `TPS_QPLAN=1`); the page raises it with the mode (`?plandigits=0` off) */
   planDigits: false,
   /** PLAN MODE: A CLICK ON BARE GROUND DESELECTS (planmode.ts planInput; the maintainer, 10-25, with the digits picking the men and the ground click
    *  doing nothing: "clicking on the ground to deselect is pretty key"): with `planDigits` on, a left click on bare ground leaves NOBODY picked: no
    *  circle is lit, a right click orders nobody ("nobody to take that order") and no ring opens, until a man is picked again by a click, a box or
    *  his digit, or 5 picks everyone. Shift + a click or Shift + a digit adds to the empty set. The mode put down forgets it: it comes up with
-   *  everyone. A tutorial mission is the same. false: the click picks nobody new and who was
+   *  everyone. A tutorial mission keeps its own ground click (planGroundAll) while its lines name it. false: the click picks nobody new and who was
    *  picked stays picked, as `planDigits` was built. Off here and on the frozen stand (`TPS_PLANCLEAR=1`, beside `TPS_PLANDIGITS=1`); the page
    *  raises it with the digits (`?planclear=0` off) */
   planClear: false,

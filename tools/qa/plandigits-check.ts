@@ -9,7 +9,7 @@
 //   3. 5 picks everyone.
 //   4. a left click on bare ground picks nobody new: the men picked stay picked. A click on a man and a drag still pick.
 //   5. a digit with the ring's key down is not the mode's (it is the ring's own wedge), and a digit with no man is nothing.
-//   6. CONTROL — a tutorial mission (rails live) has no ground click of its own: it is gone there as off a tutorial.
+//   6. CONTROL — a tutorial mission (rails live) keeps the ground click, while its lines still name it; off a tutorial it is gone.
 //   7. CONTROL — the switch off: no digit is the mode's (the weapon slot's key is left in the frame), a click on nothing is everyone, no digit drawn.
 //   8. CONTROL (plumbing) — a recording from before the key replays with it off; the frozen stand holds it off, the page's has it on, FROZEN_HOLDS has its row.
 // PLANDIGITS_BREAK=1 = the switch left off and the same lines asked: 1 to 5 must fail.
@@ -60,7 +60,7 @@ export async function plandigitsCheck(): Promise<boolean> {
     // 6
     { const rails0 = g.rails; K.planDigits = true;
       g.rails = { live: true }; const taught = PM.planGroundAll(O); g.rails = { live: false }; const plain = PM.planGroundAll(O); g.rails = rails0; const here = PM.planGroundAll(O); K.planDigits = !BREAK;
-      line(!taught && !plain && !here, '6. CONTROL — a tutorial mission has no ground click of its own: it is gone there as off a tutorial', `rails live: ${taught ? 'everyone' : 'nobody new'} · rails not live: ${plain ? 'everyone' : 'nobody new'} · this mission: ${here ? 'everyone' : 'nobody new'}`); }
+      line(taught && !plain && !here, '6. CONTROL — a tutorial mission keeps the ground click; off a tutorial it is gone', `rails live: ${taught ? 'everyone' : 'nobody new'} · rails not live: ${plain ? 'everyone' : 'nobody new'} · this mission: ${here ? 'everyone' : 'nobody new'}`); }
     // 7
     { K.planDigits = false; R.home(); R.clickMan(T()[0]); const one = names();
       input.pressed.add('Digit2'); PM.planInput(O, input, R.W.cam, R.W.canvas, 0); const left = input.pressed.has('Digit2'); input.pressed.delete('Digit2'); const still = names();

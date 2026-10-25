@@ -443,8 +443,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   picking the men and the ground click doing nothing: "clicking on the ground to deselect is pretty key". ON, with `planDigits`: a left click on
   bare ground leaves NOBODY picked (`plan.pick = []`, an empty set that `tick` lets stand): no circle is drawn as picked, a right click orders
   nobody ("nobody to take that order"), no chain is laid. A click on a man, a box, a digit, Shift + either (it adds to the empty set) or 5 for
-  everyone picks again; the mode put down forgets it and comes up with everyone. A TUTORIAL MISSION IS THE SAME: the click that picked everyone there went on 10-25, with
-  mission 2's lines turned to the digits (it needs that change of the tutorial's in the same tree). SWITCH: ON in the page with the digits (`?planclear=0` = the click picks nobody new, who was picked
+  everyone picks again; the mode put down forgets it and comes up with everyone. A TUTORIAL MISSION KEEPS ITS OWN GROUND CLICK (everyone,
+  `planGroundAll`) while its lines name it. SWITCH: ON in the page with the digits (`?planclear=0` = the click picks nobody new, who was picked
   stays picked), OFF in the module and on the frozen stand (`TPS_PLANCLEAR=1`, beside `TPS_PLANDIGITS=1`); a recording from before the key
   replays with it off; debugger tick "Tab ▸ plan mode ▸ a click on the ground deselects". CHECK: `probes.ts planclear` (family squadorders;
   `tools/qa/planclear-check.ts`), seven lines on plan mode's rig on both stands; `PLANCLEAR_BREAK=1` fails lines 1 to 3. `plandigits-check` holds
@@ -456,8 +456,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   Blue Two; a man keeps his digit when another is down, and a digit with no living man is nothing), Shift + the digit puts him in the picked set or
   takes him out as a Shift click does, 5 picks everyone, and his digit is drawn up and to the right of each man's circle (`PlanView.men[].n`,
   `.planmode .pn`). A LEFT CLICK ON BARE GROUND THEN PICKS NOBODY NEW: who was picked stays picked; a click on a man and a box still pick. A digit
-  with the ring's key down is left for the ring (`stayDigit`). A TUTORIAL MISSION KEPT THE GROUND CLICK until 10-25, while mission 2's lines said
-  "Left-click on empty ground to pick your whole squad again"; its lines teach the digits now and `planGroundAll` asks the switch alone. ON in the page with the mode (`?plandigits=0` off), OFF in the module and on the frozen stand (`TPS_PLANDIGITS=1`, beside
+  with the ring's key down is left for the ring (`stayDigit`). A TUTORIAL MISSION (rails live) KEEPS THE GROUND CLICK: mission 2's lines say
+  "Left-click on empty ground to pick your whole squad again" and its scripted player does it, the plan tutorial's own to move (told); the digits
+  work there too. ON in the page with the mode (`?plandigits=0` off), OFF in the module and on the frozen stand (`TPS_PLANDIGITS=1`, beside
   `TPS_QPLAN=1`); a `FROZEN_HOLDS` row; the journal (a recording from before the key replays with it off); a tick ('Tab ▸ plan mode ▸ the digits
   pick the men'). CHECK `probes.ts plandigits` (family squadorders; 8 lines on plan mode's own rig, both stands, one deal seed 3: the rule has no die
   in it; `PLANDIGITS_BREAK=1` fails lines 1 to 5). `planmode-check`'s rig holds the switch off: its lines pick by the mouse and ask that a click on
