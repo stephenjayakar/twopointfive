@@ -25,7 +25,7 @@ export const SCENES: { name: string; sam: Vec3; yaw: number; seen: boolean; behi
   { name: 'man standing', sam: [10.4, 0, 16.5], yaw: 1.03, seen: false, line: 'Sneak up behind him and grab him', tip: 'a man who stands with his back to you. Look at the whole of it: the walk in, the stop, the grab' },
   { name: 'man walking', sam: [13.2, 0, 13.6], yaw: Math.PI / 2, seen: false, behind: 'beat', line: 'Catch up with him from behind and grab him', tip: 'a man who walks away from you down the yard, waits, and turns back. Look for: can you match his pace and stay behind him?' },
   { name: 'dark room', sam: [34.2, 0, 25.9], yaw: Math.PI, seen: true, end: [36.2, 0, 7.4], line: 'Get to the far end of the room without being seen', tip: 'three men among the shelves, and they can see you. Look for: does slipping between them feel careful and quick to read?' },
-  { name: 'dark corridor', sam: [9.4, 0, 3.2], yaw: Math.PI / 2, seen: true, end: [33.0, 0, 3.2], line: 'Get to the far end of the corridor without being seen', tip: 'two men walking up and down, three niches, and they can see you. Look for: does ducking into a niche as one comes feel good?' },
+  { name: 'dark corridor', sam: [4.3, 0, 25.8], yaw: Math.PI, seen: true, end: [4.3, 0, 2.0], line: 'Get to the far end of the corridor without being seen', tip: 'two men walking up and down, three niches, and they can see you. Look for: does ducking into a niche as one comes feel good?' },
   { name: 'corner', sam: [10.7, 0, 12.45], yaw: 0, seen: false, line: 'Wait at the corner and grab him as he comes past', tip: 'your back is on the wall, and a man comes round the corner past you. Look for: is the moment to grab easy to feel?' },
 ];
 export const SNEAKLAB_SYSTEM = 'Sneak lab';
