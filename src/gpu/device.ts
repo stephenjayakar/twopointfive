@@ -75,6 +75,7 @@ export async function initGpu(canvas: HTMLCanvasElement, opts: { retry?: boolean
       maxColorAttachmentBytesPerSample: lim.maxColorAttachmentBytesPerSample,
     },
   });
+  if (PIPE_QUEUE.on) installPipeQueue(device);
   device.lost.then(info => onLost(info, !!opts.retry));
   device.addEventListener('uncapturederror', (ev) => { console.error('WebGPU error:', (ev as GPUUncapturedErrorEvent).error.message); });
   const ctx = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -134,6 +135,63 @@ function track<T>(label: string, p: Promise<T>): Promise<T> {
   const P = pipelineProgress; P.total++; const t = typeof performance !== 'undefined' ? performance.now() : 0;
   return p.then(v => { P.done++; if (P.times.length < 512 && typeof performance !== 'undefined') P.times.push({ label, ms: performance.now() - t }); P.onChange?.(P.done, P.total, label); return v; });
 }
+// ---- THE COMPILE QUEUE (2026-10-26, measured on a Windows machine: RTX 3080, Ryzen 3700X, Chrome 155, D3D12 + DXC). Chrome compiles every …Async pipeline on ONE pool
+// of worker threads in its GPU process (15 workers on 16 hardware threads), and that pool is SHARED with Chrome's own drawing of the page: Skia Graphite rasterizes the
+// HTML (the HUD, the cards, the menus) through Dawn and makes its little pipelines on the same workers. On D3D12 a big kernel of ours is a DXC compile of 5–25 s (the
+// gathers, the march, the composites: everything in them is inlined into one function), so a burst of twenty of them holds every worker for that long — and Graphite's
+// pipelines, asked for while the burst runs, wait behind it. The page then cannot be drawn at all: the trace of a played floor showed the raster's flush blocked 3–7 s at a
+// time while the second (cut-box) set compiled after the boot, the picture frozen with it (15 s in one take). Metal compiles in a fraction of that, so the burst never
+// starved anything on a Mac. So every …Async creation goes through this queue: at most `boot` in flight while the start card counts the boot's pipelines in (biggest module
+// first, so the slowest compiles are not the last to start), and after the boot (`pipeQueue.settle()`, main.ts) at most `after` in flight, of which at most `low` are the
+// background set's (modules compiled behind the cut prelude: `const CUT_BOXES: bool = true;`) — first come first served among the rest, so a pass's first-use pipeline
+// is not stuck behind twenty background twins. A switch of the page, not a rule of the game (no knob, no FROZEN_HOLDS row: every stand compiles the same programs, only
+// in a different order); `?pipequeue=0` = every creation straight to the browser, as it was.
+export const PIPE_QUEUE = { on: true, /** in flight while the boot's count is open (0 = the machine's threads less two, at least 4) */ boot: 0, /** in flight after the boot */ after: 4, /** …of which background (cut-set) compiles */ low: 2 };
+try { const v = new URLSearchParams(location.search).get('pipequeue'); if (v === '0') PIPE_QUEUE.on = false; else if (v && /^\d+$/.test(v)) PIPE_QUEUE.boot = +v; } catch { /* no page (the harness) */ }
+interface PipeJob { cost: number; low: boolean; seq: number; go: () => void }
+/** the queue's state (window.__pipeQueue on the page: in flight, waiting, the phase, the most that ever waited) */
+export const pipeQueue = {
+  phase: 'boot' as 'boot' | 'after', inflight: 0, inflightLow: 0, waiting: [] as PipeJob[], maxWaiting: 0, seq: 0,
+  limit(): number { return this.phase === 'boot' ? (PIPE_QUEUE.boot || Math.max(4, ((typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 8) - 2)) : PIPE_QUEUE.after; },
+  /** the boot's pipelines are in: from here at most `after` in flight, `low` of them background */
+  settle() { this.phase = 'after'; this.pump(); },
+  pump() {
+    while (this.waiting.length && this.inflight < this.limit()) {
+      let pick = -1;
+      for (let i = 0; i < this.waiting.length; i++) {
+        const j = this.waiting[i];
+        if (j.low && this.phase === 'after' && this.inflightLow >= PIPE_QUEUE.low) continue;
+        if (pick < 0) { pick = i; continue; }
+        const p = this.waiting[pick];
+        const better = this.phase === 'boot' ? j.cost > p.cost : (p.low && !j.low) || (p.low === j.low && j.seq < p.seq);   // boot: biggest first · after: the foreground first, then in order
+        if (better) pick = i;
+      }
+      if (pick < 0) return;
+      const job = this.waiting.splice(pick, 1)[0]; this.inflight++; if (job.low) this.inflightLow++; job.go();
+    }
+  },
+};
+function installPipeQueue(device: GPUDevice) {
+  const D = device as unknown as Record<string, unknown>;
+  const meta = new WeakMap<GPUShaderModule, { cost: number; low: boolean }>();
+  const csm = device.createShaderModule.bind(device);
+  D.createShaderModule = (desc: GPUShaderModuleDescriptor) => { const m = csm(desc); meta.set(m, { cost: desc.code.length, low: desc.code.includes('const CUT_BOXES: bool = true;') }); return m; };
+  const of = (mods: (GPUShaderModule | undefined)[]) => { let cost = 0, low = false; for (const m of new Set(mods)) { const x = m && meta.get(m); if (x) { cost += x.cost; low ||= x.low; } } return { cost, low }; };
+  const queued = <T,>(mods: (GPUShaderModule | undefined)[], make: () => Promise<T>): Promise<T> => new Promise<T>((resolve, reject) => {
+    const { cost, low } = of(mods); const Q = pipeQueue;
+    const job: PipeJob = { cost, low, seq: Q.seq++, go: () => {
+      let p: Promise<T>; try { p = make(); } catch (e) { p = Promise.reject(e); }
+      p.then(resolve, reject).finally(() => { Q.inflight--; if (job.low) Q.inflightLow--; Q.pump(); });
+    } };
+    Q.waiting.push(job); Q.maxWaiting = Math.max(Q.maxWaiting, Q.waiting.length);
+    queueMicrotask(() => Q.pump());   // (a burst made in one task is all queued before the first pick: the biggest of it starts first)
+  });
+  const cpa = device.createComputePipelineAsync.bind(device), rpa = device.createRenderPipelineAsync.bind(device);
+  D.createComputePipelineAsync = (desc: GPUComputePipelineDescriptor) => queued([desc.compute.module], () => cpa(desc));
+  D.createRenderPipelineAsync = (desc: GPURenderPipelineDescriptor) => queued([desc.vertex.module, desc.fragment?.module], () => rpa(desc));
+  try { (window as unknown as Record<string, unknown>).__pipeQueue = pipeQueue; } catch { /* no page */ }
+}
+
 /** createComputePipelineAsync with progress accounting; on rejection logs and returns the synchronous (invalid-but-usable-as-before) pipeline. (Promise.resolve round the call: the QA
  *  harness's Proxy device answers with a non-thenable stand-in, which then simply resolves.) */
 export function computePipelineAsync(device: GPUDevice, desc: GPUComputePipelineDescriptor): Promise<GPUComputePipeline> {
