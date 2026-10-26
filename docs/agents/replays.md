@@ -283,7 +283,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   own `quiet` and kind, weather's dice and a few unsubscribe hooks are closures (the check prints every function in the state by where it hangs). `newRunId()` reads
   the wall clock inside the tick (marked, never compared; a server would name the run). The static pass does not see a class instance at the top of a module, an
   out-parameter, a class's `static` field. A SAVE IS A SIDE EFFECT OUTSIDE THE SNAPSHOT: the controller's shelf of saves in memory is deliberately not in one
-  (`savestate.ts memShelf`: a load must not take the later saves away), so the same ticks played again after a put back write an autosave a second time, into the
+  (`savestate.ts MemShelf`, a `HostOwned`: a load must not take the later saves away), so the same ticks played again after a put back write an autosave a second time, into the
   next slot, and the slot's name is in the state — whoever rolls a game back puts the shelf back with it: the check does (every snapshot it takes remembers the
   shelf beside it), a rollback ring will have to. THE SENSORS' TAPE DOES NOT GO BACK EITHER (`sensors.ts SensorStream`, the host's): right for a save loaded
   in play — the game goes back, the recording goes on — but a ring that undoes eight ticks and plays them again under a recording files them twice, and

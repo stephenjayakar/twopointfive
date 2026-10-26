@@ -1,6 +1,7 @@
 // THE SAVE TIMELINE (src/game/savestate.ts SAVETIMELINE): the saves roll in two rings, each keeps a picture, a team on the floor is saved in memory, and every
 // entry of the strip loads and plays on as the run it was taken from.
-//   bun run tools/qa/savetimeline-check.ts          (probes.ts savetimeline; SAVETIMELINE_BREAK=1 leaves the switch off and must FAIL)
+//   bun run tools/qa/savetimeline-check.ts          (probes.ts savetimeline; SAVETIMELINE_BREAK=1 leaves the switch off and must FAIL;
+//                                                    SAVESINCE_BREAK=1 nudges one man after each put-back of a take since the base in (5b) and must FAIL)
 // What it holds, on the plain night alone and on a yard with a pair on the floor (train-orders, once Training 5):
 //   (1) the set ROLLS at its cap: seven autosaves and seven saves by hand leave the newest five of each — neither kind pushes out the other — and the strip
 //       (`timeline`) lists the ten in the mission clock's order;
@@ -27,7 +28,7 @@ const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/lev
 const { rollcallState } = await import(`${ROOT}/src/game/guards.ts`);
 const { ambientState } = await import(`${ROOT}/src/game/dialogue.ts`);
 const { MOVES, TURN } = await import(`${ROOT}/src/game/character.ts`);
-const { takeSnapshot, snapshotBytes } = await import(`${ROOT}/src/game/rollback.ts`);
+const { takeSnapshot, snapshotBytes, stateHash, restoreSnapshot } = await import(`${ROOT}/src/game/rollback.ts`);
 const { roomOf } = await import(`${ROOT}/src/game/chronicle.ts`);
 const { hostileTo } = await import(`${ROOT}/src/game/teams.ts`);
 
@@ -211,6 +212,60 @@ export async function savetimelineCheck(): Promise<boolean> {
         if ((S.slots() as any[]).some(x => x.mem)) fails.push('a restart kept the old run\'s saves in memory'); }
       line(!fails.length, '(5) train-orders, a pair on the floor: a save is kept where no file can be, the newest five by hand beside the autosave, each loads and plays on as its save did, the store untouched; F5 saves, Enter once down goes back; a restart lets them go',
         `${units} units · ${notes.join(' · ')}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
+    }
+    // ---- (5b) the same pair, each save in memory taken SINCE the one before it (SAVETIMELINE.since; SAVESINCE_BREAK=1: one man is nudged after each put-back and 'to the bit' must FAIL)
+    {
+      const SECS_B = 4, BREAK_B = process.env.SAVESINCE_BREAK === '1';
+      const play = async (since: boolean) => {
+        const W = await lesson('train-orders', 11, ON), g = W.game, S = g.saves, shelf = (S as any).shelf; S.enabled = false; SAVETIMELINE.since = since;
+        const out = { refs: [] as string[], kinds: [] as boolean[], loads: [] as string[], pairs: 0, bits: 0, thrown: '', fails: [] as string[] }, cams = new Map<string, any>(), ref = new Map<string, string>();
+        const walk = (label: string) => WALK[Number(label.split('#')[1]) % 4], pairs: [string, any, any][] = [];
+        const save = (label: string): any => {
+          W.input.keys.clear(); steps(W, 3); const base = shelf.last;
+          // (the moment before the save, taken the way the save is about to be — since the shelf's own base — and whole: put back side by side below. The save's
+          //  own snapshot cannot stand beside a whole take: the controller writes its books on both sides of it inside the one call)
+          if (since && base) pairs.push([label, takeSnapshot(g, base), takeSnapshot(g)]);
+          const r = S.write(g, 'manual', label); if (!r.ok) { out.fails.push(`${label}: ${r.why}`); return null; }
+          if (!r.info?.mem) out.fails.push(`${label} is not kept in memory`);
+          out.kinds.push(!!base && shelf.get(r.info.key)?.snap.chain === base.chain);   // (taken since the base: it stands on the base's own chain — a whole walk begins a new one)
+          cams.set(label, camKeep(W)); W.input.keys.add(walk(label)); const d = digestRun(W, SECS_B, SEED).hash; ref.set(label, d); out.refs.push(d); return r.info;
+        };
+        const load = (x: any) => {
+          const why = S.load(g, x.key); if (why) { out.fails.push(`${x.label}: would not load — ${why}`); return; }
+          camPut(W, cams.get(x.label)); W.input.keys.clear(); W.input.keys.add(walk(x.label)); const d = digestRun(W, SECS_B, SEED).hash; out.loads.push(d);
+          if (d !== ref.get(x.label)) out.fails.push(`${x.label}: the ${SECS_B} s after its load digest ${d}, after its save ${ref.get(x.label)}`);
+        };
+        for (let i = 0; i < 7; i++) save(`since #${i}`);   // (seven into a ring of five: the two oldest are gone, and with them the snapshots the third was taken since)
+        const hands = (S.timeline() as any[]).filter(x => x.slot === 'manual');
+        if (hands.length !== 5) out.fails.push(`by hand kept: ${hands.map(x => x.label).join(',')}`);
+        for (const x of hands) load(x);   // (each a put-back; oldest first, so the newest is put back over a game that has been four others since it was taken)
+        // a save made after a put-back is taken since the snapshot put back: it loads, and so do one older and one newer than the one it was taken since
+        if (hands.length === 5) { load(hands[1]); const late = save('since #7'); load(hands[4]); if (late) load(late); load(hands[2]); }
+        // TO THE BIT: each of those put back, then the whole take of the same moment — the state word of what the game reaches is the same word (last, so
+        // that nothing above runs on from a put-back that went round the controller). The red path nudges one man after the first put-back: every pair must part.
+        const word = (snap: any, nudge: boolean) => { restoreSnapshot(snap); if (nudge) { const c = g.guards[0].char.pos; c[0] += Math.max(1e-3, Math.abs(c[0]) * 1e-5); } return stateHash(g); };
+        out.pairs = pairs.length;
+        for (const [label, mine, whole] of pairs) { const a = word(mine, BREAK_B), b = word(whole, false); if (a === b) out.bits++; else out.fails.push(`before ${label}: taken since the base on the shelf and put back, the state word is ${a}; a whole take of the same moment gives ${b}`); }
+        // A TAKE THAT THROWS HALF WAY (rollback.ts Chain.busy): the next take since a snapshot of that chain is a whole one on a new chain and is the game as it
+        // stands; a snapshot of the marked chain still goes back
+        if (since && pairs.length) { const base = shelf.last, G = g as any;
+          Object.defineProperty(G, 'zzThrows', { enumerable: true, configurable: true, get() { throw new Error('thrown in the walk'); } });
+          let threw = false; try { takeSnapshot(g, base); } catch { threw = true; } delete G.zzThrows;
+          const after = takeSnapshot(g, base), whole = takeSnapshot(g), a = word(after, false), b = word(whole, false); let back = true; try { restoreSnapshot(base); } catch { back = false; }
+          out.thrown = !threw ? 'the take did not throw' : after.chain === base.chain ? 'the take after a thrown one went on in the same chain' : a !== b ? 'the take after a thrown one is not the game as it stood' : !back ? 'a snapshot of the marked chain would not go back' : '';
+          if (out.thrown) out.fails.push(out.thrown); }
+        W.input.keys.clear(); return out;
+      };
+      const on = await play(true), off = await play(false), fails = [...on.fails.map(f => `since: ${f}`), ...off.fails.map(f => `whole: ${f}`)];
+      const sinceN = on.kinds.filter(Boolean).length;
+      if (on.kinds[0]) fails.push('the first save of the run reads as taken since another');
+      if (sinceN < on.kinds.length - 2) fails.push(`${sinceN} of ${on.kinds.length} saves were taken since the one before (want all but the first; one whole walk forced by a stale chain is let by)`);
+      if (off.kinds.some(Boolean)) fails.push('with the switch off a save reads as taken since another');
+      if (on.refs.join() !== off.refs.join()) fails.push('the run is not the same run with the saves taken since one another (the seconds after each save, by digest)');
+      if (on.loads.join() !== off.loads.join()) fails.push('a load plays on differently from a save taken since another than from a whole one');
+      if (!on.pairs || on.bits !== on.pairs) fails.push(`${on.bits} of ${on.pairs} takes since the base on the shelf, put back, are to the bit a whole take of the same moment`);
+      line(!fails.length, '(5b) train-orders, a pair on the floor: a save in memory taken since the one before it is the same save — each of the five kept loads and plays on as its save did with the snapshots it was taken since gone from the ring, a save made after a put-back loads and so do an older and a newer one, the run and the seconds after every load are those of whole takes, and the moment before each save, taken since the base on the shelf and put back, is to the bit a whole take of it; after a take that throws half way the next is a whole one and right; switch off = every save a whole take',
+        `${sinceN} of ${on.kinds.length} taken since another · ${on.loads.length} loads · ${on.bits} of ${on.pairs} put back beside a whole take, the same state word${BREAK_B ? ' (SAVESINCE_BREAK: one man nudged after each put-back)' : ''}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
     }
     // ---- (6) weights: a lesson alone, in play
     {
