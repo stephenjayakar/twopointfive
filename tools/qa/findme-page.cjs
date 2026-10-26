@@ -65,7 +65,8 @@ const DOT = (a) => { const f = window.__cam.planarBasis().fwd; return f[0] * Mat
   const page = await (await browser.newContext({ viewport: { width: 1024, height: 576 }, deviceScaleFactor: 1 })).newPage();
   page.setDefaultNavigationTimeout(900000);   // (a boot on the software adapter is minutes, and the reload is a second one)
   const errs = []; page.on('pageerror', e => errs.push(String(e).slice(0, 300))); page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errs.push(m.text().slice(0, 300)); });
-  const url = `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&autocam=0`, wait = ms => new Promise(r => setTimeout(r, ms));
+  // (findtuned=0: this is the rows' own check, on the starts as built — the outline off until its row is flipped. The page's own starts: findtuned-page.cjs)
+  const url = `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&autocam=0&findtuned=0`, wait = ms => new Promise(r => setTimeout(r, ms));
   const boot = async (again) => { if (again) await page.reload(); else await page.goto(url); await page.evaluate(async () => { await window.__ready; }); await page.evaluate(STEP, 20); };
   const still = async (name, full = 0) => { if (!outDir && !full) return; const u = await page.evaluate(DRAW, [full ? 10 : 4, full]);   // (the outline's picture is given the frames the resolve takes to bring a new line up)
     if (!u || !outDir) return;

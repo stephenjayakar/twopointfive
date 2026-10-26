@@ -1372,10 +1372,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **Finding your own man, and the camera under the hand: twelve rows on trial in Options > Game (10-19; six, cut to four and back to five 10-20; the outline's width row 10-21, its strength, two light rows, teammates and colour 10-22;
   `src/host/findme.ts` the table, `src/ui/findme.ts` the ring, the rows and the outline's frame, `src/render/outline.ts` the outline's pass).** From a play test: a new player kept losing his own man on the screen, in the dark and behind
   walls, and reached for a camera that turns the other way and one that snaps behind him. The maintainer asked for settings to play with, none a new
-  default, so THERE IS NO SWITCH AND NO `FROZEN_HOLDS` ROW: `FINDME` starts as `{ pan: 1, ring: false, outline: false, width: 1, opacity: 0.6, picture: true, lit: 0.3, dark: 0.12, picLit: 0.3, picDark: 0.12, mates: 1, colour: 0.6, turn: 1, behind: false }` on the page and on
+  default THEN (since 10-26 the outline's four rows start at the maintainer's own numbers ON THE PAGE, behind a switch with a `FROZEN_HOLDS` row: THE OUTLINE IS ON, below; what follows is the module and the frozen stand), so there was no switch and no `FROZEN_HOLDS` row: `FINDME` starts as `{ pan: 1, ring: false, outline: false, width: 1, opacity: 0.6, picture: true, lit: 0.3, dark: 0.12, picLit: 0.3, picDark: 0.12, mates: 1, colour: 0.6, turn: 1, behind: false }` on the page and on
   both stands, and at those starts the build is the build as it was (measured against the build head each time: the same game digest and the same
   view matrix over 15 s of a scripted hand, two seeds, free step and fixed, frozen and shipped). Kept per machine in localStorage
-  `twopointsix.findme`, read once at load; Reset to defaults on the Game tab puts all twelve back. THE ROWS: `Aim pan` (a slider, none to today's: it
+  `twopointsix.findme`, read at load and again when the page says which starts are in force; Reset to defaults on the Game tab puts all twelve back. THE ROWS: `Aim pan` (a slider, none to today's: it
   scales `FollowCamera.aimLead` as built; none = he is the middle of the screen wherever the mouse goes), `Ring at your feet` (the gold ring the order
   menu draws, `PLAN.ringM * 1.35`, on at all times; it stands down while the menu's own is up: `PlanFloor.youOn`), `Turn direction` (the camera's key + mouse
   turns the view the other way: one function, `host/findme.ts ctrlTurn`, asked by the loop's orbit and by the engine replay's own Ctrl turn,
@@ -1498,6 +1498,44 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   Nothing reads these rows with the outline off; the page reads them every frame, so they move live under Options. Line (1) of the check holds
   what is kept; line (10) the rim's own width inside its two pixel counts, every step of the width row, the strength row and the light rows'
   ends; the page check moves every slider and takes width and strength to None and back. Nobody has seen any of them on a GPU.
+  THE OUTLINE IS ON FOR A MACHINE THAT HAS KEPT NOTHING, AT THE MAINTAINER'S OWN NUMBERS (10-26). He watched a first-time player on a fresh
+  browser profile: "i don't think the outlines showed up for him?" (they were off, as every row here started), then "we should take the numbers
+  i tuned ... and use those as the defaults". His rows as he left them on his GPU on 10-22 ("overall these feel a lot better already"):
+  `FINDME_TUNED = { outline: true, width: 0.25, mates: 0.8, colour: 0.5 }`; the strength, the fade by the picture and the light rows he left at
+  their starts. SWITCH: `FINDTUNED.on` (`host/findme.ts`), ON in the page (`?findtuned=0` = every row starts as built, no rim until Options
+  asks, as it was), OFF in the module and on the frozen stand (`FROZEN_HOLDS['FINDTUNED.on']`, `TPS_FINDTUNED=1`; the shipped stand boots with
+  it, `TPS_FINDTUNED=0` there is the page's word). In the knob registry as THE VISIT'S OWN (`knobs.ts VISIT_OWN`, beside `SAVEPIC`; its word on
+  `ui/replaykey.ts VISIT_FLAGS`): a picture on this machine's screen, in no recording, and no digest can tell it on from off (line (3) of the
+  check). The table is not read off the switch frame by frame: WHOEVER WRITES `FINDTUNED.on` CALLS `findMeStarts()` (`pageSwitches` and the
+  stand do). A probe that boots the page's switches on the frozen stand and puts its knobs back leaves the tuned starts in the table until the
+  next game is stood up or `findMeStarts()` is asked; nothing headless reads the table but `findme-check`, which asks first.
+  `FINDME_START` IS NOW THE STARTS IN FORCE (`FINDME_BUILT` under `FINDME_TUNED`): what Reset puts back and what a kept line is written
+  against, so the rule above (only moved rows are kept) does the work. `findMeStarts()` moves a row standing at its old start to its new one,
+  leaves a row a hand moved, and where there is a store reads the kept line again: a machine that kept nothing gets the rim; one whose line
+  names a row keeps that row, Off included; a line that kept these very numbers by hand is the same table and is written again as only what
+  still differs. THREE TRAPS IN THE KEPT LINE, each held by line (12): (a) the module's own read as it loads no longer tidies the line —
+  tidied against the built starts a kept `outline: false` is "at its start", written away, and drawn again on the next visit; the line is
+  tidied only by the page's call under the tuned starts; (b) a row moved on a `?findtuned=0` visit is written INTO the line as it lies
+  (`keep(k)`), not the table whole against the built starts, for the same reason; (c) a store whose name throws (a frame with storage
+  blocked) still gets the page's starts: the read is tried apart from the starts. KNOWN AND LEFT: a line an older build kept WHOLE (all
+  fourteen keys; the builds of 10-20 and 10-21 wrote it so) on a machine not opened since reads as fourteen rows moved by hand, so it keeps
+  the outline off; a line `{"outline":true}` from before this change keeps the rim and takes the new width, teammates and colour (rows at
+  the old starts follow the new, by the rule above); Reset on a `?findtuned=0` visit writes the line empty.
+  WHAT A PLAYER SEES THAT IS NEW: on any machine where the row was never touched, a thin rim round him and his teammates where they are dark
+  on the picture, in half colour. AT 25 % THE RIM IS A FEW PER CENT OF ONE PIXEL (`outlineRadius(h, 0.25)`: 0.54 px on a composite 630 rows
+  high or less, 0.55 at 720, 0.58 at 1000, 0.61 at 1260 and over; the pixel beside him gets the strength row's 60 % of radius − 0.5, so
+  about 2 % to 7 % of the ink): his pick on his own high-density screen, and on a coarse screen or a low quality tier it may not be seen at
+  all. Whether the start should be a share of a pixel covered and not a share of the rim's width is not settled; nobody has looked at it on a
+  second machine. WHAT IT COSTS, read not measured: by the picture the pass runs every frame the row is on, lit or dark (a scissored draw a
+  man, five on a squad level), and where GBAA does not run (render resolution at 100 %) the renderer keeps a copy of the composite for it:
+  one copy a frame and 8 bytes a pixel that a fresh machine did not pay before, and the Auto ladder and the benchmark now run with it.
+  Checks: `probes.ts findme` line (12), ALL PASS on both stands (`FINDTUNED_BREAK=1` = the boot leaves the starts as built: that line fails
+  on both; `FINDME_BREAK=1` still fails its seven); lines (1) to (11) are the rows' own and run on the built starts whatever the stand
+  booted with. `tools/qa/findtuned-page.cjs` is the real page's word (software adapter, a squad of four: a browser that kept nothing, the
+  word, a kept Off; the Options screen read off its own rows, a row put Off, Reset). `findme-page.cjs` and `findme-squad-page.cjs` open the
+  page with `findtuned=0`: they are the rows' own checks, and NEITHER WAS RUN on this change (35 minutes each on the software adapter).
+  NOBODY HAS SEEN the tuned rim on a GPU but the maintainer on his own machine, and nobody has measured what the pass costs a machine that
+  did not ask for it. NOT made starts: aim pan at none and the turn reversed, which he also said felt good on 10-20; nobody asked.
   SHELVED STILL: `Shape through walls` (no row, no key; a kept line that names it reads without it). A proper one is him drawn once more with the
   depth test off into a mask and filled where a wall hides him: a pass of its own, to be built only once the outline has been seen on a GPU.
   ONE MODEL HOLDS: pan, turn and behind change the seat's view, which is the player's input and rides the record as data (`cmd.ts`), so a recording
