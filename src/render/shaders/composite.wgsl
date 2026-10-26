@@ -240,10 +240,6 @@ fn gbEdge(k: u32, fl: u32, n: u32, uv: vec2f, P: vec2f, N: vec2f, w: f32, wt: f3
   if ((fl & 1u) != 0u && dd < 0.012 + 2.0 * w && gbOpenUV(k, fl, n, uv - N * (sd + select(-0.004, 0.004, sd >= 0.0)))) { o.y = min(o.y, dd); }
   return o;
 }
-fn gbChordEdge(k: u32, fl: u32, n: u32, uv: vec2f, S: GbSite, s: i32, cb: u32, w: f32, wt: f32, acc: vec2f) -> vec2f {
-  let A = gpChordPt(S, s, cb); let e = gpChordPt(S, s + 1, cb) - A; let L = max(1e-6, length(e));
-  return gbEdge(k, fl, n, uv, A, vec2f(-e.y, e.x) / L, w, wt, acc);
-}
 fn gbCracks(k: u32, X: vec3f, fp: f32) -> vec2f {
   let h = gbHeader(k); let fl = u32(h.y + 0.5); let n = min(u32(h.x + 0.5), 8u);
   let uv = gbUV(k, gbLocal(k, X));
@@ -260,18 +256,22 @@ fn gbCracks(k: u32, X: vec3f, fp: f32) -> vec2f {
   let d = uv - S.c; let r = length(d);
   let heavy = 0.55 + 0.35 * clamp(h.w, 0.15, 1.0);   // the lines thicken a little as the pane's damage climbs
   var acc = vec2f(0.0, 1e9); var frost = 0.0;   // (coverage, distance to the nearest hole's rim)
+  // the crack lines this point is tested against are LISTED below and drawn by ONE gbEdge call after (the compile: DXC — Chrome's compiler on Windows — inlines each call
+  // it meets, and the nine calls this made were nine copies of the hole test). gbEdge only takes the max of the coverage and the min of the rim distance, so the order
+  // the lines are met in does not change a bit of the answer. Per line: a point and its normal, or (kind 1) chord cb of sector s; its weight; its flags.
+  var eP: array<vec2f, 8>; var eN: array<vec2f, 8>; var eW: array<f32, 8>; var eF: array<u32, 8>; var eS: array<i32, 8>; var eC: array<u32, 8>; var eK: array<u32, 8>; var ne = 0u;
   for (var q = 0; q < 2; q++) {   // the radials either side: perpendicular distance, while the crack has run this far (tapering over its last third)
     let kk = s + q; let a = gpAngle(S, kk); let dir = vec2f(cos(a), sin(a)); let N = vec2f(-dir.y, dir.x);
-    if (full) { acc = gbEdge(k, fl, n, uv, S.c, N, w, heavy, acc); continue; }
+    if (full) { eK[ne] = 0u; eP[ne] = S.c; eN[ne] = N; eW[ne] = heavy; eF[ne] = fl; ne++; continue; }
     let along = dot(d, dir); let perp = abs(dot(d, N));
     let reach = gpRho(S, kk, 2u) * (1.25 + 2.0 * gpJit(S.seed, gpWrap(kk, S.n), 9u)) * min(1.6, 0.6 + 0.4 * S.e);
-    if (along <= reach) { acc = gbEdge(k, fl, n, uv, S.c, N, w, min(1.0, (reach - along) / (0.33 * reach) + 0.25) * heavy, acc); }
+    if (along <= reach) { eK[ne] = 0u; eP[ne] = S.c; eN[ne] = N; eW[ne] = min(1.0, (reach - along) / (0.33 * reach) + 0.25) * heavy; eF[ne] = fl; ne++; }
     else { acc.x = max(acc.x, gbLine(length(vec2f(along - reach, perp)), w, 0.25 * heavy)); }
   }
   if (web) {   // laminated: the three chords, an outer ring in most sectors, a sub-chord inside each band — a tight web that never opens
     var wb = 0u; for (; wb < 4u; wb++) { if (!gpBeyond(S, s, wb, uv)) { break; } }
-    for (var cb = u32(max(0, i32(wb) - 1)); cb <= min(2u, wb); cb++) { acc = gbChordEdge(k, 0u, n, uv, S, s, cb, w, select(0.8, 1.0, cb == 0u) * heavy, acc); }
-    if (wb >= 3u && gpJit(S.seed, sb.x, 33u) < GP_WEB_RING) { acc = gbChordEdge(k, 0u, n, uv, S, s, 3u, w, 0.6 * heavy, acc); }
+    for (var cb = u32(max(0, i32(wb) - 1)); cb <= min(2u, wb); cb++) { eK[ne] = 1u; eS[ne] = s; eC[ne] = cb; eW[ne] = select(0.8, 1.0, cb == 0u) * heavy; eF[ne] = 0u; ne++; }
+    if (wb >= 3u && gpJit(S.seed, sb.x, 33u) < GP_WEB_RING) { eK[ne] = 1u; eS[ne] = s; eC[ne] = 3u; eW[ne] = 0.6 * heavy; eF[ne] = 0u; ne++; }
     if (wb >= 1u && wb <= 3u && gpJit(S.seed, sb.x, 11u + wb) > 0.35) {
       let f0 = 0.3 + 0.4 * gpJit(S.seed, sb.x, 15u + wb); let f1 = 0.3 + 0.4 * gpJit(S.seed, gpWrap(s + 1, S.n), 15u + wb);
       let A = mix(gpChordPt(S, s, wb - 1u), gpChordPt(S, s, wb), f0); let B = mix(gpChordPt(S, s + 1, wb - 1u), gpChordPt(S, s + 1, wb), f1); let e = B - A;
@@ -283,15 +283,20 @@ fn gbCracks(k: u32, X: vec3f, fp: f32) -> vec2f {
     let inner = select(select(select(0, 1, b == 2u), 2, b >= 3u), -1, b == 0u);
     let outer = select(select(select(-1, 2, b == 2u), select(1, 2, merged), b == 1u), 0, b == 0u);
     let c2 = select(0.0, 0.8, full || gpJit(S.seed, sb.x, 31u) < GP_C2_DRAWN);
-    if (inner >= 0) { acc = gbChordEdge(k, fl, n, uv, S, s, u32(inner), w, select(select(0.8, c2, inner == 2), 1.0, inner == 0) * heavy, acc); }
-    if (outer >= 0) { acc = gbChordEdge(k, fl, n, uv, S, s, u32(outer), w, select(select(0.8, c2, outer == 2), 1.0, outer == 0) * heavy, acc); }
+    if (inner >= 0) { eK[ne] = 1u; eS[ne] = s; eC[ne] = u32(inner); eW[ne] = select(select(0.8, c2, inner == 2), 1.0, inner == 0) * heavy; eF[ne] = fl; ne++; }
+    if (outer >= 0) { eK[ne] = 1u; eS[ne] = s; eC[ne] = u32(outer); eW[ne] = select(select(0.8, c2, outer == 2), 1.0, outer == 0) * heavy; eF[ne] = fl; ne++; }
     if (b == 0u) { acc.x = max(acc.x, 0.5); frost = max(frost, 0.75); }   // a crater still in (a blow too soft to punch it): crushed white
   }
   if (full && b >= 3u) {   // past the rings of a run pane: the sector's branch crack and this half's snap
     let sp = gpSplit(S, s); let asp = S.rot + GP_TAU * sp / f32(S.n);
-    acc = gbEdge(k, fl, n, uv, S.c, vec2f(-sin(asp), cos(asp)), w, 0.9 * heavy, acc);
+    eK[ne] = 0u; eP[ne] = S.c; eN[ne] = vec2f(-sin(asp), cos(asp)); eW[ne] = 0.9 * heavy; eF[ne] = fl; ne++;
     let c = gpCut(S, s, select(0u, 1u, st.y >= sp));
-    if (c.on) { acc = gbEdge(k, fl, n, uv, c.p, c.n, w, 0.8 * heavy, acc); }
+    if (c.on) { eK[ne] = 0u; eP[ne] = c.p; eN[ne] = c.n; eW[ne] = 0.8 * heavy; eF[ne] = fl; ne++; }
+  }
+  for (var i = 0u; i < ne; i++) {
+    var P = eP[i]; var Nl = eN[i];
+    if (eK[i] == 1u) { let A = gpChordPt(S, eS[i], eC[i]); let e = gpChordPt(S, eS[i] + 1, eC[i]) - A; let L = max(1e-6, length(e)); P = A; Nl = vec2f(-e.y, e.x) / L; }   // (gbChordEdge's line)
+    acc = gbEdge(k, eF[i], n, uv, P, Nl, w, eW[i], acc);
   }
   if (full && n >= 2u) {   // where this blow's cracks met the next one's
     var j2 = 0u; var d2 = 1e30; let d1 = dot(d, d) - S.rz * S.rz;

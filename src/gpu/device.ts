@@ -146,9 +146,12 @@ function track<T>(label: string, p: Promise<T>): Promise<T> {
 // background set's (modules compiled behind the cut prelude: `const CUT_BOXES: bool = true;`) — first come first served among the rest, so a pass's first-use pipeline
 // is not stuck behind twenty background twins. A switch of the page, not a rule of the game (no knob, no FROZEN_HOLDS row: every stand compiles the same programs, only
 // in a different order); `?pipequeue=0` = every creation straight to the browser, as it was.
-export const PIPE_QUEUE = { on: true, /** in flight while the boot's count is open (0 = the machine's threads less two, at least 4) */ boot: 0, /** in flight after the boot */ after: 4, /** …of which background (cut-set) compiles */ low: 2 };
-try { const v = new URLSearchParams(location.search).get('pipequeue'); if (v === '0') PIPE_QUEUE.on = false; else if (v && /^\d+$/.test(v)) PIPE_QUEUE.boot = +v; } catch { /* no page (the harness) */ }
-interface PipeJob { cost: number; low: boolean; seq: number; go: () => void }
+export const PIPE_QUEUE = { on: true, /** in flight while the boot's count is open (0 = the machine's threads less two, at least 4) */ boot: 0, /** in flight after the boot */ after: 4, /** …of which background (cut-set) compiles */ low: 2,
+  /** LATER (2026-10-26): the twins no first frame draws with the default settings (laterPipelineAsync below) are left out of the boot and compiled after it in the background lane; false = the boot waits for them too (`?pipelater=0`) */ later: true };
+try { const q = new URLSearchParams(location.search); const v = q.get('pipequeue'); if (v === '0') PIPE_QUEUE.on = false; else if (v && /^\d+$/.test(v)) PIPE_QUEUE.boot = +v; if (q.get('pipelater') === '0') PIPE_QUEUE.later = false; } catch { /* no page (the harness) */ }
+interface PipeJob { cost: number; low: boolean; later: boolean; seq: number; go: () => void }
+/** the descriptors laterPipelineAsync handed the browser: the queue keeps them out of the boot and puts them in the background lane after it */
+const laterDescs = new WeakSet<object>();
 /** the queue's state (window.__pipeQueue on the page: in flight, waiting, the phase, the most that ever waited) */
 export const pipeQueue = {
   phase: 'boot' as 'boot' | 'after', inflight: 0, inflightLow: 0, waiting: [] as PipeJob[], maxWaiting: 0, seq: 0,
@@ -160,6 +163,7 @@ export const pipeQueue = {
       let pick = -1;
       for (let i = 0; i < this.waiting.length; i++) {
         const j = this.waiting[i];
+        if (j.later && this.phase === 'boot' && (this.inflight > 0 || this.waiting.some(w => !w.later))) continue;   // (a LATER twin never takes a worker from the boot's own pipelines: before settle() only once they are all done — a page that never settles still gets it)
         if (j.low && this.phase === 'after' && this.inflightLow >= PIPE_QUEUE.low) continue;
         if (pick < 0) { pick = i; continue; }
         const p = this.waiting[pick];
@@ -177,9 +181,9 @@ function installPipeQueue(device: GPUDevice) {
   const csm = device.createShaderModule.bind(device);
   D.createShaderModule = (desc: GPUShaderModuleDescriptor) => { const m = csm(desc); meta.set(m, { cost: desc.code.length, low: desc.code.includes('const CUT_BOXES: bool = true;') }); return m; };
   const of = (mods: (GPUShaderModule | undefined)[]) => { let cost = 0, low = false; for (const m of new Set(mods)) { const x = m && meta.get(m); if (x) { cost += x.cost; low ||= x.low; } } return { cost, low }; };
-  const queued = <T,>(mods: (GPUShaderModule | undefined)[], make: () => Promise<T>): Promise<T> => new Promise<T>((resolve, reject) => {
+  const queued = <T,>(mods: (GPUShaderModule | undefined)[], make: () => Promise<T>, later = false): Promise<T> => new Promise<T>((resolve, reject) => {
     const { cost, low } = of(mods); const Q = pipeQueue;
-    const job: PipeJob = { cost, low, seq: Q.seq++, go: () => {
+    const job: PipeJob = { cost, low: low || later, later, seq: Q.seq++, go: () => {
       let p: Promise<T>; try { p = make(); } catch (e) { p = Promise.reject(e); }
       p.then(resolve, reject).finally(() => { Q.inflight--; if (job.low) Q.inflightLow--; Q.pump(); });
     } };
@@ -187,8 +191,8 @@ function installPipeQueue(device: GPUDevice) {
     queueMicrotask(() => Q.pump());   // (a burst made in one task is all queued before the first pick: the biggest of it starts first)
   });
   const cpa = device.createComputePipelineAsync.bind(device), rpa = device.createRenderPipelineAsync.bind(device);
-  D.createComputePipelineAsync = (desc: GPUComputePipelineDescriptor) => queued([desc.compute.module], () => cpa(desc));
-  D.createRenderPipelineAsync = (desc: GPURenderPipelineDescriptor) => queued([desc.vertex.module, desc.fragment?.module], () => rpa(desc));
+  D.createComputePipelineAsync = (desc: GPUComputePipelineDescriptor) => queued([desc.compute.module], () => cpa(desc), laterDescs.has(desc));
+  D.createRenderPipelineAsync = (desc: GPURenderPipelineDescriptor) => queued([desc.vertex.module, desc.fragment?.module], () => rpa(desc), laterDescs.has(desc));
   try { (window as unknown as Record<string, unknown>).__pipeQueue = pipeQueue; } catch { /* no page */ }
 }
 
@@ -196,6 +200,18 @@ function installPipeQueue(device: GPUDevice) {
  *  harness's Proxy device answers with a non-thenable stand-in, which then simply resolves.) */
 export function computePipelineAsync(device: GPUDevice, desc: GPUComputePipelineDescriptor): Promise<GPUComputePipeline> {
   return track(desc.label ?? 'compute', Promise.resolve(device.createComputePipelineAsync(desc)).catch(e => { pipelineProgress.failed++; console.error(`[pipeline] ${desc.label ?? '?'}: ${e?.message ?? e}`); return device.createComputePipeline(desc); }));
+}
+/** A pipeline the boot does NOT wait for (PIPE_QUEUE.later): a twin that no first frame draws with the default settings and whose pass has a fallback until it is in (render/passes.ts
+ *  traceJobs says which and why). Not counted on the start card; the queue holds it until the boot's count is frozen and then compiles it in the background lane. On rejection,
+ *  likewise logged, and the synchronous (invalid) pipeline. */
+export function laterPipelineAsync(device: GPUDevice, desc: GPUComputePipelineDescriptor): Promise<GPUComputePipeline> {
+  laterDescs.add(desc);
+  return Promise.resolve(device.createComputePipelineAsync(desc)).catch(e => { console.error(`[pipeline] ${desc.label ?? '?'}: ${e?.message ?? e}`); return device.createComputePipeline(desc); });
+}
+/** laterPipelineAsync's render twin */
+export function laterRenderPipelineAsync(device: GPUDevice, desc: GPURenderPipelineDescriptor): Promise<GPURenderPipeline> {
+  laterDescs.add(desc);
+  return Promise.resolve(device.createRenderPipelineAsync(desc)).catch(e => { console.error(`[pipeline] ${desc.label ?? '?'}: ${e?.message ?? e}`); return device.createRenderPipeline(desc); });
 }
 /** createRenderPipelineAsync, likewise */
 export function renderPipelineAsync(device: GPUDevice, desc: GPURenderPipelineDescriptor): Promise<GPURenderPipeline> {

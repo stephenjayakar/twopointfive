@@ -104,6 +104,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
   var N = vec3f(0.0, 1.0, 0.0);
   var code = 0u;                                             // SLIVERS: the fallback code that rides out in outE0.a (header)
   var wantsRays = false;                                     // a sliver under rule 1 with a live light to decide (voted into the tile's ballot below)
+  var edgeWant = 0u;                                         // edge rays: the hard-edge bits of the classes whose strongest emitter a centre ray decides (traced with the sliver rays below: ONE shadowSample call for both — DXC inlines each call it meets)
   var remR = vec2f(1.0);                                     // rule 1: the ratio the class's REMAINDER (everything but the rayed light) rides on, per class
   if (live) {
     N = normalize(textureLoad(oNormal, gxy, 0).xyz * 2.0 - 1.0);
@@ -182,27 +183,11 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
       }
       if (sr0.w > 0.0 || sr1.w > 0.0) { code |= 8u; }         // (a class read 'unshadowed' for want of any tap holding its light — counted, not changed)
       // ---- edge rays: a hard shadow edge of a class between the taps → its strongest emitter decided by ONE centre ray from this output pixel ----
-      if (EDGE_RAYS && edgeBits != 0u) {
-        let owner = (textureLoad(oId, gxy, 0).x >> 20u) & 0xffu;
-        let Po = P + N * 0.015;
-        for (var c = 0u; c < 2u; c++) {
-          let liveU = max(select(U0 - Uw0, U1 - Uw1, c == 1u), vec3f(0.0));   // the class's LIVE unshadowed light here (walled-off lights are dark by proof, not by ratio)
-          if ((edgeBits & (1u << c)) == 0u || topI[c] < 0) { continue; }      // no hard edge of this class near, or nothing reaches
-          if (topW[c] < 0.35 * luminance(liveU)) { continue; }                 // no single emitter to pin the edge on
-          let li = wgLights[u32(topI[c])];
-          let vs = shadowSample(li, Po, N, owner, 0u, 1u, vec2f(0.0));   // sample 0 of 1 at u0 = 0: the emitter's centre → (visibility incl. smoke, ·)
-          var vt = vec3f(vs.x);
-          if (vs.x > 0.0) { let gm = lightGlassMask(li); if (gm != 0u) { vt = vs.x * glassVis(li, gm, P); } }   // lit through a pane: tinted, as both estimators tint a lit leader
-          let E = select(E0, E1, c == 1u);
-          let rest = max(liveU - topE[c], vec3f(0.0));
-          let Ec = topE[c] * vt + clamp(E - topE[c] * vt, vec3f(0.0), rest);   // ONLY the strongest emitter's share is the ray's; the remainder keeps the taps' word (exact wherever ray and taps agree — the ray acts only where they differ), never above its unshadowed total, the walled-off part at its true 0
-          if (c == 0u) { E0 = Ec; } else { E1 = Ec; }
-        }
-      }
+      if (EDGE_RAYS && edgeBits != 0u) { edgeWant = edgeBits; }   // (its rays: below, after the tile's ballot — nothing between reads E0 / E1)
     }
   }
   // ---- SLIVER rays (rule 1, the traced pipeline): the tile's ballot in uniform control flow, then per class one deterministic ray to the strongest live emitter's centre ----
-  var overturn = 0.0;                                          // paint 2: how far the ray moved the class off the borrowed ratio (signed: + = the ray found light the neighbours called dark)
+  var overturn = 0.0; var sliverNow = false;                                          // paint 2: how far the ray moved the class off the borrowed ratio (signed: + = the ray found light the neighbours called dark)
   if (EDGE_RAYS) {
     if (wantsRays) { atomicOr(&wgSliver[lidx >> 5u], 1u << (lidx & 31u)); }
     workgroupBarrier();
@@ -210,23 +195,36 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
       let m0 = atomicLoad(&wgSliver[0]); let m1 = atomicLoad(&wgSliver[1]);
       let below = (1u << (lidx & 31u)) - 1u;
       let rank = select(countOneBits(m0 & below), countOneBits(m0) + countOneBits(m1 & below), lidx >= 32u);
-      if (rank < sliverCap) {
-        code |= 4u;
-        let owner = (textureLoad(oId, gxy, 0).x >> 20u) & 0xffu;   // (a ray from a man's own sliver ignores his proxies, as every shadow ray of his does)
-        let Po = P + N * 0.015;
-        for (var c = 0u; c < 2u; c++) {
-          if (topI[c] < 0) { continue; }
-          let liveU = max(select(U0 - Uw0, U1 - Uw1, c == 1u), vec3f(0.0));
-          let li = wgLights[u32(topI[c])];
-          let vs = shadowSample(li, Po, N, owner, 0u, 1u, vec2f(0.0));   // the emitter's centre: binary at the output resolution and rock-still (the output raster carries no jitter under the decoupled path)
-          var vt = vec3f(vs.x);
-          if (vs.x > 0.0) { let gm = lightGlassMask(li); if (gm != 0u) { vt = vs.x * glassVis(li, gm, P); } }
-          var rr = remR[c]; if (rr < 0.0) { rr = vs.x; }             // no neighbour verdict for this class: the rayed light's own visibility stands in for its remainder
-          let Ec = topE[c] * vt + max(liveU - topE[c], vec3f(0.0)) * rr;
-          overturn += (vs.x - select(remR[c], 0.5, remR[c] < 0.0)) * luminance(topE[c]);
-          if (c == 0u) { E0 = Ec; } else { E1 = Ec; }
-        }
+      if (rank < sliverCap) { code |= 4u; sliverNow = true; }
+    }
+  }
+  // the centre rays of BOTH rules through ONE shadowSample call (a pixel takes at most one of them: the sliver rule's pixels are the borrowed-ratio branch's, the edge
+  // rays the other's): per class, a sliver ray re-decides the rayed light and its remainder; an edge ray only the strongest emitter's share
+  if (sliverNow || edgeWant != 0u) {
+    let owner = (textureLoad(oId, gxy, 0).x >> 20u) & 0xffu;   // (a ray from a man's own sliver ignores his proxies, as every shadow ray of his does)
+    let Po = P + N * 0.015;
+    for (var c = 0u; c < 2u; c++) {
+      if (topI[c] < 0) { continue; }
+      let liveU = max(select(U0 - Uw0, U1 - Uw1, c == 1u), vec3f(0.0));   // the class's LIVE unshadowed light here (walled-off lights are dark by proof, not by ratio)
+      if (!sliverNow) {
+        if ((edgeWant & (1u << c)) == 0u) { continue; }                     // no hard edge of this class near
+        if (topW[c] < 0.35 * luminance(liveU)) { continue; }                // no single emitter to pin the edge on
       }
+      let li = wgLights[u32(topI[c])];
+      let vs = shadowSample(li, Po, N, owner, 0u, 1u, vec2f(0.0));   // the emitter's centre (sample 0 of 1 at u0 = 0): binary at the output resolution and rock-still (the output raster carries no jitter under the decoupled path) → (visibility incl. smoke, ·)
+      var vt = vec3f(vs.x);
+      if (vs.x > 0.0) { let gm = lightGlassMask(li); if (gm != 0u) { vt = vs.x * glassVis(li, gm, P); } }   // lit through a pane: tinted, as both estimators tint a lit leader
+      var Ec: vec3f;
+      if (sliverNow) {
+        var rr = remR[c]; if (rr < 0.0) { rr = vs.x; }             // no neighbour verdict for this class: the rayed light's own visibility stands in for its remainder
+        Ec = topE[c] * vt + max(liveU - topE[c], vec3f(0.0)) * rr;
+        overturn += (vs.x - select(remR[c], 0.5, remR[c] < 0.0)) * luminance(topE[c]);
+      } else {
+        let E = select(E0, E1, c == 1u);
+        let rest = max(liveU - topE[c], vec3f(0.0));
+        Ec = topE[c] * vt + clamp(E - topE[c] * vt, vec3f(0.0), rest);   // ONLY the strongest emitter's share is the ray's; the remainder keeps the taps' word (exact wherever ray and taps agree — the ray acts only where they differ), never above its unshadowed total, the walled-off part at its true 0
+      }
+      if (c == 0u) { E0 = Ec; } else { E1 = Ec; }
     }
   }
   { let ou = 0.25 * max(luminance(U0 + U1 - Uw0 - Uw1), 1e-4); if (overturn < -ou) { code |= 16u; } else if (overturn > ou) { code |= 32u; } }   // census bits: 16 = the ray found DARK what the neighbours would have lent lit (a leak under rule 0), 32 = the reverse

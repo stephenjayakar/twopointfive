@@ -6,7 +6,8 @@
 // the history (a preset hop or a window reshape; the render scale never touches it — the grid is not per pixel). settings.froxelVol off = nothing here is
 // dispatched or read (composite / particles / volumetrics.wgsl take their old paths under the frame flag) and, after a while off, the volumes are let go.
 import { cutSwap, ProgramSet } from './cutSwap';
-import { makeShader, computePipelineAsync } from '../gpu/device';
+import { makeShader, computePipelineAsync, laterPipelineAsync, PIPE_QUEUE } from '../gpu/device';
+const computePipelineAsyncNow = computePipelineAsync;
 import { scenePrelude } from './frame';
 import lightingCommon from './shaders/lighting_common.wgsl' with { type: 'text' };
 import volCommon from './shaders/vol_common.wgsl' with { type: 'text' };
@@ -56,8 +57,17 @@ export class Froxels {
   /** the module source as compiled (prelude + lighting_common + vol_common + froxel.wgsl) — main.ts __hotFroxel recompiles a variant through hotSwap */
   static source(body: string = froxelSrc): string { return scenePrelude() + lightingCommon + volCommon + body; }
   private mod: GPUShaderModule;
-  /** the five kernels off the boot module, compiled off the GPU process's main thread (gpu/device.ts computePipelineAsync) — passes.ts init awaits it */
-  async init(): Promise<void> { await this.buildPipelines(this.mod); cutSwap.add(this); }
+  /** the five kernels off the boot module, compiled off the GPU process's main thread (gpu/device.ts computePipelineAsync) — passes.ts init awaits it. LATER (gpu/device.ts
+   *  PIPE_QUEUE.later, 2026-10-26): the boot does not wait for them — only the medium, low and very low presets march the froxels, so the boot's set leaves them to the
+   *  background lane and the engine keeps FrameFlags.FroxelVol down (the per-pixel march draws the haze and the smoke, as with the row off) until `ready`. `?pipelater=0` =
+   *  the boot waits for them as it did. */
+  async init(): Promise<void> {
+    cutSwap.add(this);
+    if (PIPE_QUEUE.later) { void this.buildPipelines(this.mod, true).then(() => { this.ready = true; }); return; }
+    await this.buildPipelines(this.mod); this.ready = true;
+  }
+  /** the five kernels are in (the engine raises FrameFlags.FroxelVol only then) */
+  ready = false;
   // ---- CUT BOXES — a calm room pays nothing (render/cutSwap.ts): the two kernels that trace (inject, injectJ) a second time, behind the cut prelude
   private cutSet = new ProgramSet();
   async buildCut(): Promise<void> {
@@ -69,14 +79,18 @@ export class Froxels {
     this.cutSet.set(this, { pInject, pInjectJ });
   }
   useCut(on: boolean) { this.cutSet.use(this, on); }
-  private async buildPipelines(mod: GPUShaderModule): Promise<void> {
+  private async buildPipelines(mod: GPUShaderModule, later = false): Promise<void> {
     const d = this.device; const lay = (l: GPUBindGroupLayout) => d.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, l] });
-    [this.pCull, this.pInject, this.pInjectJ, this.pTemp, this.pInteg] = await Promise.all([
+    const computePipelineAsync = later ? laterPipelineAsync : computePipelineAsyncNow;
+    const ps = await Promise.all([
       computePipelineAsync(d, { label: 'froxelCull', layout: lay(this.lCull), compute: { module: mod, entryPoint: 'cull' } }),
       computePipelineAsync(d, { label: 'froxelInject', layout: lay(this.lInject), compute: { module: mod, entryPoint: 'inject' } }),
       computePipelineAsync(d, { label: 'froxelInjectJ', layout: lay(this.lInjectJ), compute: { module: mod, entryPoint: 'injectJ' } }),
       computePipelineAsync(d, { label: 'froxelTemporal', layout: lay(this.lTemp), compute: { module: mod, entryPoint: 'temporal' } }),
       computePipelineAsync(d, { label: 'froxelIntegrate', layout: lay(this.lInteg), compute: { module: mod, entryPoint: 'integrate' } }) ]);
+    const [pCull, pInject, pInjectJ, pTemp, pInteg] = ps;
+    if (later) this.cutSet.patch(this, { pCull, pInject, pInjectJ, pTemp, pInteg }, null);   // (a LATER set lands through the cut set's patch: a live cut set keeps its two twins and gets these back when it goes)
+    else { this.pCull = pCull; this.pInject = pInject; this.pInjectJ = pInjectJ; this.pTemp = pTemp; this.pInteg = pInteg; }
   }
   /** Dev / measurement hook (main.ts __hotFroxel): rebuild the five pipelines from a froxel.wgsl variant; the old ones stay on a compile error. */
   async hotSwap(body: string): Promise<{ ok: boolean; messages: string[] }> {

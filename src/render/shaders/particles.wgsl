@@ -205,41 +205,7 @@ fn sheetKickShape(p: ptr<function, Particle>, slot: u32, sn: ptr<function, vec3f
 /** Two-sided light on a sheet at P with (camera-facing) normal N: one pass over the lights scoring the FRONT (toward the eye) and BACK irradiance separately —
  *  evalLight without the cosine, split by the sign of N·L — behind the reach masks like the chips; the three strongest (front + TRANS·back) get a shadow ray, the
  *  rest are credited at UNTRACED_CREDIT. Returns front, back. */
-struct SheetLight { front: vec3f, back: vec3f };
-fn sheetLight(P: vec3f, N: vec3f, trans: f32, owner: u32) -> SheetLight {
-  var sl: SheetLight; sl.front = vec3f(0.0); sl.back = vec3f(0.0);
-  var bl = array<f32, 3>(-1.0, -1.0, -1.0); var bi = array<u32, 3>(0u, 0u, 0u);
-  var bF = array<vec3f, 3>(vec3f(0.0), vec3f(0.0), vec3f(0.0)); var bB = array<vec3f, 3>(vec3f(0.0), vec3f(0.0), vec3f(0.0));
-  var bL = array<vec3f, 3>(vec3f(0.0), vec3f(0.0), vec3f(0.0)); var bd = array<f32, 3>(0.0, 0.0, 0.0);
-  var restF = vec3f(0.0); var restB = vec3f(0.0);
-  for (var i = 0u; i < frame.numLights; i++) {
-    let li = lights[i];
-    let lv = lightReachLevel(i, P);
-    if (lv == 0u) { continue; }
-    var ev = evalLight(li, P, vec3f(0.0));
-    if (!ev.ok) { continue; }
-    let c = dot(N, ev.L);
-    let k = select(1.0, 0.25, lv == 1u);
-    let F = ev.E * (max(c, 0.0) * k); let B = ev.E * (max(-c, 0.0) * k);
-    let lum = luminance(F + B * trans);
-    if (lum < P_MIN_E || lum <= bl[2]) { restF += F; restB += B; continue; }
-    if (bl[2] > 0.0) { restF += bF[2]; restB += bB[2]; }
-    var s = 2u;
-    if (lum > bl[1]) { bl[2] = bl[1]; bi[2] = bi[1]; bF[2] = bF[1]; bB[2] = bB[1]; bL[2] = bL[1]; bd[2] = bd[1]; s = 1u;
-      if (lum > bl[0]) { bl[1] = bl[0]; bi[1] = bi[0]; bF[1] = bF[0]; bB[1] = bB[0]; bL[1] = bL[0]; bd[1] = bd[0]; s = 0u; } }
-    bl[s] = lum; bi[s] = i; bF[s] = F; bB[s] = B; bL[s] = ev.L; bd[s] = ev.dist.x;
-  }
-  let traceOn = (em.flags & 1u) != 0u;
-  for (var s = 0u; s < P_SHADOW_K; s++) {
-    if (bl[s] <= 0.0) { continue; }
-    var vis = 1.0;
-    if (traceOn) { let Po = P + bL[s] * 0.02; if (occluded(Po, bL[s], bd[s] - 0.05, owner | ((lights[bi[s]].owner & 0xffu) << 8u))) { vis = 0.0; } }   // (origin nudged toward the light: either face may be the lit one)
-    sl.front += bF[s] * vis; sl.back += bB[s] * vis;
-  }
-  let uc = select(1.0, UNTRACED_CREDIT, traceOn);
-  sl.front += restF * uc; sl.back += restB * uc;
-  return sl;
-}
+// (the walk: pLight mode 1, below)
 
 // ================================================================== the glass shard (game/shardModel.ts is the CPU reference of the flight and the touch — keep them in step)
 /** Free flight: gravity, drag by size (k0.y is the rate at SHARD_REF_SIZE: area ÷ mass ∝ 1 ÷ size — the fines are stopped by the air, a palm-sized piece is not), a tumble
@@ -258,53 +224,7 @@ fn shardAir(p: ptr<function, Particle>, n: ptr<function, vec3f>, w: ptr<function
  *  only from lights on the eye's side of it — and `scatter` = the irradiance its body and cut edges send on diffusely (both faces: a quarter whatever the angle + the cosine's
  *  share). One pass over the lights behind the reach masks like the chips; the `rays` strongest of the two kept (by what they would put on screen) get a shadow ray, everything
  *  else is credited at UNTRACED_CREDIT. A fragment costs at most two rays where a chip costs three. */
-struct ShardLit { scatter: vec3f, spec: vec3f };
-fn shardLight(P: vec3f, N: vec3f, V: vec3f, alpha0: f32, owner: u32, rays: u32, wS: f32) -> ShardLit {
-  var sl: ShardLit; sl.scatter = vec3f(0.0); sl.spec = vec3f(0.0);
-  var bl = array<f32, 2>(-1.0, -1.0); var bi = array<u32, 2>(0u, 0u);
-  var bS = array<vec3f, 2>(vec3f(0.0), vec3f(0.0)); var bG = array<vec3f, 2>(vec3f(0.0), vec3f(0.0));
-  var bL = array<vec3f, 2>(vec3f(0.0), vec3f(0.0)); var bd = array<f32, 2>(0.0, 0.0);
-  var restS = vec3f(0.0); var restG = vec3f(0.0);
-  let nv = max(dot(N, V), 0.1);
-  for (var i = 0u; i < frame.numLights; i++) {
-    let li = lights[i];
-    let lv = lightReachLevel(i, P);
-    if (lv == 0u) { continue; }
-    var ev = evalLight(li, P, vec3f(0.0));
-    if (!ev.ok) { continue; }
-    let k = select(1.0, 0.25, lv == 1u);
-    let c = dot(N, ev.L);
-    let S = ev.E * ((0.25 + 0.75 * abs(c)) * k);
-    var G = vec3f(0.0);
-    if (c > 0.0) {
-      let H = normalize(ev.L + V);
-      let nh = max(dot(N, H), 0.0);
-      let a = clamp(alpha0 + li.radius / (2.0 * max(ev.dist.x, 0.05)), 0.03, 1.0); let a2 = a * a;
-      let dd = nh * nh * (a2 - 1.0) + 1.0;
-      let f1 = 1.0 - clamp(dot(V, H), 0.0, 1.0); let f2 = f1 * f1;
-      G = ev.E * (min(a2 / (3.14159265 * dd * dd) * (SHARD_F0 + (1.0 - SHARD_F0) * f2 * f2 * f1) / (4.0 * nv), SHARD_GLINT_CAP) * k);
-    }
-    let lum = luminance(S) * wS + luminance(G);                         // what it would show of this light: wS = its diffuse share × the 0.3 the eye is sent of it (0.03 in the air)
-    if (lum < P_MIN_E * 0.03 || lum <= bl[1]) { restS += S; restG += G; continue; }
-    if (bl[1] > 0.0) { restS += bS[1]; restG += bG[1]; }
-    var s = 1u;
-    if (lum > bl[0]) { bl[1] = bl[0]; bi[1] = bi[0]; bS[1] = bS[0]; bG[1] = bG[0]; bL[1] = bL[0]; bd[1] = bd[0]; s = 0u; }
-    bl[s] = lum; bi[s] = i; bS[s] = S; bG[s] = G; bL[s] = ev.L; bd[s] = ev.dist.x;
-  }
-  let traceOn = (em.flags & 1u) != 0u;
-  let uc = select(1.0, UNTRACED_CREDIT, traceOn);
-  for (var s = 0u; s < 2u; s++) {
-    if (bl[s] <= 0.0) { continue; }
-    var vis = 1.0;
-    if (traceOn) {
-      if (s < rays) { let Po = P + bL[s] * 0.02; if (occluded(Po, bL[s], bd[s] - 0.05, owner | ((lights[bi[s]].owner & 0xffu) << 8u))) { vis = 0.0; } }
-      else { vis = UNTRACED_CREDIT; }
-    }
-    sl.scatter += bS[s] * vis; sl.spec += bG[s] * vis;
-  }
-  sl.scatter += restS * uc; sl.spec += restG * uc;
-  return sl;
-}
+// (the walk: pLight mode 2, below)
 
 // ================================================================== shading
 /** Irradiance-ish light on a small particle at P. N = the normal to shade with (up for something lying on the floor), or (0,0,0) for a tumbling chip / a puff:
@@ -317,39 +237,85 @@ fn shardLight(P: vec3f, N: vec3f, V: vec3f, alpha0: f32, owner: u32, rays: u32, 
 const P_SHADOW_K: u32 = 3u;
 const UNTRACED_CREDIT: f32 = 0.35;
 const P_MIN_E: f32 = 0.003;      // a light dimmer than this at the particle (W/m², after wrap) is not worth a slot or a ray: summed untraced
-struct PLight { E: vec3f, L1: vec3f, E1: vec3f };
-fn particleLight(P: vec3f, N: vec3f, wrap: f32, owner: u32, credit: f32) -> PLight {
-  var pl: PLight; pl.E = vec3f(0.0); pl.L1 = vec3f(0.0, 1.0, 0.0); pl.E1 = vec3f(0.0);
+// (the walk: pLight mode 0, below)
+
+/** The three light walks of a particle (the sheet's, the fragment's and the small particle's, described above, as they were statement for statement) as ONE body, so update() asks for the light at ONE call
+ *  (the compile: DXC — Chrome's compiler on Windows — inlines each call it meets, and the three walks were three copies of the light loop and the shadow ray). mode 0 =
+ *  the small particle's walk (the comment above P_SHADOW_K; wrap, credit); 1 = the sheet's (trans = wrap); 2 = the fragment's (V, alpha0, rays, wS). Returns a = E / front / scatter,
+ *  b = (0) / back / spec, and for mode 0 the strongest light's direction and irradiance after its ray (L1, E1). */
+struct PLit { a: vec3f, b: vec3f, L1: vec3f, E1: vec3f };
+fn pLight(mode: u32, P: vec3f, N: vec3f, wrap: f32, owner: u32, credit: f32, V: vec3f, alpha0: f32, rays: u32, wS: f32) -> PLit {
+  var pl: PLit; pl.a = vec3f(0.0); pl.b = vec3f(0.0); pl.L1 = vec3f(0.0, 1.0, 0.0); pl.E1 = vec3f(0.0);
+  let K = select(P_SHADOW_K, 2u, mode == 2u);
   var bl = array<f32, 3>(-1.0, -1.0, -1.0); var bi = array<u32, 3>(0u, 0u, 0u);
-  var bE = array<vec3f, 3>(vec3f(0.0), vec3f(0.0), vec3f(0.0)); var bL = array<vec3f, 3>(vec3f(0.0), vec3f(0.0), vec3f(0.0)); var bd = array<f32, 3>(0.0, 0.0, 0.0);
-  var rest = vec3f(0.0);
+  var bA = array<vec3f, 3>(vec3f(0.0), vec3f(0.0), vec3f(0.0)); var bB = array<vec3f, 3>(vec3f(0.0), vec3f(0.0), vec3f(0.0));
+  var bL = array<vec3f, 3>(vec3f(0.0), vec3f(0.0), vec3f(0.0)); var bd = array<f32, 3>(0.0, 0.0, 0.0);
+  var restA = vec3f(0.0); var restB = vec3f(0.0);
   let noN = all(N == vec3f(0.0));
+  let nv = max(dot(N, V), 0.1);
   for (var i = 0u; i < frame.numLights; i++) {
     let li = lights[i];
     let lv = lightReachLevel(i, P);
     if (lv == 0u) { continue; }
-    var ev = evalLight(li, P, N);
+    var ev = evalLight(li, P, select(vec3f(0.0), N, mode == 0u));   // (the sheet and the shard score without the cosine: they take the sign of N·L themselves)
     if (!ev.ok) { continue; }
-    ev.E *= select(1.0, wrap, noN) * select(1.0, 0.25, lv == 1u);
-    let lum = luminance(ev.E);
-    if (lum < P_MIN_E || lum <= bl[2]) { rest += ev.E; continue; }
-    // insert into the top three (what falls off the bottom joins the untraced rest)
-    if (bl[2] > 0.0) { rest += bE[2]; }
-    var k = 2u;
-    if (lum > bl[1]) { bl[2] = bl[1]; bi[2] = bi[1]; bE[2] = bE[1]; bL[2] = bL[1]; bd[2] = bd[1]; k = 1u;
-      if (lum > bl[0]) { bl[1] = bl[0]; bi[1] = bi[0]; bE[1] = bE[0]; bL[1] = bL[0]; bd[1] = bd[0]; k = 0u; } }
-    bl[k] = lum; bi[k] = i; bE[k] = ev.E; bL[k] = ev.L; bd[k] = ev.dist.x;
+    var A = vec3f(0.0); var B = vec3f(0.0); var lum = 0.0; var floorE = P_MIN_E;
+    if (mode == 0u) {
+      ev.E *= select(1.0, wrap, noN) * select(1.0, 0.25, lv == 1u);
+      A = ev.E; lum = luminance(ev.E);
+    } else if (mode == 1u) {
+      let c = dot(N, ev.L);
+      let k = select(1.0, 0.25, lv == 1u);
+      A = ev.E * (max(c, 0.0) * k); B = ev.E * (max(-c, 0.0) * k);
+      lum = luminance(A + B * wrap);
+    } else {
+      let k = select(1.0, 0.25, lv == 1u);
+      let c = dot(N, ev.L);
+      A = ev.E * ((0.25 + 0.75 * abs(c)) * k);
+      if (c > 0.0) {
+        let H = normalize(ev.L + V);
+        let nh = max(dot(N, H), 0.0);
+        let a = clamp(alpha0 + li.radius / (2.0 * max(ev.dist.x, 0.05)), 0.03, 1.0); let a2 = a * a;
+        let dd = nh * nh * (a2 - 1.0) + 1.0;
+        let f1 = 1.0 - clamp(dot(V, H), 0.0, 1.0); let f2 = f1 * f1;
+        B = ev.E * (min(a2 / (3.14159265 * dd * dd) * (SHARD_F0 + (1.0 - SHARD_F0) * f2 * f2 * f1) / (4.0 * nv), SHARD_GLINT_CAP) * k);
+      }
+      lum = luminance(A) * wS + luminance(B);                         // what it would show of this light: wS = its diffuse share × the 0.3 the eye is sent of it (0.03 in the air)
+      floorE = P_MIN_E * 0.03;
+    }
+    // insert into the top K (what falls off the bottom joins the untraced rest)
+    let last = K - 1u;
+    if (lum < floorE || lum <= bl[last]) { restA += A; restB += B; continue; }
+    if (bl[last] > 0.0) { restA += bA[last]; restB += bB[last]; }
+    var s = last;
+    if (K == 3u) {
+      if (lum > bl[1]) { bl[2] = bl[1]; bi[2] = bi[1]; bA[2] = bA[1]; bB[2] = bB[1]; bL[2] = bL[1]; bd[2] = bd[1]; s = 1u;
+        if (lum > bl[0]) { bl[1] = bl[0]; bi[1] = bi[0]; bA[1] = bA[0]; bB[1] = bB[0]; bL[1] = bL[0]; bd[1] = bd[0]; s = 0u; } }
+    } else if (lum > bl[0]) { bl[1] = bl[0]; bi[1] = bi[0]; bA[1] = bA[0]; bB[1] = bB[0]; bL[1] = bL[0]; bd[1] = bd[0]; s = 0u; }
+    bl[s] = lum; bi[s] = i; bA[s] = A; bB[s] = B; bL[s] = ev.L; bd[s] = ev.dist.x;
   }
   let traceOn = (em.flags & 1u) != 0u;
-  let Po = P + select(N, vec3f(0.0, 1.0, 0.0), noN) * 0.015;
-  for (var k = 0u; k < P_SHADOW_K; k++) {
-    if (bl[k] <= 0.0) { continue; }
-    var E = bE[k];
-    if (traceOn) { if (occluded(Po, bL[k], bd[k] - 0.03, owner | ((lights[bi[k]].owner & 0xffu) << 8u))) { E = vec3f(0.0); } }
-    if (k == 0u) { pl.E1 = E; pl.L1 = bL[0]; }
-    pl.E += E;
+  let Pp = P + select(N, vec3f(0.0, 1.0, 0.0), noN) * 0.015;
+  for (var s = 0u; s < K; s++) {
+    if (bl[s] <= 0.0) { continue; }
+    // the shadow ray (ONE call for the three walks): a small particle's from just off it along N (up when it has none), a sheet's and a fragment's from a hair toward the
+    // light (either face may be the lit one); a fragment past its `rays` strongest is credited at UNTRACED_CREDIT instead
+    let ray = traceOn && (mode != 2u || s < rays);
+    var occ = false;
+    if (ray) { occ = occluded(select(P + bL[s] * 0.02, Pp, mode == 0u), bL[s], select(bd[s] - 0.05, bd[s] - 0.03, mode == 0u), owner | ((lights[bi[s]].owner & 0xffu) << 8u)); }
+    if (mode == 0u) {
+      var E = bA[s];
+      if (occ) { E = vec3f(0.0); }
+      if (s == 0u) { pl.E1 = E; pl.L1 = bL[0]; }
+      pl.a += E;
+    } else {
+      var vis = 1.0;
+      if (traceOn) { if (ray) { if (occ) { vis = 0.0; } } else { vis = UNTRACED_CREDIT; } }
+      pl.a += bA[s] * vis; pl.b += bB[s] * vis;
+    }
   }
-  pl.E += rest * select(1.0, credit, traceOn);
+  if (mode == 0u) { pl.a += restA * select(1.0, credit, traceOn); }
+  else { let uc = select(1.0, UNTRACED_CREDIT, traceOn); pl.a += restA * uc; pl.b += restB * uc; }
   return pl;
 }
 
@@ -586,63 +552,70 @@ fn applyImpulses(p: ptr<function, Particle>, kind: u32, slot: u32, sn: ptr<funct
   let u = p.age / p.life;
   if (kind == P_SPARK) {
     if (emberIs(kind, p.color)) { p.shade = emberRadiance(u, p.color, k1.w, p.seed, p.age); } else { p.shade = sparkRadiance(u, k1.y, k1.w); }
-  } else if (isSheet) {
-    // the face the eye sees: light falling on it, TRANS of what falls on the other face (a leaf against a torch glows), the cache's ambient — facing up at rest,
-    // the sphere's mean in the air (both faces)
-    let albedo = unpackRgb8(p.color);
-    let N = select(-sn, sn, dot(sn, frame.camPos - p.pos) >= 0.0);
-    let sl = sheetLight(p.pos, N, k1.w, owner);
-    var amb: vec3f;
-    if (asleep) { amb = diceIrradiance(p.pos + vec3f(0.0, c0Spacing().x, 0.0), N); }
-    else { amb = diceMeanRadiance(p.pos + vec3f(0.0, 0.25, 0.0)) * 3.14159265 * (0.5 + 0.5 * k1.w); }
-    amb *= frame.indirectScale;
-    p.shade = albedo * (sl.front + sl.back * k1.w + amb) * (1.0 / 3.14159265);
-    p.ori = pOctEncode(sn); let pw = packOmega(sw); p.omg = pw.x; p.omgZ = pw.y; p.aux = pack2x16float(vec2f(aspect, gust));
-  } else if (isShard) {
-    // GLASS: what it mirrors toward the eye off its own face (the lights' lobes, the room's mean radiance by Fresnel) + the little its body and cut edges scatter, tinted.
-    // In the air it turns every frame, so it flashes as its face sweeps a light past the eye; at rest it is re-lit every 4th frame (staggered by slot: litter holds
-    // still, and a torch crossing it is three frames late at worst) with ONE shadow ray, flying with two.
-    if (!asleep || isNew || (!slept0 && (em.flags & 8u) != 0u) || ((frame.frameIdx + slot) & 3u) == 0u) {
-      let tint = unpackRgb8(p.color);
-      let V = normalize(frame.camPos - p.pos);
-      let N = select(-sn, sn, dot(sn, V) >= 0.0);
-      let rough = k1.z * (0.6 + 0.8 * f32((p.seed >> 12u) & 255u) / 255.0);                                    // no two fracture faces are equally clean
-      // (round five) at rest it is a little drift of broken glass — a frost, not a clear face: more of what falls on it goes on diffusely, so the lights are ranked by
-      // that share too and the two strongest are both shadow-rayed (a drift under a desk must not glow by the panels' untraced credit)
-      let frosted = asleep && (em.flags & 8u) != 0u;
-      var kS = k1.w; var wS = 0.03; var rays = select(2u, 1u, asleep);
-      if (frosted) { kS = max(kS, shardRestScatter(p.size, p.seed)); wS = kS * 0.3; rays = 2u; }
-      let sl = shardLight(p.pos, N, V, rough, owner, rays, wS);
-      let f1 = 1.0 - clamp(dot(N, V), 0.0, 1.0); let f2 = f1 * f1;
-      let Fv = SHARD_F0 + (1.0 - SHARD_F0) * f2 * f2 * f1;
-      let env = diceMeanRadiance(p.pos + vec3f(0.0, 0.25, 0.0));
+  } else {   // the sheet, the glass fragment and the rest: their three light walks are ONE pLight call (above) — set up per kind, then the kind's own shading
+    let lightDue = !isShard || !asleep || isNew || (!slept0 && (em.flags & 8u) != 0u) || ((frame.frameIdx + slot) & 3u) == 0u;   // (a fragment at rest is re-lit every 4th frame — below)
+    var mode = 0u; let albedo = unpackRgb8(p.color); var N = vec3f(0.0); var wrap = 0.4; var V = vec3f(0.0); var rough = 0.0; var kS = k1.w; var wS = 0.03; var rays = 0u;
+    if (isSheet) {
+      // the face the eye sees: light falling on it, TRANS of what falls on the other face (a leaf against a torch glows), the cache's ambient — facing up at rest,
+      // the sphere's mean in the air (both faces)
+      mode = 1u; wrap = k1.w;
+      N = select(-sn, sn, dot(sn, frame.camPos - p.pos) >= 0.0);
+    } else if (isShard) {
+      // GLASS: what it mirrors toward the eye off its own face (the lights' lobes, the room's mean radiance by Fresnel) + the little its body and cut edges scatter, tinted.
+      // In the air it turns every frame, so it flashes as its face sweeps a light past the eye; at rest it is re-lit every 4th frame (staggered by slot: litter holds
+      // still, and a torch crossing it is three frames late at worst) with ONE shadow ray, flying with two.
+      mode = 2u;
+      if (lightDue) {
+        V = normalize(frame.camPos - p.pos);
+        N = select(-sn, sn, dot(sn, V) >= 0.0);
+        rough = k1.z * (0.6 + 0.8 * f32((p.seed >> 12u) & 255u) / 255.0);                                    // no two fracture faces are equally clean
+        // (round five) at rest it is a little drift of broken glass — a frost, not a clear face: more of what falls on it goes on diffusely, so the lights are ranked by
+        // that share too and the two strongest are both shadow-rayed (a drift under a desk must not glow by the panels' untraced credit)
+        let frosted = asleep && (em.flags & 8u) != 0u;
+        rays = select(2u, 1u, asleep);
+        if (frosted) { kS = max(kS, shardRestScatter(p.size, p.seed)); wS = kS * 0.3; rays = 2u; }
+      }
+    } else {
+      if (kind == P_DUST) { wrap = k0.z; }                   // a puff scatters whatever crosses it toward the eye from every side (k0.z = params.dust 'wrap', 0.5: half a beam's worth reads right next to the wall it came out of)
+      else if (asleep) { N = vec3f(0.0, 1.0, 0.0); }
+    }
+    var pl: PLit;
+    if (lightDue) { pl = pLight(mode, p.pos, N, wrap, owner, UNTRACED_CREDIT, V, rough, rays, wS); }
+    if (isSheet) {
       var amb: vec3f;
-      if (asleep) { amb = diceIrradiance(p.pos + vec3f(0.0, c0Spacing().x, 0.0), vec3f(0.0, 1.0, 0.0)); } else { amb = env * 3.14159265; }
-      p.shade = sl.spec + env * (Fv * frame.indirectScale) + tint * (sl.scatter + amb * frame.indirectScale) * (kS / 3.14159265);
+      if (asleep) { amb = diceIrradiance(p.pos + vec3f(0.0, c0Spacing().x, 0.0), N); }
+      else { amb = diceMeanRadiance(p.pos + vec3f(0.0, 0.25, 0.0)) * 3.14159265 * (0.5 + 0.5 * k1.w); }
+      amb *= frame.indirectScale;
+      p.shade = albedo * (pl.a + pl.b * k1.w + amb) * (1.0 / 3.14159265);
+      p.ori = pOctEncode(sn); let pw = packOmega(sw); p.omg = pw.x; p.omgZ = pw.y; p.aux = pack2x16float(vec2f(aspect, gust));
+    } else if (isShard) {
+      if (lightDue) {
+        let f1 = 1.0 - clamp(dot(N, V), 0.0, 1.0); let f2 = f1 * f1;
+        let Fv = SHARD_F0 + (1.0 - SHARD_F0) * f2 * f2 * f1;
+        let env = diceMeanRadiance(p.pos + vec3f(0.0, 0.25, 0.0));
+        var amb: vec3f;
+        if (asleep) { amb = diceIrradiance(p.pos + vec3f(0.0, c0Spacing().x, 0.0), vec3f(0.0, 1.0, 0.0)); } else { amb = env * 3.14159265; }
+        p.shade = pl.b + env * (Fv * frame.indirectScale) + albedo * (pl.a + amb * frame.indirectScale) * (kS / 3.14159265);
+      }
+      p.ori = pOctEncode(sn); let pw = packOmega(sw); p.omg = pw.x; p.omgZ = pw.y; p.aux = pack2x16float(vec2f(aspect, 0.0));
+    } else {
+      // ambient off the radiance cache: a resting chip reads the dice like a floor point does (a probe spacing up, facing up); a flying chip half the sphere's mean;
+      // a puff the WHOLE sphere's (it is lit from behind as much as from the front) — which is what lets gypsum dust show pale in a dim corridor at all
+      var amb: vec3f;
+      if (asleep) { amb = diceIrradiance(p.pos + vec3f(0.0, c0Spacing().x, 0.0), vec3f(0.0, 1.0, 0.0)); }
+      else { amb = diceMeanRadiance(p.pos + vec3f(0.0, 0.25, 0.0)) * 3.14159265 * select(0.5, 0.9 * k0.w, kind == P_DUST); }   // (k0.w = params.dust 'ambient' ×, 1)
+      amb *= frame.indirectScale;                             // the composite scales the bounce on screen by this: sit next to the floor it lies on, not above it
+      var L = albedo * (pl.a + amb) * (1.0 / 3.14159265);
+      if (kind == P_CASING) {                                 // the glint: Blinn-Phong off the strongest light toward the eye; tumbling in flight the normal spins (it twinkles), at rest it is up
+        let V = normalize(frame.camPos - p.pos);
+        var Nn = vec3f(0.0, 1.0, 0.0);
+        if (!asleep) { let a = p.spin + p.age * 31.0; Nn = normalize(vec3f(cos(a), 0.8, sin(a))); }
+        let H = normalize(pl.L1 + V);
+        let s = pow(max(dot(Nn, H), 0.0), 40.0);
+        L += pl.E1 * albedo * (s * 6.0) + albedo * amb * 0.3;   // metal: the highlight is tinted, and a little more of the room in it
+      }
+      p.shade = L;
     }
-    p.ori = pOctEncode(sn); let pw = packOmega(sw); p.omg = pw.x; p.omgZ = pw.y; p.aux = pack2x16float(vec2f(aspect, 0.0));
-  } else {
-    let albedo = unpackRgb8(p.color);
-    var N = vec3f(0.0); var wrap = 0.4;
-    if (kind == P_DUST) { wrap = k0.z; }                   // a puff scatters whatever crosses it toward the eye from every side (k0.z = params.dust 'wrap', 0.5: half a beam's worth reads right next to the wall it came out of)
-    else if (asleep) { N = vec3f(0.0, 1.0, 0.0); }
-    let pl = particleLight(p.pos, N, wrap, owner, UNTRACED_CREDIT);
-    // ambient off the radiance cache: a resting chip reads the dice like a floor point does (a probe spacing up, facing up); a flying chip half the sphere's mean;
-    // a puff the WHOLE sphere's (it is lit from behind as much as from the front) — which is what lets gypsum dust show pale in a dim corridor at all
-    var amb: vec3f;
-    if (asleep) { amb = diceIrradiance(p.pos + vec3f(0.0, c0Spacing().x, 0.0), vec3f(0.0, 1.0, 0.0)); }
-    else { amb = diceMeanRadiance(p.pos + vec3f(0.0, 0.25, 0.0)) * 3.14159265 * select(0.5, 0.9 * k0.w, kind == P_DUST); }   // (k0.w = params.dust 'ambient' ×, 1)
-    amb *= frame.indirectScale;                             // the composite scales the bounce on screen by this: sit next to the floor it lies on, not above it
-    var L = albedo * (pl.E + amb) * (1.0 / 3.14159265);
-    if (kind == P_CASING) {                                 // the glint: Blinn-Phong off the strongest light toward the eye; tumbling in flight the normal spins (it twinkles), at rest it is up
-      let V = normalize(frame.camPos - p.pos);
-      var Nn = vec3f(0.0, 1.0, 0.0);
-      if (!asleep) { let a = p.spin + p.age * 31.0; Nn = normalize(vec3f(cos(a), 0.8, sin(a))); }
-      let H = normalize(pl.L1 + V);
-      let s = pow(max(dot(Nn, H), 0.0), 40.0);
-      L += pl.E1 * albedo * (s * 6.0) + albedo * amb * 0.3;   // metal: the highlight is tinted, and a little more of the room in it
-    }
-    p.shade = L;
   }
   pool.parts[slot] = p;
 }
@@ -732,6 +705,7 @@ fn rainStep(pin: Particle, slot: u32, isNew: bool, dt: f32) {
   if (SNOW_GRAINS) { if (grainIs(pin.aux)) { grainStep(pin, slot, isNew, dt); return; } }   // a grain of blown snow near the view (below): its own step
   if (SNOW_WISPS) { if (wispIs(pin.aux)) { wispStep(pin, slot, isNew, dt); return; } }   // a wisp of blowing snow (below): its own step
   var p = pin;
+  var landed = false; var sP = vec3f(0.0); var sV = vec3f(0.0); var sT = vec3f(0.0);   // a drop that lands this step: where its crown is lit, toward the eye, its normal (ONE rainShadeV call below for the crown and the head — DXC inlines each call it meets)
   let k0 = em.kp[P_RAIN * 2u]; let k1 = em.kp[P_RAIN * 2u + 1u];
   if ((p.bits & PB_ASLEEP) != 0u) { atomicAdd(&pool.hdr[1], 1u); pool.parts[slot] = p; return; }   // a splash in progress: only its clock runs (the caller advanced it)
   if (!isNew && dt > 0.0) {
@@ -780,26 +754,34 @@ fn rainStep(pin: Particle, slot: u32, isNew: bool, dt: f32) {
           p.spin = p.age;                                   // when it landed: the crown's clock is age − spin
           p.life = min(p.life, p.age + max(k1.x, 0.02));    // and it lives the splash's length more — never past the life it was filed with (the CPU retires its slot by that)
           p.ori = pOctEncode(hit.n);
-          let Ps = p.pos + hit.n * 0.02;
-          p.shade = rainShadeV(Ps, normalize(frame.camPos - Ps), hit.n, k1, false);   // lit where it landed, toward the eye (in the lamp's cone it glitters; in the building's shadow it does not)
-          pool.parts[slot] = p; return;
+          landed = true; sP = p.pos + hit.n * 0.02; sV = normalize(frame.camPos - sP); sT = hit.n;   // lit where it landed, toward the eye (in the lamp's cone it glitters; in the building's shadow it does not) — below
         }
       }
+      if (!landed) {
       p.pos += mv;
       if (snowNow()) {   // THE WRAP: a flake is in the air for seconds, so one that leaves the square round the view's disc (frame.weatherE: centre xz, radius — game/snowFx.ts) is
         // carried to the far side of it at its own height: the view moves, or cuts, and the air it comes to is already snowing
         let E = frame.weatherE;
         if (E.z > 0.0) { let d = p.pos.xz - E.xy; if (abs(d.x) > E.z || abs(d.y) > E.z) { let w = (fract((d + E.z) / (2.0 * E.z)) * 2.0 - 1.0) * E.z; p.pos = vec3f(E.x + w.x, p.pos.y, E.y + w.y); } }
       }
+      }
     }
+    if (!landed) {
     var gone = p.pos.y < -0.2;
     if (snowNow() && snowPast() > 0.0) { gone = gone || !flakeOpen(p.pos.xz) || p.pos.y > WORLD_MAX.y; }   // (SNOW_LOOK.past: a flake's air goes on past the level's rim, to where the view's disc wraps it)
     else { gone = gone || !rainOutdoors(p.pos.xz) || any(p.pos < WORLD_MIN) || any(p.pos > WORLD_MAX); }
     if (gone) { pool.parts[slot].age = p.life; return; }   // drifted over the roof's dry column / out of the world: gone
+    }
   }
-  let V = normalize(frame.camPos - p.pos);
-  let tl = length(p.vel); let T = select(vec3f(0.0, -1.0, 0.0), p.vel / max(tl, 1e-6), tl > 1e-3);
-  let head = rainShadeV(p.pos, V, T, k1, !snowNow());   // (a flake has no strand to glint along)
+  var glint = false;
+  if (!landed) {
+    sP = p.pos; sV = normalize(frame.camPos - p.pos);
+    let tl = length(p.vel); sT = select(vec3f(0.0, -1.0, 0.0), p.vel / max(tl, 1e-6), tl > 1e-3);
+    glint = !snowNow();   // (a flake has no strand to glint along)
+  }
+  let sh = rainShadeV(sP, sV, sT, k1, glint);
+  if (landed) { p.shade = sh; pool.parts[slot] = p; return; }   // (the crown)
+  let head = sh;
   var tail = select(p.shade, head, isNew);                  // last frame's head = this frame's tail (a new drop has none: head both ends)
   tail = mix(head, tail, clamp(em.rainCfgB.w, 0.0, 1.0));
   p.omg = pack2x16float(tail.xy); p.omgZ = pack2x16float(vec2f(tail.z, 0.0));

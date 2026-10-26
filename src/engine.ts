@@ -290,7 +290,9 @@ export class Engine {
     if (canvas.width !== ow || canvas.height !== oh) { canvas.width = ow; canvas.height = oh; }
     // SHARP DIRECT: live only where there is something to decouple — TAAU on (the output-size history), the internal size below the output, and no debug view (those bypass the resolve and read
     // internal-size diagnostics); mirrored into the passes BEFORE their resize, like the TAAU switch (the composite-size set follows it)
-    const sharp = !!this.settings.sharpDirect && this.settings.taau && this.settings.debugView === 0 && (ow !== w || oh !== h);
+    // (… or while no fragment composite is in yet — the pair is a LATER twin when the boot built the sharp path, passes.ts traceJobs: sharp direct stands in for it then, even where
+    // there is nothing to decouple)
+    const sharp = this.settings.taau && this.settings.debugView === 0 && ((!!this.settings.sharpDirect && (ow !== w || oh !== h)) || !this.passes.fragCompReady);
     this.passes.setSharp(sharp);
     this.passes.setGbaa(!!this.settings.gbaa && this.settings.taau && this.settings.debugView === 0 && (sharp || this.settings.taauPhases <= 0));   // GBAA: on the TAAU path only (its blend sits between the composite and the resolve; the debug views and the FXAA chain bypass it), and only on a 1 : 1 raster it can own — sharp direct live, or the jitter off — never under the jittered upscale (that is C4: measured softer than main)
     this.passes.setOutlineCopy(!!this.outline?.on && this.outline.picture && this.settings.debugView === 0);   // THE OUTLINE BY THE PICTURE (render/outline.ts): a copy of the composite for it to read, kept only while its rows ask
@@ -500,7 +502,7 @@ export class Engine {
     // touches it); a spell off lets the volumes go after ten seconds. FrameFlags.FroxelVol is up exactly while a grid is dispatched.
     const numTransientNow = this.lights.lights.reduce((n, l) => n + ((l.ttl >= 0 || l.transient) && l.enabled ? 1 : 0), 0);   const firstTransientNow = numTransientNow ? this.lights.firstTransientSlot : 0;   // (+ the lowest SLOT holding one, from the upload above — the gather's subtraction loop starts there instead of at slot 0 (frame.p5Cfg.w; 0 when none is alive, so a still's frame block is byte for byte what it was — review R2.2))   // transient (ttl / flagged) lights alive this frame — the gather skips its subtraction loop at 0, the froxels draw them outside their history (the goggles' infrared lights are NOT among them: steady lights in the tube's picture — lights.ts LightSet.ir)
     const fx = this.passes.froxels;
-    const froxOn = s.froxelVol && s.froxelH >= 8 && s.froxelD >= 4 && (s.flags & (FrameFlags.Volumetrics | FrameFlags.Smoke)) !== 0;   // (beams AND smoke both off: nothing for the grid to hold — the old path draws the same nothing)
+    const froxOn = s.froxelVol && fx.ready && s.froxelH >= 8 && s.froxelD >= 4 && (s.flags & (FrameFlags.Volumetrics | FrameFlags.Smoke)) !== 0;   // (fx.ready: the kernels are a LATER set — render/froxels.ts init)   // (beams AND smoke both off: nothing for the grid to hold — the old path draws the same nothing)
     const froxNear = Math.max(0.05, s.froxelNear, cam.pos[1] - Engine.FROXEL_CONTENT_TOP);   // (nothing to light hangs above FROXEL_CONTENT_TOP: the first slice starts where a ray from this height could first meet anything)
     const froxFar = Math.max(froxNear + 1, s.froxelFar);
     if (froxOn) {
@@ -610,6 +612,7 @@ export class Engine {
       canvasView = this.offscreenTarget.createView();
     }
     this.passes.directPasses = s.directPasses; this.passes.directHistory = s.directHistory; this.passes.debugView = s.debugView;
+    this.passes.volK0 = Math.round(s.volLightCap || 0) <= 0;   // (the K = 0 smoke march: its own twin, passes.ts volK0Pipe)
     this.passes.gatherStrata = !!s.gatherStrata;   // (stratified gather directions: which gather pipeline pair the encode takes this frame)
     this.passes.glassRefract = !!(s.glassRefract && s.glass && this.world.glassList.length > 0);   // (glass refraction: composite's GLASS_REFRACT twin — only while there is a pane list to bend through; glass off / no panes = the module as it was)
     { const P = this.passes; P.restirOn = s.restir; P.restirRays = s.restirRays; P.restirSpatial = s.restirSpatial; P.restirHistory = s.restirHistory; P.restirRadius = s.restirRadius; P.restirGradient = s.restirGradient; P.restirGradK = s.restirGradK; P.restirYoung = s.restirYoung; P.restirSpatialAll = s.restirSpatialAll; P.restirCoherent = s.restirCoherent; P.restirSampleHue = s.restirSampleHue; P.restirRatioRaw = s.restirRatioRaw; P.restirPermute = s.restirPermute; P.restirPenCap = s.restirPenCap; P.restirPenRays = s.restirPenRays; P.restirAudit = s.restirAudit; P.heldRays = s.heldRays; P.heldAdaptive = !!s.heldAdaptive; P.restirStableRetrace = !!s.restirStableRetrace; P.restirDimClass = s.restirDimClass || 0; P.restirHueSplit = s.restirHueSplit; P.restirKnownDark = s.restirKnownDark; P.restirJitter = this.jitter;
