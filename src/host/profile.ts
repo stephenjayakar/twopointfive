@@ -337,6 +337,7 @@ export function pageSwitches(q: URLSearchParams): void {
   SAVETIMELINE.on = q.get('savetimeline') !== '0';   // the saves roll (five by hand on F5 beside five autosaves), each keeps a picture, a team on the floor is saved in memory, and the pause and down cards lay this run's out as a strip (game/savestate.ts): ON in the page; ?savetimeline=0 = one checkpoint to go back to, as it was
   SAVETIMELINE.holds = q.get('saveholds') !== '0';   // a save carries his wall hold and the close-in mode's held gait (savestate.ts SAVETIMELINE.holds): a load plays on as its save did; ?saveholds=0 = no file says either
   SAVETIMELINE.turn = q.get('saveturn') !== '0';   // a save carries the turn a man is in the middle of (savestate.ts SAVETIMELINE.turn): caught mid-turn he goes on round after a load; ?saveturn=0 = no file says it and he starts from rest
+  SAVETIMELINE.since = q.get('savesince') !== '0';   // a save in memory copies only what changed since the save before it (savestate.ts SAVETIMELINE.since, rollback.ts takeSnapshot's `since`): less of a stall in the save's frame (measured headless only); ?savesince=0 = every one a whole take
   SAVEPIC.on = q.get('savepic') !== '0';   // a save's picture is boxed down on the GPU and read back late, with no wait in the save's own frame (host/savepic.ts, render/savepic.ts); ?savepic=0 = the canvas drawn into a 2D one in that frame, as it was
   FIRELINE.on = !(q.has('nofireline') && q.get('nofireline') !== '0');   // a teammate walking on an order waits short of the lane you are firing down and crosses when you stop (game/fireline.ts): ON in the page; ?nofireline = an order walks him through your fire, as it did
   FRIENDS.lowReady = !(q.has('nomuzzle') && q.get('nomuzzle') !== '0');   // Sam's raised gun comes to the low ready off a teammate in its line while nobody is in a fight (game/friends.ts): ON in the page; ?nomuzzle = his gun is his own, as it was
@@ -761,6 +762,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'SAVETIMELINE.on': 'TPS_SAVETIMELINE=1',
   'SAVETIMELINE.holds': 'TPS_SAVEHOLDS=1',
   'SAVETIMELINE.turn': 'TPS_SAVETURN=1',
+  'SAVETIMELINE.since': 'TPS_SAVESINCE=1',
   'SAVEPIC.on': 'TPS_SAVEPIC=1 (the page\'s alone: no picture is taken headless)',
   'WALLCHARGE.outer': 'TPS_OUTERWALL=1',
   'WALLCHARGE.safe': 'TPS_WALLSAFE=1',

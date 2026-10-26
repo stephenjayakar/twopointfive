@@ -37,14 +37,14 @@ import { ROLLBACK_EXEMPT, RAW_WEAK_OK, GENERATOR_OK } from './rollback-exempt.ts
 const { Game } = await import(`${ROOT}/src/game/game.ts`);
 const { takeSnapshot: take0, restoreSnapshot: restore0, stateHash, stateFlat, flatDiff, stateAlike, stateRawWeak, snapshotBytes, stateFunctions } = await import(`${ROOT}/src/game/rollback.ts`) as typeof import('../../src/game/rollback.ts');
 const { cmdText, cmdFromText } = await import(`${ROOT}/src/game/cmd.ts`);
-// THE SAVES' SHELF IS THE HOST'S (savestate.ts memShelf: the saves kept in memory stand behind closures, in no snapshot, so that a load does not take the later saves
+// THE SAVES' SHELF IS THE HOST'S (savestate.ts MemShelf, a HostOwned: the saves kept in memory are in no snapshot, so that a load does not take the later saves
 // away). Whoever rolls a game back has to put the shelf back with it: played again, an autosave inside the window lands in the NEXT slot, and the slot's name is in
 // the state — 'same game' parted there on the shipped stand, one autosave inside one moment's ticks. So the check, as the host: every snapshot it takes remembers
 // the shelf beside it, and a put back (into either game) puts that shelf back too. (The field renamed or gone: nothing is remembered and that line is red again.)
-const SHELF = new WeakMap<object, unknown[]>();
-const shelfOf = (g: any): { all(): any[]; clear(): void; set(k: string, e: unknown): void } | null => { const sh = g?.saves?.shelf; return sh && typeof sh.all === 'function' ? sh : null; };
-const takeSnapshot = (g: any, since?: any): any => { const S = take0(g, since); const sh = shelfOf(g); if (sh) SHELF.set(S, sh.all()); return S; };
-const restoreSnapshot = (S: any, other?: any): void => { if (other) restore0(S, other); else restore0(S); const sh = shelfOf(other ?? S.game), kept = SHELF.get(S) as any[] | undefined; if (sh && kept) { sh.clear(); for (const e of kept) sh.set(e.info.key, e); } };
+const SHELF = new WeakMap<object, { all: unknown[]; last: unknown }>();
+const shelfOf = (g: any): { all(): any[]; clear(): void; set(k: string, e: unknown): void; last: unknown } | null => { const sh = g?.saves?.shelf; return sh && typeof sh.all === 'function' ? sh : null; };
+const takeSnapshot = (g: any, since?: any): any => { const S = take0(g, since); const sh = shelfOf(g); if (sh) SHELF.set(S, { all: sh.all(), last: sh.last }); return S; };   // (…and the snapshot the next save in memory would be taken since — SAVETIMELINE.since)
+const restoreSnapshot = (S: any, other?: any): void => { if (other) restore0(S, other); else restore0(S); const sh = shelfOf(other ?? S.game), kept = SHELF.get(S); if (sh && kept) { sh.clear(); for (const e of kept.all as any[]) sh.set(e.info.key, e); sh.last = kept.last; } };
 
 const argv = process.argv.slice(2); const flag = (n: string) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : undefined; };
 const KNOWN = ['--scn', '--seeds', '--cap', '--every', '--ticks', '--jobs', '--static', '--times', '--one', '--out', '--why', '--arm'];
