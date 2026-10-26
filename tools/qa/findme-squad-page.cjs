@@ -7,7 +7,8 @@
 //            buffer, with no GPU error and no console error
 //   picture  the rims go BY THE PICTURE (the row 'Outline fades by' as it starts; GBAA's copy of the composite is there to read): with both light rows at
 //            their most the rim is whole round every man; with both at none (no part of a man is darker than black) the same frames have next to none of
-//            its ink left; the rows at their starts are somewhere between; and with GBAA put off (as render resolution at 100 % has it) the outline
+//            its ink left; the rows at their starts have no more of it than at their most (men that dark have the whole rim there too: the two are drawn
+//            the same number of frames, each from a picture with no rim in it, so the resolve has gathered as much of the line in both); and with GBAA put off (as render resolution at 100 % has it) the outline
 //            keeps a copy of the composite for itself and the rims are whole again. Counted: pixels in the men's boxes that are strongly coloured, the three inks
 //            at full colour over a dark room — a count, not a judgement of the look
 //   exit 0 = all of it · 1 = otherwise. With an outDir it keeps the pictures (the squad as the page frames it, whole and cut to the men, at each of
@@ -63,14 +64,14 @@ const STATE = () => { const E = window.__engine, P = E.passes.outlinePass, F = E
       'the frame has his own man and four teammates, an owner each, yellow for him, two red, two blue', JSON.stringify({ you: s0.you, mates: s0.mates }));
     // the program compiles off the frame: draw until it is in, then draw with it
     let s1 = s0; for (let i = 0; i < 40 && !(s1.pass && (s1.pass.pipe || s1.pass.bad)); i++) { await page.evaluate(DRAW, 1); await new Promise(r => setTimeout(r, 1000)); s1 = await page.evaluate(STATE); }
-    const d0 = s1.pass ? s1.pass.drawn : 0, pic = await page.evaluate(DRAW, 6), s2 = await page.evaluate(STATE);
+    const d0 = s1.pass ? s1.pass.drawn : 0, pic = await page.evaluate(DRAW, 8), s2 = await page.evaluate(STATE);   // (8, as the starts' capture below: the resolve brings a new line up over several frames, and the two counts are held against each other)
     if (pic) { keep('findme-squad.png', pic.full); keep('findme-squad-men.png', pic.crop); }
     // by the picture: the same men, the rows at none, then at their starts
     const ends = async (lit, dark, n) => { await page.evaluate(([l, k]) => { const f = window.__findme; f.set('picDark', 0); f.set('picLit', l); f.set('picDark', k); }, [lit, dark]); return await page.evaluate(DRAW, n); };
     const none = await ends(0, 0, 10); if (none) { keep('findme-squad-none.png', none.full); keep('findme-squad-none-men.png', none.crop); }
     const mid = await ends(0.3, 0.12, 8), s3 = await page.evaluate(STATE); if (mid) { keep('findme-squad-starts.png', mid.full); keep('findme-squad-starts-men.png', mid.crop); }
     line(s2.picture && s2.gbaa && !!pic && !!none && !!mid && pic.ink > 200 && none.ink < pic.ink * 0.25 && mid.ink > none.ink && mid.ink <= pic.ink * 1.1 && same(s3.ends, [0.3, 0.12]),
-      'by the picture: the rims whole with the light rows at their most, next to none of their ink with the rows at none, the starts between (men stood in a dark room)', `by the picture ${s2.picture ? 'yes' : 'NO'} · GBAA's copy of the composite to read ${s2.gbaa ? 'yes' : 'NO'} · strongly coloured pixels in the men's boxes: rows at most ${pic ? pic.ink : '?'}, at none ${none ? none.ink : '?'}, at their starts ${mid ? mid.ink : '?'}`);
+      'by the picture: the rims whole with the light rows at their most, next to none of their ink with the rows at none, at the starts more than none and no more than at their most (men stood in a dark room, the same frames drawn for each)', `by the picture ${s2.picture ? 'yes' : 'NO'} · GBAA's copy of the composite to read ${s2.gbaa ? 'yes' : 'NO'} · strongly coloured pixels in the men's boxes: rows at most ${pic ? pic.ink : '?'}, at none ${none ? none.ink : '?'}, at their starts ${mid ? mid.ink : '?'}`);
     // the same with GBAA off (render resolution at 100 % has it so): the composite's set is made again with a copy kept for the outline alone, filled before its pass
     await page.evaluate(() => { window.__engine.settings.gbaa = false; }); const bare = await ends(1, 1, 8), s4 = await page.evaluate(STATE); if (bare) { keep('findme-squad-no-gbaa.png', bare.full); keep('findme-squad-no-gbaa-men.png', bare.crop); }
     line(!s4.gbaa && s4.copy && s4.picture && !!bare && bare.ink > 200 && bare.ink > none.ink * 2 && !!s4.pass && !s4.pass.bad,
