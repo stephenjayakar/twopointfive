@@ -72,7 +72,8 @@ export async function findmeCheck(): Promise<boolean> {
   const fixedWas = FIXEDSTEP.on, startWas = { ...FINDME }, autoWas = AUTOCAM.on;
   const ctxOf = (W: any, extra: Record<string, unknown> = {}): any => ({ game: W.game, input: W.input, cam: W.cam, view: W.canvas, host: W.engine, render: () => { W.engine.world.upload(); }, betweenTicks: () => { W.engine.world.upload(true); },
     smoke: null, audio: null, demo: null, attract: null, hud: null, bubbles: null, time: 0, updateMs: 0, frozen: () => false, present: () => false, fixedStep: () => true, ...extra });
-  const stand = async (seed: number) => { Math.random = seeded(1); const W = await standUp({ seed }) as any; AUTOCAM.on = false; F.setAutoView(false); return W; };   // (the camera that runs itself, host/autocam.ts, takes the double tap where it is on — the page's stand: these lines are the row's own, with it off; autocam-check.ts holds the tap with it on)
+  const stand = async (seed: number) => { Math.random = seeded(1); const W = await standUp({ seed }) as any; AUTOCAM.on = false; F.setAutoView(false); F.FINDTUNED.on = false; F.findMeStarts(); return W; };   // (the camera that runs itself, host/autocam.ts, takes the double tap where it is on — the page's stand: these lines are the row's own, with it off; autocam-check.ts holds the tap with it on)
+  // (…and the starts as built: a stand-up under TPS_FINDTUNED=1 raises the tuned ones each time — src/host/standup.ts — and these lines are the rows' own. Line (12) puts the switch where it wants it after its own stand-up)
   const DT = 1 / 60, f4 = (v: number) => v.toFixed(4);
   try {
     // (1) the table
