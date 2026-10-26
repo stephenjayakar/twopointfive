@@ -1532,7 +1532,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   Checks: `probes.ts findme` line (12), ALL PASS on both stands (`FINDTUNED_BREAK=1` = the boot leaves the starts as built: that line fails
   on both; `FINDME_BREAK=1` still fails its seven); lines (1) to (11) are the rows' own and run on the built starts whatever the stand
   booted with. `tools/qa/findtuned-page.cjs` is the real page's word (software adapter, a squad of four: a browser that kept nothing, the
-  word, a kept Off; the Options screen read off its own rows, a row put Off, Reset). `findme-page.cjs` and `findme-squad-page.cjs` open the
+  word, a kept Off; the Options screen read off its own rows, a row put Off, Reset): RUN ONCE, 1024 × 576 on `verylow`, ALL PASS, six lines,
+  no page or console error; the fresh browser's pass drew 7 frames once its program was in. `findme-page.cjs` and `findme-squad-page.cjs` open the
   page with `findtuned=0`: they are the rows' own checks, and NEITHER WAS RUN on this change (35 minutes each on the software adapter).
   NOBODY HAS SEEN the tuned rim on a GPU but the maintainer on his own machine, and nobody has measured what the pass costs a machine that
   did not ask for it. NOT made starts: aim pan at none and the turn reversed, which he also said felt good on 10-20; nobody asked.
