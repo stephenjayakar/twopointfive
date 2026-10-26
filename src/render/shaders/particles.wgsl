@@ -701,12 +701,21 @@ fn rainShadeV(P: vec3f, V: vec3f, T: vec3f, k1: vec4f, glint: bool) -> vec3f {
  *  in `spin`, its life cut to the splash's — lit there once; a hit on an invisible box (the NoPrimary roof the camera looks through) or a drift into the roof's dry column / out of the
  *  world ends it unseen. Splashing: nothing moves; the splat grows the crown off (age − spin). SHADE (v2): this frame's at the head; LAST frame's — the point a frame's fall up
  *  today's streak, lit exactly as it was then — kept as the TAIL in omg / omgZ (f16 × 3; a rain drop has no angular velocity to keep there) for the splat to run head → tail. */
+/** what a grain's / a wisp's step hands back to rainStep: RS_DONE = it stored itself; RS_WISP / RS_GRAIN = light it at Ps toward the eye V along T (the one rainShadeV call), then store p */
+struct RainReq { p: Particle, act: u32, Ps: vec3f, V: vec3f, T: vec3f };
+const RS_NONE: u32 = 0u; const RS_DONE: u32 = 1u; const RS_WISP: u32 = 2u; const RS_GRAIN: u32 = 3u;
+fn rsDone() -> RainReq { var r: RainReq; r.act = RS_DONE; return r; }
 fn rainStep(pin: Particle, slot: u32, isNew: bool, dt: f32) {
-  if (SNOW_GRAINS) { if (grainIs(pin.aux)) { grainStep(pin, slot, isNew, dt); return; } }   // a grain of blown snow near the view (below): its own step
-  if (SNOW_WISPS) { if (wispIs(pin.aux)) { wispStep(pin, slot, isNew, dt); return; } }   // a wisp of blowing snow (below): its own step
+  // a grain of blown snow / a wisp of blowing snow near the view (below) takes its own step, and its light comes back here: ONE rainShadeV call below for the grain, the
+  // wisp, the drop's crown and the drop's head (DXC — Chrome's compiler on Windows — inlines each call it meets)
+  var req: RainReq; req.act = RS_NONE;
+  if (SNOW_GRAINS) { if (grainIs(pin.aux)) { req = grainStep(pin, slot, isNew, dt); } }
+  if (SNOW_WISPS) { if (req.act == RS_NONE && wispIs(pin.aux)) { req = wispStep(pin, slot, isNew, dt); } }
+  if (req.act == RS_DONE) { return; }
   var p = pin;
-  var landed = false; var sP = vec3f(0.0); var sV = vec3f(0.0); var sT = vec3f(0.0);   // a drop that lands this step: where its crown is lit, toward the eye, its normal (ONE rainShadeV call below for the crown and the head — DXC inlines each call it meets)
+  var landed = false; var sP = vec3f(0.0); var sV = vec3f(0.0); var sT = vec3f(0.0);   // a drop that lands this step: where its crown is lit, toward the eye, its normal
   let k0 = em.kp[P_RAIN * 2u]; let k1 = em.kp[P_RAIN * 2u + 1u];
+  if (req.act == RS_NONE) {
   if ((p.bits & PB_ASLEEP) != 0u) { atomicAdd(&pool.hdr[1], 1u); pool.parts[slot] = p; return; }   // a splash in progress: only its clock runs (the caller advanced it)
   if (!isNew && dt > 0.0) {
     var vAir = vec3f(0.0);
@@ -773,13 +782,17 @@ fn rainStep(pin: Particle, slot: u32, isNew: bool, dt: f32) {
     if (gone) { pool.parts[slot].age = p.life; return; }   // drifted over the roof's dry column / out of the world: gone
     }
   }
+  }
   var glint = false;
-  if (!landed) {
+  if (req.act != RS_NONE) { sP = req.Ps; sV = req.V; sT = req.T; }
+  else if (!landed) {
     sP = p.pos; sV = normalize(frame.camPos - p.pos);
     let tl = length(p.vel); sT = select(vec3f(0.0, -1.0, 0.0), p.vel / max(tl, 1e-6), tl > 1e-3);
     glint = !snowNow();   // (a flake has no strand to glint along)
   }
   let sh = rainShadeV(sP, sV, sT, k1, glint);
+  if (req.act == RS_WISP) { var q = req.p; let lit = sh * max(em.rainCfgC.w, 0.0); q.shade = select(mix(q.shade, lit, 0.35), lit, isNew); pool.parts[slot] = q; return; }
+  if (req.act == RS_GRAIN) { var q = req.p; let lit = sh * max(grain.a.w, 0.0); q.shade = min(select(mix(q.shade, lit, 0.5), lit, q.age - q.spin < 2.0 * dt), vec3f(GRAIN_SHADE_MAX)); pool.parts[slot] = q; return; }   // (a grain that flies through a lamp's own point is lit from no distance: on the software adapter one such pixel overflowed the frame's half floats and took the whole picture black through the bloom and the history. No grain is brighter than GRAIN_SHADE_MAX)
   if (landed) { p.shade = sh; pool.parts[slot] = p; return; }   // (the crown)
   let head = sh;
   var tail = select(p.shade, head, isNew);                  // last frame's head = this frame's tail (a new drop has none: head both ends)
@@ -884,7 +897,7 @@ fn wispAir(pos: vec3f, seed: u32, color: u32) -> vec3f {
  *  leaves the crest), what stands in its way stops it and it is gone inside a third of a second (a wall cuts the veil), born inside a solid = never there; under
  *  a roof, over WISP_TOP or out of the world = gone; (WX_OWN.wind) in a roof's lee it slows with the field and fades. Lit as a flake is (rainShadeV: the three strongest lights shadow-tested, the sky's dome) × its gain, eased
  *  over a few frames so a shadow's edge crossing it does not flick. */
-fn wispStep(pin: Particle, slot: u32, isNew: bool, dt: f32) {
+fn wispStep(pin: Particle, slot: u32, isNew: bool, dt: f32) -> RainReq {
   var p = pin;
   let k1 = em.kp[P_RAIN * 2u + 1u];
   if (!isNew && dt > 0.0) {
@@ -896,7 +909,7 @@ fn wispStep(pin: Particle, slot: u32, isNew: bool, dt: f32) {
       if ((em.flags & 2u) != 0u) {
         let hit = traceClosest(p.pos, rd, len + 0.03, 0u);
         if (hit.idx >= 0) {
-          if (hit.inside) { pool.parts[slot].age = p.life; return; }
+          if (hit.inside) { pool.parts[slot].age = p.life; return rsDone(); }
           free = false;
           p.pos += rd * max(hit.t - 0.03, 0.0);
           if (hit.n.y > 0.5) { p.vel -= hit.n * min(dot(p.vel, hit.n), 0.0); p.pos += hit.n * 0.01; }
@@ -905,7 +918,7 @@ fn wispStep(pin: Particle, slot: u32, isNew: bool, dt: f32) {
       }
       if (free) { p.pos += mv; }
     }
-    if (!rainOutdoors(p.pos.xz) || p.pos.y < -0.2 || p.pos.y > WISP_TOP || any(p.pos < WORLD_MIN) || any(p.pos > WORLD_MAX)) { pool.parts[slot].age = p.life; return; }
+    if (!rainOutdoors(p.pos.xz) || p.pos.y < -0.2 || p.pos.y > WISP_TOP || any(p.pos < WORLD_MIN) || any(p.pos > WORLD_MAX)) { pool.parts[slot].age = p.life; return rsDone(); }
     if (wispShare(p.pos.xz) < WISP_LEE_DIE) { p.life = min(p.life, p.age + WISP_FADE_OUT); }   // (WX_OWN.wind) run into a roof's lee: the air that carried it is gone — it slows with the field and its fade-out starts, as against a wall
     if (SNOW_GRAINS) { if (grain.b.w > 0.5 && !snowOneAir() && length(airAt(p.pos.xz).xy) < WISP_LEE_DIE * grain.a.x) { p.life = min(p.life, p.age + WISP_FADE_OUT); } }
     if (SNOW_GRAINS) { if (snowOneAir() && ((p.color >> 16u) & 255u) != 0u && length(airAt(p.pos.xz).xy) < grain.g.w * grain.f.y) { p.life = min(p.life, p.age + WISP_FADE_OUT); p.vel.y -= 0.6 * dt; } }   // ONE AIR: where the air that lifted it slows under what holds snow up, it sinks back and is gone   // (SNOW GRAINS: on the simulated air the same rule by that air — dead air behind a wall carries nothing)
@@ -913,9 +926,7 @@ fn wispStep(pin: Particle, slot: u32, isNew: bool, dt: f32) {
   let Ps = p.pos + vec3f(0.0, 0.03, 0.0);
   let V = normalize(frame.camPos - Ps);
   let tl = length(p.vel); let T = select(vec3f(1.0, 0.0, 0.0), p.vel / max(tl, 1e-6), tl > 1e-3);
-  let lit = rainShadeV(Ps, V, T, k1, false) * max(em.rainCfgC.w, 0.0);
-  p.shade = select(mix(p.shade, lit, 0.35), lit, isNew);
-  pool.parts[slot] = p;
+  var r: RainReq; r.p = p; r.act = RS_WISP; r.Ps = Ps; r.V = V; r.T = T; return r;   // (lit by rainStep's ONE rainShadeV: × rainCfgC.w, eased 0.35 a frame)
 }
 
 // ================================================================== a grain of blown snow near the view (game/snowFx.ts SNOWGRAINS; particles_draw.wgsl grainVertex draws it)
@@ -960,11 +971,11 @@ fn grainNoise3(u: vec3f, k: u32) -> vec3f {
  *  at the ground than a hand up), plus the small eddies, plus the field's lift, less its own sinking; its step swept through the trace grid — what faces up it
  *  skips off while the air is fast and lies on when it is not, a wall turns it and may take it; out of the radius, under a roof or out of the world it lies at
  *  once; over GRAIN_TOP, in dead air or at its flight's end it fades and lies. Lit as a flake is (rainShadeV) × its gain, on about every other frame, eased. */
-fn grainStep(pin: Particle, slot: u32, isNew: bool, dt: f32) {
+fn grainStep(pin: Particle, slot: u32, isNew: bool, dt: f32) -> RainReq {
   var p = pin;
   let k1 = em.kp[P_RAIN * 2u + 1u];
   if (isNew) { p.spin = -1.0; p.ori = 0u; p.omg = 0u; p.omgZ = 0u; p.shade = vec3f(0.0); p.vel = vec3f(0.0); }
-  if (!(dt > 0.0)) { pool.parts[slot] = p; return; }
+  if (!(dt > 0.0)) { pool.parts[slot] = p; return rsDone(); }
   let E = frame.weatherE; let Rn = max(grain.a.y, 1.0); let U0 = max(grain.a.x, 1e-3);
   var end = bitcast<f32>(p.omg);
   if (grain.b.w < 0.5 || E.z <= 0.0 || (p.spin >= 0.0 && p.age >= end)) { p.spin = -1.0; }
@@ -973,39 +984,41 @@ fn grainStep(pin: Particle, slot: u32, isNew: bool, dt: f32) {
     p.omgZ = 0u; p.shade = vec3f(0.0);
     // A BLAST (grain.c / .d): for as long as it throws, a share of every lying grain is its — put down inside its disc and thrown out from its middle and up,
     // whatever the wind is doing (the loose snow a burst lifts); from there it is a flying grain like any other, on the air the same blast has shoved outward
-    if (grain.c.w > 0.0 && grain.b.w > 0.5 && E.z > 0.0 && p.life - p.age > GRAIN_FADE_OUT + 0.4 && rnd(p.seed, c + 13u) < 1.0 - exp(-grain.c.w * dt)) {
-      let rr = sqrt(rnd(p.seed, c + 2u)); let th = rnd(p.seed, c + 3u) * 6.2831853;
-      let dir = vec2f(cos(th), sin(th)); let q = grain.c.xy + dir * (rr * max(grain.c.z, 0.05));
-      if (rainOutdoors(q) && distance(q, E.xy) < Rn && airAt(q).w > 0.5) {   // (… off open ground only, as the wind's own pick-up: not off a crate's top or a brazier's — the air's map has those solid)
-        var y = 0.0; var ok = true;
-        if ((em.flags & 2u) != 0u) { let hit = traceClosest(vec3f(q.x, 1.3, q.y), vec3f(0.0, -1.0, 0.0), 1.6, 0u); if (hit.idx >= 0) { ok = !hit.inside && hit.n.y > 0.5; y = 1.3 - hit.t; } }
+    // … and the wind's own pick-up off open ground. The two are the turns of ONE loop round ONE ground ray (DXC — Chrome's compiler on Windows — inlines each call it meets):
+    // turn 0 the blast's grain (taken: done), turn 1 the wind's.
+    for (var turn = 0u; turn < 2u; turn++) {
+      var q = vec2f(0.0); var dir = vec2f(0.0); var rr = 0.0; var A = vec4f(0.0); var s = 0.0;
+      if (turn == 0u) {
+        if (!(grain.c.w > 0.0 && grain.b.w > 0.5 && E.z > 0.0 && p.life - p.age > GRAIN_FADE_OUT + 0.4 && rnd(p.seed, c + 13u) < 1.0 - exp(-grain.c.w * dt))) { continue; }
+        rr = sqrt(rnd(p.seed, c + 2u)); let th = rnd(p.seed, c + 3u) * 6.2831853;
+        dir = vec2f(cos(th), sin(th)); q = grain.c.xy + dir * (rr * max(grain.c.z, 0.05));
+        if (!(rainOutdoors(q) && distance(q, E.xy) < Rn && airAt(q).w > 0.5)) { continue; }   // (… off open ground only, as the wind's own pick-up: not off a crate's top or a brazier's — the air's map has those solid)
+      } else {
+        if (!(grain.b.w > 0.5 && E.z > 0.0 && p.life - p.age > GRAIN_FADE_OUT + 0.4 && rnd(p.seed, c + 1u) < 1.0 - exp(-GRAIN_PICK_RATE * dt))) { continue; }   // (… and not in its slot's last moments: a flight ends faded, before the ring takes the slot back)
+        rr = sqrt(rnd(p.seed, c + 2u)); let th = rnd(p.seed, c + 3u) * 6.2831853;
+        q = E.xy + vec2f(cos(th), sin(th)) * (rr * Rn);
+        if (!rainOutdoors(q)) { continue; }
+        A = airAt(q); s = length(A.xy);
+        if (!(A.w > 0.5 && rnd(p.seed, c + 4u) < smoothstep(GRAIN_PICK_LO * U0, GRAIN_PICK_HI * U0, s))) { continue; }
+      }
+      var y = 0.0; var ok = true;
+      if ((em.flags & 2u) != 0u) { let hit = traceClosest(vec3f(q.x, 1.3, q.y), vec3f(0.0, -1.0, 0.0), 1.6, 0u); if (hit.idx >= 0) { ok = !hit.inside && hit.n.y > 0.5; y = 1.3 - hit.t; } }
+      if (turn == 0u) {
         if (ok && y < 0.35) {   // (… and off the ground itself: what stands a box high in the disc keeps its snow)
           let h = rnd(p.seed, c + 5u); let far = rnd(p.seed, c + 6u);
           p.pos = vec3f(q.x, y + 0.03 + 0.2 * h, q.y);
           p.vel = vec3f(dir.x, 0.0, dir.y) * (grain.d.x * (0.2 + 0.8 * far) * (0.35 + 0.65 * rr)) + vec3f(0.0, grain.d.y * (0.25 + 0.75 * h), 0.0);
           p.spin = p.age; end = min(p.age + GRAIN_FLIGHT * (0.5 + rnd(p.seed, c + 7u)), p.life - GRAIN_FADE_OUT); p.omg = bitcast<u32>(end);
-          pool.parts[slot] = p; return;
+          pool.parts[slot] = p; return rsDone();
         }
+      } else if (ok) {
+        let h = rnd(p.seed, c + 5u);
+        p.pos = vec3f(q.x, y + 0.015 + 0.12 * h * h, q.y);
+        p.vel = vec3f(A.x, 0.0, A.y) * ((0.45 + 0.4 * h) * max(grain.b.z, 0.0)) + vec3f(0.0, (0.25 + 0.9 * rnd(p.seed, c + 6u)) * min(s / U0, 1.6), 0.0);
+        p.spin = p.age; end = min(p.age + GRAIN_FLIGHT * (0.5 + rnd(p.seed, c + 7u)), p.life - GRAIN_FADE_OUT); p.omg = bitcast<u32>(end);
       }
     }
-    if (grain.b.w > 0.5 && E.z > 0.0 && p.life - p.age > GRAIN_FADE_OUT + 0.4 && rnd(p.seed, c + 1u) < 1.0 - exp(-GRAIN_PICK_RATE * dt)) {   // (… and not in its slot's last moments: a flight ends faded, before the ring takes the slot back)
-      let rr = sqrt(rnd(p.seed, c + 2u)); let th = rnd(p.seed, c + 3u) * 6.2831853;
-      let q = E.xy + vec2f(cos(th), sin(th)) * (rr * Rn);
-      if (rainOutdoors(q)) {
-        let A = airAt(q); let s = length(A.xy);
-        if (A.w > 0.5 && rnd(p.seed, c + 4u) < smoothstep(GRAIN_PICK_LO * U0, GRAIN_PICK_HI * U0, s)) {
-          var y = 0.0; var ok = true;
-          if ((em.flags & 2u) != 0u) { let hit = traceClosest(vec3f(q.x, 1.3, q.y), vec3f(0.0, -1.0, 0.0), 1.6, 0u); if (hit.idx >= 0) { ok = !hit.inside && hit.n.y > 0.5; y = 1.3 - hit.t; } }
-          if (ok) {
-            let h = rnd(p.seed, c + 5u);
-            p.pos = vec3f(q.x, y + 0.015 + 0.12 * h * h, q.y);
-            p.vel = vec3f(A.x, 0.0, A.y) * ((0.45 + 0.4 * h) * max(grain.b.z, 0.0)) + vec3f(0.0, (0.25 + 0.9 * rnd(p.seed, c + 6u)) * min(s / U0, 1.6), 0.0);
-            p.spin = p.age; end = min(p.age + GRAIN_FLIGHT * (0.5 + rnd(p.seed, c + 7u)), p.life - GRAIN_FADE_OUT); p.omg = bitcast<u32>(end);
-          }
-        }
-      }
-    }
-    pool.parts[slot] = p; return;
+    pool.parts[slot] = p; return rsDone();
   }
   let h1 = f32(p.seed & 1023u) * (1.0 / 1023.0); let h2 = f32((p.seed >> 10u) & 1023u) * (1.0 / 1023.0);
   let A = airAt(p.pos.xz); let s = length(A.xy);
@@ -1024,7 +1037,7 @@ fn grainStep(pin: Particle, slot: u32, isNew: bool, dt: f32) {
     if ((em.flags & 2u) != 0u) {
       let hit = traceClosest(p.pos, rd, len + 0.02, 0u);
       if (hit.idx >= 0) {
-        if (hit.inside) { p.spin = -1.0; p.omgZ = 0u; pool.parts[slot] = p; return; }
+        if (hit.inside) { p.spin = -1.0; p.omgZ = 0u; pool.parts[slot] = p; return rsDone(); }
         free = false;
         p.pos += rd * max(hit.t - 0.02, 0.0) + hit.n * 0.01;
         let vn = min(dot(p.vel, hit.n), 0.0);
@@ -1040,20 +1053,18 @@ fn grainStep(pin: Particle, slot: u32, isNew: bool, dt: f32) {
     if (free) { p.pos += mv; }
   }
   let dC = distance(p.pos.xz, E.xy);
-  if (!rainOutdoors(p.pos.xz) || p.pos.y < -0.2 || any(p.pos < WORLD_MIN) || any(p.pos > WORLD_MAX) || dC > Rn * 1.1) { p.spin = -1.0; p.omgZ = 0u; pool.parts[slot] = p; return; }
+  if (!rainOutdoors(p.pos.xz) || p.pos.y < -0.2 || any(p.pos < WORLD_MIN) || any(p.pos > WORLD_MAX) || dC > Rn * 1.1) { p.spin = -1.0; p.omgZ = 0u; pool.parts[slot] = p; return rsDone(); }
   if (p.pos.y > GRAIN_TOP || s < GRAIN_DROP * U0) { end = min(end, p.age + GRAIN_FADE_OUT); }
   p.omg = bitcast<u32>(end);
   let env = smoothstep(0.0, GRAIN_FADE_IN, p.age - p.spin) * smoothstep(0.0, GRAIN_FADE_OUT, end - p.age) * (1.0 - smoothstep(0.7, 1.0, dC / Rn));
   p.omgZ = bitcast<u32>(clamp(grain.a.z, 0.0, 4.0) * (0.5 + h2) * env);
   p.color = u32(clamp(grain.e.x, 0.0, 0.999) * 4096.0) | (u32(clamp(grain.e.y, 0.0, 15.9) * 16.0) << 12u) | (u32(clamp(grain.e.z, 0.0, 1.0) * 255.0) << 20u);   // (how the draw shows it: grain.e, packed — the draw has no numbers of the grains' own)
+  var r: RainReq; r.p = p; r.act = RS_DONE;
   if (p.age - p.spin < 2.0 * dt || rnd(p.seed, c + 12u) < 0.5) {
     let Ps = p.pos + vec3f(0.0, 0.02, 0.0);
     let V = normalize(frame.camPos - Ps);
     let tl = length(p.vel); let T = select(vec3f(1.0, 0.0, 0.0), p.vel / max(tl, 1e-6), tl > 1e-3);
-    let lit = rainShadeV(Ps, V, T, k1, false) * max(grain.a.w, 0.0);
-    // (a grain that flies through a lamp's own point is lit from no distance: on the software adapter one such pixel overflowed the frame's half floats and took the
-    // whole picture black through the bloom and the history. No grain is brighter than GRAIN_SHADE_MAX)
-    p.shade = min(select(mix(p.shade, lit, 0.5), lit, p.age - p.spin < 2.0 * dt), vec3f(GRAIN_SHADE_MAX));
-  }
-  pool.parts[slot] = p;
+    r.act = RS_GRAIN; r.Ps = Ps; r.V = V; r.T = T;   // (lit by rainStep's ONE rainShadeV: × grain.a.w, eased a half a frame, capped at GRAIN_SHADE_MAX)
+  } else { pool.parts[slot] = p; }
+  return r;
 }

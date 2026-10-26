@@ -200,7 +200,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
   }
   // the centre rays of BOTH rules through ONE shadowSample call (a pixel takes at most one of them: the sliver rule's pixels are the borrowed-ratio branch's, the edge
   // rays the other's): per class, a sliver ray re-decides the rayed light and its remainder; an edge ray only the strongest emitter's share
-  if (sliverNow || edgeWant != 0u) {
+  if (EDGE_RAYS && (sliverNow || edgeWant != 0u)) {   // (EDGE_RAYS: the plain kernel carries none of this)
     let owner = (textureLoad(oId, gxy, 0).x >> 20u) & 0xffu;   // (a ray from a man's own sliver ignores his proxies, as every shadow ray of his does)
     let Po = P + N * 0.015;
     for (var c = 0u; c < 2u; c++) {

@@ -285,7 +285,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   are equal); `&nofow` on both sides takes the race out, and is equal at both checkpoints.
   **Never seen on a GPU.** That a driver's compile gets shorter, that the browser's shader cache now answers a second level's modules, and that the hitches go with the text are INFERENCES — the next
   benchmark text from the Windows machine is the measure (`load`, `loads`, `longest freeze`).
-- **What is left of the shader wait, and needs a GPU to do (2026-10-19).** (1) Compile first what the opened quality draws: the boot waits for all ~133 pipelines though a tier
+- **What is left of the shader wait, and needs a GPU to do (2026-10-19).** (1) Compile first what the opened quality draws (2026-10-26: the twins no first frame draws are LATER — the Windows bullets below): the boot waited for all ~133 pipelines though a tier
   takes a part of them (the legacy and v3 denoiser chains, every à-trous variant, both composite kinds are all made). The count tool prints which boot pipelines a pass took in the
   seconds after ready, but on the software adapter a frame is half a minute, so its list is a floor, not the set — the split needs a machine that draws, and every pipeline left
   for later needs its pass to stand down until it is in. (2) Module creation is one burst: sixty `createShaderModule` calls in one task, parsed back to back on the browser's GPU
@@ -313,6 +313,40 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   76.5/s, the longest 163 ms, 5 over 50 ms; boot 32.5 → 30.3 s (one run each, a second pair agreed: a 3.6 s freeze → 133 ms). The launcher, warm, with the queue: boot
   1.6 s, 76.9/s, the longest gap 130 ms. The frame itself is the GPU's on that floor (union 13–18 ms at `high`, the ladder down to scale 0.5; `low` pinned: 9.9 ms,
   97 fps); the calm office at high is 10.6 ms at 1507×780, about the M4 Max reference above. Never measured on a Mac with the queue on (the boot order changes there too).
+- **Windows: the cold compile cut from ~26–30 s to ~9 s (2026-10-26, the same Windows machine; Chrome 155, D3D12, DXC 1.9.2607 as Chrome ships it).** Measured with a
+  browser already started (a fresh profile's first navigation waits 2.5–4.6 s on the browser's own start-up before it asks for the page: not the page's) and an EMPTY shader
+  cache, `__boot` to interactive, cold every time: the title 26.0–26.5 s → 8.4–10.4 s (pipelines 25.0–25.4 → 7.4–9.4 s; four runs of the final build's shaders), the
+  compound's room clear 29.4–29.7 → 8.6–8.7 s (three each), the pass (snow) 29.9–30.0 → 9.8 s (two each; one run in four of the same build takes a few seconds more — the
+  GPU process's own scheduling).
+  The launcher, warm: 2.3 s to interactive, 0.6 s of pipelines, as before. **Why it was slow**: DXC inlines every call into one function before it optimizes, so a kernel pays
+  for each CALL SITE of a heavy function (the tracer, `occluded`, `evalLight` with the fog's walk) — fgather's `main` reached ~680 KB of inlined text from 95 KB of WGSL —
+  and its time grows faster than the text. A small loop round a heavy call is NOT unrolled (tried: an opaque trip count changed nothing), so a loop of turns round ONE call
+  site is the tool. **Two levers, both in**: (1) THE ONE-CALL-SITE REWRITES, each the old statements in the old order (the same `rnd()` draws), so the picture is the same
+  bits: fgather `main` and `mainGi` trace every ray (the gather's, the young tile's extras, the fresh candidates, the gloss floor's and the pane's mirror) through one
+  `traceShade` in a loop of turns; `directAtPoint` / `directOnScreen` are one `directAt` with one `evalLight` and one `occluded` (also reflectP5's two-part hit and
+  `giReshadeDirect`); reflectP5 takes the two halves and `traceClosestMesh` on every path (bit for bit `traceClosest` with its bits down); the volumetric rain walks its
+  open-air pieces through one `rainAlong`, the sun and a lamp share one beam march, the fog's three looks and the sun's two rays are turns; the composite runs its beams /
+  fire / volumetrics / veil tail once for sky and surface and the glass cracks draw one line list through one `gbEdge` (max / min only, so order-free); the particle update's
+  three light walks are one `pLight`, and the drop's crown and head, the snow grain and the wisp share one `rainShadeV`; the direct pass's leaders and tail, the sharp
+  pass's edge and sliver rays, restir's glass and target reads, the rig normal's four taps likewise. (2) LATER TWINS (`gpu/device.ts laterPipelineAsync`,
+  `PIPE_QUEUE.later`; `?pipelater=0` = the boot waits for every one as before; a switch of the page, no knob): the boot's set leaves out what no first frame draws with the
+  default settings — restir's motion twin (restir meanwhile), the iid gathers and the resampling pair (the strata pair / the plain gather meanwhile; the reservoirs start clean
+  as when the row is switched on), reflectP5 (main's reflections), the old direct estimator (restir), the dust twin (plain smoke), the fragment composites (sharp direct is
+  held live until one is in — engine.render, even at scale 1), the non-refracting compute composite (compSR, the same picture with no pane crossed), the froxel kernels and
+  the volumetric pass's froxel twin (FrameFlags.FroxelVol held down: the per-pixel march meanwhile) — and compiles them after it in the queue's background lane; each lands
+  through its cut set's `patch`. The K = 0 smoke march, which no preset runs, lives only in a twin built the first frame `volLightCap` is 0 (`volumetrics.wgsl VOL_K0`).
+  **Offline DXC, per kernel, the title's text (ms, one at a time; HLSL dumped from Chrome with `dump_shaders`, timed with Chrome's own dxcompiler.dll)**: volDust 9268 → 4274,
+  fgatherGi 9079 → 3658, vol 8626 → 2560 (+ the froxel twin), fgather 7725 → 2223, reflectP5 7396 → 2514, compositeS/SR 5265 → 3400, direct 4072 → 2579, particlesUpdate
+  3488 → 2164 (the pass's 5914 → 3678), restir 3181 → 2847, reflect 2422 → 1906, sharpUE 1734 → 1009; the queue's 15 workers get ~4.5× out of the 16 threads (DXC alone
+  scales 6× at best), so the boot is about its set's total ÷ 4.5. **The picture** (a GPU twin of `tools/qa/draw-equal.cjs`: its five views, plus the pass and the compound on
+  their own camera, with `&cutprograms=boot` so the cut rule is in every program, every LATER twin waited for): EQUAL pixel for pixel on D3D12 against the tree before at
+  high (all seven), medium (the five) and ultra (the five and the compound); the pass's second checkpoint at ultra differs only through the frames drawn before the twins
+  landed (the resampling gather's reservoirs start clean when its twin lands, where the tree before carried the boot frame's) and is EQUAL with `?pipelater=0`. A check WITHOUT `cutprograms=boot` must not wait for the queue: the cut set landing mid-capture changes the firefight view by design. **The
+  frame** (the compound's room clear at ultra, scale 0.75, warm): union 13.65 → 13.85 ms (gather 1.37 → 1.50, compS 0.55 → 0.66; the loops' registers). **Not seen**:
+  any of it on Metal (the rewrites are the same operations, but a fast-math compiler may schedule them to last-bit differences, as reflect_p5.wgsl's history notes), and the
+  fallback frames themselves (a `?nogatherstrata` / `?norestir` / `?norefract` visit, ultra's phase-5 pair, a froxel tier, scale 1 — for the seconds before their twin is in).
+  Left: vol's two smoke marches (the classic and the froxel-lit one are one march apart from their light — ~1.2 s of each program), the rain splash's second `rainLight`,
+  restir's two `traceSample`s across its barriers, and the page script's own ~0.7 s.
 - **The outline in the dark** (`render/outline.ts`, `shaders/outline.wgsl`; 2026-10-20): one scissored, blended triangle onto the composite after the fog of
   war and before the resolve, reading the G-buffer's id and depth targets, made only while the player's Options row is on. What it is for, what it costs
   and what nobody has seen: `docs/agents/menus.md`, "Finding your own man". A pass that wants whose-pixel-is-this can take it as its model: the owner byte
