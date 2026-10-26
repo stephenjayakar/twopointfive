@@ -1,6 +1,7 @@
 // FINDING YOUR OWN MAN ON THE SCREEN, and how the camera answers the hand: fourteen settings to play with on twelve rows (Options > Game; ui/findme.ts draws the ring, hands
 // the renderer the outline's frame and builds the rows). With all of them as they start the game is as it stood before it had them, on the page and on both
-// of the harness's stands: the ring and the outline start off and the camera's three start as the camera was. The seven rows under `outline` are read only
+// of the harness's stands: the ring and the outline start off and the camera's three start as the camera was. (THE PAGE, since 2026-10-26, starts the
+// outline ON at the maintainer's own numbers — FINDME_TUNED and findMeStarts, below; the module and the frozen stand are as this says.) The seven rows under `outline` are read only
 // while it is on, and three of those are NOT how the outline was first built: `picture`, `mates` and `colour` (the rims by the picture, teammates rimmed,
 // the rims in colour) are on from their
 // starts for a machine that keeps the outline on. (One more is SHELVED, 2026-10-20: his shape
@@ -39,14 +40,30 @@
 // pan, turn and behind change the seat's VIEW, and the view is the player's input (game/cmd.ts carries it as data, tick by tick): a recording replays the view
 // it was made with whatever these say today, and no rule of the game reads this table. ring is the HUD's alone and outline the picture's: nobody's senses,
 // no light meter and no digest can tell either on from off.
-// KEPT PER MACHINE (localStorage `twopointsix.findme`), read once as this module loads; a harness has no store and gets the starts. Only the rows that
+// KEPT PER MACHINE (localStorage `twopointsix.findme`), read as this module loads and again when the page says which starts are in force (findMeStarts);
+// a harness has no store and gets the starts. Only the rows that
 // are NOT at their starts are written (keep), so a start that is tuned later reaches every machine whose row stands at the old start — a row put back to
 // its start by hand is one of those: these are rows on trial, and their starts are what the maintainer's own hand is settling. A line an older build kept
-// whole is written again that way as it is read. No imports, on purpose:
+// whole is written again that way as the page reads it under its own starts. No imports, on purpose:
 // the loop (host/loop.ts) and the engine replay's own view (replay/engineplay.ts, its Ctrl turn) read the table and nothing of the game or the page comes with it.
 
 export interface FindMe { pan: number; ring: boolean; outline: boolean; width: number; opacity: number; picture: boolean; lit: number; dark: number; picLit: number; picDark: number; mates: number; colour: number; turn: 1 | -1; behind: boolean }
-export const FINDME_START: Readonly<FindMe> = { pan: 1, ring: false, outline: false, width: 1, opacity: 0.6, picture: true, lit: 0.3, dark: 0.12, picLit: 0.3, picDark: 0.12, mates: 1, colour: 0.6, turn: 1, behind: false };
+/** every row as it was BUILT: the module's own starts, and the frozen stand's (no rim, and the rim's rows at the numbers it was first drawn with) */
+export const FINDME_BUILT: Readonly<FindMe> = { pan: 1, ring: false, outline: false, width: 1, opacity: 0.6, picture: true, lit: 0.3, dark: 0.12, picLit: 0.3, picDark: 0.12, mates: 1, colour: 0.6, turn: 1, behind: false };
+/** THE OUTLINE'S ROWS AS THE MAINTAINER'S HAND LEFT THEM (2026-10-22, on his GPU: "overall these feel a lot better already" — the rim on, a quarter of
+ *  its width, his teammates' at four fifths of his, half the colour), made the starts on 2026-10-26: he had watched a first-time player on a machine that
+ *  had kept nothing and "i don't think the outlines showed up for him" — they were off, as every one of these rows starts — then "we should take the
+ *  numbers i tuned ... and use those as the defaults". The rim's strength and its light rows he left at their starts, so they are not here. THE PAGE'S
+ *  STARTS, not the module's: FINDTUNED and findMeStarts, below. */
+export const FINDME_TUNED: Readonly<Partial<FindMe>> = { outline: true, width: 0.25, mates: 0.8, colour: 0.5 };
+/** THE SWITCH: on = the starts in force are the tuned ones over the built. ON in the page (host/profile.ts pageSwitches; `?findtuned=0` = every row starts
+ *  as built, no rim until Options > Game asks, as it was), OFF here and on the frozen stand (`TPS_FINDTUNED=1`). The page's alone, as host/savepic.ts's
+ *  is (game/knobs.ts VISIT_OWN): a picture on this machine's screen — no run reads it, no digest can tell it, and no recording sets it. Whoever writes it
+ *  calls findMeStarts() after: the table is not read off it frame by frame. */
+export const FINDTUNED = { on: false };
+const START: FindMe = { ...FINDME_BUILT };
+/** the starts in force: as built until the switch says otherwise (findMeStarts). What Reset puts back, and what a kept line is written against */
+export const FINDME_START: Readonly<FindMe> = START;
 /** the width row's ends (shares of the rim's own width) */
 export const FINDME_WIDTH = { min: 0, max: 1.5 };
 /** the most a teammate's rim is against his */
@@ -84,7 +101,7 @@ let seat: { aimLead: number } | null = null, lead = 0;
  *  written only when the pan row itself moves (to that share of the lead as built: the debugger's own aim lead slider writes the same number, and the later hand wins) */
 export function bindFindMe(cam: { aimLead: number }) { seat = cam; lead = cam.aimLead; if (FINDME.pan !== 1) cam.aimLead = lead * FINDME.pan; }
 /** one setting changed by the player: on the table, on the camera if it is the pan, and kept */
-export function setFindMe<K extends keyof FindMe>(k: K, v: FindMe[K]) { if (put(k, v)) keep(); }
+export function setFindMe<K extends keyof FindMe>(k: K, v: FindMe[K]) { if (put(k, v)) keep(k); }
 /** every row back to its start (Options' Reset): only what had been moved is written */
 export function resetFindMe() { let any = false; for (const k of Object.keys(FINDME_START) as (keyof FindMe)[]) any = put(k, FINDME_START[k], true) || any; if (any) keep(); }
 function put<K extends keyof FindMe>(k: K, v: FindMe[K], whole = false): boolean {
@@ -94,9 +111,36 @@ function put<K extends keyof FindMe>(k: K, v: FindMe[K], whole = false): boolean
   if (!whole && k === 'picDark') v = Math.min(v as number, FINDME.picLit) as FindMe[K];
   if (FINDME[k] === v) return false; FINDME[k] = v; if (k === 'pan' && seat) seat.aimLead = lead * FINDME.pan; return true;
 }
-function movedRows(): string { const moved: Record<string, unknown> = {}; for (const k of Object.keys(FINDME_START) as (keyof FindMe)[]) if (FINDME[k] !== FINDME_START[k]) moved[k] = FINDME[k]; return JSON.stringify(moved); }
-function keep() { try { globalThis.localStorage?.setItem(LS, movedRows()); } catch { /* no store */ } }
-try { const was = globalThis.localStorage?.getItem(LS); Object.assign(FINDME, findMeRead(was)); if (was != null && was !== movedRows()) keep(); } catch { /* no store */ }
+function movedRows(): string { const moved: Record<string, unknown> = {}; for (const k of Object.keys(START) as (keyof FindMe)[]) if (FINDME[k] !== START[k]) moved[k] = FINDME[k]; return JSON.stringify(moved); }
+/** the store's line: a string, null = a store that has kept nothing, undefined = no store here (a harness) or one that may not be read (a frame whose
+ *  storage is blocked throws at the name itself) */
+function keptLine(): string | null | undefined { try { const st = globalThis.localStorage; return st ? st.getItem(LS) : undefined; } catch { return undefined; } }
+/** the table kept. Under the tuned starts (the page's own) the line is the rows moved off them and nothing else. UNDER THE BUILT ONES ON A VISIT (`k`: the
+ *  row a hand just moved under `?findtuned=0`, or on a stand that never raised the switch) the line as it lies is the tuned starts' own and only that row
+ *  is written into it — rewritten whole against the built starts, a kept `outline: false` would be 'at its start', written away, and drawn again on the
+ *  next plain visit. No `k` = the whole table (Reset; a tidy). */
+function keep(k?: keyof FindMe) {
+  try {
+    const st = globalThis.localStorage; if (!st) return;
+    if (FINDTUNED.on || k === undefined) { st.setItem(LS, movedRows()); return; }
+    let was: Record<string, unknown> = {}; try { const j = JSON.parse(st.getItem(LS) ?? 'null'); if (j && typeof j === 'object' && !Array.isArray(j)) was = j; } catch { /* not ours: written over */ }
+    if (FINDME[k] === START[k]) delete was[k]; else was[k] = FINDME[k];
+    const out: Record<string, unknown> = {}; for (const key of Object.keys(START)) if (key in was) out[key] = was[key];   // (in the table's own order, as a whole line is)
+    st.setItem(LS, JSON.stringify(out));
+  } catch { /* no store */ }
+}
+/** THE STARTS IN FORCE FOLLOW THE SWITCH (FINDTUNED.on; host/profile.ts pageSwitches calls this once, before anything is drawn; a stand that raises the
+ *  switch, after). A row standing at its old start moves to its new one; a row a hand has moved stays. Then, where there is a store, the kept line is
+ *  read again over the new starts — a machine that has kept nothing gets the outline, one whose line names a row keeps that row, Off included — and, under
+ *  the tuned starts only, a line that says more than the rows moved off them is written again as only those (an older build's whole line; a line that
+ *  kept the tuned numbers by hand). Under `?findtuned=0` a line is left as it lies. Called again with nothing changed it does nothing on a harness. */
+export function findMeStarts(): void {
+  const T: Partial<FindMe> = FINDTUNED.on ? FINDME_TUNED : {}, S = START as unknown as Record<string, unknown>, F = FINDME as unknown as Record<string, unknown>;
+  for (const k of Object.keys(FINDME_BUILT) as (keyof FindMe)[]) { const next = k in T ? T[k] : FINDME_BUILT[k]; if (S[k] !== next) { if (F[k] === S[k]) F[k] = next; S[k] = next; } }
+  const was = keptLine(); if (was === undefined) return;
+  Object.assign(FINDME, findMeRead(was)); if (FINDTUNED.on && was != null && was !== movedRows()) keep();
+}
+{ const was = keptLine(); if (was !== undefined) Object.assign(FINDME, findMeRead(was)); }   // (as the module loads: the line over the built starts, for a page that never calls the above — the replay viewer reads `turn`)
 
 // ---- the camera running itself (host/autocam.ts): is the mode on
 /** THE AUTO CAMERA'S MODE, the seat's own: on = the camera frames things itself (the camera's key tapped twice), off = it is the hand's (the key held with

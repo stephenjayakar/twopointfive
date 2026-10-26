@@ -53,7 +53,7 @@ const STATE = () => { const E = window.__engine, P = E.passes.outlinePass, F = E
   let fails = 0; const line = (ok, what, detail) => { if (!ok) fails++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}\n    ${detail}`); };
   const keep = (name, u) => { if (outDir && u) { fs.writeFileSync(path.join(outDir, name), Buffer.from(u.split(',')[1], 'base64')); log(`kept ${name}`); } };
   try {
-    const url = `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&squad4`; log(url);
+    const url = `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&squad4&findtuned=0`; log(url);   // (findtuned=0: the rows' own check, on the starts as built — the kept line above names what it moves; the page's own starts are findtuned-page.cjs's)
     await page.goto(url); await page.evaluate(async () => { await window.__ready; }); await page.evaluate(STEP, 20); log('booted');
     await page.evaluate(() => { window.__menu.close(); if (window.__smoke) window.__smoke.params.enabled = false; window.__game.godMode = true; window.__game.aiEnabled = false; });
     await page.evaluate(STEP, 30);
