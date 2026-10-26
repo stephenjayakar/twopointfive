@@ -86,6 +86,21 @@ export const HOLD = { cut: 0.965, aim: 1.03, cruise: 0.975, pacedMs: 6, pacedWin
  *      keeps the page proven paced (so the GPU still makes the frame in half the pace: nothing lost when the pacing lifts, even on a fixed display); a step after which the frame grew by
  *      `gain` is taken off again and held off as a failed climb rung is. The rest of the way up is the plain restore's (58 fps), and the climb past the tier's start keeps its own rule. */
 export const PACED = { band: 0.06, gain: 0.05, windows: 2, upWindows: 4, trialSecs: 12, backSecs: 30, recheckSecs: 120, recheckMax: 3, probeGain: 0.15 };
+/** SHARP SHED (settings.ladderShed, default on, `?laddershed=0`; the maintainer's pick of 10-25 off his own takes: 'Auto drops it'). UNDER AUTO, where the ladder would take pixels off
+ *  the tier's own picture — the cut by rate, the step for the back-off band, the cut taken with a load spike's rungs, an aim's judged cut, a preset starved away — and sharp direct is drawing and the tier's
+ *  to place (no ?sharp / ?nosharp / ?noiq), it lets sharp direct go INSTEAD, with its two riders (the decoupled jitter, GBAA): the output-size kernels are the one part of a frame that
+ *  fewer pixels do not shrink (the maintainer's Mac at High ×0.5: 4.9 of 15.5 ms, and he saw no difference in a fight with it off). Rungs the climb put ON TOP of the tier's start still come off first: they are
+ *  extras. The shed stays across auto's preset hops (a hop is priced without it) and ends with the auto spell (a pin, auto chosen again) or the switch.
+ *  It comes back when the tier is at its own scale again, the rate at the aim (or the page paced), no preset hop about to be taken, and the union PRICED WITH IT ON THE TIER'S OWN
+ *  PICTURE — rungs the climb took meanwhile are priced off and come off with the move: the tier's own row before the extras — still `HOLD.restore` of the way to the back-off band,
+ *  `HOLD.restoreWindows` windows running (without timings: the rate alone, `HOLD.blindWindows` of them); and no sooner than `holdSecs` after it was shed, doubling each time it is shed
+ *  again within twice that hold of coming back (16× at most). ITS PRICE is the cost model's share, or what this machine's own union showed if that is more (never over `seenCap` × the
+ *  model): off a shed, what the union gave back — trusted for twice the hold-off only, since a spike that ended in the same second reads as its price; on the way back, what the union
+ *  took on in a calm scene — that reading replaces the other and stands `backSecs`. So a machine the model underprices tries it once, reads the price, and leaves it. Where it does not
+ *  fit, the climb spends the room on pixels instead — to 0.95, as with sharp direct on, so there is a size left for it to come back at. Turned back on by hand (the Tab row), the
+ *  ladder holds no shed against it.
+ *  Off = the ladder as it was. NOT covered: a pinned preset keeps sharp direct whatever its frame rate, and the boot's pick (plan) still prices every tier with it on. */
+export const SHED = { holdSecs: 60, seenCap: 3, backSecs: 900 };
 /** THE SAME CHECK UNDER AN AIM (settings.ladderHeld, default on, `?ladderheld=0`; off = an aim as it was: `holdBound` alone decides, and every line below is skipped). An aim stepped a
  *  held page down on the union's SIZE alone (two windows over the back-off band; over its budget, by rate) and gave the pixels back only with the union priced under `restore` of that
  *  band. On a page the browser holds to 30 fps the GPU clocks down and every pass reads about half again longer (the maintainer's Mac on a low battery, 10-14: 6.7‥7.4 ms free-running,
@@ -419,11 +434,14 @@ export class Quality {
   private lastClimbAt = -1e9; private undidForDip = false; private unsureAcc = false; private unsureRun = 0; private hopSlowAt = -1;   // (the fps back-off: when the last rung went up — undoing never touches it — and whether this dip already had its one newest-only undo)
   /** auto's preset hops: the last hop up (for 'straight back down = that hop failed') and the pairs held off since, `${from}>${to}` → until / repeat count — NOT cleared by apply() */
   private lastHop: { from: QualityName; to: QualityName; at: number } | null = null; private hopHold = new Map<string, { until: number; n: number }>();
+  // SHARP SHED's state (SHED above; none of it moves while settings.ladderShed or auto is off): sharp direct is shed · what this machine's union showed it costs (ms at `rows` output rows) · the
+  // union the shed was taken at, for the first window after it to measure against · no way back before `until` (`n` sheds in this run of them, `backAt` = when it last came back) · windows with room for it
+  shed = false; private shedSeen: { ms: number; rows: number; until: number } | null = null; private shedMark: { union: number; scale: number; preset: QualityName; back?: boolean } | null = null; private shedHold = { until: 0, n: 0, backAt: -1e9 }; private shedRoomy = 0;
   /** the cost model's price of running preset `next` at its starting scale on this window, relative to `cur` at its current scale (COST's per-pixel and fixed parts; the union × this =
    *  the union to expect after the hop): medium → high ≈ 1.5, low → medium and verylow → low ≈ 2.2 at 720 CSS rows on the coarse cache grid (low → medium ≈ 1.9 on the one grid) — never the flat '×2' a threshold would assume */
   hopRatio(next: QualityName, cur: QualityName = this.current as QualityName): number {
     if (!(cur in COST) || !(next in COST)) return 2;
-    const cv = this.engine.gpu.canvas as HTMLCanvasElement; const cssH = cv?.clientHeight || 720, cssW = cv?.clientWidth || 1280; const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
+    const { cssH, cssW, dpr } = this.win();
     const taauOn = this.engine.settings.taau !== false;
     const S = this.engine.settings;
     const mpx = (maxH: number, scale: number) => { const rows = Math.min(maxH, cssH * dpr) * scale; return rows * rows * (cssW / cssH) / 1e6; };
@@ -432,7 +450,8 @@ export class Quality {
     const pc = PRESETS[cur]; const live: Preset = cur === this.current ? this.livePreset(cur) : pc;
     const one = this.oneGrid(), table = costTable(one, this.smokeKeep());   // (the grid and the smoke rows the presets run: ONE CACHE GRID, SMOKE KEEP)
     const curCost = costOf(cur === this.current ? presetCost(live, one) : table[cur], live.maxH, cur === this.current ? S.renderScale : startScale(pc, taauOn));
-    return costOf(table[next], PRESETS[next].maxH, startScale(PRESETS[next], taauOn)) / Math.max(0.1, curCost);
+    const nextCost = this.shed && this.shedOn() ? presetCost({ ...withSmoke(PRESETS[next], this.smokeKeep()), iq: { ...PRESETS[next].iq, sharp: false } }, one) : table[next];   // (SHARP SHED: the shed stays across the hop, so the next preset is priced as it will run)
+    return costOf(nextCost, PRESETS[next].maxH, startScale(PRESETS[next], taauOn)) / Math.max(0.1, curCost);
   }
   /** preset `cur` (the current one) as it is being rendered: the live lossy divisors, cap and scale over its rows (scale + iq.sharp as they are: presetCost prices sharp direct by `iq.sharp && scale < 1`) */
   private livePreset(cur: QualityName): Preset { const S = this.engine.settings; const pc = withSmoke(PRESETS[cur], this.smokeKeep()); return { ...pc, lossy: { ...pc.lossy, gatherThird: !!S.gatherThird, volQuarter: !!S.volQuarter, rcHalfRate: !!S.rcHalfRate }, maxH: S.maxInternalHeight || pc.maxH, scale: S.renderScale, iq: { ...pc.iq, sharp: !!S.sharpDirect && S.taau !== false } }; }
@@ -448,7 +467,7 @@ export class Quality {
   // as far as this page has SEEN it (the fastest tenth of its rAF intervals, the highest so far — 0 = not yet; a display at 60 never shows more, one at 120 shows it the moment the frame fits);
   // `displayHzPin` > 0 = told (QA / the replay tool)
   private hot = 0; private paced = 0; private maxDt = 0; displayHz = 0; displayHzPin = 0; private vsWatching = false;
-  private probeUntil = 0; private probeN = 0; private pacedAt = 0; private pacedSince = 0; private pacedChecks = 0; private pacedMiss = 0; private pacedRun = 0; private pacedBack = { at: -1e9, n: 0, until: 0 }; private pacedFailed = new Set<string>(); private lastCut: { from: number; preset: QualityName; avg: number; union: number; at: number; marks?: [string, number, number | undefined][]; probeFrom?: number } | null = null; private upTrial: { from: number; avg: number } | null = null;   // the paced check (PACED; as now under ladderPaced, an aim under ladderHeld): the verified pace (s a frame, 0 = none), paced windows running, the cut being judged (`marks`: the failed-rung state an aim's judged cuts found, put back with the pixels; `probe`: a chain of nothing but an aim's own judged cuts), the step up being judged
+  private probeUntil = 0; private probeN = 0; private pacedAt = 0; private pacedSince = 0; private pacedChecks = 0; private pacedMiss = 0; private pacedRun = 0; private pacedBack = { at: -1e9, n: 0, until: 0 }; private pacedFailed = new Set<string>(); private lastCut: { from: number; preset: QualityName; avg: number; union: number; at: number; marks?: [string, number, number | undefined][]; probeFrom?: number; shed?: boolean } | null = null; private upTrial: { from: number; avg: number } | null = null;   // the paced check (PACED; as now under ladderPaced, an aim under ladderHeld): the verified pace (s a frame, 0 = none), paced windows running, the cut being judged (`marks`: the failed-rung state an aim's judged cuts found, put back with the pixels; `probe`: a chain of nothing but an aim's own judged cuts), the step up being judged
   /** settings.ladderAim as the ladder reads it (a stub engine without the row = 0 = as now) */
   get aim(): number { const a = Number((this.engine.settings as { ladderAim?: number }).ladderAim); return a > 0 ? a : 0; }
   /** the bands the ladder is on right now (ladderBands above) */
@@ -499,7 +518,7 @@ export class Quality {
    *  presented frames later, normally before Resume; a player quicker than that gets the one step within their first second, as one who beats the start card does. */
   private startAuto() {
     this.lastHop = null;   // (a hop under a previous auto spell says nothing about this one)
-    this.auto = true;
+    this.auto = true; this.shed = false; this.shedSeen = null; this.shedMark = null; this.shedHold = { until: 0, n: 0, backAt: -1e9 }; this.shedRoomy = 0;   // (nor does a shed: this spell starts with the tier's own rows and measures them)
     let remembered: string | null = null, sc: number | null = null;
     try { remembered = localStorage.getItem(LS_AUTO); const v = parseFloat(localStorage.getItem(LS_SCALE) ?? ''); if (isFinite(v)) sc = v; } catch { /* */ }
     const onLadder = (n: string | null): n is QualityName => !!n && (AUTO_LADDER as string[]).includes(n);
@@ -547,8 +566,9 @@ export class Quality {
     S.rtReflect = p.rt.on && !rtVeto.on; S.rtReflectDiv = p.rt.div; S.rtRays = p.rt.rays; S.rtMaxRough = p.rt.maxRough; S.rtAtrous = p.rt.atrous;   // RT reflections per tier (RtTier above; ?nortreflect vetoes the switch, the Tab ▸ Materials rows move them by hand until the next preset)
     { const p5 = p5Veto.on ? P5_OFF : p.p5; S.giResample = p5.gi; S.giResampleRays = p5.giRays; S.rtMeshHits = p5.mesh; S.rtHitReuse = p5.reuse; }   // phase 5's ultra extras (P5Tier above): on in ultra, off everywhere else — the Tab rows move them by hand until the next preset; ?nop5 vetoes them
     if (gbaaForce.on) { S.gbaa = true; S.taauPhases = 0; }   // ?gbaa: geometric edge AA + jitter off, over the tier's phases row above
-    const iq = iqForce.off ? IQ_OFF : p.iq; const sharpOn = sharpForce.v ?? iq.sharp;   // the tier's resolve configuration (IqTier; ?noiq / ?sharp / ?nosharp force it; the Tab ▸ Frame rows move each by hand until the next preset)
-    S.sharpDirect = sharpOn; S.sharpDecouple = sharpOn && iq.decouple; S.gbaa = gbaaForce.on || (sharpOn && iq.gbaa); S.taauHistSharp = iq.histSharp;
+    if (!this.shedOn()) this.shed = false;   // (SHARP SHED is auto's, under its switch: a preset pinned by hand has its own rows)
+    const iq = iqForce.off ? IQ_OFF : p.iq; const sharpOn = sharpForce.v ?? (iq.sharp && !this.shed);   // the tier's resolve configuration (IqTier; ?noiq / ?sharp / ?nosharp force it; SHARP SHED keeps sharp direct off across auto's hops; the Tab ▸ Frame rows move each by hand until the next preset)
+    this.putSharp(iq, sharpOn); S.taauHistSharp = iq.histSharp;
     S.dnShadowIters = p.dn.shIters; S.dnShadowCap = p.dn.shCap; S.dnGiIters = p.dn.giIters; S.dnGiCap = p.dn.giCap; S.dnSpecIters = p.dn.spIters;   // the v3 denoiser's tiers (render/denoise.ts; Tab ▸ Denoiser rows likewise) — inert under settings.denoiser 'legacy'
     S.giFullRes = !!p.dn.giFull && !gimVeto.on; S.giFullIters = p.dn.giFullIters ?? 4; S.giYoungRays = gimVeto.on ? 1 : (p.dn.giYoungK ?? 1);   // GI in motion per tier (Dn above; ?nogim vetoes both for the visit; Tab ▸ Indirect light rows move them by hand until the next preset)
     S.directSamplesTop = p.ds[0]; S.directSamplesOther = p.ds[1]; S.directAdaptiveMin = p.ds[2]; S.directHistory = p.hist;
@@ -567,7 +587,7 @@ export class Quality {
     if (cur.nx !== grid.nx || cur.ny !== grid.ny || cur.nz !== grid.nz || cur.cascades !== p.cascades) this.engine.rebuildRc({ ...defaultRcConfig, ...grid, cascades: p.cascades, interval0: cur.interval0 });
     this.smoke.params.rbIters = rbItersOf(p, this.oneSolve());   // (ONE SMOKE SOLVE: the same pressure pairs under every preset, so what smoke hides is not the setting's)
     S.fireSmoke = fireSmokeFor(name, this.fireShed(), this.auto, S.fireSmoke);   // (FIRE SMOKE SHED: the floor rung draws an open fire without its smoke, and auto's first rung up from it keeps that — game/fire.ts reads it)
-    this.climbed = []; this.roomy = 0; this.sinceClimb = 0; this.failed.clear(); this.failCount.clear(); this.dipping = 0;   // (the climb's rungs and failures were the previous preset's: this one starts from its own rows)
+    this.shedRoomy = 0; this.climbed = []; this.roomy = 0; this.sinceClimb = 0; this.failed.clear(); this.failCount.clear(); this.dipping = 0;   // (the climb's rungs and failures were the previous preset's: this one starts from its own rows)
     if (this.motionCalm) this.applyMotionCalm(true);   // (the opt-in motion-calm rows ride over the preset's own while the switch is on)
     this.lastChange = `preset ${name}`; this.cooldown = 3; this.slow = this.fast = 0;
     if (this.auto) { try { localStorage.setItem(LS_AUTO, name); } catch { /* */ } }
@@ -628,6 +648,8 @@ export class Quality {
     const S = this.engine.settings;
     const climbOn = this.adaptive && !!S.ladderClimb && this.climbAllowed;
     if (!climbOn && this.climbed.length) this.unclimbAll('climb switched off');
+    if (this.shed && !this.shedOn()) this.unshed('the switch is off');
+    if (this.shed && S.sharpDirect) { this.shed = false; this.shedMark = null; this.shedRoomy = 0; }   // (put back on by hand, the Tab row: a by-hand row stands until the next preset, and the ladder holds no shed against it)
     // the climb's frame-rate back-off counts consecutive windows under CLIMB.backoffFps (a single hitch is not a verdict); kept outside the cooldown gate so a step's own cooldown cannot hide a dip
     if (avg > 1 / B.backoffFps) this.dipping++; else this.dipping = 0;
     if (this.cooldown > 0) return;
@@ -639,13 +661,28 @@ export class Quality {
     // the cruising rule's room test (auto ↑ a preset): with GPU timings, the union priced at the NEXT preset by the cost model (hopRatio) must fit hopFits of the plan budget, and a hop that
     // failed lately is held off; without timings the rate alone decides. Under auto the CLIMB defers to it — presets first — except at the top of auto's ladder, or when the next preset will
     // not fit (or is held off) but a scale step still might (a medium machine 9.5 ms busy at 60 fps: high would cost ~14, no; 0.5 ms of pixels, yes)
-    const timed = unionAvg > 0; const ai = AUTO_LADDER.indexOf(this.current as QualityName); const nextUp = ai >= 0 && ai < AUTO_LADDER.length - 1 ? AUTO_LADDER[ai + 1] : null;
+    const timed = unionAvg > 0;
+    // SHARP SHED, what this machine pays for sharp direct: the first judged window after it moved, nothing else moved since. OFF a shed: what the union gave back — the largest standing is
+    // kept, for twice the hold-off only (a spike that ended inside that window reads as sharp direct's price, and a reading nothing could test again would keep it off for the spell). On
+    // the way BACK: what the union took on, read in a calm scene — it replaces whatever stood, for SHED.backSecs
+    if (this.shedMark) { const m = this.shedMark; this.shedMark = null; const ms = m.back ? unionAvg - m.union : m.union - unionAvg;
+      if (timed && m.preset === this.current && Math.abs(m.scale - S.renderScale) < 1e-3 && (m.back ? !this.shed && ms > 0 : this.shed && ms > this.shedSeenMs())) this.shedSeen = { ms, rows: this.outRows(), until: this.clock + (m.back ? SHED.backSecs : 2 * Math.max(0, this.shedHold.until - this.clock)) }; }
+    const ai = AUTO_LADDER.indexOf(this.current as QualityName); const nextUp = ai >= 0 && ai < AUTO_LADDER.length - 1 ? AUTO_LADDER[ai + 1] : null;
     const hopHeld = !!nextUp && (this.hopHold.get(`${this.current}>${nextUp}`)?.until ?? -1) > this.clock;
     const roomForNext = !!nextUp && !hopHeld && (!timed || unionAvg * this.hopRatio(nextUp) < LADDER.hopFits * B.planBudget);
     const autoWantsPreset = this.auto && !!nextUp && roomForNext;
     // THE PACED CHECK (PACED; as now, and an aim under ladderHeld): is this slow window a page something else paces? 2 = it moved the ladder itself
     const pacedNow = this.pacedStep(B, avg, avgT, unionAvg, sc, top); if (pacedNow === 2) return;
     const gpuBound = !pacedNow && (unionAvg <= 0 || (B.hold ? this.holdBound(avg, unionAvg, B) : unionAvg > B.gpuFloor));   // (union unknown this window: assume it is; known and well under the budget: the rate is capped by pacing, not by pixels; a page the paced check has as paced: neither cut nor starved of its preset)
+    // SHARP SHED, the way back (SHED): the tier at its own scale, the rate at the aim (or the page paced), no preset hop waiting, the hold-off over, and the union priced with sharp direct on
+    // still under the restore band (a page the paced check has as paced: the frame's own room, as a step given back there) — counted here, given back in auto's block below
+    const pacedPage = timed && !gpuBound && avg > 1 / B.cutFps;   // (slow with the GPU inside its budget and the frame far over its union: something else paces this page — it will never show the target, and the union alone says whether the pixels fit)
+    const fitsBack = (priced: number) => pacedNow ? priced * (1 + PACED.gain) + HOLD.pacedMs < avg * 1000 : priced < HOLD.restore * CLIMB.backoff * B.budget;   // (a page the paced check has as paced, ladderHeld: the frame's own room — what comes back leaves it more than its GPU work, as the pace needs; the band is for a GPU on its own clock)
+    let sharpFits = false; const sp = this.shed ? this.sharpPrice(unionAvg) : null;
+    if (sp) {   // (priced on the tier's OWN picture: rungs the climb took meanwhile come off for it, auto's block below — the tier's own row before the extras; a hop that cannot be taken at this rate does not hold it off)
+      sharpFits = this.clock >= this.shedHold.until && sc >= this.maxScale - 1e-3 && !(autoWantsPreset && avg < 1 / B.cruisingFps) && (avg < 1 / B.cruisingFps || pacedPage) && (!timed || fitsBack(sp.bare + sp.add));
+      if (!unsure) this.shedRoomy = sharpFits ? this.shedRoomy + 1 : 0;
+    }
     if (this.adaptive) {
       if (avg > 1 / B.cutFps) { this.slow++; this.fast = 0; } else if (avg < 1 / B.restoreFps) { this.fast++; this.slow = 0; } else { this.slow = 0; this.fast = 0; }
       if (avg > 1 / B.cutFps && this.lastHop && this.hopSlowAt < 0) this.hopSlowAt = this.clock;   // (the first slow window since the last hop up: hopFailSecs counts from here)   // under 45 fps for two windows: cut; over 58 for four: give pixels back (was 29 / 45: 'anything over 29 is fine' — retuned 08-10 toward a 50–60 hold)
@@ -661,7 +698,9 @@ export class Quality {
           const want = B.hold ? (timed ? this.holdWant(sc, avg, unionAvg, B) : sc * Math.sqrt((1 / B.aimFps) / avg)) : 0, bound = B.hold && !pacedNow && (!timed || this.holdBound(avg, unionAvg, B));   // (priced before the rungs come off: at the climbed scale the windows were measured at; a paced page keeps its tier's start)
           this.unclimbAll(`${(1 / avg).toFixed(0)} fps${unionAvg > CLIMB.backoff * budget ? `, gpu ${unionAvg.toFixed(1)} ms` : ''}`, true); this.cooldown = LADDER.stepCooldown;
           // AN AIM does not wait a cooldown and two more windows for the plain cut: where the rungs alone do not bring the rate back (the model's scale for the aim sits under the tier's start), the cut is taken with them
-          if (bound) { const from = Math.min(this.maxScale, S.renderScale); const to = +Math.max(SCALE_FLOOR, Math.max(snapDown(sc - 0.3 + 1e-6), snapDown(want))).toFixed(2); if (to < from - 1e-3) { S.renderScale = to; this.pacedCut(B, from, avgT, unionAvg); this.holdLeft(from, true); this.lastChange += ` · hold ${B.target.toFixed(0)} ↓ scale ${to.toFixed(2)}`; } }
+          if (bound) { const from = Math.min(this.maxScale, S.renderScale); const to = +Math.max(SCALE_FLOOR, Math.max(snapDown(sc - 0.3 + 1e-6), snapDown(want))).toFixed(2); if (to < from - 1e-3) {
+            if (this.canShed()) this.lastChange += ` · ${this.shedSharp(B, from, avg, avgT, unionAvg, true, false)}`;   // (SHARP SHED: before anything of the tier's own picture; no measure of it here — the rungs' cost came off the union in the same window)
+            else { S.renderScale = to; this.pacedCut(B, from, avgT, unionAvg); this.holdLeft(from, true); this.lastChange += ` · hold ${B.target.toFixed(0)} ↓ scale ${to.toFixed(2)}`; } } }
         }
         this.dipping = 0; this.slow = 0; return;
       }
@@ -675,15 +714,17 @@ export class Quality {
       // AN AIM, ladderHeld: slow, the frame far over a union the aim's own rules let be (inside the budget AND the back-off band: over the band the step below is taken first, as ever,
       // and judged), no pace known — a held page AND a display missing its vsync. A cut to where the union fits the proof's floor tells them apart (pacedStep judges it there); not while
       // a take-back is held off (a cut right after one said that take-back was wrong), nor sooner after a judged one than the re-test would come (`probeUntil`: a rate that wobbles)
-      if (B.hold && this.slow >= 2 && !gpuBound && !pacedNow && timed && this.pacedOn(B) && sc > SCALE_FLOOR + 0.01 && !this.climbed.length && unionAvg <= CLIMB.backoff * budget && this.clock >= this.pacedBack.until && this.clock >= this.probeUntil) {
-        const to = this.probeScale(sc, unionAvg, B);
+      if (B.hold && this.slow >= 2 && !gpuBound && !pacedNow && timed && this.pacedOn(B) && !this.climbed.length && unionAvg <= CLIMB.backoff * budget && this.clock >= this.pacedBack.until && this.clock >= this.probeUntil) {
+        if (this.canShed()) { this.lastChange = `${this.shedSharp(B, sc, avg, avgT, unionAvg)} (a held page or a missed vsync: the paced check tells which)`; return; }   // (SHARP SHED: before that cut too — a missed vsync bought back keeps every pixel; a held page gives it back with the verdict, pacedStep)
+        const to = sc > SCALE_FLOOR + 0.01 ? this.probeScale(sc, unionAvg, B) : 0;
         if (to > 0) {
           this.pacedCut(B, sc, avgT, unionAvg, this.current as QualityName, true); S.renderScale = to; this.holdLeft(sc, false); this.slow = 0; this.hot = 0; this.cooldown = LADDER.stepCooldown;
           this.lastChange = `hold ${B.target.toFixed(0)} ↓ scale ${to.toFixed(2)} (${(1 / avg).toFixed(0)} fps with the GPU at ${unionAvg.toFixed(1)} ms: a held page or a missed vsync — a cut to where the union fits tells which)`; return;
         }
       }
       if (this.slow >= 2 && !gpuBound) { this.slow = 0; this.lastChange = `${(1 / avg).toFixed(0)} fps but the GPU takes ${unionAvg.toFixed(1)} ms — frame pacing (display / browser / power), not load: resolution left at ×${sc.toFixed(2)}`; }
-      if (this.slow >= 2 && sc > SCALE_FLOOR + 0.01) {   // proportional step: pixels ∝ scale², so aim straight at the scale that would give ~AIM fps — at least one grid step, at most 0.2 down, snapped down onto the grid, never under the floor
+      if (this.slow >= 2 && this.canShed()) this.lastChange = this.shedSharp(B, sc, avg, avgT, unionAvg);   // SHARP SHED: where the cut below would have been taken (the GPU is the limit: the line above), sharp direct goes first and the picture keeps its size
+      else if (this.slow >= 2 && sc > SCALE_FLOOR + 0.01) {   // proportional step: pixels ∝ scale², so aim straight at the scale that would give ~AIM fps — at least one grid step, at most 0.2 down, snapped down onto the grid, never under the floor
         const want = B.hold && unionAvg > 0 ? this.holdWant(sc, avg, unionAvg, B) : sc * Math.sqrt((1 / B.aimFps) / avg);
         S.renderScale = B.hold ? +Math.max(SCALE_FLOOR, Math.min(snapDown(sc - 1e-3), Math.max(snapDown(sc - 0.2 + 1e-6), snapDown(want)))).toFixed(2)   // (an aim's cuts land ON the grid: the clamps too — the sizes the pool and the way back up already know)
           : +Math.max(SCALE_FLOOR, Math.min(sc - SCALE_STEP, Math.max(sc - 0.2, snapDown(want)))).toFixed(2);
@@ -693,6 +734,7 @@ export class Quality {
       }
       else if (this.fast >= 4 && sc < this.maxScale - 1e-3) { S.renderScale = +Math.min(this.maxScale, snapDown(sc) + SCALE_STEP).toFixed(2); this.fast = 0; this.cooldown = LADDER.stepCooldown; this.lastChange = `adaptive ↑ scale ${S.renderScale.toFixed(2)}`; }
       // AN AIM, nothing climbed, the union over the back-off band two windows running: one grid step off before the frame rate has to say so
+      else if (B.hold && this.hot >= HOLD.hotWindows && !this.climbed.length && this.canShed()) this.lastChange = this.shedSharp(B, sc, avg, avgT, unionAvg, avg > 1 / B.cutFps);   // (SHARP SHED: … and sharp direct before that step too — judged where that step is, with the rate under the aim)
       else if (B.hold && this.hot >= HOLD.hotWindows && !this.climbed.length && sc > SCALE_FLOOR + 0.01) {
         S.renderScale = +Math.max(SCALE_FLOOR, Math.min(sc - 0.01, snapDown(sc - 1e-3))).toFixed(2); this.holdLeft(sc, false);
         if (avg > 1 / B.cutFps) this.pacedCut(B, sc, avgT, unionAvg);   // (a step for the band while the rate is under the aim: judged, ladderHeld — a held page's clocked-down GPU reads over the band and the step buys nothing)
@@ -705,9 +747,7 @@ export class Quality {
       // cost frames lately
       else if (B.hold && sc < this.maxScale - 1e-3) {
         const to = +Math.min(this.maxScale, snapDown(sc + 1e-6) + SCALE_STEP).toFixed(2);
-        const pacedPage = timed && !gpuBound && avg > 1 / B.cutFps;   // (slow with the GPU inside its budget and the frame far over its union: something else paces this page — it will never show the target, and the union alone says whether the pixels fit)
-        const priced = unionAvg * (1 + this.pixelShare() * ((to / sc) ** 2 - 1));
-        const room = pacedNow ? priced * (1 + PACED.gain) + HOLD.pacedMs < avg * 1000 : priced < HOLD.restore * CLIMB.backoff * budget;   // (a page the paced check has as paced, ladderHeld: the frame's own room — the step leaves it more than its GPU work, as the pace needs; the band is for a GPU on its own clock)
+        const room = fitsBack(unionAvg * (1 + this.pixelShare() * ((to / sc) ** 2 - 1)));
         if (!unsure) this.roomy = (avg < 1 / B.cruisingFps || pacedPage) && (!timed || room) && this.lastCut?.probeFrom === undefined ? this.roomy + 1 : 0;   // (never while a judged cut waits for its verdict: a step up under it would be cut again and keep the trial open)
         if (this.roomy >= (timed ? HOLD.restoreWindows : HOLD.blindWindows) && this.sinceClimb >= CLIMB.climbGap && !this.failed.has(`scale:${to.toFixed(2)}`)) {
           S.renderScale = to; this.roomy = 0; this.sinceClimb = 0; this.cooldown = LADDER.stepCooldown;
@@ -717,7 +757,7 @@ export class Quality {
       }
       // THE CLIMB itself: display rate held AND the GPU under the headroom band for CLIMB.windows windows running, the last climb long enough ago → one rung up (scale → its top, then the
       // divisors, then — capClimb — the output cap), skipping rungs that failed lately
-      else if (climbOn && unionAvg > 0 && !autoWantsPreset) {   // (under auto a cheaper preset with room for the next goes UP A PRESET first — the cruising rule below; the climb spends what is left at the top of auto's ladder, under a preset the next will not fit over, or on a preset pinned from a menu)
+      else if (climbOn && unionAvg > 0 && !autoWantsPreset && !sharpFits) {   // (SHARP SHED: room that fits sharp direct back is its room first, auto's block below)   // (under auto a cheaper preset with room for the next goes UP A PRESET first — the cruising rule below; the climb spends what is left at the top of auto's ladder, under a preset the next will not fit over, or on a preset pinned from a menu)
         const roomyNow = avg < 1 / B.cruisingFps && unionAvg < CLIMB.headroom * budget;   // (the rate gate sits UNDER any display's refresh — a 60 Hz panel's rAF never averages better than 60.0 — and the headroom itself is read off the GPU union, never off the rate)
         this.roomy = roomyNow ? this.roomy + 1 : 0;   // (never reached in an unsure window: unionAvg is 0 then and this branch is skipped — the count simply waits)
         if (this.roomy >= CLIMB.windows && this.sinceClimb >= CLIMB.climbGap && sc >= this.maxScale - 1e-3) { const step = this.nextRung(S.renderScale, unionAvg < CLIMB.divisorRoom * budget); if (step) { this.climb(step, unionAvg, B); this.roomy = 0; } }
@@ -737,7 +777,12 @@ export class Quality {
       // the next preset fitting the plan budget (roomForNext above); without timings the rate alone, for twice the windows; a window without a fresh timer verdict leaves the count alone
       const rateOk = avg < 1 / B.cruisingFps && sc >= this.maxScale - 1e-3 && !!nextUp && !hopHeld;   // (everything but the union is known in an unsure window: a bad rate resets the count regardless; only the union's verdict is withheld)
       if (rateOk && !unsure && roomForNext) this.cruising++; else if (!rateOk || !unsure) this.cruising = 0;   // (rungs standing do not block it: the room is priced at the climbed cost, and apply() puts the next preset's own rows in their place)
-      if (this.starved >= 2 && i > 0) {   // keep the scale adaptive had reached: relative to a LOWER cap now, so the cheaper preset starts with fewer pixels than it left, never more
+      if (this.shed && sp && this.shedRoomy >= (timed ? HOLD.restoreWindows : HOLD.blindWindows) && this.sinceClimb >= CLIMB.climbGap) {   // SHARP SHED, the way back
+        const rungs = this.climbed.length; if (rungs) this.unclimbAll('room for sharp direct');
+        this.unshed(timed ? `gpu ∪ ${unionAvg.toFixed(1)} ms, ~${(sp.bare + sp.add).toFixed(1)} with it${rungs ? ` and the climb's ${rungs === 1 ? 'rung' : `${rungs} rungs`} off` : ''}, room under the ${(CLIMB.backoff * B.budget).toFixed(1)} band` : `${(1 / avg).toFixed(0)} fps`, timed ? sp.bare : 0);
+      }
+      else if (this.starved >= 2 && this.canShed()) this.lastChange = this.shedSharp(B, sc, avg, avgT, unionAvg);   // (… and before a preset is given up: adaptive resolution off, or the scale already at its floor by hand)
+      else if (this.starved >= 2 && i > 0) {   // keep the scale adaptive had reached: relative to a LOWER cap now, so the cheaper preset starts with fewer pixels than it left, never more
         const from = this.current, keep = S.renderScale, chain = this.lastCut; this.apply(AUTO_LADDER[i - 1]); S.renderScale = Math.min(keep, S.renderScale); this.cooldown = 4; this.starved = 0;
         this.lastCut = chain; this.pacedCut(B, sc, avgT, unionAvg, from);   // (a preset given up is judged with the cuts before it, PACED)
         let held = '';
@@ -750,11 +795,61 @@ export class Quality {
     }
   }
 
+  // ---- SHARP SHED (SHED): can → shed → price → back ----
+  /** the rule stands: auto, and settings.ladderShed (a stub engine without the row = off, the ladder as it was) */
+  private shedOn(): boolean { return this.auto && !!this.engine.settings.ladderShed; }
+  /** sharp direct is the ladder's to let go right now: the rule stands, nothing forces the tier's resolve rows, the tier places it and it is drawing (on, under TAAU, below scale 1) */
+  private canShed(): boolean { const S = this.engine.settings; return this.shedOn() && !this.shed && sharpForce.v === null && !iqForce.off && !!PRESETS[this.current as QualityName]?.iq.sharp && !!S.sharpDirect && S.taau !== false && S.renderScale < 1; }
+  /** sharp direct and its two riders as the ladder writes them (a preset put on, a shed, the way back) */
+  private putSharp(iq: IqTier, on: boolean) { const S = this.engine.settings; S.sharpDirect = on; S.sharpDecouple = on && iq.decouple; S.gbaa = gbaaForce.on || (on && iq.gbaa); }
+  /** this window: its CSS size and device pixel ratio (720p at 1× where there is no canvas) */
+  private win() { const cv = this.engine.gpu?.canvas as HTMLCanvasElement | undefined; return { cssH: cv?.clientHeight || 720, cssW: cv?.clientWidth || 1280, dpr: (typeof window !== 'undefined' && window.devicePixelRatio) || 1 }; }
+  /** the cost model's ms for preset rows `p` as they would run on this window */
+  private costAt(p: Preset): number { const { cssH, cssW, dpr } = this.win(), rows = Math.min(p.maxH, cssH * dpr) * p.scale, c = presetCost(p, this.oneGrid()); return c.fixed + c.pixel * (rows * rows * (cssW / cssH) / 1e6) / REF.mpx; }
+  /** the output rows of this window under cap `maxH` (the live one: what sharp direct's kernels run at) */
+  private outRows(maxH: number = this.engine.settings.maxInternalHeight): number { const { cssH, dpr } = this.win(); return Math.min(maxH || Infinity, cssH * dpr); }
+  /** what this machine's union showed sharp direct costs, at `rows` output rows (0 = never measured, or measured too long ago to stand: `until`) */
+  private shedSeenMs(rows: number = this.outRows()): number { const s = this.shedSeen; return s && this.clock < s.until ? s.ms * (rows / s.rows) ** 2 : 0; }
+  /** the live rows with every rung the climb holds taken off again: the tier's own picture as it would stand now */
+  private ownPreset(live: Preset): Preset {
+    return this.climbed.reduceRight<Preset>((p, s) => s.kind === 'scale' ? { ...p, scale: Math.min(p.scale, Math.max(this.maxScale, s.from)) } : s.kind === 'gather' ? { ...p, lossy: { ...p.lossy, gatherThird: true } } : s.kind === 'vol' ? { ...p, lossy: { ...p.lossy, volQuarter: true } } : { ...p, maxH: Math.min(p.maxH, s.from) }, live);
+  }
+  /** let sharp direct go where a cut from `from` would have been taken; `judge` = the paced check judges it as it would that cut (a shed that bought no frame rate goes back with the
+   *  chain's pixels, pacedStep); `mark` = this window's union is the 'before' of its measure. Returns the move's words */
+  private shedSharp(B: Bands, from: number, avg: number, avgT: number, unionAvg: number, judge = true, mark = true): string {
+    const S = this.engine.settings, H = this.shedHold; this.putSharp(PRESETS[this.current as QualityName].iq, false); this.shed = true; this.shedRoomy = 0;
+    if (judge) { this.pacedCut(B, from, avgT, unionAvg); if (this.lastCut) this.lastCut.shed = true; }
+    H.n = this.clock - H.backAt < 2 * SHED.holdSecs * Math.min(16, 2 ** Math.max(0, H.n - 1)) ? H.n + 1 : 1; H.until = this.clock + SHED.holdSecs * Math.min(16, 2 ** (H.n - 1));
+    this.shedMark = mark && unionAvg > 0 ? { union: unionAvg, scale: S.renderScale, preset: this.current as QualityName } : null;
+    this.slow = 0; this.hot = 0; this.starved = 0; this.roomy = 0; this.sinceClimb = 0; this.cooldown = LADDER.stepCooldown;
+    return `shed ↓ sharp direct off (${(1 / avg).toFixed(0)} fps${unionAvg > 0 ? `, gpu ∪ ${unionAvg.toFixed(1)} ms` : ''}): the picture keeps its size — not back for ${Math.round(H.until - this.clock)} s`;
+  }
+  /** sharp direct back, priced off this window's union: `bare` = the union on the tier's own picture without it (the live union less what the climb's standing rungs cost, by the cost
+   *  model's ratio), `add` = what it adds there, ms: the model's share, or what this machine showed if more (never over SHED.seenCap × the model) */
+  private sharpPrice(unionAvg: number): { bare: number; add: number } {
+    const cur = this.current as QualityName; if (!(cur in COST) || !(unionAvg > 0)) return { bare: unionAvg, add: 0 };
+    const live = this.livePreset(cur), own = this.ownPreset(live), cost = (p: Preset, sharp: boolean) => Math.max(0.1, this.costAt({ ...p, iq: { ...p.iq, sharp } }));
+    const bare = unionAvg * cost(own, false) / cost(live, false), model = bare * (cost(own, true) / cost(own, false) - 1);
+    return { bare, add: Math.max(model, Math.min(this.shedSeenMs(this.outRows(own.maxH)), SHED.seenCap * model)) };
+  }
+  /** sharp direct back as the tier places it; `wrong` = the shed bought no frame rate (the paced check took it back): it does not count toward the next one's hold-off */
+  private sharpBack(wrong = false) {
+    const iq = iqForce.off ? IQ_OFF : PRESETS[this.current as QualityName].iq, H = this.shedHold; this.shed = false; this.shedRoomy = 0; this.shedMark = null; this.putSharp(iq, sharpForce.v ?? iq.sharp);
+    if (wrong) H.n = Math.max(0, H.n - 1); else H.backAt = this.clock;
+  }
+  /** the way back as a move of the ladder's own (room for it again, the switch put off) */
+  private unshed(why: string, bare = 0) {   // (`bare` = the union priced without it on the picture it comes back to: the 'before' of the measure of what it adds)
+    this.sharpBack(); this.roomy = 0; this.sinceClimb = 0; this.cooldown = LADDER.stepCooldown; this.lastChange = `shed ↑ sharp direct back (${why})`;
+    if (bare > 0 && this.engine.settings.sharpDirect) this.shedMark = { union: bare, scale: this.engine.settings.renderScale, preset: this.current as QualityName, back: true };
+  }
+  /** what the shed holds, for the Tab panel / QA (`__quality.shedState`) */
+  get shedState() { return { on: this.shedOn(), shed: this.shed, backIn: this.shed ? Math.max(0, Math.round(this.shedHold.until - this.clock)) : 0, sheds: this.shedHold.n, seenMs: +this.shedSeenMs().toFixed(2), roomy: this.shedRoomy }; }
+
   // ---- the climb's rungs (CLIMB): next → take → undo ----
   /** the scale the climb may reach: 1.0 — except while sharp direct rides under TAAU, where the LAST GRID VALUE BELOW 1.0 is the top: at 1.0 the internal size equals the output size and engine.resize
    *  has nothing to decouple, so sharp direct, its decoupled jitter and GBAA all switch off — the '1.0 + TAA' picture docs/internal/image-quality.md measured worse on every column than 0.9 + C3j
    *  (why ultra starts at 0.9); the divisor rungs come after 0.95 instead */
-  private scaleTop(): number { const S = this.engine.settings; return S.sharpDirect && S.taau !== false ? +(1.0 - SCALE_STEP).toFixed(2) : 1.0; }
+  private scaleTop(): number { const S = this.engine.settings; return (S.sharpDirect || this.shed) && S.taau !== false ? +(1.0 - SCALE_STEP).toFixed(2) : 1.0; }   // (SHARP SHED: shed is not gone — the size it comes back at is kept)
   /** the next rung from here, in the fixed order (scale by SCALE_STEP up to scaleTop() → the gather's divisor 3 → 2 → the volumetrics' 4 → 2 → the output cap by CLIMB.capStep toward the window's device
    *  rows), passing over rungs that failed lately; `divisorsToo` = the union leaves CLIMB.divisorRoom (the divisor / cap rungs cost more than a scale step); null = nothing left to spend on */
   private nextRung(scale: number, divisorsToo: boolean): ClimbStep | null {
@@ -784,7 +879,7 @@ export class Quality {
   /** the share of the compute union that scales with the pixel count at the live preset / scale / divisors on this window, per the cost model (priced as hopRatio prices the current preset) */
   pixelShare(): number {
     const cur = this.current as QualityName; if (!(cur in COST)) return 0.6;
-    const cv = this.engine.gpu?.canvas as HTMLCanvasElement | undefined; const cssH = cv?.clientHeight || 720, cssW = cv?.clientWidth || 1280; const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
+    const { cssH, cssW, dpr } = this.win();
     const live = this.livePreset(cur); const c = presetCost(live, this.oneGrid()); const rows = Math.min(live.maxH, cssH * dpr) * live.scale; const pixel = c.pixel * (rows * rows * (cssW / cssH) / 1e6) / REF.mpx;
     return pixel / Math.max(1e-6, pixel + c.fixed);
   }
@@ -866,13 +961,15 @@ export class Quality {
       this.lastCut = null;
       const hop = lc.preset !== this.current;
       const same = avgT >= lc.avg * (1 - (lc.probeFrom !== undefined ? PACED.probeGain : PACED.gain));   // (an aim's own judged cut: a missed vsync bought back is a whole refresh shorter, a fifth of the frame at the least — under `probeGain` it is the rate's own wobble)
-      if (same && lc.avg * 1000 - lc.union > HOLD.pacedMs && this.clock >= this.pacedBack.until && (hop ? this.auto : this.adaptive && lc.from > sc + 1e-3)) {   // (… and where the cut started the frame was more than its GPU work: a state the check itself would keep)   // it did not: fewer pixels (a cheaper preset) bought nothing — back to where the cut found it
+      const shedToo = !!lc.shed && this.shed;   // (SHARP SHED: the chain let sharp direct go — it bought as little, and goes back with the pixels)
+      if (same && lc.avg * 1000 - lc.union > HOLD.pacedMs && this.clock >= this.pacedBack.until && (hop ? this.auto : (this.adaptive && lc.from > sc + 1e-3) || shedToo)) {   // (… and where the cut started the frame was more than its GPU work: a state the check itself would keep)   // it did not: fewer pixels (a cheaper preset) bought nothing — back to where the cut found it
         if (hop) this.apply(lc.preset);
+        if (shedToo) this.sharpBack(true);
         S.renderScale = +Math.min(hop ? this.maxScale : top, lc.from).toFixed(2);
         this.takeMarksBack(lc);
         if (B.hold) this.probeUntil = this.clock + PACED.recheckSecs * 2 ** Math.min(PACED.recheckMax, this.probeN++);   // (the next judged cut no sooner than the re-test of this pace would come, whatever becomes of the pace meanwhile)
         this.pacedAt = avgT; this.pacedSince = this.clock; this.pacedMiss = 0; this.pacedRun = 0; this.slow = 0; this.starved = 0; this.cooldown = hop ? 4 : LADDER.stepCooldown; this.pacedBack.at = this.clock;
-        this.lastChange = `paced ↑ ${hop ? `${this.current} ` : ''}scale ${S.renderScale.toFixed(2)} (${fps(lc.avg)} fps before the cut, ${fps(avgT)} after it with the GPU at ${lc.union.toFixed(1)} → ${unionAvg.toFixed(1)} ms: frame pacing, not load — the pixels go back)`; return 2;
+        this.lastChange = `paced ↑ ${hop ? `${this.current} ` : ''}scale ${S.renderScale.toFixed(2)} (${fps(lc.avg)} fps before the cut, ${fps(avgT)} after it with the GPU at ${lc.union.toFixed(1)} → ${unionAvg.toFixed(1)} ms: frame pacing, not load — the pixels go back${shedToo ? ', sharp direct with them' : ''})`; return 2;
       }
       if (!same && !hop && lc.probeFrom !== undefined && this.adaptive && lc.probeFrom > sc + 1e-3) this.holdLeft(lc.probeFrom, true);   // (it was the pixels: the level an aim's own judged cut left cost the frame rate — a failed rung, so the way back up does not walk into it again a few seconds on)
     }
@@ -915,5 +1012,5 @@ export class Quality {
   }
   /** QA / the Tab panel: feed the ladder synthetic 1-s windows without presenting anything — `secs` seconds of frames at `fps` with the GPU union at `unionMs` (tools/qa/quality-plan.ts drives the climb's
    *  checks through this; the calibration must be done or off) */
-  simulate(secs: number, fps: number, unionMs: number) { const dt = 1 / fps; const n = Math.round(secs * fps); for (let i = 0; i < n; i++) this.sample(dt, unionMs); return { scale: this.engine.settings.renderScale, gatherThird: this.engine.settings.gatherThird, volQuarter: this.engine.settings.volQuarter, maxH: this.engine.settings.maxInternalHeight, preset: this.current, last: this.lastChange, climb: this.climbState }; }
+  simulate(secs: number, fps: number, unionMs: number) { const dt = 1 / fps; const n = Math.round(secs * fps); for (let i = 0; i < n; i++) this.sample(dt, unionMs); return { scale: this.engine.settings.renderScale, sharp: this.engine.settings.sharpDirect, gatherThird: this.engine.settings.gatherThird, volQuarter: this.engine.settings.volQuarter, maxH: this.engine.settings.maxInternalHeight, preset: this.current, last: this.lastChange, climb: this.climbState }; }
 }

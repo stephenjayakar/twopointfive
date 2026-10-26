@@ -99,6 +99,10 @@ export interface RenderSettings {
    *  frame far over its GPU work takes a judged cut (to where the union fits the aim's frame less 6 ms); the frame no shorter there = the pixels straight back and that rate remembered
    *  as the page's pace, where nothing is cut for the union's size and a scale left low comes back on the frame's own room, each step judged. false = an aim as it was. */
   ladderHeld: boolean;
+  /** auto lets sharp direct go before it shrinks the picture (ui/quality.ts SHED; ?laddershed=0; Tab ▸ Frame): where auto's ladder would take pixels off the tier's own picture or give the
+   *  preset up, and sharp direct is drawing, sharp direct goes instead (its output-size kernels are the part of a frame fewer pixels do not shrink), stays off across auto's preset hops, and
+   *  comes back when the union priced with it fits again. false = the ladder as it was. Auto only: a pinned preset keeps its rows. */
+  ladderShed: boolean;
   /** one light-cache grid at every preset (ui/quality.ts ONE CACHE GRID; ?onegrid=0): low and verylow run the 40 × 4 × 28 probe grid the other presets run, so the light meter the
    *  guards and teammates see by (render/shaders/probe.wgsl reads the cache's dice) reads the same shadow whatever the graphics setting, and no ladder step swaps the cache under a
    *  mission. false = low and verylow on their coarser 32 × 3 × 22 grid, as it was. Read when a preset is applied. */
@@ -372,7 +376,7 @@ export const defaultSettings = (): RenderSettings => ({
   dnGiIters: 4, dnGiCap: 24, dnGiClampK: 1.0, dnGiSigmaL: 4, dnGiFast: 3, dnGiFirefly: 0,   // (k 1.0 / fast 3: the sweep in docs/internal/p3-denoise.md §3 — 10 % of a lights-off in 16 frames vs legacy's 14, at half its torch-hotspot boil)
   giFullRes: false, giFullIters: 4, giYoungRays: 1, giYoungCap: 0.08, giYoungLen: 4,   // GI in motion: both OFF by default until a preset places them (ui/quality.ts Preset.dn.giFull / giYoungK); Tab ▸ Indirect light rows
   dnGiClampCut: 0, dnGiYoungWiden: 0,                                                     // (D): off until measured (Tab ▸ Denoiser rows)
-  ladderClimb: true, capClimb: false, ladderAim: 60, ladderPaced: true, ladderHeld: true, oneCacheGrid: true, oneSmokeSolve: true, fireSmokeShed: true, fireSmoke: true, smokeKeep: 1,   // the ladder spends measured headroom on scale + divisors by default (it only ever acts on presented frames with GPU timings that show the room); the output-cap climb is opt-in (Tab ▸ Frame)
+  ladderClimb: true, capClimb: false, ladderAim: 60, ladderPaced: true, ladderHeld: true, ladderShed: true, oneCacheGrid: true, oneSmokeSolve: true, fireSmokeShed: true, fireSmoke: true, smokeKeep: 1,   // the ladder spends measured headroom on scale + divisors by default (it only ever acts on presented frames with GPU timings that show the room); the output-cap climb is opt-in (Tab ▸ Frame)
   dnSpecIters: 1, dnSpecCap: 16, dnSpecClampK: 1.0, dnSpecSigmaL: 2, dnSpecRough: 0.08,
   dnDepthK: 0.004, dnNormalPow: 12, dnMotionVectors: true,
   flags: FrameFlags.Direct | FrameFlags.Indirect | FrameFlags.Volumetrics | FrameFlags.Smoke | FrameFlags.RcVisWeight | FrameFlags.SmokeShadows | FrameFlags.Bounce | FrameFlags.Dither | FrameFlags.SoftShadow | FrameFlags.Temporal,

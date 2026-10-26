@@ -34,6 +34,7 @@ export interface PerfDump {
   version: 1; startedAt: string; machine: string; dpr: number; userAgent: string; commit?: string; query?: string; smokeUnit?: number;   // smokeUnit = bricks to one count of a frame's n.smoke (the smoke solver's `stats.live` is its brick pool in 512s: smoke/smoke.ts). No stamp = a take from before the stamp, clouds on the box solver or the pool on the builds since: tools/qa/perf-sweep.ts smokeUnit() tells which · commit = the one the dev server says it serves (/qa/commit; absent off a static build) · query = the page's URL flags (which mission, which switches)
   note: string; frames: PerfFrame[]; events: PerfEvent[];
   settingsAtStart: Record<string, unknown>; settingsAtEnd: Record<string, unknown>;
+  shedAtStart?: boolean;   // the ladder had sharp direct shed when the take began (quality.ts SHARP SHED): settingsAtStart alone cannot tell that from the row put off by hand
 }
 
 const RENDER_PASS = /^(gbuffer|composite|post|fxaa|pdraw)$/;
@@ -105,7 +106,7 @@ export function longText(type: string, e: LongEntry): string {
 export class PerfRecorder {
   recording = false;
   private ring = new FrameRing(); private events: PerfEvent[] = [];
-  private t0 = 0; private startedAt = ''; private settings0: Record<string, unknown> = {};
+  private t0 = 0; private startedAt = ''; private settings0: Record<string, unknown> = {}; private shed0 = false;
   commit: string | undefined;
   private lastPreset = ''; private lastEff = 0; private lastEsc = -1; private lastQualityNote = ''; private lastSettingsKey = ''; private lastReallocs = 0; private lastSaves = -1; private lastLoads = -1;
   /** CPU section marks written by main.ts's step() each frame (ms) */
@@ -130,7 +131,7 @@ export class PerfRecorder {
   start(note = '', frames = MAX_FRAMES): void {
     this.ring.reset(Math.max(1, Math.floor(frames))); this.events = []; this.t0 = performance.now(); this.startedAt = new Date().toISOString(); this.recording = true;
     if (this.commit === undefined && typeof document !== 'undefined') try { void fetch('/qa/commit', { cache: 'no-store' }).then(r => r.ok ? r.text() : '').then(t => { const c = t.trim(); if (/^[0-9a-f]{7,40}$/.test(c)) this.commit = c; }).catch(() => {}); } catch { /* no dev server */ }   // (asked on the first recording, as the session journal asks: ui/sessionrec.ts)
-    this.settings0 = this.snapSettings(); this.lastSettingsKey = this.settingsKey();
+    this.settings0 = this.snapSettings(); this.lastSettingsKey = this.settingsKey(); this.shed0 = !!this.quality.shed;
     this.lastSaves = -1; this.lastLoads = -1;
     this.lastPreset = this.quality.label; this.lastEff = this.engine.effectiveScale; this.lastEsc = -1; this.lastQualityNote = this.quality.lastChange ?? ''; this.lastReallocs = this.engine.passes.reallocs;
     this.event('start', note || 'recording started (F9 stops; the dump downloads and goes to the shot server if it is up)');
@@ -149,7 +150,7 @@ export class PerfRecorder {
     const frames: PerfFrame[] = new Array(this.ring.n); for (let f = 0; f < this.ring.n; f++) frames[f] = this.ring.frameAt(f);   // (the objects exist only for the dump: built here, serialized, dropped)
     const dump: PerfDump = { version: 1, startedAt: this.startedAt, machine: this.engine.gpu?.adapterInfo ?? 'unknown', dpr: (typeof window !== 'undefined' && window.devicePixelRatio) || 1, userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'bun', ...(this.commit ? { commit: this.commit } : {}), ...(typeof location !== 'undefined' ? { query: location.search } : {}), ...(typeof (this.game as unknown as { smoke?: { stats?: { pool?: number } } }).smoke?.stats?.pool === 'number' ? { smokeUnit: 512 } : {}),
       note: `twopointsix perf recording · ${this.ring.n} frames · ${(this.ring.n ? this.ring.lastT() / 1000 : 0).toFixed(1)} s`,
-      frames, events: this.events, settingsAtStart: this.settings0, settingsAtEnd: this.snapSettings() };
+      frames, events: this.events, settingsAtStart: this.settings0, settingsAtEnd: this.snapSettings(), ...(this.shed0 ? { shedAtStart: true } : {}) };
     if (deliver) { this.deliver(dump); this.hudNote(`REC saved — ${this.ring.n} frames`); }
     return dump;
   }

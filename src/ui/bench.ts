@@ -442,7 +442,7 @@ export class Bench {
   // ---- its heavy moment held still: as it stood, each preset, then each feature
   private hold(): void {
     const Q = this.quality, S = this.settings, P = this.deps.smoke?.params, rb = P?.rbIters;
-    const cur = Q.current as QualityName, auto = Q.auto, QQ = Q as unknown as { climbed?: unknown[]; failed?: Map<string, number>; failCount?: Map<string, number> };
+    const cur = Q.current as QualityName, auto = Q.auto, shed = Q.shed, QQ = Q as unknown as { climbed?: unknown[]; failed?: Map<string, number>; failCount?: Map<string, number> };
     const snap: Record<string, unknown> = {}; for (const k of Object.keys(S)) { const v = S[k]; if (typeof v === 'number' || typeof v === 'boolean' || typeof v === 'string' || Array.isArray(v)) snap[k] = copy(v); }
     const climbed = QQ.climbed ? [...QQ.climbed] : null, failed = QQ.failed ? new Map(QQ.failed) : null, failCount = QQ.failCount ? new Map(QQ.failCount) : null;
     let changed = false;
@@ -450,7 +450,8 @@ export class Bench {
     // apply here, so no preset of the benchmark's is filed as this machine's pick)
     this.back = () => {
       if (changed) { Q.auto = false; Q.apply(cur); }
-      Q.auto = auto; if (climbed) QQ.climbed = climbed; if (failed && QQ.failed) for (const [k, v] of failed) QQ.failed.set(k, v); if (failCount && QQ.failCount) for (const [k, v] of failCount) QQ.failCount.set(k, v);
+      Q.auto = auto; Q.shed = shed;   // (… and a shed standing: apply() with auto off ends it, and the settings put back below have sharp direct off)
+      if (climbed) QQ.climbed = climbed; if (failed && QQ.failed) for (const [k, v] of failed) QQ.failed.set(k, v); if (failCount && QQ.failCount) for (const [k, v] of failCount) QQ.failCount.set(k, v);
       for (const k of Object.keys(snap)) if (!same(S[k], snap[k])) S[k] = copy(snap[k]);
       if (P && rb !== undefined) P.rbIters = rb;
     };
