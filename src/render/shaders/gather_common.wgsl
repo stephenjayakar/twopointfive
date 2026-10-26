@@ -31,75 +31,22 @@ fn rnd() -> f32 { rngState = rngState * 747796405u + 2891336453u; var w = ((rngS
 // On-screen shadowed direct light if the point is visible this frame (exact, already denoised), else a one-ray estimate.
 // `ex` (torch bounce cards): bit k set = this point lies inside card k's claim region, whose light's direct term the card carries instead — taken back
 // out of the on-screen textures (what that light delivered here: shadowed, through smoke), left out of the off-screen sum. Always 0 with the flag off.
-// (Main's body verbatim. Phase 5 once had it set a private 'took the on-screen path' flag for the reflection pass's reuse: two dead-simple stores, yet with
-// them live in the reflect kernel the Metal compiler scheduled the light loop differently and ONE light pick in a thousand flipped — a different output cell
-// at ultra in one view. The reuse path asks directOnScreen below first instead, and this function stays exactly what every tier ran before.)
-fn directAtPoint(P: vec3f, N: vec3f, ex: u32) -> vec3f {
-  let clip = frame.viewProj * vec4f(P, 1.0);
-  if (clip.w > 0.0) {
-    let ndc = clip.xyz / clip.w;
-    let uv = ndc.xy * vec2f(0.5, -0.5) + 0.5;
-    if (all(uv > vec2f(0.0)) && all(uv < vec2f(1.0))) {
-      let px = vec2u(uv * frame.screen);
-      let d = textureLoad(gDepth, px, 0);
-      if (d < 1.0) {
-        let Ps = worldFromDepth(vec2f(px) + 0.5, d);
-        let Ns = textureLoad(gNormal, px, 0).xyz * 2.0 - 1.0;
-        if (distance(Ps, P) < 0.12 && dot(Ns, N) > 0.7) {
-          var Ed = textureLoad(directTex, px, 0).xyz + textureLoad(softTex, px, 0).xyz;
-          // the on-screen direct term includes transient lights (muzzle flashes); this estimate feeds accumulated history,
-          // so take their (unshadowed) share back out — a flash must never outlive itself as bounce
-          for (var i = min(frame.p5Cfg.w, nL); i < select(0u, nL, frame.rcJitter.w > 0.0); i++) {   // (skipped outright when no transient light is alive — the common case; else from the first transient's slot: they sit at the tail of the list, and every slot visited is still tested — the same subset in the same order, review R2.2)
-            let li = wgLights[i];
-            if (!lightTransient(li)) { continue; }
-            let ev = evalLight(li, P, N);
-            // only what the flash actually delivered here is in the texture: a hit in the flash's shadow keeps its steady light
-            if (ev.ok && !occluded(P + N * 0.01, ev.L, max(ev.dist.x - li.radius - 0.02, 0.0), (li.owner & 0xffu) << 8u)) { Ed -= ev.E; }   // same skip rule the direct pass used when it PUT the flash there (its carrier never shadows it), or the subtraction misses in the shooter's wedge
-          }
-          // torch bounce cards: inside card k's footprint its light's direct term leaves the same way — what the direct pass delivered here (its shadow ray's
-          // skip rule, the smoke on the segment), so a hit in a man's shadow inside the spot keeps everything it has (ex == 0u unless the flag is on)
-          for (var k = 0u; k < select(0u, nC, ex != 0u); k++) {
-            if ((ex & (1u << k)) == 0u) { continue; }
-            let li = wgLights[u32(wgCards[k * 4u + 1u].w)];
-            let ev = evalLight(li, P, N);
-            if (!ev.ok) { continue; }
-            let tmax = max(ev.dist.x - li.radius - 0.02, 0.0);
-            if (occluded(P + N * 0.01, ev.L, tmax, (li.owner & 0xffu) << 8u)) { continue; }
-            var sub = ev.E;
-            if (frame.numSmoke > 0u) { sub *= smokeTransmittance(P + N * 0.01, ev.L, min(tmax, 30.0)); }
-            Ed -= sub;
-          }
-          return max(Ed, vec3f(0.0));
-        }
-      }
-    }
-  }
-  // off-screen hit: score every steady light unshadowed, spend ONE shadow ray on an importance-picked light and apply
-  // its visibility to the whole sum (exact when one light dominates, which is the common case at a bounce point)
-  var U = vec3f(0.0); var W = 0.0; var pick = -1; var pw = 0.0; var pL = vec3f(0.0); var pDist = 0.0; var pRad = 0.0;
-  let Po = P + N * 0.01;
-  for (var i = 0u; i < nL; i++) {
-    let li = wgLights[i];
-    if (lightTransient(li)) { continue; }
-    if (ex != 0u) { let ck = wgCardOf[i]; if (ck >= 0 && (ex & (1u << u32(ck))) != 0u) { continue; } }   // torch bounce cards: this light's direct term here is the card's to carry (never taken with the flag off: ex == 0u)
-    if (!lightReaches(i, P)) { continue; }   // walled off from the bounce point's cell (reach.ts): neither in the sum nor pickable — the same failure the direct pass had, one bounce down
-    let ev = evalLight(li, P, N);
-    if (!ev.ok) { continue; }
-    let w = luminance(ev.E);
-    if (w < 1e-4) { continue; }
-    U += ev.E; W += w;
-    if (rnd() * W < w) { pick = i32(i); pw = w; pL = ev.L; pDist = ev.dist.x; pRad = li.radius; }
-  }
-  if (pick < 0) { return vec3f(0.0); }
-  let pk = wgLights[u32(pick)];
-  let tmax = select(pDist - pRad - 0.02, 60.0, lightKind(pk) == 2u);
-  var vis = 1.0;
-  if (tmax > 0.0 && occluded(Po, pL, tmax, (pk.owner & 0xffu) << 8u)) { vis = 0.0; }
-  return U * vis;
-}
+// (Phase 5 once had it set a private 'took the on-screen path' flag for the reflection pass's reuse: two dead-simple stores, yet with them live in the reflect
+// kernel the Metal compiler scheduled the light loop differently and ONE light pick in a thousand flipped — a different output cell at ultra in one view. The
+// reuse asks directAt's .w instead.)
+fn directAtPoint(P: vec3f, N: vec3f, ex: u32) -> vec3f { return directAt(P, N, ex, true).xyz; }
 // directAtPoint's ON-SCREEN half alone (phase 5 — the resampling gather's cheap revalidation of a stored sample point): the exact denoised direct light at P
-// if it is visible this frame (.w = 1), else nothing (.w = 0) — never the light loop. The statements are directAtPoint's; keep the two in step.
-fn directOnScreen(P: vec3f, N: vec3f, ex: u32) -> vec4f {
+// if it is visible this frame (.w = 1), else nothing (.w = 0) — never the light loop.
+fn directOnScreen(P: vec3f, N: vec3f, ex: u32) -> vec4f { return directAt(P, N, ex, false); }
+// Both of the above, as ONE body (the compile, 2026-10-26: DXC — Chrome's shader compiler on Windows — inlines every call, and this body asked evalLight three
+// times and the shadow ray three times, so every caller paid for six inlined copies of the light and the tracer; a kernel that shades four hits paid for
+// twenty-four). The light walks are now the turns of ONE loop with ONE evalLight and ONE occluded: on screen, the transient slots and then the cards' lights,
+// whose share is taken back out of the textures; off screen, every steady light scored and then one more turn for the picked light's shadow ray. The
+// statements and their order are directAtPoint's as they were (the same rnd() draws), so the light is what it was. offOk = the off-screen estimate may run:
+// .w = 1 = the on-screen answer, 2 = the off-screen estimate, 0 = off screen and not asked.
+fn directAt(P: vec3f, N: vec3f, ex: u32, offOk: bool) -> vec4f {
+  var onScreen = false;
+  var Ed = vec3f(0.0);
   let clip = frame.viewProj * vec4f(P, 1.0);
   if (clip.w > 0.0) {
     let ndc = clip.xyz / clip.w;
@@ -111,29 +58,70 @@ fn directOnScreen(P: vec3f, N: vec3f, ex: u32) -> vec4f {
         let Ps = worldFromDepth(vec2f(px) + 0.5, d);
         let Ns = textureLoad(gNormal, px, 0).xyz * 2.0 - 1.0;
         if (distance(Ps, P) < 0.12 && dot(Ns, N) > 0.7) {
-          var Ed = textureLoad(directTex, px, 0).xyz + textureLoad(softTex, px, 0).xyz;
-          for (var i = min(frame.p5Cfg.w, nL); i < select(0u, nL, frame.rcJitter.w > 0.0); i++) {   // (as directAtPoint: from the first transient's slot)
-            let li = wgLights[i];
-            if (!lightTransient(li)) { continue; }
-            let ev = evalLight(li, P, N);
-            if (ev.ok && !occluded(P + N * 0.01, ev.L, max(ev.dist.x - li.radius - 0.02, 0.0), (li.owner & 0xffu) << 8u)) { Ed -= ev.E; }
-          }
-          for (var k = 0u; k < select(0u, nC, ex != 0u); k++) {
-            if ((ex & (1u << k)) == 0u) { continue; }
-            let li = wgLights[u32(wgCards[k * 4u + 1u].w)];
-            let ev = evalLight(li, P, N);
-            if (!ev.ok) { continue; }
-            let tmax = max(ev.dist.x - li.radius - 0.02, 0.0);
-            if (occluded(P + N * 0.01, ev.L, tmax, (li.owner & 0xffu) << 8u)) { continue; }
-            var sub = ev.E;
-            if (frame.numSmoke > 0u) { sub *= smokeTransmittance(P + N * 0.01, ev.L, min(tmax, 30.0)); }
-            Ed -= sub;
-          }
-          return vec4f(max(Ed, vec3f(0.0)), 1.0);
+          onScreen = true;
+          Ed = textureLoad(directTex, px, 0).xyz + textureLoad(softTex, px, 0).xyz;
         }
       }
     }
   }
-  return vec4f(0.0);
+  if (!onScreen && !offOk) { return vec4f(0.0); }
+  // ON SCREEN: the on-screen direct term includes transient lights (muzzle flashes); this estimate feeds accumulated history, so take their (unshadowed) share
+  // back out — a flash must never outlive itself as bounce (skipped outright when no transient light is alive — the common case; else from the first transient's
+  // slot: they sit at the tail of the list, and every slot visited is still tested — the same subset in the same order, review R2.2). Only what the flash actually
+  // delivered here is in the texture: a hit in the flash's shadow keeps its steady light. Then the torch bounce cards: inside card k's footprint its light's direct
+  // term leaves the same way — what the direct pass delivered here (its shadow ray's skip rule, the smoke on the segment), so a hit in a man's shadow inside the
+  // spot keeps everything it has (ex == 0u unless the flag is on).
+  // OFF SCREEN: score every steady light unshadowed, spend ONE shadow ray on an importance-picked light and apply its visibility to the whole sum (exact when one
+  // light dominates, which is the common case at a bounce point).
+  let tLo = min(frame.p5Cfg.w, nL); let tHi = select(0u, nL, frame.rcJitter.w > 0.0);
+  let nT = select(0u, tHi - tLo, tHi > tLo);
+  let nK = select(0u, nC, ex != 0u);
+  let turns = select(nL + 1u, nT + nK, onScreen);
+  var U = vec3f(0.0); var W = 0.0; var pick = -1; var pw = 0.0; var pL = vec3f(0.0); var pDist = 0.0; var pRad = 0.0;
+  var vis = 1.0;
+  let Po = P + N * 0.01;
+  for (var t = 0u; t < turns; t++) {
+    // which light this turn asks about, and what it does with the answer: 0 = a transient taken back out, 1 = a card's light taken back out, 2 = a steady light scored, 3 = the pick's shadow ray
+    var mode = 2u; var slot = t;
+    if (onScreen) {
+      if (t < nT) { mode = 0u; slot = tLo + t; }
+      else { mode = 1u; let k = t - nT; if ((ex & (1u << k)) == 0u) { continue; } slot = u32(wgCards[k * 4u + 1u].w); }
+    } else if (t == nL) { if (pick < 0) { break; } mode = 3u; slot = u32(pick); }
+    let li = wgLights[slot];
+    if (mode == 0u && !lightTransient(li)) { continue; }
+    if (mode == 2u) {
+      if (lightTransient(li)) { continue; }
+      if (ex != 0u) { let ck = wgCardOf[slot]; if (ck >= 0 && (ex & (1u << u32(ck))) != 0u) { continue; } }   // torch bounce cards: this light's direct term here is the card's to carry (never taken with the flag off: ex == 0u)
+      if (!lightReaches(slot, P)) { continue; }   // walled off from the bounce point's cell (reach.ts): neither in the sum nor pickable — the same failure the direct pass had, one bounce down
+    }
+    var ev: LightEval;
+    if (mode != 3u) { ev = evalLight(li, P, N); }
+    else { ev.L = pL; ev.dist = vec3f(pDist, 0.0, 0.0); ev.ok = true; }
+    if (!ev.ok) { continue; }
+    var tmax = max(ev.dist.x - li.radius - 0.02, 0.0);
+    var ray = true;
+    if (mode == 2u) {
+      let w = luminance(ev.E);
+      if (w < 1e-4) { continue; }
+      U += ev.E; W += w;
+      if (rnd() * W < w) { pick = i32(slot); pw = w; pL = ev.L; pDist = ev.dist.x; pRad = li.radius; }
+      ray = false;
+    } else if (mode == 3u) {
+      tmax = select(pDist - pRad - 0.02, 60.0, lightKind(li) == 2u);
+      ray = tmax > 0.0;
+    }
+    var occ = false;
+    if (ray) { occ = occluded(Po, ev.L, tmax, (li.owner & 0xffu) << 8u); }   // the same skip rule the direct pass used when it PUT the light there (its carrier never shadows it)
+    if (mode == 0u) { if (!occ) { Ed -= ev.E; } }
+    else if (mode == 1u) {
+      if (occ) { continue; }
+      var sub = ev.E;
+      if (frame.numSmoke > 0u) { sub *= smokeTransmittance(Po, ev.L, min(tmax, 30.0)); }
+      Ed -= sub;
+    } else if (mode == 3u) { if (occ) { vis = 0.0; } }
+  }
+  if (onScreen) { return vec4f(max(Ed, vec3f(0.0)), 1.0); }
+  if (pick < 0) { return vec4f(0.0, 0.0, 0.0, 2.0); }
+  return vec4f(U * vis, 2.0);
 }
 

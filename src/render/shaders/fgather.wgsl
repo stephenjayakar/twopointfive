@@ -224,6 +224,40 @@ fn cardIrradiance(P: vec3f, N: vec3f, Po: vec3f, owner: u32, pix: vec2u) -> vec3
   return Esum * vis;
 }
 
+/** the dust on a pane at Pg (normal n on the eye's side): every steady light's irradiance ON the pane, the two strongest shadow-tested (+ smoke), the rest at half credit unshadowed, × GLASS_DUST/π (0 with the knob or the direct light off) */
+fn glassDust(Pg: vec3f, n: vec3f) -> vec3f {
+  let kd = frame.glassCfg.z * GLASS_DUST;
+  if (kd > 0.0 && (frame.flags & FLAG_DIRECT) != 0u) {
+    var e0 = vec3f(0.0); var e1 = vec3f(0.0); var w0 = 0.0; var w1 = 0.0; var i0 = -1; var i1 = -1;
+    var L0 = vec3f(0.0); var L1 = vec3f(0.0); var d0 = 0.0; var d1 = 0.0; var rest = vec3f(0.0);
+    for (var i = 0u; i < nL; i++) {
+      let li = wgLights[i];
+      if (lightTransient(li)) { continue; }                 // flashes stay out of anything with history
+      if (!lightReaches(i, Pg)) { continue; }               // walled off from the pane's cell (reach.ts)
+      let ev = evalLight(li, Pg, vec3f(0.0));
+      if (!ev.ok) { continue; }
+      let E = ev.E * abs(dot(n, ev.L));
+      let w = luminance(E);
+      if (w < 1e-4) { continue; }
+      if (w > w0) { rest += e1; e1 = e0; w1 = w0; i1 = i0; L1 = L0; d1 = d0; e0 = E; w0 = w; i0 = i32(i); L0 = ev.L; d0 = ev.dist.x; }
+      else if (w > w1) { rest += e1; e1 = E; w1 = w; i1 = i32(i); L1 = ev.L; d1 = ev.dist.x; }
+      else { rest += E; }
+    }
+    var Ed = rest * 0.5;
+    for (var k = 0; k < 2; k++) {
+      let ii = select(i1, i0, k == 0); if (ii < 0) { continue; }
+      let li = wgLights[u32(ii)]; let Ld = select(L1, L0, k == 0); let dd = select(d1, d0, k == 0); let E = select(e1, e0, k == 0);
+      let side = Pg + n * (0.015 * sign(dot(n, Ld)));        // start on the face the light is on
+      let tmax = select(dd - li.radius - 0.02, 60.0, lightKind(li) == 2u);
+      if (tmax > 0.0 && occluded(side, Ld, tmax, (li.owner & 0xffu) << 8u)) { continue; }
+      var tr = 1.0;
+      if (frame.numSmoke > 0u) { tr = smokeTransmittance(side, Ld, min(max(tmax, 0.0), 30.0)); }
+      Ed += E * tr;
+    }
+    return Ed * (kd / 3.14159265);
+  }
+  return vec3f(0.0);
+}
 // ---- glass panes (FLAG_GLASS): what a pane ADDS toward the eye at the point the view ray crosses it — composite already holds the transmitted picture (the
 // G-buffer is what stands behind the pane; composite tints it), so this is the mirror image + the glints + the dust glow, all additive, leaving through the
 // same specular texture / history / à-trous pass as the glossy floors. ----
@@ -268,36 +302,7 @@ fn glassShade(Pg: vec3f, n: vec3f, V: vec3f) -> vec3f {
     }
     L *= F;
   }
-  let kd = frame.glassCfg.z * GLASS_DUST;
-  if (kd > 0.0 && (frame.flags & FLAG_DIRECT) != 0u) {
-    var e0 = vec3f(0.0); var e1 = vec3f(0.0); var w0 = 0.0; var w1 = 0.0; var i0 = -1; var i1 = -1;
-    var L0 = vec3f(0.0); var L1 = vec3f(0.0); var d0 = 0.0; var d1 = 0.0; var rest = vec3f(0.0);
-    for (var i = 0u; i < nL; i++) {
-      let li = wgLights[i];
-      if (lightTransient(li)) { continue; }                 // flashes stay out of anything with history
-      if (!lightReaches(i, Pg)) { continue; }               // walled off from the pane's cell (reach.ts)
-      let ev = evalLight(li, Pg, vec3f(0.0));
-      if (!ev.ok) { continue; }
-      let E = ev.E * abs(dot(n, ev.L));
-      let w = luminance(E);
-      if (w < 1e-4) { continue; }
-      if (w > w0) { rest += e1; e1 = e0; w1 = w0; i1 = i0; L1 = L0; d1 = d0; e0 = E; w0 = w; i0 = i32(i); L0 = ev.L; d0 = ev.dist.x; }
-      else if (w > w1) { rest += e1; e1 = E; w1 = w; i1 = i32(i); L1 = ev.L; d1 = ev.dist.x; }
-      else { rest += E; }
-    }
-    var Ed = rest * 0.5;
-    for (var k = 0; k < 2; k++) {
-      let ii = select(i1, i0, k == 0); if (ii < 0) { continue; }
-      let li = wgLights[u32(ii)]; let Ld = select(L1, L0, k == 0); let dd = select(d1, d0, k == 0); let E = select(e1, e0, k == 0);
-      let side = Pg + n * (0.015 * sign(dot(n, Ld)));        // start on the face the light is on
-      let tmax = select(dd - li.radius - 0.02, 60.0, lightKind(li) == 2u);
-      if (tmax > 0.0 && occluded(side, Ld, tmax, (li.owner & 0xffu) << 8u)) { continue; }
-      var tr = 1.0;
-      if (frame.numSmoke > 0u) { tr = smokeTransmittance(side, Ld, min(max(tmax, 0.0), 30.0)); }
-      Ed += E * tr;
-    }
-    L += Ed * (kd / 3.14159265);
-  }
+  L += glassDust(Pg, n);
   return L;
 }
 
@@ -320,33 +325,35 @@ fn youngTexel(P: vec3f) -> bool {
   let zStored = textureLoad(giHistPrev, tex, 0).a;
   return lenPrev < frame.giCfg.z || abs(zStored - pc.w) > 0.03 * pc.w + 0.05;   // (a coarser depth test than the denoiser's own: a texel off by one on a slanted floor must not read as disoccluded — a shin in front of the floor still does)
 }
-/** ONE more cosine ray from Po about N, traced and shaded exactly as the loop in `main` does (its statements), firefly-bounded by Lcap — the young tile's extra rays; kept apart so that loop stays what it was.
- *  kx / Kx: this is extra ray kx of the Kx the texel takes — under GATHER_STRATA the extras are a COMPLETE stratified set of their own (cosineDirK over Kx strata: the base loop's four
- *  cover its 2 × 2 cells, these cover theirs, so the whole remains an unbiased cosine estimate and a young tile's kx-th extra rays share a stratum like its base rays do); off = cosineDir. */
-fn youngRay(Po: vec3f, N: vec3f, owner: u32, Lcap: f32, kx: u32, Kx: u32) -> vec3f {
-  let dir = cosineDirK(N, kx, Kx);
-  let hit = traceClosest(Po, dir, TMAX, owner);
+/** ONE ray of fgather traced from ro along dir and shaded at its hit: radiance (uncapped) and, in .w, the hit distance as specHitT keeps it (1e4 on a miss). gatherRay = the
+ *  diffuse gather's rules (main's loop body and the young tile's extras): emission without the area-lit fixtures, the torch-card exclusion, the bounce read walled or bounded by
+ *  the receiver's plane (N, owner, Po: the receiver). Otherwise a mirror ray's (glossReflection / glassShade): every emitter, no card exclusion, the cache's plain read. */
+fn rayShade(ro: vec3f, dir: vec3f, trOwner: u32, gatherRay: bool, N: vec3f, owner: u32, Po: vec3f) -> vec4f {
+  let hit = traceClosest(ro, dir, TMAX, trOwner);
   var L = vec3f(0.0);
   if (hit.idx < 0) { L = skyRadiance(dir); }
   else if (!hit.inside) {
-    let Ph = Po + dir * hit.t;
+    let Ph = ro + dir * hit.t;
     var albedo: vec3f;
-    var ex = 0u;
+    var ex = 0u;   // torch bounce cards whose claim region this hit lies in: their lights' direct terms here are the cards' to carry (empty loop with the flag off; never on a mirror ray: a mirror SHOWS the torch spot on the wall)
     if (hit.idx == CAPSULE_HIT) { albedo = hit.capAlbedo; }
     else {
       let bi = u32(hit.idx);
-      if ((boxGeo[bi].flags & (BOX_EMISSIVE | BOX_AREALIT)) == BOX_EMISSIVE) { L += boxEmissive(bi); }
+      if (gatherRay) {
+        if ((boxGeo[bi].flags & (BOX_EMISSIVE | BOX_AREALIT)) == BOX_EMISSIVE) { L += boxEmissive(bi); }
+      } else if ((boxGeo[bi].flags & BOX_EMISSIVE) != 0u) { L += boxEmissive(bi); }   // a mirror: area-lit or not, it shows the fixture
       albedo = boxAlbedoSec(bi);
-      for (var k = 0u; k < nC; k++) { if (onCard(Ph, hit.n, wgCards[k * 4u], wgCards[k * 4u + 1u])) { ex |= 1u << k; } }
+      if (gatherRay) { for (var k = 0u; k < nC; k++) { if (onCard(Ph, hit.n, wgCards[k * 4u], wgCards[k * 4u + 1u])) { ex |= 1u << k; } } }
     }
     var Eh = vec3f(0.0);
     if ((frame.flags & FLAG_DIRECT) != 0u) { Eh += directAtPoint(Ph, hit.n, ex); }
-    if ((frame.flags & FLAG_BOUNCE) != 0u) { if (BOUNCE_WALLS && (bounceHitMan(hit) || bounceLeftNoWall(N, owner, hit.t))) { Eh += diceIrradianceWalled(Ph, hit.n, bounceHitOwner(hit) | (owner << 8u)); } else { Eh += diceIrradianceFrom(Ph, hit.n, Po, N); } }   // (the main loop's read, bounded the same way)
+    if ((frame.flags & FLAG_BOUNCE) != 0u) {
+      if (gatherRay) { if (BOUNCE_WALLS && (bounceHitMan(hit) || bounceLeftNoWall(N, owner, hit.t))) { Eh += diceIrradianceWalled(Ph, hit.n, bounceHitOwner(hit) | (owner << 8u)); } else { Eh += diceIrradianceFrom(Ph, hit.n, Po, N); } }
+      else { Eh += diceIrradiance(Ph + hit.n * c0Spacing(), hit.n); }   // (no walled read on a mirror ray — lighting_common.wgsl BOUNCE WALLS: a man mirrored in a floor or a pane is the least of them)
+    }
     L += albedo * Eh * (1.0 / 3.14159265);
   }
-  let lum = luminance(L);
-  let cap = min(Lcap, 24.0);
-  return select(L, L * (cap / lum), lum > cap);
+  return vec4f(L, select(1e4, hit.t, hit.idx >= 0));
 }
 
 @compute @workgroup_size(8, 8)
@@ -409,53 +416,94 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
   let Kff = frame.lossyCfg.w;
   var Lcap = 1e9;
   if (Kff > 0.0) { let Eref = diceIrradiance(P + N * c0Spacing(), N); Lcap = max(Kff * luminance(Eref) * (1.0 / 3.14159265), 0.35); }
+  // ONE LOOP, ONE RAY A TURN (the compile, 2026-10-26: Chrome on Windows compiles through DXC, which inlines every call — this kernel traced and shaded a ray in four
+  // places (the gather's loop, the young tile's extras, the gloss floor's mirror, the pane's mirror), so the tracer and directAtPoint were inlined four times and the
+  // compile took ~8 s). Every ray this texel traces is now a turn of the loop below and is traced and shaded by the ONE call of rayShade: turns [0, RAYS) are the
+  // gather's rays, [RAYS, raysN) the young tile's extras, turn raysN the gloss floor's mirror ray and turn raysN + 1 the pane's. The statements are the old ones in
+  // the old order (the indirect is normalised, the cards added and the indirect stored between the two parts, as before), so every rnd() is drawn in the same order
+  // and the values are what they were.
   var E = vec3f(0.0);
-  for (var k = 0u; k < RAYS; k++) {
-    let dir = cosineDirK(N, k, RAYS);   // (= cosineDir(N) unless GATHER_STRATA: ray k from stratum (k + frame) mod 4 — settings.gatherStrata)
-    let hit = traceClosest(Po, dir, TMAX, owner);
-    var L = vec3f(0.0);
-    if (hit.idx < 0) { L = skyRadiance(dir); }
-    else if (!hit.inside) {
-      let Ph = Po + dir * hit.t;
-      var albedo: vec3f;
-      var ex = 0u;   // torch bounce cards whose claim region this hit lies in: their lights' direct terms here are the cards' to carry (empty loop with the flag off)
-      if (hit.idx == CAPSULE_HIT) { albedo = hit.capAlbedo; }
-      else {
-        let bi = u32(hit.idx);
-        if ((boxGeo[bi].flags & (BOX_EMISSIVE | BOX_AREALIT)) == BOX_EMISSIVE) { L += boxEmissive(bi); }
-        albedo = boxAlbedoSec(bi);
-        for (var k = 0u; k < nC; k++) { if (onCard(Ph, hit.n, wgCards[k * 4u], wgCards[k * 4u + 1u])) { ex |= 1u << k; } }
+  var Ex = vec3f(0.0);
+  var spec = vec3f(0.0);
+  for (var j = 0u; j < raysN + 2u; j++) {
+    var ro = Po; var dir = vec3f(0.0); var trOwner = owner; var gatherRay = true; var live = true;
+    var Rm = vec3f(0.0); var Fm = 0.0; var paneHit = false; var Pg = vec3f(0.0); var gn = vec3f(0.0);
+    if (j < RAYS) { dir = cosineDirK(N, j, RAYS); }   // (= cosineDir(N) unless GATHER_STRATA: ray k from stratum (k + frame) mod 4 — settings.gatherStrata)
+    else if (j < raysN) { dir = cosineDirK(N, j - RAYS, raysN - RAYS); }   // GI in motion: extra ray kx of the Kx the young texel takes (a complete stratified set of their own under GATHER_STRATA)
+    else if (j == raysN) {
+      // cosine-weighted pdf = cos/pi  ⇒  E = pi/K · Σ L
+      E *= 3.14159265 / f32(RAYS);
+      // GI in motion: the young tile's extra rays (raysN > RAYS only then), the sum re-normalised to the true count
+      if (raysN > RAYS) { E = (E * (f32(RAYS) / 3.14159265) + Ex) * (3.14159265 / f32(raysN)); }
+      if (nC > 0u && (frame.flags & FLAG_DIRECT) != 0u) { E += cardIrradiance(P, N, Po, owner, gid.xy); }   // torch bounce cards: the footprints' one bounce, analytic (after the rays: their rnd() sequence is untouched)
+      textureStore(outIndirect, gid.xy, vec4f(E * frame.indirectScale, 1.0));
+      // AFTER the gather's rays and its store: the indirect estimate is value for value what it is with both flags off. The gloss floor (glossReflection's statements):
+      // a world box (not a character), flagged, seen from above: its polished top face
+      let bidx = id & 0xFFFFFu;
+      live = specOn && gloss && ((id >> 28u) & 1u) == 0u && bidx != 0xFFFFFu && (boxGeo[bidx].flags & BOX_GLOSS) != 0u && N.y > 0.95;
+      if (live) {
+        let I = normalize(P - frame.camPos);                 // eye → floor
+        let cosV = clamp(-I.y, 0.0, 1.0);                    // = N·V for the up-facing finish
+        Fm = GLOSS_F0 + (1.0 - GLOSS_F0) * pow(1.0 - cosV, 5.0);
+        Rm = vec3f(I.x, -I.y, I.z);                          // reflect(I, +y)
+        let up = select(vec3f(0.0, 1.0, 0.0), vec3f(1.0, 0.0, 0.0), abs(Rm.y) > 0.9);
+        let T = normalize(cross(up, Rm)); let B = cross(Rm, T);
+        let r = GLOSS_SPREAD * sqrt(rnd()); let a = rnd() * 6.2831853;
+        dir = normalize(Rm + (T * cos(a) + B * sin(a)) * r);
+        if (dir.y < 0.02) { dir = Rm; }                      // (only a grazing eye could push the cone under the floor; this camera never does)
+        ro = P + vec3f(0.0, 0.02, 0.0);
+        gatherRay = false;
       }
-      var Eh = vec3f(0.0);
-      if ((frame.flags & FLAG_DIRECT) != 0u) { Eh += directAtPoint(Ph, hit.n, ex); }
-      if ((frame.flags & FLAG_BOUNCE) != 0u) { if (BOUNCE_WALLS && (bounceHitMan(hit) || bounceLeftNoWall(N, owner, hit.t))) { Eh += diceIrradianceWalled(Ph, hit.n, bounceHitOwner(hit) | (owner << 8u)); } else { Eh += diceIrradianceFrom(Ph, hit.n, Po, N); } }   // one probe spacing off the hit face (per axis) like every other dice read — sampling closer pulls light through off-lattice walls — but never past the plane of the surface this ray LEFT, and no trilinear neighbour from behind it (lighting_common diceIrradianceFrom: the back of a shelf against the wall being shaded read the lit room next door)
-      L += albedo * Eh * (1.0 / 3.14159265);
+    } else {
+      // a pane between the eye and this texel's surface: what it adds toward the eye at the crossing (the nearest pane only reflects; composite tints for every one crossed) — glassShade's statements
+      live = false;
+      if (specOn && glassOn) {
+        let toP = P - frame.camPos; let dist = length(toP); let V = toP / max(dist, 1e-4);
+        let gh = glassTrace(frame.camPos, V, 0.0, dist - 0.02);
+        if (gh.idx >= 0) {
+          paneHit = true; Pg = frame.camPos + V * gh.t; gn = gh.n;
+          let cosI = clamp(dot(-V, gn), 0.0, 1.0);
+          Fm = glassFresnel(cosI) * frame.glassCfg.x;
+          Rm = V - gn * (2.0 * dot(V, gn));
+          ro = Pg + gn * 0.015; dir = Rm; trOwner = 0u; gatherRay = false;
+          live = Fm > 0.001;
+        }
+      }
     }
-    // firefly guard: one ray in K finding a small intensely lit patch is an outlier the filters would smear into a blotch
-    // (generous cap: a desk-lamp pool or a torch spot seen from the wall next to it is a LARGE, legitimately bright patch, not a
-    // firefly — clamping it hard is what made small bright lights cast no bounce)
-    let lum = luminance(L);
-    let cap = min(Lcap, 24.0);
-    L = select(L, L * (cap / lum), lum > cap);
-    E += L;
-  }
-  // cosine-weighted pdf = cos/pi  ⇒  E = pi/K · Σ L
-  E *= 3.14159265 / f32(RAYS);
-  // GI in motion: the young tile's extra rays (raysN > RAYS only then) — the same ray as above (youngRay), the sum re-normalised to the true count; the loop above is untouched text and program
-  if (raysN > RAYS) { var Ex = vec3f(0.0); for (var k = RAYS; k < raysN; k++) { Ex += youngRay(Po, N, owner, Lcap, k - RAYS, raysN - RAYS); } E = (E * (f32(RAYS) / 3.14159265) + Ex) * (3.14159265 / f32(raysN)); }   // (the extras stratified among themselves under GATHER_STRATA)
-  if (nC > 0u && (frame.flags & FLAG_DIRECT) != 0u) { E += cardIrradiance(P, N, Po, owner, gid.xy); }   // torch bounce cards: the footprints' one bounce, analytic (after the rays: their rnd() sequence is untouched)
-  textureStore(outIndirect, gid.xy, vec4f(E * frame.indirectScale, 1.0));
-  if (specOn) {   // AFTER the gather's rays and its store: the indirect estimate is value for value what it is with both flags off
-    var spec = vec3f(0.0);
-    let bidx = id & 0xFFFFFu;
-    if (gloss && ((id >> 28u) & 1u) == 0u && bidx != 0xFFFFFu && (boxGeo[bidx].flags & BOX_GLOSS) != 0u && N.y > 0.95) { spec = glossReflection(P, owner); }   // a world box (not a character), flagged, seen from above: its polished top face
-    if (glassOn) {   // a pane between the eye and this texel's surface: what it adds toward the eye at the crossing (the nearest pane only reflects; composite tints for every one crossed)
-      let toP = P - frame.camPos; let dist = length(toP); let V = toP / max(dist, 1e-4);
-      let gh = glassTrace(frame.camPos, V, 0.0, dist - 0.02);
-      if (gh.idx >= 0) { spec += glassShade(frame.camPos + V * gh.t, gh.n, V); }
+    var L = vec3f(0.0);
+    if (live) {
+      let rs = rayShade(ro, dir, trOwner, gatherRay, N, owner, Po);
+      L = rs.xyz;
+      if (gatherRay) {
+        // firefly guard: one ray in K finding a small intensely lit patch is an outlier the filters would smear into a blotch
+        // (generous cap: a desk-lamp pool or a torch spot seen from the wall next to it is a LARGE, legitimately bright patch, not a
+        // firefly — clamping it hard is what made small bright lights cast no bounce)
+        let lum = luminance(L);
+        let cap = min(Lcap, 24.0);
+        L = select(L, L * (cap / lum), lum > cap);
+        if (j < RAYS) { E += L; } else { Ex += L; }
+      } else {
+        specHitT = rs.w;
+        let lum = luminance(L);
+        L = select(L, L * (GLOSS_RAY_MAX / lum), lum > GLOSS_RAY_MAX);        // the traced ray: the gather's firefly bound (a lit panel ≈ 11 passes whole, a spark streak does not)
+        if ((frame.flags & FLAG_DIRECT) != 0u) {
+          var G = glossGlints(ro, Rm, trOwner);
+          let lg = luminance(G);
+          G = select(G, G * (GLOSS_GLINT_MAX / lg), lg > GLOSS_GLINT_MAX);   // the analytic glints: stable, so allowed to read as white
+          L += G;
+        }
+        if (j == raysN) {
+          // the wet lot (game/weather.ts: frame.weatherA.w = wetness, weatherC = the interior footprint): standing water outdoors mirrors far more than a polish —
+          // up to 3.5× the coat's Fresnel at full wet, capped at a full mirror, nothing indoors or dry (w = 0: min(F, 1) = F)
+          let Wc = frame.weatherC; var wetOut = select(0.0, frame.weatherA.w, P.x < Wc.x || P.z < Wc.y || P.x > Wc.z || P.z > Wc.w);
+          if (WX_KINDS) { if (frame.cardCfg.y != 0u && wxRoofed(P.xz)) { wetOut = 0.0; } }   // (weather kinds: every roof of the level keeps its floor dry, not the first alone)
+          spec = L * (min(Fm * (1.0 + 2.5 * wetOut), 1.0) * GLOSS_STRENGTH);
+        } else { L *= Fm; }
+      }
     }
-    textureStore(outSpecular, gid.xy, vec4f(spec, specHitT));   // (.a = the reflection ray's hit distance for the v3 denoiser; the legacy chain reads .rgb only)
+    if (paneHit) { spec += L + glassDust(Pg, gn); }
   }
+  if (specOn) { textureStore(outSpecular, gid.xy, vec4f(spec, specHitT)); }   // (.a = the reflection ray's hit distance for the v3 denoiser; the legacy chain reads .rgb only)
 }
 
 // ================================================================================================================================================
@@ -559,8 +607,8 @@ fn giReshadeDirect(xs: vec3f, ns: vec3f, bi: u32, full: bool) -> vec4f {
   var ex = 0u;
   for (var k = 0u; k < nC; k++) { if (onCard(xs, ns, wgCards[k * 4u], wgCards[k * 4u + 1u])) { ex |= 1u << k; } }
   if ((frame.flags & FLAG_DIRECT) != 0u) {
-    if (full) { L += albedo * directAtPoint(xs, ns, ex) * (1.0 / 3.14159265); }
-    else { let od = directOnScreen(xs, ns, ex); if (od.w == 0.0) { return vec4f(0.0); } L += albedo * od.xyz * (1.0 / 3.14159265); }
+    let od = directAt(xs, ns, ex, full); if (od.w == 0.0) { return vec4f(0.0); }   // (one call for both: full = directAtPoint, else directOnScreen — .w 0 = off screen, not asked)
+    L += albedo * od.xyz * (1.0 / 3.14159265);
   }
   return vec4f(L, 1.0);
 }

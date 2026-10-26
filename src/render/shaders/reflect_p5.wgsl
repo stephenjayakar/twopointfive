@@ -103,8 +103,8 @@ fn reflHitParts(hit: Hit, Po: vec3f, dir: vec3f, kEmit: f32, walls: u32) -> HitP
       if (ms != 0u && frame.markCfg.w != 0.0) { let mh = markReflHit(ms, bi, Ph, hit.n, dir, hit.t, kEmit, boxAlbedo(bi)); h.albedo = mh.albedo; h.Le += mh.L; }
     }
     if ((frame.flags & FLAG_DIRECT) != 0u) {   // (the on-screen half first, so the reuse knows which path lit the hit; off screen, directAtPoint repeats the cheap projection test and takes its light loop)
-      let od = directOnScreen(Ph, hit.n, 0u);
-      if (od.w > 0.0) { h.Eh += od.xyz; h.onScreen = true; } else { h.Eh += directAtPoint(Ph, hit.n, 0u); }
+      let od = directAt(Ph, hit.n, 0u, true);   // (directOnScreen, else directAtPoint, in one call: .w = 1 on screen)
+      h.Eh += od.xyz; h.onScreen = od.w == 1.0;
     }
     if ((frame.flags & FLAG_BOUNCE) != 0u) { if ((BOUNCE_WALLS && bounceHitMan(hit)) || walls != 0u) { h.Eh += diceIrradianceWalled(Ph, hit.n, bounceHitOwner(hit) | ((walls & 0xffu) << 8u)); } else { h.Eh += diceIrradiance(Ph + hit.n * c0Spacing(), hit.n); } }
   } else { h.segT = 0.0; }
