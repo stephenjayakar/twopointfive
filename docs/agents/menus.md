@@ -1466,9 +1466,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   that reads as right or as a blink nobody has seen. Line (10) of the check holds the frame, the slot, what is bound and the two pairs; what
   the shader makes of the copy only a device can say: `findme-squad-page.cjs` counts the rims' ink on the software adapter with the rows at
   their most, at none, at their starts, and at their most again with GBAA put off. MEASURED on that adapter, one run, a squad of four stood in a dark room, strongly coloured pixels in the men's
-  boxes: 1501 with the rows at their most, 66 at none, 1629 at their starts (men that dark have the whole rim; the resolve had more frames
-  to gather it), 2442 at their most with GBAA off (the copy kept for the outline; that picture is not anti-aliased, so more of it counts), no
-  GPU error in any. That is the ends and the two copies; NOT MEASURED: a man half lit, which is the case the row is for. `findme` is green
+  boxes: 1771 with the rows at their most, 65 at none, 1591 at their starts (men that dark have nearly the whole rim there too), 2419 at
+  their most with GBAA off (the copy kept for the outline; that picture is not anti-aliased, so more of it counts), no
+  GPU error in any. (The first run, 10-22, read 1501 / 66 / 1629: its picture at most was drawn two frames younger than the one at the starts, and
+  the resolve gathers a new line over several frames, so the starts read over the most. The check draws the same frames for both now and holds
+  the starts at no more than the most.) That is the ends and the two copies; NOT MEASURED: a man half lit, which is the case the row is for. `findme` is green
   on both stands, its break word red with seven lines. THE TWO COPIES ARE NOT THE SAME PICTURE: GBAA's is taken before its edge blends and
   the fog of war, the outline's own after both; the team's own men are never fogged and the blend moves edge pixels only, so the mean over
   a man's pixels is near enough the same. Nobody has seen any of it on a GPU, and nobody has timed the pass by the picture.
