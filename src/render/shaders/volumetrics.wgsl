@@ -30,6 +30,9 @@ const VOL_KMAX: u32 = 6u;
 // THE K = 0 MARCH (no quality row ships it: every tier's caps.volK is 2 or more) is compiled only into its own twin (passes.ts volK0Pipe, built the first frame
 // settings.volLightCap is 0): the boot's program carries false here, so the compile — DXC, Chrome's compiler on Windows, ~1.3 s of it — does not pay for a march no tier runs.
 const VOL_K0: bool = false;
+// THE FROXEL-LIT SMOKE MARCH (smokeMarchJ: the medium, low and very low presets) likewise: the boot's program (passes.ts pVol) is compiled with false here — the classic tiers'
+// march, beams and rain — and the froxel tiers draw through its twin with true (pVolF, a LATER pipeline; the engine raises FrameFlags.FroxelVol only once it is in).
+const VOL_FROXEL_MARCH: bool = true;
 const MARCH_REFRESH_W: f32 = 0.02; // … and a light's shadow ray + self-shadow are refreshed (every `every` steps) only at steps whose weight T·(1 − e^−σΔ) in the pixel exceeds this — deep in the core and out in the thin skin the last answer stands (each slot is traced at least once a stretch)
 const MARCH_DIR_TMAX: f32 = 30.0;  // … and a shadow ray toward a DIRECTIONAL light (the moon, the breach's sun: evalLight says 1e6 m) stops at 30 m: from anywhere smoke can be (under 3.5 m) a ray climbing at 15° or more has cleared this level's 8 m of roof by then — nothing beyond can shadow it, and the walk to the world's rim was the moon's whole price
 const MARCH_MINOR_K: f32 = 0.04;     // smokeMarchJ's per-step lights: one whose unshadowed irradiance at a step is under this share of the stronger ones' there spends no shadow ray and no self-shadow taps (docs/internal/smoke-look.md §2: the moon's 80 m ray from every lit step of a lamp-lit plume was a fifth of the pass)
@@ -371,7 +374,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
 
   // ---- (b) smoke first (it attenuates what is behind it; haze contribution is mostly in front/around, error is small) ----
   let volK = min(frame.volCfg.x, VOL_KMAX);
-  if (froxel && (frame.flags & FLAG_SMOKE) != 0u && frame.numSmoke > 0u) { let sm = smokeMarchJ(ro, rd, tSurf, jitterS, pix * frame.invScreen); inscatter = sm.rgb; T = sm.a; }   // (b′) froxel-lit smoke march (above)
+  if (VOL_FROXEL_MARCH && froxel && (frame.flags & FLAG_SMOKE) != 0u && frame.numSmoke > 0u) { let sm = smokeMarchJ(ro, rd, tSurf, jitterS, pix * frame.invScreen); inscatter = sm.rgb; T = sm.a; }   // (b′) froxel-lit smoke march (above)
   if (!froxel && (frame.flags & FLAG_SMOKE) != 0u && frame.numSmoke > 0u && volK > 0u) {
     // (K > 0) the capped march: per-domain stretches front to back, a bounded per-stretch shortlist, the K strongest lights a step (see VOL_KMAX above)
     var ivA: array<vec3f, 8>; var ivM: array<u32, 8>; var niv = 0u; // (tEnter, tExit, voxel) + domain bit per live domain the ray crosses before the surface, sorted by tEnter
