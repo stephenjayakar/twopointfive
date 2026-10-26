@@ -42,6 +42,7 @@ export async function knobsCheck(): Promise<boolean> {
     RECAP: 'reads only (the end card)', PLAN: 'picture only (marks on the floor)',
     FIXEDSTEP: "the page's frame loop, not a game rule: a recording replays the updates it holds whatever stepped them (knobs.ts VISIT_OWN)", TWEEN: 'picture only (what a frame between two ticks draws; knobs.ts VISIT_OWN)',
     SAVEPIC: "how this page takes a save's picture, set once at boot for the canvas: no run reads it (knobs.ts VISIT_OWN)",
+    FINDTUNED: "which starts this machine's outline rows have, a picture setting: no run reads it (knobs.ts VISIT_OWN)",
   };
   const prof = readFileSync(`${ROOT}/src/host/profile.ts`, 'utf8'), body = prof.slice(prof.indexOf('export function pageSwitches'));
   const wrote = [...new Set([...body.slice(0, body.search(/^}/m)).matchAll(/^\s*([A-Za-z_][A-Za-z0-9_]*)\.[A-Za-z0-9_.]+ = /gm)].map(m => m[1]))];

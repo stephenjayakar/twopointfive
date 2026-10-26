@@ -224,6 +224,7 @@ import { FIXEDSTEP } from '../host/loop';
 import { AUTOCAM } from '../host/autocam';
 import { TWEEN } from '../host/tween';
 import { SAVEPIC } from '../host/savepic';
+import { FINDTUNED } from '../host/findme';
 import { MORALE } from './morale';
 import { RUNNER } from './runner';
 import { STARTLE } from './startle';
@@ -301,8 +302,9 @@ export const NOT_KNOBS: Record<string, readonly string[]> = { SLOTS: ['ok', 'why
  *  from everybody who plays it. FIXEDSTEP and TWEEN (host/loop.ts, host/tween.ts) are how this page's frame loop steps and draws: a tape replays the updates it
  *  holds whatever stepped them, and the viewer's loop is the viewer's. SAVEPIC (host/savepic.ts) is how this page takes a save's picture: this page's canvas is
  *  configured for it once, at boot, and a tape that set it would configure a viewer's canvas by the page somebody else recorded on (its address word,
- *  `savepic`, is the visit's for the same reason: ui/replaykey.ts VISIT_FLAGS). */
-export const VISIT_OWN: string[] = ['MUSIC', 'FIXEDSTEP', 'TWEEN', 'SAVEPIC'];
+ *  `savepic`, is the visit's for the same reason: ui/replaykey.ts VISIT_FLAGS). FINDTUNED (host/findme.ts) is which starts this machine's own outline rows
+ *  have: a picture setting of the viewer's, and a tape that set it would rim a viewer's men by the page somebody else recorded on (its word, `findtuned`, likewise). */
+export const VISIT_OWN: string[] = ['MUSIC', 'FIXEDSTEP', 'TWEEN', 'SAVEPIC', 'FINDTUNED'];
 
 /** every knob table by name — made on each call (see the head: never at module load) */
 export function knobRegistry(): Record<string, object> {
@@ -399,6 +401,8 @@ export function knobRegistry(): Record<string, object> {
     FIXEDSTEP, TWEEN,
     // how the page takes a save's picture (host/savepic.ts): the page's alone, as the two above are
     SAVEPIC,
+    // which starts the outline's rows have on this machine (host/findme.ts): the page's alone, as the three above are
+    FINDTUNED,
     // the camera running itself (host/autocam.ts): the switch, what it frames and by how much, when it may turn
     AUTOCAM,
     // shaken (morale.ts): what a blast does to the men it does not hurt — who ducks, who breaks, the rounds a broken man puts into the dust — reads these
