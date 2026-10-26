@@ -19,10 +19,9 @@ bun run dev      # the game at http://localhost:5173
 bun run build    # static bundle in ./dist
 ```
 
-On Windows, start it with `tools\windows\play-chrome.cmd`. Chrome there compiles the shaders with DXC, which is slow, and its
-shader cache is too small for this game's set, so a plain Chrome window compiles everything again on every load (half a minute
-or more). The script opens the game in a Chrome window of its own with a cache big enough to keep them: the first load of a
-level compiles, later ones take a second or two.
+On Windows, Chrome compiles the shaders with DXC, which is slow, and its GPU process keeps only 6 MB of compiled shaders in
+memory, less than this game's set, so most of them are compiled again on each load. The game waits only for the ones its first
+frames draw and compiles the rest in the background, so the first seconds after a load can still stutter.
 
 ## Play
 
