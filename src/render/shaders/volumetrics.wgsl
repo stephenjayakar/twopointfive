@@ -574,7 +574,11 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
         var s0 = max(-bq - sq, ta); var s1 = min(-bq + sq, tbb);
         if (lightKind(li) == 1u) { let ci = coneInterval(ro, rd, li.pos, li.dir, li.cosOuter); s0 = max(s0, ci.x); s1 = min(s1, ci.y); }
         if (s0 >= s1) { continue; }
-        if ((li.kind & (LIGHT_FOG_SEEN | LIGHT_FOG_UNSEEN)) != 0u && max(lightFogK(li, ro + rd * s0, vec3f(0.0)), max(lightFogK(li, ro + rd * (0.5 * (s0 + s1)), vec3f(0.0)), lightFogK(li, ro + rd * s1, vec3f(0.0)))) <= 0.002) { continue; }   // (a beam the fog of war's class cuts along this ray takes none of the K places)
+        if ((li.kind & (LIGHT_FOG_SEEN | LIGHT_FOG_UNSEEN)) != 0u) {   // (the three points asked in turn through ONE lightFogK call: DXC inlines each call it meets)
+          var fk: array<f32, 3>;
+          for (var q = 0u; q < 3u; q++) { fk[q] = lightFogK(li, ro + rd * select(select(s1, 0.5 * (s0 + s1), q == 1u), s0, q == 0u), vec3f(0.0)); }
+          if (max(fk[0], max(fk[1], fk[2])) <= 0.002) { continue; }
+        }   // (a beam the fog of war's class cuts along this ray takes none of the K places)
         let delta = dot(li.pos - ro, rd);
         let Dl = max(length(ro + rd * delta - li.pos), max(li.radius, 1e-3));
         let score = max3(li.color) * li.volumetric * (atan((s1 - delta) / Dl) - atan((s0 - delta) / Dl)) / Dl;
@@ -612,8 +616,13 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
         var accD = vec3f(0.0);
         for (var s = 0u; s < stepsD; s++) {
           let X = ro + rd * (tA + (f32(s) + jitter) * dtD);
-          if (!occluded(X, vec3f(0.0, 1.0, 0.0), CEIL_Y + 0.5 - min(X.y, CEIL_Y), 0u)) { continue; }   // open sky over this point: outdoor air, no dust
-          if (occluded(X, Ld, 80.0, 0u)) { continue; }
+          // turn 0: open sky over this point = outdoor air, no dust; turn 1: the sun's own shadow ray (two turns of ONE occluded call — DXC inlines each call it meets)
+          var dark = false;
+          for (var q = 0u; q < 2u; q++) {
+            let occ = occluded(X, select(Ld, vec3f(0.0, 1.0, 0.0), q == 0u), select(80.0, CEIL_Y + 0.5 - min(X.y, CEIL_Y), q == 0u), 0u);
+            if (occ == (q == 1u)) { dark = true; break; }
+          }
+          if (dark) { continue; }
           var st = 1.0;
           if (frame.numSmoke > 0u) { st = smokeTransmittance(X, Ld, 6.0); }
           accD += li.color * (st * hazeAt(X));
@@ -683,6 +692,9 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
         let I = frame.weatherC;
         let ib = isectBounds(ro, invRd, vec3f(I.x, -100.0, I.y), vec3f(I.z, 100.0, I.w));
         var wx = vec3f(0.0); var outLen = 0.0;
+        // the open-air pieces of the stretch, front to back, then ONE rainAlong a piece (the compile: DXC — Chrome's compiler on Windows — inlines every call, and the
+        // four calls this took were four copies of the streak walk and its light loop; the pieces and their order are what the calls had)
+        var seg: array<vec2f, 5>; var nSeg = 0u;
         if (WX_KINDS && frame.cardCfg.y != 0u) {
           // WEATHER KINDS (a kind picked: the footprints are the level's own roofs, up to four — the compound, the barracks): the stretch minus EVERY roof's
           // column, walked front to back — what is left is at most five pieces of open air (the yard between the house and its sheds rains; the rooms stay dry)
@@ -696,15 +708,16 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
           for (var it = 0u; it < 5u && cur < tb; it++) {
             var e0 = tb; var e1 = tb;   // the nearest column still ahead of (or around) cur
             for (var k = 0u; k < 4u; k++) { let cb = col[k]; if (cb.x < cb.y && cb.y > cur && cb.x < e0) { e0 = max(cb.x, cur); e1 = cb.y; } }
-            if (e0 > cur) { wx += rainAlong(ro, rd, cur, e0); outLen += e0 - cur; }
+            if (e0 > cur) { seg[nSeg] = vec2f(cur, e0); nSeg++; }
             cur = max(e1, e0);
           }
         } else
         if (ib.x < ib.y && ib.y > ta && ib.x < tb) {
           let a1 = min(tb, ib.x); let b0 = max(ta, ib.y);
-          if (a1 > ta) { wx += rainAlong(ro, rd, ta, a1); outLen += a1 - ta; }
-          if (tb > b0) { wx += rainAlong(ro, rd, b0, tb); outLen += tb - b0; }
-        } else { wx = rainAlong(ro, rd, ta, tb); outLen = tb - ta; }
+          if (a1 > ta) { seg[nSeg] = vec2f(ta, a1); nSeg++; }
+          if (tb > b0) { seg[nSeg] = vec2f(b0, tb); nSeg++; }
+        } else { seg[0] = vec2f(ta, tb); nSeg = 1u; }
+        for (var q = 0u; q < nSeg; q++) { wx += rainAlong(ro, rd, seg[q].x, seg[q].y); outLen += seg[q].y - seg[q].x; }
         // the lit sky of a stroke: the thin haze along the outdoor stretch glows with it (isotropic; no march — the sky is everywhere at once)
         wx += frame.weatherB.xyz * (frame.hazeDensity * 4.0 * outLen);
         // the crown where a drop lands on the lot, lit like a streak there

@@ -84,7 +84,8 @@ fn emitTraceK(rough: f32) -> f32 { return 1.0 - smoothstep(0.2, 0.3, rough); }
  *  (direct + bounce) otherwise; through any glass pane on the segment: tinted, plus what the pane itself mirrors (the sky / the cache) × its Fresnel.
  *  Bounded per ray by matCfg.z (luminance). In two halves for phase 5's hit-lighting reuse, which sits between them: reflHitParts finds the hit's
  *  emission + albedo and the IRRADIANCE there (the part worth a history: the one-shadow-ray light pick at an off-screen hit is what flickers), reflHitFinish
- *  puts them together and applies the segment's glass and the bound. Called back to back with the irradiance untouched they compute exactly shadeReflHit. */
+ *  puts them together and applies the segment's glass and the bound. Called back to back with the irradiance untouched they compute what main's one-function shading (reflect.wgsl shadeReflHit) does, statement
+ *  for statement — every path of this kernel takes the two halves (one copy of the hit shading: DXC inlines each call it meets). */
 struct HitParts { Le: vec3f, albedo: vec3f, Eh: vec3f, segT: f32, solid: bool, onScreen: bool };   // solid = an opaque surface was hit (Eh / albedo meaningful); onScreen = its direct light came off this frame's denoised textures
 fn reflHitParts(hit: Hit, Po: vec3f, dir: vec3f, kEmit: f32, walls: u32) -> HitParts {
   var h: HitParts; h.Le = vec3f(0.0); h.albedo = vec3f(0.0); h.Eh = vec3f(0.0); h.segT = RT_TMAX; h.solid = false; h.onScreen = false;
@@ -99,7 +100,7 @@ fn reflHitParts(hit: Hit, Po: vec3f, dir: vec3f, kEmit: f32, walls: u32) -> HitP
       let bf = boxGeo[bi].flags;
       if ((bf & BOX_EMISSIVE) != 0u) { h.Le += boxEmissive(bi) * select(1.0, kEmit, (bf & BOX_AREALIT) != 0u); }
       h.albedo = boxAlbedoSec(bi);
-      let ms = markSlotOf(bf);                                            // MARKINGS at the reflection hit (as shadeReflHit)
+      let ms = markSlotOf(bf);                                            // MARKINGS at the reflection hit (as reflect.wgsl shadeReflHit)
       if (ms != 0u && frame.markCfg.w != 0.0) { let mh = markReflHit(ms, bi, Ph, hit.n, dir, hit.t, kEmit, boxAlbedo(bi)); h.albedo = mh.albedo; h.Le += mh.L; }
     }
     if ((frame.flags & FLAG_DIRECT) != 0u) {   // (the on-screen half first, so the reuse knows which path lit the hit; off screen, directAtPoint repeats the cheap projection test and takes its light loop)
@@ -122,47 +123,6 @@ fn reflHitFinish(h: HitParts, Po: vec3f, dir: vec3f) -> vec3f {
       let Pg = Po + dir * gh.t;
       var env = skyRadiance(Rg);
       if ((frame.flags & FLAG_BOUNCE) != 0u && Rg.y < 0.25) { env = diceMeanRadiance(Pg + Rg * 0.6); }   // a pane mirroring back into the building: the cache's mean radiance a step along the mirrored ray; up and out: the sky
-      L = L * gh.trans * (1.0 - Fg) + env * Fg;
-    }
-  }
-  let lum = luminance(L); let cap = frame.matCfg.z;
-  return select(L, L * (cap / lum), cap > 0.0 && lum > cap);
-}
-// The whole hit shading in ONE function, main's statements verbatim — the path every tier takes with the phase-5 bits down. (reflHitParts + reflHitFinish above compute the same
-// thing in two halves for the reuse path; keeping this body whole keeps the off path's generated code what it was: composing it from the halves moved one output cell in one
-// view at ultra by a last-bit difference.) Keep the three in step.
-fn shadeReflHit(hit: Hit, Po: vec3f, dir: vec3f, kEmit: f32, walls: u32) -> vec3f {
-  var L = vec3f(0.0);
-  var segT = RT_TMAX;
-  if (hit.idx < 0) {
-    L = skyRadiance(dir) + frame.weatherB.xyz;
-  } else if (!hit.inside) {
-    segT = hit.t;
-    let Ph = Po + dir * hit.t;
-    var albedo: vec3f;
-    if (hit.idx == CAPSULE_HIT) { albedo = hit.capAlbedo; }
-    else {
-      let bi = u32(hit.idx);
-      let bf = boxGeo[bi].flags;
-      if ((bf & BOX_EMISSIVE) != 0u) { L += boxEmissive(bi) * select(1.0, kEmit, (bf & BOX_AREALIT) != 0u); }
-      albedo = boxAlbedoSec(bi);                                          // (= boxAlbedo unless the box's markings are folded in for the secondary rays)
-      let ms = markSlotOf(bf);                                            // MARKINGS at the reflection hit (markings.wgsl): the face's pixel art band-limited by the cone, + its emission
-      if (ms != 0u && frame.markCfg.w != 0.0) { let mh = markReflHit(ms, bi, Ph, hit.n, dir, hit.t, kEmit, boxAlbedo(bi)); albedo = mh.albedo; L += mh.L; }
-    }
-    var Eh = vec3f(0.0);
-    if ((frame.flags & FLAG_DIRECT) != 0u) { Eh += directAtPoint(Ph, hit.n, 0u); }
-    if ((frame.flags & FLAG_BOUNCE) != 0u) { if ((BOUNCE_WALLS && bounceHitMan(hit)) || walls != 0u) { Eh += diceIrradianceWalled(Ph, hit.n, bounceHitOwner(hit) | ((walls & 0xffu) << 8u)); } else { Eh += diceIrradiance(Ph + hit.n * c0Spacing(), hit.n); } }
-    L += albedo * Eh * (1.0 / PI);
-  } else { segT = 0.0; }
-  if (glassCount() > 0u) {
-    let gh = glassTrace(Po, dir, 0.01, segT);
-    if (gh.idx >= 0) {
-      let cosI = clamp(dot(-dir, gh.n), 0.0, 1.0);
-      let Fg = glassFresnel(cosI) * min(frame.glassCfg.x, 1.0);
-      let Rg = dir - gh.n * (2.0 * dot(dir, gh.n));
-      let Pg = Po + dir * gh.t;
-      var env = skyRadiance(Rg);
-      if ((frame.flags & FLAG_BOUNCE) != 0u && Rg.y < 0.25) { env = diceMeanRadiance(Pg + Rg * 0.6); }
       L = L * gh.trans * (1.0 - Fg) + env * Fg;
     }
   }
@@ -382,11 +342,11 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
     if (Ls.z < 0.02) { Ls = vec3f(-Ve.x, -Ve.y, Ve.z); H = vec3f(0.0, 0.0, 1.0); }   // under the horizon (rough finish, grazing eye): the mirror direction instead — energy kept where 1 spp cannot afford a rejection loop
     let dir = normalize(T * Ls.x + B * Ls.y + N * Ls.z);
     var hit: Hit;
-    if ((frame.p5Cfg.z & 1u) != 0u || rigSmoothOn()) { hit = traceClosestMesh(Po, dir, RT_TMAX, owner); } else { hit = traceClosest(Po, dir, RT_TMAX, owner); }   // (phase 5: the men's skinned mesh in the mirror while bit 1 is up — or the SDF rig's smooth union, frame.rigCfg bit 2, whose branch lives in the same tail; main's own tracer, untouched, while both are down)
+    hit = traceClosestMesh(Po, dir, RT_TMAX, owner);   // (with p5Cfg.z bit 1 and the rig both down its tail is traceClosest's exactly: one tracer, not two copies of it — DXC inlines each call it meets)   // (phase 5: the men's skinned mesh in the mirror while bit 1 is up — or the SDF rig's smooth union, frame.rigCfg bit 2, whose branch lives in the same tail; main's own tracer, untouched, while both are down)
     if (k == 0u) { hitT0 = select(RT_TMAX, hit.t, hit.idx >= 0); }
     var Li: vec3f;
+    var hp = reflHitParts(hit, Po, dir, kEmit, reflWalls);   // (the two halves on every path: shadeReflHit's statements in the same order, one copy of the hit shading instead of two)
     if (reuse) {
-      var hp = reflHitParts(hit, Po, dir, kEmit, reflWalls);
       // hit-lighting reuse: a STATIC opaque hit whose direct light was the one-ray estimate (an on-screen hit already carries this frame's settled light) takes the record's irradiance
       // into a running mean when the record's point lies within the lobe's own footprint of it on the same face — a history keyed on where the ray WENT, not on the pixel, so the
       // R2-scattered rays of consecutive frames refine one estimate of the light on that patch instead of each flickering its own light pick
@@ -401,10 +361,8 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
         }
         if (k == 0u) { let Ph = Po + dir * hit.t; let Es = min(hp.Eh, vec3f(RT_HIT_EMAX)); outRec = vec4u(p5PackXZ(Ph), p5PackYN(Ph, hit.n), pack2x16float(Es.xy), (pack2x16float(vec2f(Es.z, 0.0)) & 0xffffu) | (u32(cnt) << 16u) | (box12 << 20u)); }
       }
-      Li = reflHitFinish(hp, Po, dir);
-    } else {
-      Li = shadeReflHit(hit, Po, dir, kEmit, reflWalls);
     }
+    Li = reflHitFinish(hp, Po, dir);
     let Fr = F0 + (vec3f(1.0) - F0) * pow5(1.0 - clamp(dot(Ve, H), 0.0, 1.0));
     let wG = (1.0 + lamV) / (1.0 + lamV + smithLambda(Ls, ax, ay));      // G2 / G1(v), height-correlated: the VNDF estimator's remaining weight
     Lsum += Li * min(Fr * wetF, vec3f(1.0)) * wG;

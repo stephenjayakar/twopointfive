@@ -78,62 +78,70 @@ fn shadowPhase(P: vec3f, N: vec3f, Po: vec3f, owner: u32, pxPerMetre: f32, nIter
   }
 
   // ---- shadow rays: leaders exact (own visibility on own light); the tail rides on the leaders' aggregate visibility ----
+  // (Per class, the leaders and then the tail's pick are the turns of ONE loop round ONE shadowSample call: DXC — Chrome's compiler on Windows — inlines each call it
+  // meets, and the two calls were two copies of the shadow ray and the man's soft term. The statements and their order — the same rnd() draws — are as they were.)
   for (var c = 0u; c < 2u; c++) {
     S[c] = vec3f(0.0); blurPx[c] = 0.0;
     if (W[c] <= 0.0) { continue; }
     let K = select(2u, 3u, c == 1u);              // broad emitters (panels) overlap more: one extra leader
     var leadU = vec3f(0.0); var leadS = vec3f(0.0);
-    for (var k = 0u; k < K; k++) {
-      let pk = top[c * 3u + k];
-      if (pk.idx < 0) { continue; }
-      let li = wgLights[u32(pk.idx)];
-      let f = pk.E;
-      leadU += f;
-      if (luminance(f) < 0.02 * W[c]) { leadS += f; continue; }   // negligible: not worth a ray
-      // rays instead of heuristics: the strongest light gets 4 stratified emitter samples, the others 2 (a zero-radius
-      // light needs exactly one — every sample would land on the same point)
-      var ns = select(u32(clamp(select(frame.directCfg.y, frame.directCfg.x, k == 0u), 1.0, 8.0)), 1u, li.radius <= 0.0);
-      if (c == 1u) { ns = min(ns, select(2u, 4u, k == 0u)); }   // broad emitters: wide, low-contrast penumbrae that the filter + history resolve well — cap their ray budget; the sharp class keeps the full budget for crisp edges
-      if (W[0] + W[1] < frame.lossyCfg.z) { ns = 1u; }          // LOSSY option dimRays (z = 0 when off: never true): a pixel whose whole unshadowed light is this dim resolves its penumbrae with one emitter sample per leader — near black after the tonemap, where grain cannot be seen
-      let u0 = vec2f(rnd(), rnd());
-      var vsum = 0.0; var pwMax = -1.0; var blocked = 0u; var taken = 0u;
+    var tail = vec3f(0.0); var tailS = vec3f(0.0);
+    for (var k = 0u; k <= K; k++) {               // turns [0, K): the leaders; turn K: the tail
+      var li: Light; var f = vec3f(0.0); var ns = 1u; var u0 = vec2f(0.0); var pkIdx = 0u;
+      if (k < K) {
+        let pk = top[c * 3u + k];
+        if (pk.idx < 0) { continue; }
+        li = wgLights[u32(pk.idx)]; pkIdx = u32(pk.idx);
+        f = pk.E;
+        leadU += f;
+        if (luminance(f) < 0.02 * W[c]) { leadS += f; continue; }   // negligible: not worth a ray
+        // rays instead of heuristics: the strongest light gets 4 stratified emitter samples, the others 2 (a zero-radius
+        // light needs exactly one — every sample would land on the same point)
+        ns = select(u32(clamp(select(frame.directCfg.y, frame.directCfg.x, k == 0u), 1.0, 8.0)), 1u, li.radius <= 0.0);
+        if (c == 1u) { ns = min(ns, select(2u, 4u, k == 0u)); }   // broad emitters: wide, low-contrast penumbrae that the filter + history resolve well — cap their ray budget; the sharp class keeps the full budget for crisp edges
+        if (W[0] + W[1] < frame.lossyCfg.z) { ns = 1u; }          // LOSSY option dimRays (z = 0 when off: never true): a pixel whose whole unshadowed light is this dim resolves its penumbrae with one emitter sample per leader — near black after the tonemap, where grain cannot be seen
+        u0 = vec2f(rnd(), rnd());
+      } else {
+        // tail = class total minus leaders. Worth a ray (≥ 2 % of the class): credited with the visibility of ONE importance-picked tail
+        // light (one emitter sample) — unbiased in LUMINANCE for Σ_tail E·V (chroma stays the unshadowed tail's aggregate hue: differently
+        // coloured tail lights with different visibility come out at the right brightness, mixed colour; the per-channel-unbiased E_pick·V/p
+        // form exceeds U per channel and would fight the filter's S≤U ratio clamp — a queued follow-up), and noise-free wherever the tail
+        // shares one fate (the filter / history take the rest). Negligible tails ride on the leaders' aggregate visibility (smooth, no ray).
+        tail = max(U[c] - leadU - Uw[c], vec3f(0.0));   // the live tail: walled-off lights (Uw) are dark by proof, not by the pick's luck
+        let visTail = clamp(leadS / max(leadU, vec3f(1e-4)), vec3f(0.0), vec3f(1.0));
+        tailS = tail * visTail;
+        if (pickT[c] < 0 || luminance(tail) < 0.02 * W[c]) { break; }
+        li = wgLights[u32(pickT[c])];
+        u0 = vec2f(rnd(), rnd());
+      }
+      var vsum = 0.0; var pwMax = -1.0; var blocked = 0u; var taken = 0u; var vs = vec2f(0.0);
       for (var si = 0u; si < ns; si++) {
         // adaptive: the budget is only spent where samples disagree (a penumbra). Three stratified samples that all agree
         // — spread across the emitter disk — mean the light is entirely visible or entirely hidden from here; stop.
         if (si >= u32(max(frame.rcJitter.z, 2.0)) && (blocked == 0u || blocked == taken)) { break; }   // (>= 2: one sample cannot 'agree'; the stop rule biases faint penumbra tails slightly toward fully lit/dark)
-        let vs = shadowSample(li, Po, N, owner, si, ns, u0);
+        vs = shadowSample(li, Po, N, owner, si, ns, u0);
         vsum += vs.x; taken++;
         if (vs.y >= 0.0) { pwMax = max(pwMax, vs.y); blocked++; }
         if (vs.y == SOFT_CLEAR_Y) { softC[c] = true; }
       }
-      var fS = f;
-      if (vsum > 0.0) { let gm = wgGlass[u32(pk.idx)]; if (gm != 0u) { fS = f * glassVis(li, gm, P); } }   // glass: a leader that actually REACHES this pixel (some sample lit) through a pane arrives tinted by it — a visibility factor, S only (U keeps the untinted light: the ratio filter smooths the tint's edge like a penumbra's); nothing asked for a blocked light or one with no pane in reach
-      leadS += fS * (vsum / f32(taken));
-      // penumbra hint only when this pixel actually straddles the shadow edge (some samples blocked, some not) or is fully
-      // blocked (then the width tells the filter how far the lit side may be): PCSS width from the blocker distance
-      if (blocked > 0u) { blurPx[c] = max(blurPx[c], max(0.75, pwMax * pxPerMetre * min(1.0, luminance(f) / W[c] * 2.0))); }
-    }
-    // tail = class total minus leaders. Worth a ray (≥ 2 % of the class): credited with the visibility of ONE importance-picked tail
-    // light (one emitter sample) — unbiased in LUMINANCE for Σ_tail E·V (chroma stays the unshadowed tail's aggregate hue: differently
-    // coloured tail lights with different visibility come out at the right brightness, mixed colour; the per-channel-unbiased E_pick·V/p
-    // form exceeds U per channel and would fight the filter's S≤U ratio clamp — a queued follow-up), and noise-free wherever the tail
-    // shares one fate (the filter / history take the rest). Negligible tails ride on the leaders' aggregate visibility (smooth, no ray).
-    let tail = max(U[c] - leadU - Uw[c], vec3f(0.0));   // the live tail: walled-off lights (Uw) are dark by proof, not by the pick's luck
-    var visTail = clamp(leadS / max(leadU, vec3f(1e-4)), vec3f(0.0), vec3f(1.0));
-    var tailS = tail * visTail;
-    if (pickT[c] >= 0 && luminance(tail) >= 0.02 * W[c]) {
-      let li = wgLights[u32(pickT[c])];
-      let vs = shadowSample(li, Po, N, owner, 0u, 1u, vec2f(rnd(), rnd()));
-      if ((frame.flags & FLAG_TAIL_CHROMA) != 0u) {
-        // per-channel unbiased form: this light's OWN colour, weighted by 1/p (p = its share of the tail's score). Single samples exceed U per
-        // channel (the filter's ratio clamp is opened up for it); exact in expectation for every channel, chroma noise where the tail mixes hues.
-        let ev = evalLight(li, P, N); let w = luminance(ev.E);
-        tailS = select(vec3f(0.0), min(ev.E * (vs.x * sumT[c] / max(w, 1e-6)), 4.0 * tail), w > 0.0);   // bounded at 4× the unshadowed tail per channel HERE, so every consumer (the filter's exact shortcut and its ratio path alike) sees one distribution — a small energy loss on saturated minority lights instead of a desaturated band along the penumbra hints
+      if (k < K) {
+        var fS = f;
+        if (vsum > 0.0) { let gm = wgGlass[pkIdx]; if (gm != 0u) { fS = f * glassVis(li, gm, P); } }   // glass: a leader that actually REACHES this pixel (some sample lit) through a pane arrives tinted by it — a visibility factor, S only (U keeps the untinted light: the ratio filter smooths the tint's edge like a penumbra's); nothing asked for a blocked light or one with no pane in reach
+        leadS += fS * (vsum / f32(taken));
+        // penumbra hint only when this pixel actually straddles the shadow edge (some samples blocked, some not) or is fully
+        // blocked (then the width tells the filter how far the lit side may be): PCSS width from the blocker distance
+        if (blocked > 0u) { blurPx[c] = max(blurPx[c], max(0.75, pwMax * pxPerMetre * min(1.0, luminance(f) / W[c] * 2.0))); }
       } else {
-        tailS = tail * vs.x;   // luminance-unbiased, bounded by U: the tail keeps its aggregate hue
+        if ((frame.flags & FLAG_TAIL_CHROMA) != 0u) {
+          // per-channel unbiased form: this light's OWN colour, weighted by 1/p (p = its share of the tail's score). Single samples exceed U per
+          // channel (the filter's ratio clamp is opened up for it); exact in expectation for every channel, chroma noise where the tail mixes hues.
+          let ev = evalLight(li, P, N); let w = luminance(ev.E);
+          tailS = select(vec3f(0.0), min(ev.E * (vs.x * sumT[c] / max(w, 1e-6)), 4.0 * tail), w > 0.0);   // bounded at 4× the unshadowed tail per channel HERE, so every consumer (the filter's exact shortcut and its ratio path alike) sees one distribution — a small energy loss on saturated minority lights instead of a desaturated band along the penumbra hints
+        } else {
+          tailS = tail * vs.x;   // luminance-unbiased, bounded by U: the tail keeps its aggregate hue
+        }
+        if (vs.y >= 0.0) { blurPx[c] = max(blurPx[c], max(0.75, vs.y * pxPerMetre * min(1.0, luminance(tail) / W[c] * 2.0))); }   // a blocked tail ray is a penumbra measurement too
       }
-      if (vs.y >= 0.0) { blurPx[c] = max(blurPx[c], max(0.75, vs.y * pxPerMetre * min(1.0, luminance(tail) / W[c] * 2.0))); }   // a blocked tail ray is a penumbra measurement too
-      if (vs.y == SOFT_CLEAR_Y) { softC[c] = true; }
     }
     S[c] = leadS + tailS;
   }

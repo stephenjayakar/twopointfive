@@ -716,26 +716,21 @@ fn compositePixel(pix0: vec2f) -> vec3f {
   let depth = textureLoad(gDepth, pix, 0);
   var color: vec3f;
   let dbg = frame.debugView;
+  // the tail both branches end with (beams, fire, the volumetrics, the weather's veil), run ONCE below on the branch's ray: the compile — DXC, Chrome's compiler on Windows,
+  // inlines every call, and the two copies of the fire's look alone were ~160 KB of inlined text. rdT / tT = the view ray and how far it goes (the sky: 1e4); dirS = the
+  // pixel's own ray to its surface (the veil's); zg / Ng / id / moved = the surface's keys (unset on the sky)
+  var rdT = vec3f(0.0); var tT = 1e4; var dirS = vec3f(0.0); var zg = 0.0; var Ng = vec3f(0.0); var id = 0u; var moved = false;
   if (depth >= 1.0) {
     // background: sky through the view ray
     let Pfar = worldFromDepth(pixf, 1.0);
     color = skyRadiance(normalize(Pfar - frame.camPos));
-    if (dbg == 0u && beams.n > 0u && (beams.p0 & 2u) != 0u) { color += beamAir(frame.camPos, normalize(Pfar - frame.camPos), 1e4, beamPix()); }
-    if (dbg == 0u && beams.fireN.x > 0u) { color = fireOver(color, pixf, normalize(Pfar - frame.camPos), 1e4); }
-    if (dbg == 0u || dbg == 5u) {
-      if ((frame.flags & FLAG_FROXEL_VOL) != 0u) { let vol = froxelVol(pixf, pix, pin, 1e4); color = color * vol.a + vol.rgb; }   // (view 5 keeps the sky under the volumetrics here, as the old path always did)
-      else {
-      let vol = upsampleVol(pix, pin, 1e4);
-      color = color * vol.a + vol.rgb;
-      }
-    }
-    if (WX_KINDS && !WX_VOL) { if (frame.cardCfg.w != 0u && dbg == 0u) { color = wxFogApply(color, normalize(Pfar - frame.camPos), 0.0, true); } }   // WEATHER FOG (a kind picked, game/weatherKinds.ts): over the void past the lot as over the ground beside it
+    rdT = normalize(Pfar - frame.camPos);
   } else {
     // Where the surface this pixel shows is READ: under the pixel — or, through REFRACTING glass (GLASS_REFRACT: passes.ts compiles this module a second time with it true, taken while
     // settings.glassRefract; false = every statement below exactly as it was, the frame hash for hash), where the ray the glass bent comes out behind it. So the glass test runs FIRST there:
     // the pixel's own ray (P0 / z0 / V) meets the nearest pane, glassRefractPath bends it through that box, refractedRead finds the pixel it lands on (sPix), and the tint, the cracks and the
     // pane's own terms are settled before anything is read; the tail then keys the panes' reflection field and the fog on the PIXEL (zg / Ng), the shading on what is read.
-    var sPix = pix; var sPixf = pixf; var sPin = pin; var sDepth = depth; var moved = false; var N0 = vec3f(0.0); var z0 = 0.0;
+    var sPix = pix; var sPixf = pixf; var sPin = pin; var sDepth = depth; var N0 = vec3f(0.0); var z0 = 0.0;
     var glassT = vec3f(1.0); var glassPix = false;
     var specK = 1.0; var crackL = vec3f(0.0);   // the cracks' share (FLAG_DECALS × FLAG_GLASS): × the pane's reflection along crack lines, + what the crack star and its collar scatter toward the eye
     if (GLASS_REFRACT) {
@@ -781,7 +776,7 @@ fn compositePixel(pix0: vec2f) -> vec3f {
     let albedo4 = textureLoad(gAlbedo, sPix, 0);
     let albedo = albedo4.rgb;                   // (.a = the decals' gloss-keep: exactly 1 unless a mark's soot lies on this pixel — gbuffer.wgsl fsBox)
     let N = normalize(textureLoad(gNormal, sPix, 0).xyz * 2.0 - 1.0);
-    let id = textureLoad(gId, sPix, 0).x;
+    id = textureLoad(gId, sPix, 0).x;
     let boxIdx = id & 0xFFFFFu;
     let P = worldFromDepth(sPixf, sDepth);
     let z = distance(P, frame.camPos);
@@ -837,7 +832,7 @@ fn compositePixel(pix0: vec2f) -> vec3f {
         }
       }
     }
-    var zg = z; var Ng = N;                     // the panes' reflection field and the fog key on the PIXEL — its own distance, the normal AT it — not on what a bend read (≡ z / N unless GLASS_REFRACT moved the read)
+    zg = z; Ng = N;                             // the panes' reflection field and the fog key on the PIXEL — its own distance, the normal AT it — not on what a bend read (≡ z / N unless GLASS_REFRACT moved the read)
     if (GLASS_REFRACT) { zg = z0; Ng = select(N, N0, moved); }
     var dif = albedo * (Ed + Ei) * (1.0 / PI);   // (the old product, untouched: the pass-off frame hashes identical to main — docs/internal/p4-materials.md §5)
     var sparkle = vec3f(0.0);                    // SNOW SPARKLE (snowSparkleFacet above): the facets' flashes at this pixel — zero unless SNOW_SPARKLE, on lit fresh snow
@@ -874,22 +869,27 @@ fn compositePixel(pix0: vec2f) -> vec3f {
     else if (dbg == 13u) { color = textureLoad(directTex, pix, 0).rgb; }   // the v3 denoiser's shadow-client state, written raw into the sharp class's texture by its last iteration (denoise.wgsl DN_DEBUG_VIEW): r/g = σ per class, b = history length
     else if (dbg == 16u) { color = Ei; }                            // phase 5: the resampling gather's reservoir state (fgather.wgsl mainGi writes it into the indirect, through the diffuse denoiser): r = confidence M ÷ cap, g = temporal history taken, b = spatial taps accepted ÷ k — the plain indirect with resampling off
     else if (dbg == 17u) { color = select(vec3f(0.0), upsampleRefl(pixf), frame.rtCfg.w >= 1.0); }   // phase 5: the reflection pass's raw output as the composite fetches it (no cutoff fade / gloss-keep) — the mesh hits and the hit-lighting reuse are judged here
-    if (dbg == 0u && beams.n > 0u && (beams.p0 & 2u) != 0u) { color += beamAir(frame.camPos, normalize(worldFromDepth(pixf, 0.5) - frame.camPos), zg, beamPix()); }
-    if (dbg == 0u && beams.fireN.x > 0u) { color = fireOver(color, pixf, normalize(worldFromDepth(pixf, 0.5) - frame.camPos), zg); }
-    if (dbg == 0u || dbg == 5u) {
-      if (WX_VOL) { if (WX_KINDS) { if (frame.cardCfg.w != 0u) { wxAirT = wxAirTEst(pixf, zg); } } }
-      if ((frame.flags & FLAG_FROXEL_VOL) != 0u) { let vol = froxelVol(pixf, pix, pin, zg); color = select(color * vol.a + vol.rgb, vol.rgb, dbg == 5u); }   // (the fog along the PIXEL's ray to its own surface — zg — whatever a bend read)
-      else {
-      let vol = upsampleVol(pix, pin, zg);
-      color = select(color * vol.a + vol.rgb, vol.rgb, dbg == 5u);
-      }
-    }
-    if (WX_KINDS && !WX_VOL) { if (frame.cardCfg.w != 0u && dbg == 0u) {   // (the flat veil — under WX_VOL the weather's air is a volume the volumetric pass marched: it is in `vol` above)
-      if (WX_EDGE) {   // (the veil at the building's shell — common.wgsl wxFogApplySurf: an outside wall's face is asked where its normal points; a man's pixel and a box he carries — bit 28 / the owner byte of the PIXEL's own id — where he stands)
-        var idg = id; if (GLASS_REFRACT) { if (moved) { idg = textureLoad(gId, pix, 0).x; } }
-        color = wxFogApplySurf(color, normalize(worldFromDepth(pixf, depth) - frame.camPos), zg, select(Ng.xz, vec2f(0.0), ((idg >> 20u) & 0x1FFu) != 0u));
-      } else { color = wxFogApply(color, normalize(worldFromDepth(pixf, depth) - frame.camPos), zg, false); }
-    } }   // WEATHER FOG along the pixel's ray to its surface: the field the men's eyes are cut by (weather.ts airTrans)
+    rdT = normalize(worldFromDepth(pixf, 0.5) - frame.camPos); tT = zg; dirS = normalize(worldFromDepth(pixf, depth) - frame.camPos);
+
   }
+  // ---- the tail both branches end with, on the branch's ray (see rdT above)
+  let sky = depth >= 1.0;
+  if (dbg == 0u && beams.n > 0u && (beams.p0 & 2u) != 0u) { color += beamAir(frame.camPos, rdT, tT, beamPix()); }
+  if (dbg == 0u && beams.fireN.x > 0u) { color = fireOver(color, pixf, rdT, tT); }
+  if (dbg == 0u || dbg == 5u) {
+    if (!sky) { if (WX_VOL) { if (WX_KINDS) { if (frame.cardCfg.w != 0u) { wxAirT = wxAirTEst(pixf, zg); } } } }
+    // (on a surface the fog along the PIXEL's ray to its own surface — zg — whatever a bend read; view 5 keeps the sky under the volumetrics, as the old path always did)
+    if ((frame.flags & FLAG_FROXEL_VOL) != 0u) { let vol = froxelVol(pixf, pix, pin, tT); color = select(color * vol.a + vol.rgb, vol.rgb, dbg == 5u && !sky); }
+    else {
+    let vol = upsampleVol(pix, pin, tT);
+    color = select(color * vol.a + vol.rgb, vol.rgb, dbg == 5u && !sky);
+    }
+  }
+  if (WX_KINDS && !WX_VOL) { if (frame.cardCfg.w != 0u && dbg == 0u) {   // WEATHER FOG (a kind picked, game/weatherKinds.ts) along the pixel's ray to its surface: the field the men's eyes are cut by (weather.ts airTrans); over the void past the lot as over the ground beside it. (The flat veil — under WX_VOL the weather's air is a volume the volumetric pass marched: it is in `vol` above)
+    if (WX_EDGE && !sky) {   // (the veil at the building's shell — common.wgsl wxFogApplySurf: an outside wall's face is asked where its normal points; a man's pixel and a box he carries — bit 28 / the owner byte of the PIXEL's own id — where he stands)
+      var idg = id; if (GLASS_REFRACT) { if (moved) { idg = textureLoad(gId, pix, 0).x; } }
+      color = wxFogApplySurf(color, dirS, zg, select(Ng.xz, vec2f(0.0), ((idg >> 20u) & 0x1FFu) != 0u));
+    } else { color = wxFogApply(color, select(dirS, rdT, sky), select(zg, 0.0, sky), sky); }
+  } }
   return max(color, vec3f(0.0));
 }

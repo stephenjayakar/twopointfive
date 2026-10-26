@@ -101,7 +101,13 @@ struct RigHit { t: f32, ch: i32 };
 fn rigNormal(base: u32, p: vec3f, kS: f32) -> vec3f {
   let e = 0.002;
   let k0 = vec3f(1.0, -1.0, -1.0); let k1 = vec3f(-1.0, -1.0, 1.0); let k2 = vec3f(-1.0, 1.0, -1.0); let k3 = vec3f(1.0, 1.0, 1.0);
-  let n = k0 * charSdf(base, p + k0 * e, kS) + k1 * charSdf(base, p + k1 * e, kS) + k2 * charSdf(base, p + k2 * e, kS) + k3 * charSdf(base, p + k3 * e, kS);
+  // (the four taps through ONE charSdf call, summed in the same order: DXC — Chrome's compiler on Windows — inlines each call it meets)
+  var n = vec3f(0.0);
+  for (var q = 0u; q < 4u; q++) {
+    let k = select(select(select(k3, k2, q == 2u), k1, q == 1u), k0, q == 0u);
+    let t = k * charSdf(base, p + k * e, kS);
+    n = select(n + t, t, q == 0u);
+  }
   return normalize(n);
 }
 fn rigClosest(ro: vec3f, rd: vec3f, tmax: f32, skipOwner: u32) -> RigHit {

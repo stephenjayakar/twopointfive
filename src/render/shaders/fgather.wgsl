@@ -23,7 +23,7 @@ struct GiYoung { count: atomic<u32>, pad0: u32, pad1: u32, pad2: u32 };
 override RAYS: u32 = 4u;
 const TMAX: f32 = 40.0;
 const CARD_MIN_E: f32 = 0.002;       // torch bounce cards: below this much unshadowed card irradiance (W/m², all cards) a pixel takes it without a shadow ray — under a percent of display white after the tonemap on any albedo, where a bounce shadow cannot be seen (the direct pass credits negligible tails unshadowed the same way)
-// glossy floors (FLAG_GLOSS, glossReflection below)
+// glossy floors (FLAG_GLOSS, glossRay / mirrorTail below)
 const GLOSS_F0: f32 = 0.04;          // dielectric finish (stone sealer, waxed lino) at normal incidence — Schlick takes it to ~0.044 at this camera's 35-50° and 0.10 at 65°
 const GLOSS_STRENGTH: f32 = 0.85;    // fraction of an ideal Fresnel coat the finish keeps (scuffs, dust)
 const GLOSS_SPREAD: f32 = 0.0437;    // tan 2.5°: the mirror ray is jittered uniformly over a cone of this half-angle — a slightly rough polish; the specular history + one à-trous pass integrate it
@@ -62,7 +62,7 @@ fn cosineDirK(N: vec3f, k: u32, K: u32) -> vec3f {
   return normalize(T * (cos(a) * r) + B * (sin(a) * r) + N * sqrt(max(1.0 - u, 0.0)));
 }
 
-// ---- glossy floors (FLAG_GLOSS): glossReflection below, and the two helpers it needs ----
+// ---- glossy floors (FLAG_GLOSS): the mirror ray (glossRay, traced in main's loop, mirrorTail), and the two helpers it needs ----
 // Fraction of a disc of (angular) radius a covered by a disc of radius b whose centre lies g away — plain circle–circle overlap over pi·a²
 // (small angles: the lobe and an emitter's outline treated as flat discs on the sphere). Concentric → min(1, b²/a²); apart → 0; smooth between.
 fn discOverlap(a: f32, b: f32, g: f32) -> f32 {
@@ -123,53 +123,9 @@ fn glossGlints(Po: vec3f, R: vec3f, owner: u32) -> vec3f {
 // Fresnel on the VIEW angle × the finish's strength. It is specular — never multiplied by the floor's albedo — so it leaves through its own
 // texture (outSpecular → history + one à-trous pass in passes.ts → composite adds it after the diffuse terms). Called after the gather's
 // rays: two rnd() for the cone plus whatever directAtPoint's pick draws, none of which the indirect estimate ever sees.
-// The hit distance of the last reflection ray traced for this texel (glossReflection / glassShade write it; main stores it in outSpecular.a for the v3 denoiser's specular client —
+// The hit distance of the last reflection ray traced for this texel (mirrorTail writes it; main stores it in outSpecular.a for the v3 denoiser's specular client —
 // its virtual-hit-point reprojection; nothing on the legacy path reads that alpha). Sky / no ray = a large number.
 var<private> specHitT: f32 = 1e4;
-fn glossReflection(P: vec3f, owner: u32) -> vec3f {
-  let I = normalize(P - frame.camPos);                 // eye → floor
-  let cosV = clamp(-I.y, 0.0, 1.0);                    // = N·V for the up-facing finish
-  let F = GLOSS_F0 + (1.0 - GLOSS_F0) * pow(1.0 - cosV, 5.0);
-  let R = vec3f(I.x, -I.y, I.z);                       // reflect(I, +y)
-  let up = select(vec3f(0.0, 1.0, 0.0), vec3f(1.0, 0.0, 0.0), abs(R.y) > 0.9);
-  let T = normalize(cross(up, R)); let B = cross(R, T);
-  let r = GLOSS_SPREAD * sqrt(rnd()); let a = rnd() * 6.2831853;
-  var dir = normalize(R + (T * cos(a) + B * sin(a)) * r);
-  if (dir.y < 0.02) { dir = R; }                       // (only a grazing eye could push the cone under the floor; this camera never does)
-  let Po = P + vec3f(0.0, 0.02, 0.0);
-  let hit = traceClosest(Po, dir, TMAX, owner);
-  var L = vec3f(0.0);
-  specHitT = select(1e4, hit.t, hit.idx >= 0);
-  if (hit.idx < 0) { L = skyRadiance(dir); }
-  else if (!hit.inside) {
-    let Ph = Po + dir * hit.t;
-    var albedo: vec3f;
-    if (hit.idx == CAPSULE_HIT) { albedo = hit.capAlbedo; }
-    else {
-      let bi = u32(hit.idx);
-      if ((boxGeo[bi].flags & BOX_EMISSIVE) != 0u) { L += boxEmissive(bi); }   // area-lit or not (see above)
-      albedo = boxAlbedoSec(bi);
-    }
-    var Eh = vec3f(0.0);
-    if ((frame.flags & FLAG_DIRECT) != 0u) { Eh += directAtPoint(Ph, hit.n, 0u); }   // (no card exclusion: a mirror SHOWS the torch spot on the wall — the cards only stand in for diffuse bounce)
-    if ((frame.flags & FLAG_BOUNCE) != 0u) { Eh += diceIrradiance(Ph + hit.n * c0Spacing(), hit.n); }   // (no walled read here — lighting_common.wgsl BOUNCE WALLS: this program has room for three, and a man mirrored in a floor or a pane is the least of them)
-    L += albedo * Eh * (1.0 / 3.14159265);
-  }
-  let lum = luminance(L);
-  L = select(L, L * (GLOSS_RAY_MAX / lum), lum > GLOSS_RAY_MAX);        // the traced ray: the gather's firefly bound (a lit panel ≈ 11 passes whole, a spark streak does not)
-  if ((frame.flags & FLAG_DIRECT) != 0u) {
-    var G = glossGlints(Po, R, owner);
-    let lg = luminance(G);
-    G = select(G, G * (GLOSS_GLINT_MAX / lg), lg > GLOSS_GLINT_MAX);   // the analytic glints: stable, so allowed to read as white
-    L += G;
-  }
-  // the wet lot (game/weather.ts: frame.weatherA.w = wetness, weatherC = the interior footprint): standing water outdoors mirrors far more than a polish —
-  // up to 3.5× the coat's Fresnel at full wet, capped at a full mirror (a grazing spectate camera would otherwise reflect more than arrives), nothing indoors
-  // or dry (w = 0: min(F, 1) = F, so this line multiplies by exactly what it always did)
-  let Wc = frame.weatherC; var wetOut = select(0.0, frame.weatherA.w, P.x < Wc.x || P.z < Wc.y || P.x > Wc.z || P.z > Wc.w);
-  if (WX_KINDS) { if (frame.cardCfg.y != 0u && wxRoofed(P.xz)) { wetOut = 0.0; } }   // (weather kinds: every roof of the level keeps its floor dry, not the first alone)
-  return L * (min(F * (1.0 + 2.5 * wetOut), 1.0) * GLOSS_STRENGTH);
-}
 
 // ---- torch bounce cards (FLAG_BOUNCE_CARDS): the cards' light at the shading point P (normal N) ----
 // Per live card: the patch as FOUR sub-emitters at its flux RMS radius rq round its flux centroid Cq (cards.wgsl), each a quarter of Φ_L (= radiance × area)
@@ -262,49 +218,12 @@ fn glassDust(Pg: vec3f, n: vec3f) -> vec3f {
 // G-buffer is what stands behind the pane; composite tints it), so this is the mirror image + the glints + the dust glow, all additive, leaving through the
 // same specular texture / history / à-trous pass as the glossy floors. ----
 const GLASS_DUST: f32 = 0.035;       // albedo of the grime film on a pane: the share of the light ARRIVING at the glass (either face) it scatters diffusely — what makes a torch beam or a lit panel show on the glass itself; × frame.glassCfg.z
-// Pg = the crossing point, n = the pane's normal on the eye's side, V = the view direction (eye → scene). One mirror ray (the exact reflection: float glass is
-// flat to well under a pixel — no cone, so nothing for the history to integrate but the hit's own shading noise), shaded like a gather hit exactly as
-// glossReflection does (emission INCLUDING area-lit fixtures: a mirror shows the glowing panel itself; albedo/π × (direct at the hit + the cached bounce); the sky
+// The pane's terms (traced in main's / mainGi's loop: the turn after the gloss floor's): at the crossing point Pg (n = the pane's normal on the eye's side, V = the view direction, eye → scene), one mirror ray (the exact reflection: float glass is
+// flat to well under a pixel — no cone, so nothing for the history to integrate but the hit's own shading noise), shaded as the gloss floor's mirror ray is
+// (traceShade's mirror rules: emission INCLUDING area-lit fixtures: a mirror shows the glowing panel itself; albedo/π × (direct at the hit + the cached bounce); the sky
 // on a miss), plus glossGlints' analytic image of the small emitters no ray can find, × Schlick's Fresnel at the view angle (n = 1.5) × the strength knob; then
 // the dust: every steady light's irradiance ON the pane (no receiver cosine but the pane's own projected area, both faces alike), the two strongest shadow-
 // tested (+ smoke), the rest at half credit unshadowed (dim by construction, reach-masked), × GLASS_DUST/π.
-fn glassShade(Pg: vec3f, n: vec3f, V: vec3f) -> vec3f {
-  let cosI = clamp(dot(-V, n), 0.0, 1.0);
-  let F = glassFresnel(cosI) * frame.glassCfg.x;
-  let R = V - n * (2.0 * dot(V, n));
-  let Po = Pg + n * 0.015;
-  var L = vec3f(0.0);
-  if (F > 0.001) {
-    let hit = traceClosest(Po, R, TMAX, 0u);
-    specHitT = select(1e4, hit.t, hit.idx >= 0);
-    if (hit.idx < 0) { L = skyRadiance(R); }
-    else if (!hit.inside) {
-      let Ph = Po + R * hit.t;
-      var albedo: vec3f;
-      if (hit.idx == CAPSULE_HIT) { albedo = hit.capAlbedo; }
-      else {
-        let bi = u32(hit.idx);
-        if ((boxGeo[bi].flags & BOX_EMISSIVE) != 0u) { L += boxEmissive(bi); }   // area-lit or not: the mirror shows the fixture
-        albedo = boxAlbedoSec(bi);
-      }
-      var Eh = vec3f(0.0);
-      if ((frame.flags & FLAG_DIRECT) != 0u) { Eh += directAtPoint(Ph, hit.n, 0u); }   // (no card exclusion, as the gloss ray: a pane's mirror image SHOWS the torch spot on the wall)
-      if ((frame.flags & FLAG_BOUNCE) != 0u) { Eh += diceIrradiance(Ph + hit.n * c0Spacing(), hit.n); }   // (no walled read here — lighting_common.wgsl BOUNCE WALLS: this program has room for three, and a man mirrored in a floor or a pane is the least of them)
-      L += albedo * Eh * (1.0 / 3.14159265);
-    }
-    let lum = luminance(L);
-    L = select(L, L * (GLOSS_RAY_MAX / lum), lum > GLOSS_RAY_MAX);
-    if ((frame.flags & FLAG_DIRECT) != 0u) {
-      var G = glossGlints(Po, R, 0u);
-      let lg = luminance(G);
-      G = select(G, G * (GLOSS_GLINT_MAX / lg), lg > GLOSS_GLINT_MAX);
-      L += G;
-    }
-    L *= F;
-  }
-  L += glassDust(Pg, n);
-  return L;
-}
 
 // ---- GI IN MOTION: the young-history test and the extra ray (docs/internal/gi-motion.md §C; `main` only) ----
 var<workgroup> wgYoungN: atomic<u32>;      // young lanes in this 8×8 tile
@@ -325,35 +244,85 @@ fn youngTexel(P: vec3f) -> bool {
   let zStored = textureLoad(giHistPrev, tex, 0).a;
   return lenPrev < frame.giCfg.z || abs(zStored - pc.w) > 0.03 * pc.w + 0.05;   // (a coarser depth test than the denoiser's own: a texel off by one on a slanted floor must not read as disoccluded — a shin in front of the floor still does)
 }
-/** ONE ray of fgather traced from ro along dir and shaded at its hit: radiance (uncapped) and, in .w, the hit distance as specHitT keeps it (1e4 on a miss). gatherRay = the
- *  diffuse gather's rules (main's loop body and the young tile's extras): emission without the area-lit fixtures, the torch-card exclusion, the bounce read walled or bounded by
- *  the receiver's plane (N, owner, Po: the receiver). Otherwise a mirror ray's (glossReflection / glassShade): every emitter, no card exclusion, the cache's plain read. */
-fn rayShade(ro: vec3f, dir: vec3f, trOwner: u32, gatherRay: bool, N: vec3f, owner: u32, Po: vec3f) -> vec4f {
+/** ONE ray of this pass traced from ro along dir and shaded at its hit (the compile: DXC inlines every call, so every ray of a kernel goes through ONE call of this — main's and
+ *  mainGi's loops). gatherRay = the diffuse gather's rules (main's rays, the young tile's extras, mainGi's fresh candidates): emission without the area-lit fixtures, the
+ *  torch-card exclusion, the bounce read walled or bounded by the receiver's plane (N, owner, Po: the receiver). Otherwise a mirror ray's (the gloss floor, the pane): every
+ *  emitter — a mirror shows the glowing panel itself — no card exclusion (a mirror SHOWS the torch spot on the wall), the cache's plain read (no walled read: a man mirrored in
+ *  a floor or a pane is the least of them). L = the outgoing radiance toward ro, uncapped; Lb = its cache-bounce share (gather rays, never a man's); xs / ns / t = the sample
+ *  point, its normal and distance (a sky sample: ro, the direction, GI_SKY_D); specT = the hit distance as specHitT keeps it (1e4 on a miss); ok = anything but an 'inside' hit;
+ *  cap = the hit is a man; bi / alb = the box hit and its paint (GI_NOBOX / 0 for sky or a man). */
+struct RayHit { L: vec3f, Lb: vec3f, alb: vec3f, xs: vec3f, ns: vec3f, t: f32, specT: f32, sky: bool, ok: bool, cap: bool, bi: u32 };
+fn traceShade(ro: vec3f, dir: vec3f, trOwner: u32, gatherRay: bool, N: vec3f, owner: u32, Po: vec3f) -> RayHit {
+  var r: RayHit; r.L = vec3f(0.0); r.Lb = vec3f(0.0); r.alb = vec3f(0.0); r.xs = ro; r.ns = dir; r.t = GI_SKY_D; r.sky = false; r.ok = false; r.cap = false; r.bi = GI_NOBOX;
   let hit = traceClosest(ro, dir, TMAX, trOwner);
+  r.specT = select(1e4, hit.t, hit.idx >= 0);
   var L = vec3f(0.0);
-  if (hit.idx < 0) { L = skyRadiance(dir); }
+  if (hit.idx < 0) { L = skyRadiance(dir); r.sky = true; r.ok = true; }
   else if (!hit.inside) {
     let Ph = ro + dir * hit.t;
+    r.ok = true; r.xs = Ph; r.ns = hit.n; r.t = hit.t;
     var albedo: vec3f;
-    var ex = 0u;   // torch bounce cards whose claim region this hit lies in: their lights' direct terms here are the cards' to carry (empty loop with the flag off; never on a mirror ray: a mirror SHOWS the torch spot on the wall)
-    if (hit.idx == CAPSULE_HIT) { albedo = hit.capAlbedo; }
+    var ex = 0u;   // torch bounce cards whose claim region this hit lies in: their lights' direct terms here are the cards' to carry (empty loop with the flag off)
+    if (hit.idx == CAPSULE_HIT) { albedo = hit.capAlbedo; r.cap = true; }
     else {
-      let bi = u32(hit.idx);
-      if (gatherRay) {
-        if ((boxGeo[bi].flags & (BOX_EMISSIVE | BOX_AREALIT)) == BOX_EMISSIVE) { L += boxEmissive(bi); }
-      } else if ((boxGeo[bi].flags & BOX_EMISSIVE) != 0u) { L += boxEmissive(bi); }   // a mirror: area-lit or not, it shows the fixture
-      albedo = boxAlbedoSec(bi);
+      let bi = u32(hit.idx); r.bi = bi;
+      if (gatherRay) { if ((boxGeo[bi].flags & (BOX_EMISSIVE | BOX_AREALIT)) == BOX_EMISSIVE) { L += boxEmissive(bi); } }
+      else if ((boxGeo[bi].flags & BOX_EMISSIVE) != 0u) { L += boxEmissive(bi); }
+      albedo = boxAlbedoSec(bi); r.alb = albedo;
       if (gatherRay) { for (var k = 0u; k < nC; k++) { if (onCard(Ph, hit.n, wgCards[k * 4u], wgCards[k * 4u + 1u])) { ex |= 1u << k; } } }
     }
     var Eh = vec3f(0.0);
     if ((frame.flags & FLAG_DIRECT) != 0u) { Eh += directAtPoint(Ph, hit.n, ex); }
     if ((frame.flags & FLAG_BOUNCE) != 0u) {
-      if (gatherRay) { if (BOUNCE_WALLS && (bounceHitMan(hit) || bounceLeftNoWall(N, owner, hit.t))) { Eh += diceIrradianceWalled(Ph, hit.n, bounceHitOwner(hit) | (owner << 8u)); } else { Eh += diceIrradianceFrom(Ph, hit.n, Po, N); } }
-      else { Eh += diceIrradiance(Ph + hit.n * c0Spacing(), hit.n); }   // (no walled read on a mirror ray — lighting_common.wgsl BOUNCE WALLS: a man mirrored in a floor or a pane is the least of them)
+      if (gatherRay) {
+        var Eb: vec3f;
+        if (BOUNCE_WALLS && (bounceHitMan(hit) || bounceLeftNoWall(N, owner, hit.t))) { Eb = diceIrradianceWalled(Ph, hit.n, bounceHitOwner(hit) | (owner << 8u)); } else { Eb = diceIrradianceFrom(Ph, hit.n, Po, N); }
+        Eh += Eb; if (!r.cap) { r.Lb = albedo * Eb * (1.0 / 3.14159265); }
+      } else { Eh += diceIrradiance(Ph + hit.n * c0Spacing(), hit.n); }
     }
     L += albedo * Eh * (1.0 / 3.14159265);
   }
-  return vec4f(L, select(1e4, hit.t, hit.idx >= 0));
+  r.L = L;
+  return r;
+}
+/** is this texel the polished top of a BOX_GLOSS floor box — a world box (not a character), flagged, seen from above (on = the gloss floors are up) */
+fn specOnGloss(on: bool, id: u32, N: vec3f) -> bool { let bidx = id & 0xFFFFFu; return on && ((id >> 28u) & 1u) == 0u && bidx != 0xFFFFFu && (boxGeo[bidx].flags & BOX_GLOSS) != 0u && N.y > 0.95; }
+/** the gloss floor's mirror ray at P (its two rnd() for the cone): Schlick on the VIEW angle, the unjittered mirror direction R (the glints'), the jittered ray */
+struct GlossRay { F: f32, R: vec3f, dir: vec3f };
+fn glossRay(P: vec3f) -> GlossRay {
+  var g: GlossRay;
+  let I = normalize(P - frame.camPos);                 // eye → floor
+  let cosV = clamp(-I.y, 0.0, 1.0);                    // = N·V for the up-facing finish
+  g.F = GLOSS_F0 + (1.0 - GLOSS_F0) * pow(1.0 - cosV, 5.0);
+  g.R = vec3f(I.x, -I.y, I.z);                         // reflect(I, +y)
+  let up = select(vec3f(0.0, 1.0, 0.0), vec3f(1.0, 0.0, 0.0), abs(g.R.y) > 0.9);
+  let T = normalize(cross(up, g.R)); let B = cross(g.R, T);
+  let r = GLOSS_SPREAD * sqrt(rnd()); let a = rnd() * 6.2831853;
+  g.dir = normalize(g.R + (T * cos(a) + B * sin(a)) * r);
+  if (g.dir.y < 0.02) { g.dir = g.R; }                 // (only a grazing eye could push the cone under the floor; this camera never does)
+  return g;
+}
+/** a mirror ray's radiance once traced (r): the traced ray under the gather's firefly bound (a lit panel ≈ 11 passes whole, a spark streak does not) + the analytic glints of
+ *  the small emitters no ray can see (glossGlints from ro about the mirror direction R: stable, so allowed to read as white), then — the gloss floor — Schlick's Fresnel × the
+ *  finish's strength, more on the wet lot (game/weather.ts: frame.weatherA.w = wetness, weatherC = the interior footprint: standing water outdoors mirrors up to 3.5× the coat's
+ *  Fresnel at full wet, capped at a full mirror, nothing indoors or dry — w = 0: min(F, 1) = F), or — the pane — its Fresnel F. Sets specHitT. */
+fn mirrorTail(r: RayHit, ro: vec3f, R: vec3f, trOwner: u32, F: f32, isGloss: bool, P: vec3f) -> vec3f {
+  specHitT = r.specT;
+  var L = r.L;
+  let lum = luminance(L);
+  L = select(L, L * (GLOSS_RAY_MAX / lum), lum > GLOSS_RAY_MAX);
+  if ((frame.flags & FLAG_DIRECT) != 0u) {
+    var G = glossGlints(ro, R, trOwner);
+    let lg = luminance(G);
+    G = select(G, G * (GLOSS_GLINT_MAX / lg), lg > GLOSS_GLINT_MAX);
+    L += G;
+  }
+  if (isGloss) {
+    let Wc = frame.weatherC; var wetOut = select(0.0, frame.weatherA.w, P.x < Wc.x || P.z < Wc.y || P.x > Wc.z || P.z > Wc.w);
+    if (WX_KINDS) { if (frame.cardCfg.y != 0u && wxRoofed(P.xz)) { wetOut = 0.0; } }   // (weather kinds: every roof of the level keeps its floor dry, not the first alone)
+    return L * (min(F * (1.0 + 2.5 * wetOut), 1.0) * GLOSS_STRENGTH);
+  }
+  return L * F;
 }
 
 @compute @workgroup_size(8, 8)
@@ -399,7 +368,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
   let full = min(gid.xy * gdiv + (gdiv - 1u) / 2u, vec2u(frame.screen) - 1u);   // the full-res pixel a texel is computed at: top-left of its 2x2 as always (the min never binds then), the centre of its 3x3
   let depth = textureLoad(gDepth, full, 0);
   let gloss = (frame.flags & FLAG_GLOSS) != 0u;   // glossy floors ride in this pass (they want its tracer, its light staging and its cache reads): every texel then also gets a specular value — zero unless it is a gloss floor — so the filter chain behind outSpecular sees a fully written field; flag off = no store at all (and, like the bounce, no reflections while indirect light is switched off)
-  let glassOn = (frame.flags & FLAG_GLASS) != 0u; // glass panes ride here for the same reasons and leave through the same texture (glassShade above): the specular field is written whenever EITHER is on
+  let glassOn = (frame.flags & FLAG_GLASS) != 0u; // glass panes ride here for the same reasons and leave through the same texture (glassDust above): the specular field is written whenever EITHER is on
   let specOn = gloss || glassOn;
   if (depth >= 1.0 || (frame.flags & FLAG_INDIRECT) == 0u) { textureStore(outIndirect, gid.xy, vec4f(0.0)); if (specOn) { textureStore(outSpecular, gid.xy, vec4f(0.0)); } return; }
   rngInit(gid.xy, frame.frameIdx);
@@ -418,7 +387,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
   if (Kff > 0.0) { let Eref = diceIrradiance(P + N * c0Spacing(), N); Lcap = max(Kff * luminance(Eref) * (1.0 / 3.14159265), 0.35); }
   // ONE LOOP, ONE RAY A TURN (the compile, 2026-10-26: Chrome on Windows compiles through DXC, which inlines every call — this kernel traced and shaded a ray in four
   // places (the gather's loop, the young tile's extras, the gloss floor's mirror, the pane's mirror), so the tracer and directAtPoint were inlined four times and the
-  // compile took ~8 s). Every ray this texel traces is now a turn of the loop below and is traced and shaded by the ONE call of rayShade: turns [0, RAYS) are the
+  // compile took ~8 s). Every ray this texel traces is now a turn of the loop below and is traced and shaded by the ONE call of traceShade: turns [0, RAYS) are the
   // gather's rays, [RAYS, raysN) the young tile's extras, turn raysN the gloss floor's mirror ray and turn raysN + 1 the pane's. The statements are the old ones in
   // the old order (the indirect is normalised, the cards added and the indirect stored between the two parts, as before), so every rnd() is drawn in the same order
   // and the values are what they were.
@@ -426,10 +395,10 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
   var Ex = vec3f(0.0);
   var spec = vec3f(0.0);
   for (var j = 0u; j < raysN + 2u; j++) {
-    var ro = Po; var dir = vec3f(0.0); var trOwner = owner; var gatherRay = true; var live = true;
+    var ro = Po; var dir = vec3f(0.0); var trOwner = owner; var gatherRay = true; var go = true;
     var Rm = vec3f(0.0); var Fm = 0.0; var paneHit = false; var Pg = vec3f(0.0); var gn = vec3f(0.0);
     if (j < RAYS) { dir = cosineDirK(N, j, RAYS); }   // (= cosineDir(N) unless GATHER_STRATA: ray k from stratum (k + frame) mod 4 — settings.gatherStrata)
-    else if (j < raysN) { dir = cosineDirK(N, j - RAYS, raysN - RAYS); }   // GI in motion: extra ray kx of the Kx the young texel takes (a complete stratified set of their own under GATHER_STRATA)
+    else if (j < raysN) { dir = cosineDirK(N, j - RAYS, raysN - RAYS); }   // GI in motion: extra ray kx of the Kx the young texel takes (under GATHER_STRATA a complete stratified set of their own: the base rays cover their 2 × 2 cells, these cover theirs, so the whole remains an unbiased cosine estimate)
     else if (j == raysN) {
       // cosine-weighted pdf = cos/pi  ⇒  E = pi/K · Σ L
       E *= 3.14159265 / f32(RAYS);
@@ -437,69 +406,32 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
       if (raysN > RAYS) { E = (E * (f32(RAYS) / 3.14159265) + Ex) * (3.14159265 / f32(raysN)); }
       if (nC > 0u && (frame.flags & FLAG_DIRECT) != 0u) { E += cardIrradiance(P, N, Po, owner, gid.xy); }   // torch bounce cards: the footprints' one bounce, analytic (after the rays: their rnd() sequence is untouched)
       textureStore(outIndirect, gid.xy, vec4f(E * frame.indirectScale, 1.0));
-      // AFTER the gather's rays and its store: the indirect estimate is value for value what it is with both flags off. The gloss floor (glossReflection's statements):
-      // a world box (not a character), flagged, seen from above: its polished top face
-      let bidx = id & 0xFFFFFu;
-      live = specOn && gloss && ((id >> 28u) & 1u) == 0u && bidx != 0xFFFFFu && (boxGeo[bidx].flags & BOX_GLOSS) != 0u && N.y > 0.95;
-      if (live) {
-        let I = normalize(P - frame.camPos);                 // eye → floor
-        let cosV = clamp(-I.y, 0.0, 1.0);                    // = N·V for the up-facing finish
-        Fm = GLOSS_F0 + (1.0 - GLOSS_F0) * pow(1.0 - cosV, 5.0);
-        Rm = vec3f(I.x, -I.y, I.z);                          // reflect(I, +y)
-        let up = select(vec3f(0.0, 1.0, 0.0), vec3f(1.0, 0.0, 0.0), abs(Rm.y) > 0.9);
-        let T = normalize(cross(up, Rm)); let B = cross(Rm, T);
-        let r = GLOSS_SPREAD * sqrt(rnd()); let a = rnd() * 6.2831853;
-        dir = normalize(Rm + (T * cos(a) + B * sin(a)) * r);
-        if (dir.y < 0.02) { dir = Rm; }                      // (only a grazing eye could push the cone under the floor; this camera never does)
-        ro = P + vec3f(0.0, 0.02, 0.0);
-        gatherRay = false;
-      }
+      // AFTER the gather's rays and its store (the indirect estimate is value for value what it is with both flags off): the gloss floor's mirror ray
+      go = specOnGloss(specOn && gloss, id, N);
+      if (go) { let gm = glossRay(P); Fm = gm.F; Rm = gm.R; dir = gm.dir; ro = P + vec3f(0.0, 0.02, 0.0); gatherRay = false; }
     } else {
-      // a pane between the eye and this texel's surface: what it adds toward the eye at the crossing (the nearest pane only reflects; composite tints for every one crossed) — glassShade's statements
-      live = false;
+      // a pane between the eye and this texel's surface: what it adds toward the eye at the crossing (the nearest pane only reflects; composite tints for every one crossed):
+      // the exact mirror ray (float glass is flat to well under a pixel) × Schlick at the view angle (n = 1.5) × the strength knob, + the dust (glassDust)
+      go = false;
       if (specOn && glassOn) {
         let toP = P - frame.camPos; let dist = length(toP); let V = toP / max(dist, 1e-4);
         let gh = glassTrace(frame.camPos, V, 0.0, dist - 0.02);
-        if (gh.idx >= 0) {
-          paneHit = true; Pg = frame.camPos + V * gh.t; gn = gh.n;
-          let cosI = clamp(dot(-V, gn), 0.0, 1.0);
-          Fm = glassFresnel(cosI) * frame.glassCfg.x;
-          Rm = V - gn * (2.0 * dot(V, gn));
-          ro = Pg + gn * 0.015; dir = Rm; trOwner = 0u; gatherRay = false;
-          live = Fm > 0.001;
-        }
+        if (gh.idx >= 0) { paneHit = true; Pg = frame.camPos + V * gh.t; gn = gh.n; Fm = glassFresnel(clamp(dot(-V, gn), 0.0, 1.0)) * frame.glassCfg.x; Rm = V - gn * (2.0 * dot(V, gn)); ro = Pg + gn * 0.015; dir = Rm; trOwner = 0u; gatherRay = false; go = Fm > 0.001; }
       }
     }
     var L = vec3f(0.0);
-    if (live) {
-      let rs = rayShade(ro, dir, trOwner, gatherRay, N, owner, Po);
-      L = rs.xyz;
+    if (go) {
+      let r = traceShade(ro, dir, trOwner, gatherRay, N, owner, Po);
       if (gatherRay) {
         // firefly guard: one ray in K finding a small intensely lit patch is an outlier the filters would smear into a blotch
         // (generous cap: a desk-lamp pool or a torch spot seen from the wall next to it is a LARGE, legitimately bright patch, not a
         // firefly — clamping it hard is what made small bright lights cast no bounce)
+        L = r.L;
         let lum = luminance(L);
         let cap = min(Lcap, 24.0);
         L = select(L, L * (cap / lum), lum > cap);
         if (j < RAYS) { E += L; } else { Ex += L; }
-      } else {
-        specHitT = rs.w;
-        let lum = luminance(L);
-        L = select(L, L * (GLOSS_RAY_MAX / lum), lum > GLOSS_RAY_MAX);        // the traced ray: the gather's firefly bound (a lit panel ≈ 11 passes whole, a spark streak does not)
-        if ((frame.flags & FLAG_DIRECT) != 0u) {
-          var G = glossGlints(ro, Rm, trOwner);
-          let lg = luminance(G);
-          G = select(G, G * (GLOSS_GLINT_MAX / lg), lg > GLOSS_GLINT_MAX);   // the analytic glints: stable, so allowed to read as white
-          L += G;
-        }
-        if (j == raysN) {
-          // the wet lot (game/weather.ts: frame.weatherA.w = wetness, weatherC = the interior footprint): standing water outdoors mirrors far more than a polish —
-          // up to 3.5× the coat's Fresnel at full wet, capped at a full mirror, nothing indoors or dry (w = 0: min(F, 1) = F)
-          let Wc = frame.weatherC; var wetOut = select(0.0, frame.weatherA.w, P.x < Wc.x || P.z < Wc.y || P.x > Wc.z || P.z > Wc.w);
-          if (WX_KINDS) { if (frame.cardCfg.y != 0u && wxRoofed(P.xz)) { wetOut = 0.0; } }   // (weather kinds: every roof of the level keeps its floor dry, not the first alone)
-          spec = L * (min(Fm * (1.0 + 2.5 * wetOut), 1.0) * GLOSS_STRENGTH);
-        } else { L *= Fm; }
-      }
+      } else { L = mirrorTail(r, ro, Rm, trOwner, Fm, j == raysN, P); if (j == raysN) { spec = L; } }
     }
     if (paneHit) { spec += L + glassDust(Pg, gn); }
   }
@@ -509,7 +441,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
 // ================================================================================================================================================
 // RENDERER V3 PHASE 5 — the RESAMPLING gather (settings.giResample 'temporal' | 'full', ultra; frame.p5Cfg.x = mode | revalidate << 4, .y = the numbers).
 // ReSTIR GI (Ouyang et al. 2021), simplified to what this renderer's gather is: an estimate of the irradiance E = ∫ L cosθ dω at the primary hit from
-// secondary points ONE bounce away, whose outgoing radiance L is albedo/π × (direct at the point + the cache's bounce) + emission (giTraceShade = main's
+// secondary points ONE bounce away, whose outgoing radiance L is albedo/π × (direct at the point + the cache's bounce) + emission (traceShade = main's
 // loop body). Per gather texel a RESERVOIR holds one such secondary sample y = {point x_s, its face normal n_s, its outgoing radiance L_o toward the
 // receiver} chosen by resampled importance sampling with target p̂(y) = lum(L_o) · cosθ (∝ the integrand's luminance) from
 //   * the texel's OWN reservoir of last frame, found by reprojection (prevViewProj + the g-buffer's motion vectors, both TAAU jitters taken back out so a
@@ -548,40 +480,6 @@ var<workgroup> wgNewsN: atomic<u32>;
 fn giPackAlb(a: vec3f) -> u32 { let q = vec3u(clamp(a, vec3f(0.0), vec3f(1.0)) * vec3f(31.0, 63.0, 31.0) + 0.5); return (q.x << 11u) | (q.y << 5u) | q.z; }
 fn giUnpackAlb(v: u32) -> vec3f { return vec3f(f32((v >> 11u) & 31u) / 31.0, f32((v >> 5u) & 63u) / 63.0, f32(v & 31u) / 31.0); }
 
-struct GiRay { L: vec3f, LoD: vec3f, alb: vec3f, xs: vec3f, ns: vec3f, t: f32, sky: bool, ok: bool, cap: bool, bi: u32 };
-/** ONE candidate: trace `dir` from Po and shade the hit exactly as main's loop body does (emission rule, bounce-card exclusion, direct at the point, the cache's bounce, the firefly bound `cap`).
- *  L = the whole outgoing radiance (what E takes); LoD = its emission + direct part and alb = the paint, kept apart for the reservoir: a stored sample re-adds the cache's
- *  bounce at its point EVERY frame (the multi-bounce field settles over frames after any change, and a value frozen with the sample would trail it), the direct part on
- *  the re-shade's cadence. A capsule / sky sample keeps everything in LoD (alb 0: nothing re-added — a man walks, the sky has no cache). ok = usable as a reservoir
- *  sample (anything but an 'inside' hit); cap(sule) = the hit is a man; bi = the box hit (GI_NOBOX for sky / capsule). */
-fn giTraceShade(Po: vec3f, N0: vec3f, dir: vec3f, owner: u32, cap: f32) -> GiRay {   // (N0 = the receiver's normal: the bounce read at the hit is bounded by the receiver's plane, lighting_common diceIrradianceFrom)
-  var r: GiRay; r.L = vec3f(0.0); r.LoD = vec3f(0.0); r.alb = vec3f(0.0); r.xs = Po; r.ns = dir; r.t = GI_SKY_D; r.sky = false; r.ok = false; r.cap = false; r.bi = GI_NOBOX;
-  let hit = traceClosest(Po, dir, TMAX, owner);
-  var L = vec3f(0.0); var Lb = vec3f(0.0);                                   // Lb = the cache-bounce share of L (albedo × dice / π) — subtracted back out for LoD
-  if (hit.idx < 0) { L = skyRadiance(dir); r.sky = true; r.ok = true; }
-  else if (!hit.inside) {
-    let Ph = Po + dir * hit.t;
-    r.ok = true; r.xs = Ph; r.ns = hit.n; r.t = hit.t;
-    var albedo: vec3f;
-    var ex = 0u;
-    if (hit.idx == CAPSULE_HIT) { albedo = hit.capAlbedo; r.cap = true; }
-    else {
-      let bi = u32(hit.idx); r.bi = bi;
-      if ((boxGeo[bi].flags & (BOX_EMISSIVE | BOX_AREALIT)) == BOX_EMISSIVE) { L += boxEmissive(bi); }
-      albedo = boxAlbedoSec(bi); r.alb = albedo;
-      for (var k = 0u; k < nC; k++) { if (onCard(Ph, hit.n, wgCards[k * 4u], wgCards[k * 4u + 1u])) { ex |= 1u << k; } }
-    }
-    var Eh = vec3f(0.0);
-    if ((frame.flags & FLAG_DIRECT) != 0u) { Eh += directAtPoint(Ph, hit.n, ex); }
-    if ((frame.flags & FLAG_BOUNCE) != 0u) { var Eb: vec3f; if (BOUNCE_WALLS && (bounceHitMan(hit) || bounceLeftNoWall(N0, owner, hit.t))) { Eb = diceIrradianceWalled(Ph, hit.n, bounceHitOwner(hit) | (owner << 8u)); } else { Eb = diceIrradianceFrom(Ph, hit.n, Po, N0); } Eh += Eb; if (!r.cap) { Lb = albedo * Eb * (1.0 / 3.14159265); } }
-    L += albedo * Eh * (1.0 / 3.14159265);
-  }
-  let lum = luminance(L);
-  let c = min(cap, 24.0);
-  let sc = select(1.0, c / lum, lum > c);
-  r.L = L * sc; r.LoD = max(L - Lb, vec3f(0.0)) * sc;
-  return r;
-}
 /** the cache's bounce leaving a stored sample point now: alb × dice(x_s) / π (0 for a sky / capsule sample, whose alb is 0) */
 fn giBounceAt(xs: vec3f, ns: vec3f, alb: vec3f) -> vec3f {
   if ((frame.flags & FLAG_BOUNCE) == 0u || all(alb <= vec3f(0.0))) { return vec3f(0.0); }
@@ -763,92 +661,119 @@ fn mainGi(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_i
   // ---- K fresh candidates, streamed: cosine rays traced and shaded as ever; w = m_fresh · p̂/p = m_fresh · π·lum(L) ----
   var lastXs = Po; var lastNs = N; var lastBi = GI_NOBOX; var lastSky = false; var lastCap = false; var lastD = GI_SKY_D; var lastCos = 1.0; var lastAlb = vec3f(0.0); var anyOk = false;
   var freshE = 0.0;                                                          // the fresh rays' own estimate of E (π/K Σ L, luminance) — the other half of the news test
+  var yW = 0.0; var Mkeep = 0.0; var dbgS = 0.0;   // (set at turn K below: the temporal stage closed, the spatial pass)
+  var spec = vec3f(0.0);
+  // ONE LOOP, ONE RAY A TURN (as `main`, and for the same reason: DXC inlines every call, and the fresh rays and the two mirror rays were three copies of the tracer and
+  // directAtPoint). Turns [0, K) are the fresh candidates; turn K closes the temporal stage, runs the spatial pass and the cards, and then sets up the gloss floor's
+  // mirror ray; turn K + 1 is the pane's. Every ray is traced and shaded by the ONE traceShade call; the statements run in their old order (the same rnd() draws).
   if (live) {
-    for (var k = 0u; k < K; k++) {
-      let dir = cosineDirK(N, k, K);   // (stratified across the K fresh rays under GATHER_STRATA — each still cosine-distributed over the set, so the RIS weights stand; K = 2: the Latin square)
-      let r = giTraceShade(Po, N, dir, owner, Lcap);
-      E += r.L * (PI_ * mF);                                                 // f/p̂ · w = (L / lum L) · π lum L · m_fresh
-      freshE += luminance(r.L) * (PI_ / Kf);
-      if (r.ok) {
-        anyOk = true; lastXs = r.xs; lastNs = r.ns; lastBi = r.bi; lastSky = r.sky; lastCap = r.cap; lastD = r.t; lastCos = select(max(-dot(r.ns, dir), 1e-3), 1.0, r.sky); lastAlb = r.alb;
-        let ph = luminance(r.L) * max(dot(N, dir), 1e-4);
-        let w = PI_ * luminance(r.L) * mF;
-        wsum += w;
-        if (w > 0.0 && rnd() * wsum < w) { yXs = r.xs; yNs = r.ns; yLo = r.L; yLoD = r.LoD; yAlb = r.alb; ySky = r.sky; yCap = r.cap; yBi = r.bi; yD = r.t; yCos = lastCos; yPh = ph; have = true; }
-      }
-    }
-  }
-  // E is now the temporal stage's estimate (= π/K Σ L with no history: the plain gather); the survivor's contribution weight, bounded for the f16 it is stored in (a dim
-  // survivor beside a bright candidate has a large 1/p̂ — legitimate, but +inf once packed would poison next frame: giLoad refuses anything that is not < GI_WMAX too)
-  var yW = 0.0;
-  if (have && yPh > 0.0 && wsum > 0.0) { yW = min(wsum / yPh, GI_WMAX); }
-  else if (!have && anyOk) { yXs = lastXs; yNs = lastNs; yBi = lastBi; ySky = lastSky; yCap = lastCap; yD = lastD; yCos = lastCos; yAlb = lastAlb; yLo = vec3f(0.0); yLoD = vec3f(0.0); yPh = 0.0; yW = 0.0; have = true; }   // everything dark: keep a ZERO-WEIGHT sample ('looked, found nothing' — its confidence rides along, capped low above when it is read back)
-  else if (yPh <= 0.0 || wsum <= 0.0) { yW = 0.0; yLo = vec3f(0.0); yLoD = vec3f(0.0); yPh = 0.0; }   // (a dark history and dark fresh rays: still zero-weight)
-  let Mkeep = select(min(MtE + Kf, mCap), Kf, yCap);                         // (the discounted confidence + this frame's rays; a man's sample never claims more than the rays that found him)
-  // ---- spatial (mode 2): k neighbours' temporal reservoirs of last frame, pairwise MIS against the canonical, shade-all. The canonical's pairwise weight m_c is a function of the
-  // SURVIVOR y_c and multiplies the whole shade-all estimate E (E[Σ_j a_j·m_c(y_c)] ≠ E[Σ_j a_j·m_c(y_j)]): a mild extra bias of this variant on top of the missing visibility
-  // ray — 'full' is the documented biased-but-bounded mode; 'temporal' carries neither. A neighbour holding a valid ZERO-WEIGHT reservoir is dark evidence and takes its share
-  // like any other (contribution 0); only a geometric reject returns the share to the canonical. ----
-  var dbgS = 0.0;
-  if (live && mode >= 2u && kSp > 0u && (frame.flags & FLAG_TEMPORAL) != 0u) {
-    let kf = f32(kSp); let Mck = max(Mkeep, 1.0) / kf;
-    var mc = 0.0; var Enb = vec3f(0.0); var took = 0.0;
-    let phi0 = rnd() * 6.2831853; let r0 = rnd();
-    let lumC = luminance(yLo);
-    for (var tp = 0u; tp < kSp; tp++) {
-      let ang = phi0 + f32(tp) * 2.3999632; let rr = max(radius, 1.0) * sqrt((f32(tp) + r0) / kf);
-      let qg = vec2i(gid.xy) + vec2i(i32(round(cos(ang) * rr)), i32(round(sin(ang) * rr)));
-      var accepted = false;
-      if (all(qg >= vec2i(0)) && all(qg < vec2i(odims)) && any(qg != vec2i(gid.xy))) {
-        let fq = min(vec2u(qg) * gdiv + (gdiv - 1u) / 2u, vec2u(frame.screen) - 1u);
-        let dq = textureLoad(gDepth, fq, 0);
-        if (dq < 1.0) {
-          let Pq = worldFromDepth(vec2f(fq) + 0.5, dq);
-          let Nq = normalize(textureLoad(gNormal, fq, 0).xyz * 2.0 - 1.0);
-          if (abs(dot(Pq - P, N)) < 0.05 + 0.004 * zNow && dot(Nq, N) > 0.9) {   // its receiver lies on our plane, facing our way: lit alike to first order
-            let pq = giPrevTexel(Pq, fq, gdiv, odims);
-            if (pq.ok) {
-              let nb = giLoad(pq.q);
-              let nbStaleDark = nb.W <= 0.0 && luminance(nb.Lo) > 1e-5;      // dark evidence at a point the live bounce now lights: stale, not evidence
-              if (nb.valid && nb.M > 0.0 && !nbStaleDark && abs(nb.zRecv - pq.z) < 0.01 * pq.z + 0.02) {
-                // re-target ITS sample here: direction / cos at our receiver, the reconnection Jacobian, our p̂ of it
-                let di = giDirTo(nb, P); let cosI = dot(N, di.xyz);
-                var J = 1.0; var okJ = cosI > 0.0;
-                if (!nb.sky) {
-                  let cosHere = -dot(nb.ns, di.xyz);                          // φ at the sample toward US
-                  okJ = okJ && cosHere > 0.02 && nb.cosq > 0.02;
-                  J = (cosHere * nb.dq * nb.dq) / max(nb.cosq * di.w * di.w, 1e-6);
-                  okJ = okJ && J < GI_JMAX && J > 1.0 / GI_JMAX;
-                }
-                if (okJ) {
-                  let phCI = luminance(nb.Lo) * cosI * J;                     // p̂_c(y_i)·|J|
-                  // p̂_i(y_c)·|J'|: OUR sample as its receiver would rate it (Pq, Nq) — sky: cos only
-                  var phIC = 0.0;
-                  if (have && lumC > 0.0) {
-                    if (ySky) { phIC = lumC * max(dot(Nq, yNs), 0.0); }
-                    else {
-                      let dc = yXs - Pq; let lc = max(length(dc), 1e-4); let dirc = dc / lc;
-                      let cosThere = -dot(yNs, dirc);
-                      if (cosThere > 0.02) { let Jp = (cosThere * yD * yD) / max(yCos * lc * lc, 1e-6); if (Jp < GI_JMAX && Jp > 1.0 / GI_JMAX) { phIC = lumC * max(dot(Nq, dirc), 0.0) * Jp; } }
+    for (var j = 0u; j < K + 2u; j++) {
+      var ro = Po; var dir = vec3f(0.0); var trOwner = owner; var gatherRay = true; var go = true;
+      var Rm = vec3f(0.0); var Fm = 0.0; var paneHit = false; var Pg = vec3f(0.0); var gn = vec3f(0.0);
+      if (j < K) { dir = cosineDirK(N, j, K); }   // (stratified across the K fresh rays under GATHER_STRATA — each still cosine-distributed over the set, so the RIS weights stand; K = 2: the Latin square)
+      else if (j == K) {
+        // E is now the temporal stage's estimate (= π/K Σ L with no history: the plain gather); the survivor's contribution weight, bounded for the f16 it is stored in (a dim
+        // survivor beside a bright candidate has a large 1/p̂ — legitimate, but +inf once packed would poison next frame: giLoad refuses anything that is not < GI_WMAX too)
+        yW = 0.0;
+        if (have && yPh > 0.0 && wsum > 0.0) { yW = min(wsum / yPh, GI_WMAX); }
+        else if (!have && anyOk) { yXs = lastXs; yNs = lastNs; yBi = lastBi; ySky = lastSky; yCap = lastCap; yD = lastD; yCos = lastCos; yAlb = lastAlb; yLo = vec3f(0.0); yLoD = vec3f(0.0); yPh = 0.0; yW = 0.0; have = true; }   // everything dark: keep a ZERO-WEIGHT sample ('looked, found nothing' — its confidence rides along, capped low above when it is read back)
+        else if (yPh <= 0.0 || wsum <= 0.0) { yW = 0.0; yLo = vec3f(0.0); yLoD = vec3f(0.0); yPh = 0.0; }   // (a dark history and dark fresh rays: still zero-weight)
+        Mkeep = select(min(MtE + Kf, mCap), Kf, yCap);                         // (the discounted confidence + this frame's rays; a man's sample never claims more than the rays that found him)
+        // ---- spatial (mode 2): k neighbours' temporal reservoirs of last frame, pairwise MIS against the canonical, shade-all. The canonical's pairwise weight m_c is a function of the
+        // SURVIVOR y_c and multiplies the whole shade-all estimate E (E[Σ_j a_j·m_c(y_c)] ≠ E[Σ_j a_j·m_c(y_j)]): a mild extra bias of this variant on top of the missing visibility
+        // ray — 'full' is the documented biased-but-bounded mode; 'temporal' carries neither. A neighbour holding a valid ZERO-WEIGHT reservoir is dark evidence and takes its share
+        // like any other (contribution 0); only a geometric reject returns the share to the canonical. ----
+        dbgS = 0.0;
+        if (live && mode >= 2u && kSp > 0u && (frame.flags & FLAG_TEMPORAL) != 0u) {
+          let kf = f32(kSp); let Mck = max(Mkeep, 1.0) / kf;
+          var mc = 0.0; var Enb = vec3f(0.0); var took = 0.0;
+          let phi0 = rnd() * 6.2831853; let r0 = rnd();
+          let lumC = luminance(yLo);
+          for (var tp = 0u; tp < kSp; tp++) {
+            let ang = phi0 + f32(tp) * 2.3999632; let rr = max(radius, 1.0) * sqrt((f32(tp) + r0) / kf);
+            let qg = vec2i(gid.xy) + vec2i(i32(round(cos(ang) * rr)), i32(round(sin(ang) * rr)));
+            var accepted = false;
+            if (all(qg >= vec2i(0)) && all(qg < vec2i(odims)) && any(qg != vec2i(gid.xy))) {
+              let fq = min(vec2u(qg) * gdiv + (gdiv - 1u) / 2u, vec2u(frame.screen) - 1u);
+              let dq = textureLoad(gDepth, fq, 0);
+              if (dq < 1.0) {
+                let Pq = worldFromDepth(vec2f(fq) + 0.5, dq);
+                let Nq = normalize(textureLoad(gNormal, fq, 0).xyz * 2.0 - 1.0);
+                if (abs(dot(Pq - P, N)) < 0.05 + 0.004 * zNow && dot(Nq, N) > 0.9) {   // its receiver lies on our plane, facing our way: lit alike to first order
+                  let pq = giPrevTexel(Pq, fq, gdiv, odims);
+                  if (pq.ok) {
+                    let nb = giLoad(pq.q);
+                    let nbStaleDark = nb.W <= 0.0 && luminance(nb.Lo) > 1e-5;      // dark evidence at a point the live bounce now lights: stale, not evidence
+                    if (nb.valid && nb.M > 0.0 && !nbStaleDark && abs(nb.zRecv - pq.z) < 0.01 * pq.z + 0.02) {
+                      // re-target ITS sample here: direction / cos at our receiver, the reconnection Jacobian, our p̂ of it
+                      let di = giDirTo(nb, P); let cosI = dot(N, di.xyz);
+                      var J = 1.0; var okJ = cosI > 0.0;
+                      if (!nb.sky) {
+                        let cosHere = -dot(nb.ns, di.xyz);                          // φ at the sample toward US
+                        okJ = okJ && cosHere > 0.02 && nb.cosq > 0.02;
+                        J = (cosHere * nb.dq * nb.dq) / max(nb.cosq * di.w * di.w, 1e-6);
+                        okJ = okJ && J < GI_JMAX && J > 1.0 / GI_JMAX;
+                      }
+                      if (okJ) {
+                        let phCI = luminance(nb.Lo) * cosI * J;                     // p̂_c(y_i)·|J|
+                        // p̂_i(y_c)·|J'|: OUR sample as its receiver would rate it (Pq, Nq) — sky: cos only
+                        var phIC = 0.0;
+                        if (have && lumC > 0.0) {
+                          if (ySky) { phIC = lumC * max(dot(Nq, yNs), 0.0); }
+                          else {
+                            let dc = yXs - Pq; let lc = max(length(dc), 1e-4); let dirc = dc / lc;
+                            let cosThere = -dot(yNs, dirc);
+                            if (cosThere > 0.02) { let Jp = (cosThere * yD * yD) / max(yCos * lc * lc, 1e-6); if (Jp < GI_JMAX && Jp > 1.0 / GI_JMAX) { phIC = lumC * max(dot(Nq, dirc), 0.0) * Jp; } }
+                          }
+                        }
+                        let Mi = select(min(nb.M, mCap), min(nb.M, Kf), nb.W <= 0.0);   // (a zero-weight neighbour: K rays' worth, as its own texel reads it)
+                        mc += (Mck * yPh) / (Mi * phIC + Mck * yPh + 1e-12) / kf;
+                        let mi = (Mi * nb.phat) / (Mi * nb.phat + Mck * phCI + 1e-12) / kf;
+                        Enb += nb.Lo * (cosI * J * nb.W * mi);                     // f_c(y_i)/p̂_c(y_i) · w_i, w_i = m_i p̂_c(y_i) |J| W_i
+                        accepted = true; took += 1.0;
+                      }
                     }
                   }
-                  let Mi = select(min(nb.M, mCap), min(nb.M, Kf), nb.W <= 0.0);   // (a zero-weight neighbour: K rays' worth, as its own texel reads it)
-                  mc += (Mck * yPh) / (Mi * phIC + Mck * yPh + 1e-12) / kf;
-                  let mi = (Mi * nb.phat) / (Mi * nb.phat + Mck * phCI + 1e-12) / kf;
-                  Enb += nb.Lo * (cosI * J * nb.W * mi);                     // f_c(y_i)/p̂_c(y_i) · w_i, w_i = m_i p̂_c(y_i) |J| W_i
-                  accepted = true; took += 1.0;
                 }
               }
             }
+            if (!accepted) { mc += 1.0 / kf; }                                    // a rejected pair: its share of the canonical weight comes home whole
           }
+          E = E * mc + Enb;
+          dbgS = took / kf;
+        }
+        if (live && nC > 0u && (frame.flags & FLAG_DIRECT) != 0u) { E += cardIrradiance(P, N, Po, owner, gid.xy); }
+        go = specOnGloss(specOn && gloss, id, N);
+        if (go) { let gm = glossRay(P); Fm = gm.F; Rm = gm.R; dir = gm.dir; ro = P + vec3f(0.0, 0.02, 0.0); gatherRay = false; }
+      } else {
+        go = false;
+        if (specOn && glassOn) {
+          let toP = P - frame.camPos; let dist = length(toP); let V = toP / max(dist, 1e-4);
+          let gh = glassTrace(frame.camPos, V, 0.0, dist - 0.02);
+          if (gh.idx >= 0) { paneHit = true; Pg = frame.camPos + V * gh.t; gn = gh.n; Fm = glassFresnel(clamp(dot(-V, gn), 0.0, 1.0)) * frame.glassCfg.x; Rm = V - gn * (2.0 * dot(V, gn)); ro = Pg + gn * 0.015; dir = Rm; trOwner = 0u; gatherRay = false; go = Fm > 0.001; }
         }
       }
-      if (!accepted) { mc += 1.0 / kf; }                                    // a rejected pair: its share of the canonical weight comes home whole
+      var Lm = vec3f(0.0);
+      if (go) {
+        let r = traceShade(ro, dir, trOwner, gatherRay, N, owner, Po);
+        if (gatherRay) {
+          // the firefly bound on the whole and on its emission + direct part (the share the reservoir keeps: the cache's bounce is re-added at the stored point every frame)
+          let lum = luminance(r.L); let c = min(Lcap, 24.0); let sc = select(1.0, c / lum, lum > c);
+          let rL = r.L * sc; let rLoD = max(r.L - r.Lb, vec3f(0.0)) * sc;
+          E += rL * (PI_ * mF);                                                 // f/p̂ · w = (L / lum L) · π lum L · m_fresh
+          freshE += luminance(rL) * (PI_ / Kf);
+          if (r.ok) {
+            anyOk = true; lastXs = r.xs; lastNs = r.ns; lastBi = r.bi; lastSky = r.sky; lastCap = r.cap; lastD = r.t; lastCos = select(max(-dot(r.ns, dir), 1e-3), 1.0, r.sky); lastAlb = r.alb;
+            let ph = luminance(rL) * max(dot(N, dir), 1e-4);
+            let w = PI_ * luminance(rL) * mF;
+            wsum += w;
+            if (w > 0.0 && rnd() * wsum < w) { yXs = r.xs; yNs = r.ns; yLo = rL; yLoD = rLoD; yAlb = r.alb; ySky = r.sky; yCap = r.cap; yBi = r.bi; yD = r.t; yCos = lastCos; yPh = ph; have = true; }
+          }
+        } else { Lm = mirrorTail(r, ro, Rm, trOwner, Fm, j == K, P); if (j == K) { spec = Lm; } }
+      }
+      if (paneHit) { spec += Lm + glassDust(Pg, gn); }
     }
-    E = E * mc + Enb;
-    dbgS = took / kf;
   }
-  if (live && nC > 0u && (frame.flags & FLAG_DIRECT) != 0u) { E += cardIrradiance(P, N, Po, owner, gid.xy); }
   // ---- the tile's NEWS for next frame: has the light these 64 texels gather changed since their histories were stored? Each lane's fresh estimate of E against what its
   // history believed (both luminance, before any re-shade), summed over the tile in fixed point; a tile total that doubled or halved writes the news bit into every
   // record it stores, and next frame all of them take the full re-shade instead of waiting for the tile's turn — a door thrown open on a dark room, the mains
@@ -875,16 +800,8 @@ fn mainGi(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_i
     let B = vec4u((u32(clamp(Mkeep, 0.0, 255.0)) & 255u) | (flags << 8u) | (min(yBi, GI_NOBOX) << 12u), (pack2x16float(vec2f(min(zNow, 60000.0), 0.0)) & 0xffffu) | (giPackAlb(yAlb) << 16u), pack2x16float(vec2f(min(yD, GI_SKY_D), yCos)), (pack2x16float(vec2f(yPh, 0.0)) & 0xffffu) | (p5PackOct16(N) << 16u));
     textureStore(resOutA, gid.xy, A); textureStore(resOutB, gid.xy, B);
   } else { textureStore(resOutA, gid.xy, empty); textureStore(resOutB, gid.xy, empty); }
-  // ---- the specular field, exactly as main ----
+  // ---- the specular field (traced in the loop above, as main)
   if (specOn) {
-    var spec = vec3f(0.0);
-    let bidx = id & 0xFFFFFu;
-    if (gloss && ((id >> 28u) & 1u) == 0u && bidx != 0xFFFFFu && (boxGeo[bidx].flags & BOX_GLOSS) != 0u && N.y > 0.95) { spec = glossReflection(P, owner); }
-    if (glassOn) {
-      let toP = P - frame.camPos; let dist = length(toP); let V = toP / max(dist, 1e-4);
-      let gh = glassTrace(frame.camPos, V, 0.0, dist - 0.02);
-      if (gh.idx >= 0) { spec += glassShade(frame.camPos + V * gh.t, gh.n, V); }
-    }
     textureStore(outSpecular, gid.xy, vec4f(spec, specHitT));
   }
 }
