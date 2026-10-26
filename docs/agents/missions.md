@@ -2143,7 +2143,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   looks). A check that started one by its list row finds the row in `tools/qa/yards.ts`. They are bare yards:
   `?levelFile=train-move.json&quiet` still starts a quiet mission on one, AS ANY QUIET MISSION NOW (the fog lever at its default, cameras lent, the kept
   kit card, the levers live): `torch-leak-stills.cjs` and `hands-look.cjs` ask for `quietfog=off` in their links to keep the picture they were written for;
-  `shaderwait-page.cjs` and `savetimeline-page.cjs` load the yards as they now open, and none of the four was run on a page since. `tools/levels/train-ground.ts` and `lived-train.ts` stay for them and for
+  `shaderwait-page.cjs` and `savetimeline-page.cjs` load the yards as they now open. Of the four only `savetimeline-page.cjs` was run on a page since (10-25 and 10-26, its yard job mended: `docs/agents/qa.md`, the save timeline); the other three were not. `tools/levels/train-ground.ts` and `lived-train.ts` stay for them and for
   `lights-out` and `vault`. A YARD WITHOUT ITS LESSON IS READ DIFFERENTLY BY FIVE RULES that ask `level.scenarios.lesson`: the squads' stay-and-ask roll call
   (`stayask.ts`), dozing guards (`doze.ts`), the squad deal (`roomclear.ts` → `squadDeal`), door names (`doornames.ts`) and the solo stand's kit
   (`kit.ts kitSoloStand`); and by the three that ask `LESSON_MISSIONS` for the level (the kit as issued and the levers held off on the page, no fog lever).

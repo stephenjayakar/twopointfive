@@ -3,16 +3,19 @@
 //   on      the plain night as the page opens it: F5 (a real keydown, kept from the browser) three times a few seconds apart, each on a drawn frame; the pause card's strip shows three tiles in time
 //           order, each with a picture that is not one flat colour; a click on the middle one closes the card with the mission clock at that save's; the
 //           down card shows the strip too; no page error
-//   lesson  the quarters yard, once Training five (a pair on the floor): F5 saves are kept in memory and show on the strip with pictures; a light is put out AFTER the save and the
+//   lesson  the quarters yard, once Training five (a pair on the floor): F5 saves are kept in memory and show on the strip with pictures; a light is switched off AFTER the save and the
 //           save loaded from its tile — the frame drawn after the load is lit as the frame at the save was, not as the dark one (the GPU's buffers were told:
-//           host/putback.ts); SAVEPUTBACK_BREAK=1 takes that telling away and this line must FAIL
+//           host/putback.ts); SAVEPUTBACK_BREAK=1 takes that telling away and this line must FAIL. He is stood under the light first: a light put out where
+//           nobody on the team is looking goes on showing lit in the fog's picture (game/fogofwar.ts FOG.kept, on in the page since 10-24), and from the street
+//           the dark frame this line needs between the two lit ones never came (259 → 259 bright pixels, "the check cannot tell"). Switched off, not broken:
+//           a light the team SEES break arcs (game/fixtureBreak.ts) and its sparks, which no undrawn step moves on, are nearly white where the bulb was
 //   off     ?savetimeline=0: F5 writes nothing and the pause card has no strip
 //   card    the page's own loop let go with the pause card up (the world held): F5 is kept from the browser, writes nothing yet and the card's strip shows a
 //           tile to come; the card closed, the first live tick writes ONE save by hand, with its picture; under a show's key lock F5 is the browser's.
 //           The card is not laid again under the keys; a save that would be refused shows no tile; a restart made with the card up drops the press.
 //           SAVECARD_BREAK=1 takes the hand-over of the kept press away and this job must FAIL
 // exit 0 = every job asked for, with no page error · 1 = otherwise. Game logic and the DOM decide; the one judgment of a picture is a count of nearly white pixels (the bulb's
-// glow), three frames against each other. With an outDir it keeps the stills and a screenshot of each card for a person to look at.
+// glow: the ones within a twelfth of the frame's height of where the bulb is on it, so the men its light falls on are not counted), three frames against each other. With an outDir it keeps the stills and a screenshot of each card for a person to look at.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs'), path = require('path');
 const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow', outDir = process.argv[2] || '', BREAK = process.env.SAVEPUTBACK_BREAK === '1', CARDBREAK = process.env.SAVECARD_BREAK === '1';
@@ -26,15 +29,19 @@ const STEP = (n) => { const e = window.__engine, real = e.render; e.render = () 
 // in the page: one step with its frame DRAWN and presented (a save's picture is taken off the canvas after such a frame), the GPU through with it
 const FRAME = async () => { window.__runFrames(1, 1 / 60); await window.__engine.device.queue.onSubmittedWorkDone(); };
 // in the page: draw n frames one at a time, read the last one back: how many of its pixels are nearly white (a burning bulb's own glow: the room it lights
-// barely dims in a few frames), and (with `keep`) a PNG data URL (page-look.cjs DRAW)
-const DRAW = async ([n, keep]) => {
+// barely dims in a few frames) — `hot` on the whole frame, and with `lamp` `near`: the ones around the place on the frame of the light LAMP picked (`px`) —
+// and (with `keep`) a PNG data URL (page-look.cjs DRAW)
+const DRAW = async ([n, keep, lamp]) => {
   const dev = window.__engine.device;
   const yieldMacro = () => new Promise(res => { const ch = new MessageChannel(); ch.port1.onmessage = () => res(); ch.port2.postMessage(0); });
   for (let i = 0; i < n; i++) { window.__runFrames(1, 1 / 600); await dev.queue.onSubmittedWorkDone(); await yieldMacro(); }
   window.__engine.render(window.__cam, window.__game.time, 1 / 60, false); const fr = await window.__engine.readbackFrame(); if (!fr) return null;
   if (fr.bgra) for (let i = 0; i < fr.data.length; i += 4) { const b = fr.data[i]; fr.data[i] = fr.data[i + 2]; fr.data[i + 2] = b; }
   let hot = 0; for (let i = 0; i < fr.data.length; i += 4) { fr.data[i + 3] = 255; if (fr.data[i] * 0.3 + fr.data[i + 1] * 0.59 + fr.data[i + 2] * 0.11 > 235) hot++; }
-  const out = { hot, url: null };
+  const out = { hot, near: null, px: null, url: null }, bright = (k) => fr.data[k] * 0.3 + fr.data[k + 1] * 0.59 + fr.data[k + 2] * 0.11 > 235;
+  if (lamp) { const [x, y, front] = window.__cam.project(window.__lamp.pos, fr.w, fr.h), cx = Math.round(x), cy = Math.round(y), R = Math.round(fr.h / 12); let m = 0;
+    for (let j = Math.max(0, cy - R); j <= Math.min(fr.h - 1, cy + R); j++) for (let i = Math.max(0, cx - R); i <= Math.min(fr.w - 1, cx + R); i++) if (bright((j * fr.w + i) * 4)) m++;
+    out.near = m; out.px = [cx, cy, !!front]; }
   if (keep) { const c2 = document.createElement('canvas'); c2.width = fr.w; c2.height = fr.h; c2.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(fr.data.buffer), fr.w, fr.h), 0, 0); out.url = c2.toDataURL('image/png'); }
   return out;
 };
@@ -56,11 +63,12 @@ const STRIP = async (mode) => {
 };
 // in the page: a click on the k-th tile of the strip that is up; the card gone, the mission clock where it now stands
 const PICK = (k) => { const g = window.__game, t = document.querySelectorAll('#menu .saves .tile')[k]; if (!t) return { err: 'no such tile' }; t.click(); return { open: document.getElementById('menu').classList.contains('on'), t: g.mission.stats.elapsed, loads: g.saves.stats.loads, fatal: (document.getElementById('fatal') || {}).textContent || '' }; };
-// in the page (lesson): the nearest light that burns, the camera pinned on it
+// in the page (lesson): the nearest light that burns; the camera pinned on it and (PIN's `stand`) he stood under it: the team has a look at it, so the fog's picture has it as it is
 const LAMP = () => { const g = window.__game, p = g.player.char.pos; let best = null, bd = 1e9; for (const t of g.targets) { if (!t.on || t.broken || t.kind === 'breaker' || !t.boxes || !t.boxes.length) continue; const d = Math.hypot(t.pos[0] - p[0], t.pos[2] - p[2]); if (d < bd) { bd = d; best = t; } }
   if (!best) return null; window.__lamp = best; return { name: best.name, d: +bd.toFixed(1) }; };
-const PIN = () => { const t = window.__lamp; window.__stage({ look: [t.pos[0], 0.6, t.pos[2]], yaw: 0.6, pitch: 0.9, dist: 9 }, {}); };
-const OUT = () => { const t = window.__lamp; t.broken = true; return t.broken; };
+const PIN = (stand) => { const t = window.__lamp; window.__stage({ look: [t.pos[0], 0.6, t.pos[2]], yaw: 0.6, pitch: 0.9, dist: 9 }, stand ? { player: { pos: [t.pos[0], 0, t.pos[2]] } } : {}); };
+const SEEN = () => { const g = window.__game, f = g.fogOfWar, p = g.player.char.pos; return { fog: !!f.active, seen: !f.active || f.lampSeen(window.__lamp), at: [+p[0].toFixed(1), +p[2].toFixed(1)] }; };
+const OUT = () => { const t = window.__lamp; t.on = false; return t.on; };   // (switched off, not broken: the head of this file — broken, 213 to 221 bright pixels of sparks with it out)
 const LAMPSTATE = () => { const t = window.__lamp; return { broken: t.broken, on: t.on }; };
 
 // in the page (card): F5 under a key lock, then on the pause card with the page's own loop running (frozen frames): kept from the browser, nothing written, a tile to come
@@ -145,20 +153,23 @@ const CARD3 = async () => {
           // the light: lit at the last save, put out after it, the save loaded — lit again on the GPU?
           r.lamp = await page.evaluate(LAMP); if (!r.lamp) fails.push('no burning light near him');
           else {
-            await page.evaluate(PIN); await page.evaluate(STEP, 30); const s = await page.evaluate(F5); await page.evaluate(FRAME); if (s.wrote !== 1) fails.push(`the save by the light: ${s.msg}`);
-            const A = await page.evaluate(DRAW, [3, !!outDir]); await keep('lit-at-save', A);
-            await page.evaluate(OUT); await page.evaluate(STEP, 90);
-            const B = await page.evaluate(DRAW, [3, !!outDir]); await keep('light-out', B);
+            await page.evaluate(PIN, true); await page.evaluate(STEP, 30); r.seen = await page.evaluate(SEEN); const s = await page.evaluate(F5); await page.evaluate(FRAME); if (s.wrote !== 1) fails.push(`the save by the light: ${s.msg}`);
+            const tell = r.seen.seen; if (!tell) fails.push(`stood at ${r.seen.at} the team has no look at the light: the fog's picture would keep it as last seen, and the frames could not tell (not drawn)`);
+            const A = tell ? await page.evaluate(DRAW, [3, !!outDir, true]) : null; await keep('lit-at-save', A);
+            await page.evaluate(OUT); await page.evaluate(STEP, 90); r.seenOut = await page.evaluate(SEEN);
+            const B = tell ? await page.evaluate(DRAW, [3, !!outDir, true]) : null; await keep('light-out', B);
             await page.evaluate(() => window.__stage(null, {}));
             r.strip = await page.evaluate(STRIP, 'pause'); await shot('pause-card');
             if (BREAK) await page.evaluate(() => { window.__game.saves.onPutBack = null; });
             const last = r.strip.tiles.length - 1; r.pick = await page.evaluate(PICK, last); r.lampAfter = await page.evaluate(LAMPSTATE);
-            await page.evaluate(PIN); await page.evaluate(STEP, 2);
-            const C = await page.evaluate(DRAW, [3, !!outDir]); await keep('after-load', C);
-            r.lum = { A: A.hot, B: B.hot, C: C.hot }; log(`${name}: the bulb's bright pixels`, JSON.stringify(r.lum));
-            if (r.lampAfter.broken) fails.push('the light is still broken in the game after the load');
-            if (!(A.hot - B.hot > 20)) fails.push(`putting the light out did not take its glow off the frame (${r.lum.A} → ${r.lum.B} bright pixels): the check cannot tell`);
-            else if (!(Math.abs(C.hot - A.hot) < 0.35 * (A.hot - B.hot))) fails.push(`the bulb on the frame after the load is not lit as the save's was: bright pixels at the save ${r.lum.A}, light out ${r.lum.B}, after the load ${r.lum.C}`);
+            await page.evaluate(PIN, false); await page.evaluate(STEP, 2); if (tell) { await page.evaluate(FRAME); await page.evaluate(FRAME); }   // (two drawn frames, as the save's frame had before its three: F5's own and the one after)
+            const C = tell ? await page.evaluate(DRAW, [3, !!outDir, true]) : null; await keep('after-load', C);
+            if (!r.lampAfter.on || r.lampAfter.broken) fails.push('the light is still out in the game after the load');
+            if (tell) {
+              r.lum = { A: A.near, B: B.near, C: C.near, frame: [A.hot, B.hot, C.hot], px: A.px }; log(`${name}: the bulb's bright pixels (around it; the whole frame's; its place on the frame)`, JSON.stringify(r.lum));
+              if (!(A.near - B.near > 20)) fails.push(`switching the light off did not take its glow off the frame (${r.lum.A} → ${r.lum.B} bright pixels around ${A.px}): the check cannot tell (with it off the team ${r.seenOut.seen ? 'has' : 'has not'} a look at it${r.seenOut.fog ? '' : ', no fog of war up'})`);
+              else if (!(Math.abs(C.near - A.near) < 0.35 * (A.near - B.near))) fails.push(`the bulb on the frame after the load is not lit as the save's was: bright pixels around it at the save ${r.lum.A}, light off ${r.lum.B}, after the load ${r.lum.C}`);
+            }
             if (r.pick.err || r.pick.open || r.pick.fatal) fails.push(`the tile's click: ${JSON.stringify(r.pick)}`);
             if (r.strip.tiles.length !== 4 || !r.strip.line.every(x => x.mem)) fails.push(`the strip: ${r.strip.tiles.length} tiles, in memory ${r.strip.line.map(x => x.mem).join(',')} (want 4, all in memory)`);
             if (r.strip.tiles.some(t => !(t.range > 12 && t.w > 0))) fails.push(`a tile's picture is missing or flat: ${r.strip.tiles.map(t => `${t.w}x${t.h} range ${t.range}`).join(' · ')}`);
@@ -192,7 +203,7 @@ const CARD3 = async () => {
       lesson: `the quarters yard, a pair on the floor: saves kept in memory show on the strip with pictures; a light put out after a save is lit again on the frame after its load${BREAK ? ' (SAVEPUTBACK_BREAK: the host is not told)' : ''}`,
       off: 'under ?savetimeline=0: F5 writes nothing, the pause card has no strip',
       card: `F5 on the pause card is kept, shows a tile to come and saves once as play goes on; under a key lock it is the browser's${CARDBREAK ? ' (SAVECARD_BREAK: the kept press is not handed over)' : ''}` }[name];
-    console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${said}\n    ${JSON.stringify({ set: r.set, saves: (r.saves || []).map(s => +s.t.toFixed(1)), tiles: r.strip ? r.strip.tiles.map(t => `${t.w}x${t.h} ${(t.bytes / 1024).toFixed(1)}KB range ${t.range} '${t.age}'`) : null, pick: r.pick, lum: r.lum, lamp: r.lamp, card1: r.card1, card2: r.card2, card3: r.card3 })}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
+    console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${said}\n    ${JSON.stringify({ set: r.set, saves: (r.saves || []).map(s => +s.t.toFixed(1)), tiles: r.strip ? r.strip.tiles.map(t => `${t.w}x${t.h} ${(t.bytes / 1024).toFixed(1)}KB range ${t.range} '${t.age}'`) : null, pick: r.pick, lum: r.lum, lamp: r.lamp, seen: r.seen, seenOut: r.seenOut, card1: r.card1, card2: r.card2, card3: r.card3 })}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
   }
   console.log(`=== savetimeline-page: ${red ? 'FAILURES above' : 'ALL PASS'} ===`);
   process.exit(red ? 1 : 0);
