@@ -24,13 +24,13 @@ if not exist "%CHROME%" (echo Chrome was not found. & exit /b 1)
 
 rem the dev server, when the address is the default one and nothing answers there yet
 if not "%~1"=="" goto launch
-powershell -NoProfile -Command "try { $null = Invoke-WebRequest -UseBasicParsing -TimeoutSec 2 http://localhost:5173/qa/commit; exit 0 } catch { exit 1 }"
+powershell -NoProfile -Command "try { $null = Invoke-WebRequest -UseBasicParsing -TimeoutSec 2 http://127.0.0.1:5173/qa/commit; exit 0 } catch { exit 1 }"
 if not errorlevel 1 goto launch
 echo Starting the dev server (bun run dev) in its own window ...
 pushd "%~dp0..\.."
 start "twopointsix dev server" cmd /c "bun run dev"
 popd
-powershell -NoProfile -Command "for ($i = 0; $i -lt 60; $i++) { try { $null = Invoke-WebRequest -UseBasicParsing -TimeoutSec 2 http://localhost:5173/qa/commit; exit 0 } catch { Start-Sleep -Milliseconds 500 } }; exit 1"
+powershell -NoProfile -Command "for ($i = 0; $i -lt 60; $i++) { try { $null = Invoke-WebRequest -UseBasicParsing -TimeoutSec 2 http://127.0.0.1:5173/qa/commit; exit 0 } catch { Start-Sleep -Milliseconds 500 } }; exit 1"
 if errorlevel 1 (echo The dev server did not come up on port 5173. & exit /b 1)
 
 :launch
